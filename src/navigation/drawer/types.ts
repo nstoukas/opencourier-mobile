@@ -1,4 +1,9 @@
-import { NavigationProp, RouteProp } from '@react-navigation/native';
+import {
+  CompositeNavigationProp,
+  NavigationProp,
+  RouteProp,
+} from '@react-navigation/native';
+import { MainNavigationProp } from '../main/types';
 
 export enum DrawerScreens {
   Home = 'Home',
@@ -14,7 +19,15 @@ export type DrawerStackParamList = {
   Settings: undefined;
 };
 
-export type DrawerNavigationProp = NavigationProp<DrawerStackParamList>;
+/**
+ * The drawer sits inside the main stack, so a drawer screen can navigate to either.
+ * CompositeNavigationProp unions the two, which is what lets Earnings push the stack
+ * screens EarningsDay / PayoutActivity without TypeScript rejecting the route name.
+ */
+export type DrawerNavigationProp = CompositeNavigationProp<
+  NavigationProp<DrawerStackParamList>,
+  MainNavigationProp
+>;
 export type DrawerRouteProp<T extends DrawerScreens> = RouteProp<
   DrawerStackParamList,
   T

@@ -6,6 +6,23 @@ export const formatMockDate = 'DD MMM YYYY - h:MM A';
 export const formatServer = 'YYYY-MM-DDThh:mm:ss[Z]';
 export const formatShift = 'hh:mm A';
 export const formatSpaced = 'D MMM YYYY';
+// Date-only format the earnings API expects for its `from`/`to` window.
+export const formatApiDate = 'YYYY-MM-DD';
+
+/**
+ * The phone's IANA timezone, e.g. 'Europe/Athens'.
+ * The earnings API needs it to draw day boundaries on the courier's own day instead of
+ * the server's — otherwise a late-evening delivery can land on "yesterday". Returns
+ * undefined when the JS engine can't report one, in which case we send nothing and the
+ * backend falls back to UTC.
+ */
+export const deviceTimezone = (): string | undefined => {
+  try {
+    return Intl.DateTimeFormat().resolvedOptions().timeZone || undefined;
+  } catch {
+    return undefined;
+  }
+};
 
 export const startOfThisWeek = (): Moment => {
   return moment().subtract(0, 'weeks').startOf('week');

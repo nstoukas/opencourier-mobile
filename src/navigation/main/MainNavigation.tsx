@@ -20,6 +20,8 @@ import { VehicleTypeScreen } from '@app/screens/SettingsStack/VehicleType/Vehicl
 import { RestaurantTypeScreen } from '@app/screens/SettingsStack/RestaurantType/RestaurantType';
 import { CuisineTypeScreen } from '@app/screens/SettingsStack/CuisineType/CuisineType';
 import { EarningsMethodScreen } from '@app/screens/SettingsStack/EarningsMethod/EarningsMethod';
+import { EarningsDay } from '@app/screens/EarningsDay/EarningsDay';
+import { EarningsDelivery } from '@app/screens/EarningsDelivery/EarningsDelivery';
 import { OrderPreferenceScreen } from '@app/screens/SettingsStack/OrderPreference/OrderPreference';
 import { WeightOrderScreen } from '@app/screens/SettingsStack/WeightOrder/WeightOrder';
 import { ShiftAvailabilityScreen } from '@app/screens/SettingsStack/ShiftAvailability/ShiftAvailabilityScreen';
@@ -125,6 +127,16 @@ export const MainStack = () => {
       <MainStackNavigator.Screen
         name={MainScreens.EarningsMethodScreen}
         component={EarningsMethodScreen}
+        options={DEFAULT_OPTIONS}
+      />
+      <MainStackNavigator.Screen
+        name={MainScreens.EarningsDay}
+        component={EarningsDay}
+        options={DEFAULT_OPTIONS}
+      />
+      <MainStackNavigator.Screen
+        name={MainScreens.EarningsDelivery}
+        component={EarningsDelivery}
         options={DEFAULT_OPTIONS}
       />
       <MainStackNavigator.Screen

@@ -19,6 +19,8 @@ type Props = {
   style?: StyleProp<ViewStyle>;
   type: EarningsTabItem;
   earned: number;
+  /** ISO currency code from the API — the instance decides it, so never hard-code one. */
+  currency?: string;
   onWeekRangeChange?: (start: Moment, end: Moment) => void;
 };
 
@@ -26,6 +28,7 @@ export const WeekSelector = ({
   style,
   type,
   earned,
+  currency,
   onWeekRangeChange,
 }: Props) => {
   const { t } = useTranslation();
@@ -44,7 +47,9 @@ export const WeekSelector = ({
           formatEarnings,
         )} - ${endOfWeek(substractor).format(formatEarnings)}`;
       case EarningsTabItem.All:
-        return t('translations:all_time');
+        // Not literally all time: the API caps one request at 366 days, so say what the
+        // number actually covers rather than implying a lifetime total.
+        return t('translations:last_12_months');
     }
   }, [type, substractor]);
 
@@ -62,7 +67,7 @@ export const WeekSelector = ({
       )}
       <View style={styles.containerText}>
         <Text style={styles.textPrice}>
-          {formatCurrencyFromCents(earned, 'USD')}
+          {formatCurrencyFromCents(earned, currency)}
         </Text>
         <Text style={styles.textDate}>{date}</Text>
         <View style={styles.separator} />

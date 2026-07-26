@@ -43,6 +43,11 @@ export const styles = StyleSheet.create({
     fontSize: 20,
     color: Colors.black1,
   },
+  textBreakdown: {
+    fontSize: 13,
+    color: Colors.gray13,
+    marginTop: 2,
+  },
   earningsText: {
     flex: 1,
   },
@@ -73,5 +78,9 @@ export const styles = StyleSheet.create({
   },
   veticalMargin: {
     marginVertical: 22,
+  },
+  // Keeps the last card clear of the screen edge once the list scrolls.
+  listContent: {
+    paddingBottom: 24,
   },
 });

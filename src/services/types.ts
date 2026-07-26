@@ -28,6 +28,26 @@ export type SettingsParams = {
   settings?: Setting;
 };
 
+/**
+ * Query string for `GET /courier/earnings-summary`. All optional: the backend falls back
+ * to the last 30 days in UTC. `from`/`to` are date-only ('YYYY-MM-DD') so the backend
+ * anchors them to the start/end of that day *in `timezone`*.
+ */
+export type EarningsSummaryParams = {
+  from?: string;
+  to?: string;
+  timezone?: string;
+};
+
+/**
+ * Query string for `GET /courier/earnings/day`. Unlike the summary window, `date` is
+ * required — it names exactly one day, interpreted in `timezone`.
+ */
+export type EarningsDayParams = {
+  date: string; // 'YYYY-MM-DD'
+  timezone?: string;
+};
+
 export type AccessToken = {
   accessToken: string;
   tokenType: string;

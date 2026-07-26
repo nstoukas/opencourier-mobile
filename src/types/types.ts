@@ -89,6 +89,68 @@ export enum EarningsTabItem {
   All = 'all',
 }
 
+/**
+ * One day of the courier earnings report, as returned by
+ * `GET /courier/earnings-summary`. The backend groups completed deliveries into days
+ * using the timezone we ask for, so `date` is the courier's own day, not the server's.
+ * Every money field is an **integer number of cents**.
+ */
+export type EarningsSummaryDay = {
+  date: string; // 'YYYY-MM-DD' in the requested timezone
+  deliveryCount: number;
+  compensation: number; // piece-rate pay
+  tips: number;
+  total: number; // compensation + tips
+};
+
+/**
+ * One completed delivery inside a day's earnings, from
+ * `GET /courier/earnings/day`. Money is in integer cents.
+ */
+export type EarningsDelivery = {
+  deliveryId: string;
+  droppedOffAt: string; // ISO timestamp
+  dropoffAddress: string | null;
+  pickupBusinessName: string;
+  compensation: number; // piece-rate pay
+  tips: number;
+  total: number;
+};
+
+/**
+ * The deliveries that made up one day's earnings. The totals are summed by the backend
+ * from the same ledger the per-day summary uses, so this list always reconciles with the
+ * day row it was opened from.
+ */
+export type EarningsDay = {
+  date: string; // 'YYYY-MM-DD'
+  timezone: string;
+  currency: string;
+  deliveryCount: number;
+  compensation: number;
+  tips: number;
+  total: number;
+  deliveries: EarningsDelivery[];
+};
+
+/** One delivery's full breakdown, from `GET /courier/earnings/delivery/:deliveryId`. */
+export type EarningsDeliveryDetail = EarningsDelivery & {
+  currency: string;
+};
+
+/** The whole earnings report for one window. Totals are summed by the backend. */
+export type EarningsSummary = {
+  from: string;
+  to: string;
+  timezone: string;
+  currency: string; // instance currency, voted on in Config — never assume USD
+  totalDeliveryCount: number;
+  totalCompensation: number;
+  totalTips: number;
+  totalEarnings: number;
+  days: EarningsSummaryDay[];
+};
+
 export enum PaymentTabItem {
   Bank = 'bank',
   DirectDebit = 'direct_debit',

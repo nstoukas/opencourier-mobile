@@ -6,4 +6,7 @@ export const QueryKeys = {
   orderHistory: 'orderHistory',
   instance: 'instance',
   userInstances: 'userInstances',
+  earningsSummary: 'earningsSummary',
+  earningsDay: 'earningsDay',
+  earningsDelivery: 'earningsDelivery',
 };
