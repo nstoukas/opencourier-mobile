@@ -84,20 +84,18 @@ export const InstanceDetails = ({ navigation, route }: Props) => {
 
   useEffect(() => {
     const setClientDefaults = async () => {
-      if (!instance?.details?.link) return;
-      const sanitizedLink = instance.details.link.trim().replace(/\/$/, '');
+      const activeLink = instance?.details?.link || instanceLink;
+      if (!activeLink) return;
+      const sanitizedLink = activeLink.trim().replace(/\/$/, '');
       client.defaults.baseURL = sanitizedLink + '/api/courier/v1';
       await AsyncStorage.setItem('BASE_URL', sanitizedLink + '/api/courier/v1');
-      if (instance.details.websocketLink) {
-        await AsyncStorage.setItem(
-          'SOCKET_BASE_URL',
-          instance.details.websocketLink,
-        );
-      }
+
+      const wsLink = instance?.details?.websocketLink || sanitizedLink.replace(/^http/, 'ws');
+      await AsyncStorage.setItem('SOCKET_BASE_URL', wsLink);
     };
 
     setClientDefaults();
-  }, [instance]);
+  }, [instance, instanceLink]);
 
   const handleBack = () => {
     if (navigation.canGoBack()) {
