@@ -81,3 +81,6 @@ android/gradle.properties
 ios/GoogleService-Info.plist
 upload_certificate.pem
 ios/Podfile.lock
+
+# Local secrets — never commit (Auth0 credentials, instance API URL)
+.env
