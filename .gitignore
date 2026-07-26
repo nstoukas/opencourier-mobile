@@ -84,3 +84,7 @@ ios/Podfile.lock
 
 # Local secrets — never commit (Auth0 credentials, instance API URL)
 .env
+
+# aiflow pipeline artifacts (see ../aiflow.sh) — working files, not source
+.aiflow/
+plan.md
