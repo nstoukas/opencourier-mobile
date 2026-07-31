@@ -23,6 +23,7 @@ import { RootScreen } from '@app/navigation/types';
 import DatePicker from 'react-native-date-picker';
 import useUserSettings from '@app/hooks/useUserSetttings';
 import useInstance from '@app/hooks/useInstance';
+import { RemoteImage } from '@app/components/RemoteImage/RemoteImage';
 
 type Props = MainScreenProp<MainScreens.ShiftAvailabilityScreen>;
 function capitalizeFirstLetter(string: string) {
@@ -401,10 +402,7 @@ export const ShiftAvailabilityScreen = ({ navigation }: Props) => {
               })
             }
             style={styles.org}>
-            <Image
-              source={{ uri: selectedOrg.imageUrl }}
-              style={styles.iconOrg}
-            />
+            <RemoteImage uri={selectedOrg.imageUrl} style={styles.iconOrg} />
             <Text style={styles.textOrg}>{selectedOrg.name}</Text>
             <Image source={Images.Dropdown} />
           </TouchableOpacity>

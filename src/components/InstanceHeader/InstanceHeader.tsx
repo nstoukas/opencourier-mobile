@@ -1,10 +1,11 @@
 import React from 'react';
-import { StyleProp, ViewStyle, View, Text, Image } from 'react-native';
+import { StyleProp, ViewStyle, View, Text } from 'react-native';
 import { styles } from './InstanceHeader.styles';
 import { Instance } from '@app/types/types';
 import { useTranslation } from 'react-i18next';
 import { BackNavButton } from '../BackNavButton/BackNavButton';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { RemoteImage } from '@app/components/RemoteImage/RemoteImage';
 
 type Props = {
   style?: StyleProp<ViewStyle>;
@@ -31,10 +32,7 @@ export const InstanceHeader = ({
             {t(`translations:${headerPurpose}`) + ':'}
           </Text>
           <View style={styles.contentHeader}>
-            <Image
-              source={{ uri: instance.details.imageUrl }}
-              style={styles.image}
-            />
+            <RemoteImage uri={instance.details.imageUrl} style={styles.image} />
             <View style={styles.containerHeaderText}>
               <Text style={styles.textName}>{instance.details.name}</Text>
               <Text style={styles.textCount}>{`${t(

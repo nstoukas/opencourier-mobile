@@ -3,13 +3,13 @@ import {
   StyleProp,
   ViewStyle,
   View,
-  Image,
   Text,
   TouchableOpacity,
 } from 'react-native';
 import { styles } from './InstanceCell.styles';
 import { Instance } from '@app/types/types';
 import { useTranslation } from 'react-i18next';
+import { RemoteImage } from '@app/components/RemoteImage/RemoteImage';
 
 type Props = {
   style?: StyleProp<ViewStyle>;
@@ -23,10 +23,7 @@ export const InstanceCell = ({ style, instance, onPress }: Props) => {
   return (
     <TouchableOpacity onPress={() => onPress(instance)}>
       <View style={[styles.container, style]}>
-        <Image
-          source={{ uri: instance.details.imageUrl }}
-          style={styles.image}
-        />
+        <RemoteImage uri={instance.details.imageUrl} style={styles.image} />
         <View style={styles.containerText}>
           <Text style={styles.textName}>{instance.details.name}</Text>
           <Text style={styles.textLink}>{instance.details.link}</Text>

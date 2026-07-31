@@ -1,6 +1,5 @@
 import React from 'react';
 import {
-  Image,
   StyleProp,
   ViewStyle,
   View,
@@ -10,6 +9,7 @@ import {
 import { Images } from '@app/utilities/images';
 import { styles } from './OrganizationSelect.styles';
 import { Organization } from '@app/types/types';
+import { RemoteImage } from '@app/components/RemoteImage/RemoteImage';
 
 type Props = {
   style?: StyleProp<ViewStyle>;
@@ -23,7 +23,7 @@ export const OrganizationSelect = ({ style, organization, onPress }: Props) => {
       <TouchableOpacity
         style={styles.containerDropdown}
         onPress={() => onPress(organization)}>
-        <Image source={{ uri: organization.imageUrl }} style={styles.icon} />
+        <RemoteImage uri={organization.imageUrl} style={styles.icon} />
         <Text style={styles.text}>{organization.name}</Text>
         {/* <Image style={styles.dropdown} source={Images.Dropdown} /> */}
       </TouchableOpacity>

@@ -11,6 +11,7 @@ import { Images } from '@app/utilities/images';
 import { styles } from './OrganizationCell.styles';
 import { Organization } from '@app/types/types';
 import { Colors } from '@app/styles/colors';
+import { RemoteImage } from '@app/components/RemoteImage/RemoteImage';
 
 type Props = {
   style?: StyleProp<ViewStyle>;
@@ -32,7 +33,7 @@ export const OrganizationCell = ({
       onPress={() => onPress(organization)}>
       <View style={styles.content}>
         <View style={styles.contentLeft}>
-          <Image source={{ uri: imageUrl }} style={styles.imageLeft} />
+          <RemoteImage uri={imageUrl} style={styles.imageLeft} />
           <Text
             style={[
               styles.title,
