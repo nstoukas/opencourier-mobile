@@ -56,7 +56,7 @@ export const UserStatusSelector = ({ style, onPress, selected }: Props) => {
     }, [status]);
 
     return (
-      <TouchableOpacity key={status} onPress={() => onPress(status)}>
+      <TouchableOpacity onPress={() => onPress(status)}>
         <View style={[buttonStyle, { backgroundColor: buttonColor }]}>
           <Text style={[styles.text, { color: textColor }]}>
             {t(`translations:${status.toLowerCase()}`)}
@@ -69,7 +69,8 @@ export const UserStatusSelector = ({ style, onPress, selected }: Props) => {
   return (
     <View style={[styles.container, style]}>
       {data.map(item => {
-        return <StatusItem status={item} />;
+        // Same rule as HomeTabs: the key belongs on the element .map() returns.
+        return <StatusItem key={item} status={item} />;
       })}
     </View>
   );

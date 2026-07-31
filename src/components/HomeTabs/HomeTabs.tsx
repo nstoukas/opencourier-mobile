@@ -91,7 +91,10 @@ export const HomeTabs = ({
     <View style={[styles.container, style]}>
       <View style={styles.tabs}>
         {tabs.map(tab => {
-          return <TabItem tab={tab} />;
+          // `key` must sit on the element returned by .map() — it tells React which list item
+          // this is between renders. `tab` is the enum's string value ('new' | 'in_progress' |
+          // 'history'), unique within this list and the same on every render.
+          return <TabItem key={tab} tab={tab} />;
         })}
       </View>
     </View>
