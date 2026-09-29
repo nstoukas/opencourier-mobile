@@ -58,6 +58,8 @@ has the full reasoning and verification notes.
 ## Housekeeping
 
 - Ignored pipeline artifacts (`.aiflow/`, `plan.md`). `2c0fef6`
+- `AGENTS.md`, context for AI coding tools that points at the co-op workspace rulebook, and a
+  `CLAUDE.md` that imports it.
 
 ---
 
