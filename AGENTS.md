@@ -5,7 +5,7 @@
 The courier app: React Native 0.74, React Navigation, TanStack Query, Firebase messaging,
 react-native-maps. It uses the backend's `courier` API.
 
-**Read the workspace rulebook first: [`../AGENTS.md`](../AGENTS.md).** This repo sits inside the co-op workspace, and that file binds it: co-op values, locked decisions, domain language, boundaries, and the `aiflow.sh` pipeline every change goes through. Tools that stop at this repo's git root will not find it on their own. This file only adds what is specific to this component.
+**Read the workspace rulebook first: [`../AGENTS.md`](../AGENTS.md).** This repo sits inside the co-op workspace, and that file binds it: co-op values, locked decisions, domain language, boundaries, and the skill workflow every change goes through ("How work gets done here"). Tools that stop at this repo's git root will not find it on their own. This file only adds what is specific to this component.
 
 ## Key files
 
