@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   StyleProp,
   ViewStyle,
@@ -25,6 +25,7 @@ import {
 import { Paralelogram } from '../Paralelogram/Paralelogram';
 import { Colors } from '@app/styles/colors';
 import useUser from '@app/hooks/useUser';
+import { useCountdownBar } from '@app/hooks/useCountdownBar';
 
 const PARALELOGRAM_WIDTH = 16;
 const PARALELOGRAM_HEIGHT = 8;
@@ -58,12 +59,11 @@ export const NewOrderCell = ({
   const [duration, setDuration] = useState<number>(0); // seconds
   const numberOfParalelograms = Math.floor(SCREEN_WIDTH / PARALELOGRAM_WIDTH);
 
-  const widthAnimation = useRef(
-    new Animated.Value(
-      (millisRemaining ? millisRemaining : 0 / AUTO_ACCEPT_DECLINE_TIMER) *
-        PROGRESS_BAR_WIDTH,
-    ),
-  ).current;
+  const widthAnimation = useCountdownBar(
+    millisRemaining ?? 0,
+    AUTO_ACCEPT_DECLINE_TIMER,
+    PROGRESS_BAR_WIDTH,
+  );
 
   const paralelogramColor = (index: number) => {
     const even = index % 2 === 0;

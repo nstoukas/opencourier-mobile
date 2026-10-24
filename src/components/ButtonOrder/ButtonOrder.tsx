@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef } from 'react';
+import React, { useMemo } from 'react';
 import { Colors } from '@app/styles/colors';
 import {
   StyleProp,
@@ -18,6 +18,7 @@ import {
 } from '@app/utilities/constants';
 import { useTranslation } from 'react-i18next';
 import { Images } from '@app/utilities/images';
+import { useCountdownBar } from '@app/hooks/useCountdownBar';
 
 export enum ButtonOrderType {
   accept = 'accept',
@@ -51,24 +52,12 @@ export const ButtonOrder = ({
   autoAcceptOrders = false,
 }: Props) => {
   const { t } = useTranslation();
-  const widthAnimation = useRef(
-    new Animated.Value(
-      (millisRemaining / AUTO_ACCEPT_DECLINE_TIMER) * PROGRESS_BAR_WIDTH,
-    ),
-  ).current;
+  const widthAnimation = useCountdownBar(
+    millisRemaining,
+    AUTO_ACCEPT_DECLINE_TIMER,
+    PROGRESS_BAR_WIDTH,
+  );
   const numberOfParalelograms = Math.floor(SCREEN_WIDTH / PARALELOGRAM_WIDTH);
-
-  const animateElement = () => {
-    Animated.timing(widthAnimation, {
-      toValue: PROGRESS_BAR_WIDTH,
-      duration: AUTO_ACCEPT_DECLINE_TIMER,
-      useNativeDriver: false,
-    }).start();
-  };
-
-  useEffect(() => {
-    animateElement();
-  });
 
   const backgroundColor = useMemo(() => {
     switch (type) {
