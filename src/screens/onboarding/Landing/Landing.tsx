@@ -234,7 +234,7 @@ export const LandingScreen = ({ navigation }: Props) => {
   ]);
 
   return (
-    <View style={styles.container}>
+    <View style={styles.container} testID="landing-screen">
       <Image source={Images.NoiseBG} style={styles.background} />
       <SafeAreaView style={styles.safeArea}>
         <Image source={Images.OpenDeli} style={[styles.imageOpenDeli]} />

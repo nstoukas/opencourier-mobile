@@ -64,6 +64,7 @@
     "@react-native/eslint-config": "0.74.81",
     "@react-native/metro-config": "0.74.81",
     "@react-native/typescript-config": "0.74.81",
+    "@testing-library/react-native": "12.9.0",
     "@types/jest": "^29",
     "@types/react": "^18.2.6",
     "@types/react-test-renderer": "^18.0.0",
@@ -80,6 +81,9 @@
   },
   "jest": {
     "preset": "react-native",
+    "setupFiles": [
+      "./jest.setup.js"
+    ],
     "moduleFileExtensions": [
       "ts",
       "tsx",
@@ -89,7 +93,7 @@
       "node"
     ],
     "transformIgnorePatterns": [
-      "node_modules/(?!(?:jest-)?react-native|@react-native(?:-community)?|@react-navigation|react-native-.*)"
+      "node_modules/(?!(?:jest-)?react-native|@react-native(?:-community)?|@react-navigation|react-native-.*|@notifee|@thevsstech)"
     ]
   },
   "engines": {

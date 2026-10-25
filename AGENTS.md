@@ -20,9 +20,14 @@ react-native-maps. It uses the backend's `courier` API.
 Yarn 4 via Corepack (never 3.6.4). Android needs JDK 17 and the `adb reverse` wiring;
 the workspace rulebook has the setup, and `../devup.sh mobile` automates it.
 
+**Typecheck gate: `corepack yarn typecheck:baseline`.** It runs `tsc --noEmit`, fails when
+the error count is above `typecheck-baseline.json`, and lowers the file when the count drops
+(commit the lowered file). Use it instead of counting errors by hand against a stash.
+
 ## Conventions
 
-- Tests are `*.test.ts(x)` beside the code. Prefer hooks, services and pure utilities:
-  rendering the whole App needs native mocks that don't exist yet.
+- Tests are `*.test.ts(x)` beside the code. `jest.setup.js` mocks every native module
+  once, so a screen or the whole `App` can render under Jest (see `src/App.smoke.test.tsx`);
+  use fake timers when rendering `App`, or React Query's timers keep Jest from exiting.
 
 _Drafted by /audit from the repo, worth a quick human pass. Edit freely: once a line stops matching this draft, later runs treat it as curated and will flag rather than overwrite it._

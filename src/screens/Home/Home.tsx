@@ -351,7 +351,7 @@ export const HomeScreen = ({ navigation }: Props) => {
   }, [dataSource.length, isLoadingOrders, selectedTab]);
 
   return (
-    <View style={styles.container}>
+    <View style={styles.container} testID="home-screen">
       <HomeHeader
         orderDeliveredNotification={orderDeliveredNotif}
         onCloseOrderDeliveredNotification={() =>
