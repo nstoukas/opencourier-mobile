@@ -12,10 +12,7 @@ import {
 } from 'react-native';
 import { styles } from './ButtonOrder.styles';
 import { Paralelogram } from '../Paralelogram/Paralelogram';
-import {
-  AUTO_ACCEPT_DECLINE_TIMER,
-  SCREEN_WIDTH,
-} from '@app/utilities/constants';
+import { SCREEN_WIDTH } from '@app/utilities/constants';
 import { useTranslation } from 'react-i18next';
 import { Images } from '@app/utilities/images';
 import { useCountdownBar } from '@app/hooks/useCountdownBar';
@@ -37,7 +34,10 @@ type Props = {
   style?: StyleProp<ViewStyle>;
   textStyle?: StyleProp<TextStyle>;
   type?: ButtonOrderType;
-  millisRemaining?: number;
+  // Time left before the offer's deadline; null when it has no deadline.
+  millisRemaining?: number | null;
+  // The whole countdown length, for the bar.
+  totalMillis?: number | null;
   autoAcceptOrders: boolean;
   onPress: () => void;
 };
@@ -48,13 +48,14 @@ export const ButtonOrder = ({
   textStyle,
   type = ButtonOrderType.accept,
   onPress,
-  millisRemaining = 0,
+  millisRemaining = null,
+  totalMillis = null,
   autoAcceptOrders = false,
 }: Props) => {
   const { t } = useTranslation();
   const widthAnimation = useCountdownBar(
-    millisRemaining,
-    AUTO_ACCEPT_DECLINE_TIMER,
+    millisRemaining ?? 0,
+    totalMillis ?? 0,
     PROGRESS_BAR_WIDTH,
   );
   const numberOfParalelograms = Math.floor(SCREEN_WIDTH / PARALELOGRAM_WIDTH);
@@ -122,22 +123,27 @@ export const ButtonOrder = ({
       <Text style={[styles.textTitle, textStyle, { color: textColor }]}>
         {t(`translations:${type}`)}
       </Text>
-      {type === ButtonOrderType.accept && autoAcceptOrders && (
-        <View style={[styles.containerLoader, { height: PARALELOGRAM_HEIGHT }]}>
-          {[...Array(numberOfParalelograms).keys()]
-            .map(i => i)
-            .map(index => {
-              return (
-                <Paralelogram
-                  backgroundColor={paralelogramColor(index)}
-                  width={PARALELOGRAM_WIDTH}
-                  height={PARALELOGRAM_HEIGHT}
-                />
-              );
-            })}
-          <Animated.View style={[styles.progress, { width: widthAnimation }]} />
-        </View>
-      )}
+      {type === ButtonOrderType.accept &&
+        autoAcceptOrders &&
+        millisRemaining !== null && (
+          <View
+            style={[styles.containerLoader, { height: PARALELOGRAM_HEIGHT }]}>
+            {[...Array(numberOfParalelograms).keys()]
+              .map(i => i)
+              .map(index => {
+                return (
+                  <Paralelogram
+                    backgroundColor={paralelogramColor(index)}
+                    width={PARALELOGRAM_WIDTH}
+                    height={PARALELOGRAM_HEIGHT}
+                  />
+                );
+              })}
+            <Animated.View
+              style={[styles.progress, { width: widthAnimation }]}
+            />
+          </View>
+        )}
     </TouchableOpacity>
   );
 };

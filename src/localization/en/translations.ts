@@ -394,4 +394,9 @@ export default {
   report_and_finalize: 'Report Issue and Finalize Delivery',
   handed_to_customer: 'Handed Over Directly To Customer',
   slide_to_start: 'Slide to start accepting deliveries',
+  // Offers with no deadline (spec 0002, AC-4) and offers that ended (AC-5).
+  offer_waiting_minutes: 'Waiting {{minutes}} min',
+  offer_waiting_just_now: 'Waiting less than 1 min',
+  offer_reminder_title: 'An offer is waiting for you',
+  offer_has_ended: 'This offer has ended',
 };

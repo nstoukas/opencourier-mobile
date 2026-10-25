@@ -18,10 +18,7 @@ import { metersToMiles } from '@app/utilities/geo';
 import { secondsToMinutes } from '@app/utilities/dates';
 import { getDistance } from '@app/utilities/geo';
 import { formatCurrencyFromCents } from '@app/utilities/currency';
-import {
-  AUTO_ACCEPT_DECLINE_TIMER,
-  SCREEN_WIDTH,
-} from '@app/utilities/constants';
+import { SCREEN_WIDTH } from '@app/utilities/constants';
 import { Paralelogram } from '../Paralelogram/Paralelogram';
 import { Colors } from '@app/styles/colors';
 import useUser from '@app/hooks/useUser';
@@ -40,7 +37,25 @@ type Props = {
   onDecline: (order: Order) => void;
   onCopyCustomer: (order: Order) => void;
   onCopyRestaurant: (order: Order) => void;
-  millisRemaining?: number;
+  // Time left before the server's deadline; null when the offer has no
+  // deadline (Offer expiry off), and then no bar is drawn (spec 0002).
+  millisRemaining?: number | null;
+  // The whole countdown length, so the bar starts at the share already used.
+  totalMillis?: number | null;
+  // How long the offer has waited, for the "Waiting X min" line shown when
+  // there is no deadline (AC-4).
+  millisWaited?: number | null;
+};
+
+// "Waiting 3 min", or "Waiting less than 1 min" for a fresh offer.
+const waitingText = (
+  millisWaited: number,
+  t: (key: string, options?: Record<string, unknown>) => string,
+) => {
+  const minutes = Math.floor(millisWaited / 60000);
+  return minutes < 1
+    ? t('translations:offer_waiting_just_now')
+    : t('translations:offer_waiting_minutes', { minutes });
 };
 
 export const NewOrderCell = ({
@@ -51,7 +66,9 @@ export const NewOrderCell = ({
   autoAcceptOrders,
   onCopyCustomer,
   onCopyRestaurant,
-  millisRemaining,
+  millisRemaining = null,
+  totalMillis = null,
+  millisWaited = null,
 }: Props) => {
   const { t } = useTranslation();
   const { user } = useUser();
@@ -59,9 +76,12 @@ export const NewOrderCell = ({
   const [duration, setDuration] = useState<number>(0); // seconds
   const numberOfParalelograms = Math.floor(SCREEN_WIDTH / PARALELOGRAM_WIDTH);
 
+  // An offer with a deadline shows a countdown bar; one without shows how
+  // long it has waited instead.
+  const hasDeadline = millisRemaining !== null;
   const widthAnimation = useCountdownBar(
     millisRemaining ?? 0,
-    AUTO_ACCEPT_DECLINE_TIMER,
+    totalMillis ?? 0,
     PROGRESS_BAR_WIDTH,
   );
 
@@ -96,6 +116,11 @@ export const NewOrderCell = ({
           order.currencyCode,
         )}
       </Text>
+      {!hasDeadline && millisWaited !== null && (
+        <Text style={styles.textWaiting} testID="offer-waiting">
+          {waitingText(millisWaited, t)}
+        </Text>
+      )}
       <View style={styles.separator} />
       <View style={styles.content}>
         <View style={styles.containerLeft}>
@@ -157,6 +182,7 @@ export const NewOrderCell = ({
       <>
         <ButtonOrder
           millisRemaining={millisRemaining}
+          totalMillis={totalMillis}
           style={styles.buttonTop}
           type={ButtonOrderType.accept}
           onPress={() => onAccept(order)}
@@ -168,7 +194,7 @@ export const NewOrderCell = ({
           autoAcceptOrders={autoAcceptOrders}
         />
       </>
-      {!autoAcceptOrders && (
+      {!autoAcceptOrders && hasDeadline && (
         <View style={[styles.containerLoader, { height: PARALELOGRAM_HEIGHT }]}>
           {[...Array(numberOfParalelograms).keys()]
             .map(i => i)

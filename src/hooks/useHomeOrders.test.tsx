@@ -2,7 +2,11 @@ import React from 'react';
 import renderer, { act } from 'react-test-renderer';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { OrderSetting } from '@app/types/enums';
-import { AUTO_ACCEPT_DECLINE_TIMER } from '@app/utilities/constants';
+// Compile edit for row 61 (spec 0002): the app's fixed 60 s timer is gone
+// (offers now take the server's deadline), so these row 60 tests keep the
+// number locally. The tests of an answer fired at zero were removed with that
+// behavior (decision 61.22); agy writes the row 61 tests.
+const AUTO_ACCEPT_DECLINE_TIMER = 60000;
 import { QueryKeys } from '@app/utilities/queryKeys';
 
 jest.mock('@react-native-async-storage/async-storage', () =>
@@ -68,33 +72,6 @@ describe('useHomeOrders', () => {
   afterEach(() => {
     queryClient.clear();
     jest.useRealTimers();
-  });
-
-  it('declines on expiry when in manual mode', async () => {
-    mockDeliverySetting = OrderSetting.manual;
-    queryClient.setQueryData([QueryKeys.newOrders], [{ id: 'order-123' }]);
-
-    let tree: renderer.ReactTestRenderer;
-    await act(async () => {
-      tree = renderer.create(
-        <QueryClientProvider client={queryClient}>
-          <HookHost onRender={() => {}} />
-        </QueryClientProvider>,
-      );
-    });
-
-    await act(async () => {
-      jest.advanceTimersByTime(AUTO_ACCEPT_DECLINE_TIMER);
-      await Promise.resolve();
-    });
-
-    expect(mockDeclineOrder).toHaveBeenCalledTimes(1);
-    expect(mockDeclineOrder).toHaveBeenCalledWith('order-123');
-    expect(mockAcceptOrder).not.toHaveBeenCalled();
-
-    act(() => {
-      tree.unmount();
-    });
   });
 
   it('accepts on expiry when in auto_accept mode', async () => {
@@ -361,120 +338,6 @@ describe('useHomeOrders', () => {
       // Sent once on retry (total 2 calls: 1 initial failed + 1 manual retry; 2nd tap ignored)
       expect(mockAcceptOrder).toHaveBeenCalledTimes(2);
       expect(hookResult?.dataSourceNew).toEqual([]);
-
-      act(() => {
-        tree.unmount();
-      });
-    });
-
-    it('puts offer back on New list after failed decline without restarting automatic timer', async () => {
-      mockDeliverySetting = OrderSetting.manual;
-      queryClient.setQueryData([QueryKeys.newOrders], [{ id: 'order-123' }]);
-
-      let hookResult: ReturnType<typeof useHomeOrders> | undefined;
-      let tree: renderer.ReactTestRenderer;
-      await act(async () => {
-        tree = renderer.create(
-          <QueryClientProvider client={queryClient}>
-            <HookHost
-              onRender={h => {
-                hookResult = h;
-              }}
-            />
-          </QueryClientProvider>,
-        );
-      });
-
-      // Automatic decline on expiry fails
-      mockDeclineOrder.mockRejectedValueOnce(new Error('Decline failed'));
-      await act(async () => {
-        jest.advanceTimersByTime(AUTO_ACCEPT_DECLINE_TIMER);
-        await Promise.resolve();
-      });
-
-      expect(mockDeclineOrder).toHaveBeenCalledTimes(1);
-      // Offer is back on the New list
-      expect(hookResult?.dataSourceNew.map(o => o.id)).toEqual(['order-123']);
-
-      // Advancing time further does not fire a second automatic decline
-      await act(async () => {
-        jest.advanceTimersByTime(AUTO_ACCEPT_DECLINE_TIMER * 2);
-        await Promise.resolve();
-      });
-      expect(mockDeclineOrder).toHaveBeenCalledTimes(1);
-
-      // Rider can manually decline after failure
-      mockDeclineOrder.mockResolvedValueOnce({});
-      await act(async () => {
-        hookResult?.declineOrderFn('order-123');
-        await Promise.resolve();
-      });
-      expect(mockDeclineOrder).toHaveBeenCalledTimes(2);
-
-      act(() => {
-        tree.unmount();
-      });
-    });
-
-    it('removes offer on successful send, and a later fetch still listing the same id starts a fresh countdown', async () => {
-      queryClient.setQueryData([QueryKeys.newOrders], [{ id: 'order-123' }]);
-
-      let hookResult: ReturnType<typeof useHomeOrders> | undefined;
-      let tree: renderer.ReactTestRenderer;
-      await act(async () => {
-        tree = renderer.create(
-          <QueryClientProvider client={queryClient}>
-            <HookHost
-              onRender={h => {
-                hookResult = h;
-              }}
-            />
-          </QueryClientProvider>,
-        );
-      });
-
-      expect(hookResult?.timeLeftForOffer('order-123')).toBe(
-        AUTO_ACCEPT_DECLINE_TIMER,
-      );
-
-      // Successful accept removes the offer and forgets it
-      mockAcceptOrder.mockResolvedValueOnce({});
-      mockGetNewOrders.mockResolvedValueOnce([]);
-      await act(async () => {
-        hookResult?.acceptOrderFn('order-123');
-        await Promise.resolve();
-      });
-
-      expect(hookResult?.dataSourceNew).toEqual([]);
-      expect(hookResult?.timeLeftForOffer('order-123')).toBe(0);
-
-      // Simulate time passing (30s)
-      act(() => {
-        jest.advanceTimersByTime(30000);
-      });
-
-      // A later fetch still lists the same id (decision 60.3)
-      mockGetNewOrders.mockResolvedValueOnce([{ id: 'order-123' }]);
-      await act(async () => {
-        await hookResult?.refetchNew();
-        jest.advanceTimersByTime(0);
-        await Promise.resolve();
-      });
-
-      // Offer is back on New list with a fresh full countdown
-      expect(hookResult?.dataSourceNew.map(o => o.id)).toEqual(['order-123']);
-      expect(hookResult?.timeLeftForOffer('order-123')).toBe(
-        AUTO_ACCEPT_DECLINE_TIMER,
-      );
-
-      // Advancing timers by 60s expires the newly offered countdown and declines it
-      await act(async () => {
-        jest.advanceTimersByTime(AUTO_ACCEPT_DECLINE_TIMER);
-        await Promise.resolve();
-      });
-
-      expect(mockDeclineOrder).toHaveBeenCalledTimes(1);
-      expect(mockDeclineOrder).toHaveBeenCalledWith('order-123');
 
       act(() => {
         tree.unmount();

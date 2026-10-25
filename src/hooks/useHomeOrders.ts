@@ -1,14 +1,24 @@
 import { Order, UserStatus } from '@app/types/types';
 import { services } from '@app/services/service';
 import { useEffect, useRef, useState } from 'react';
-import { AUTO_ACCEPT_DECLINE_TIMER } from '@app/utilities/constants';
 import { OrderSetting } from '@app/types/enums';
 import { filterInProgressOrdersForDisplay } from '@app/utilities/inProgressListFilter';
 import { Alert } from 'react-native';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { QueryKeys } from '@app/utilities/queryKeys';
 import useUser from './useUser';
-import { OfferCountdowns } from '@app/utilities/offerCountdowns';
+import { OfferCountdowns, OfferTiming } from '@app/utilities/offerCountdowns';
+import { isOfferEndedError } from '@app/services/orderService';
+import { remindRiderOfOffer } from '@app/services/offerReminder';
+import i18next from 'i18next';
+
+// An offer's timing as the countdowns need it (spec 0002).
+const offerTimingOf = (order: Order): OfferTiming => ({
+  id: order.id,
+  offerKey: order.offeredAt ?? null,
+  offeredAt: order.phoneClock?.offeredAt ?? null,
+  expiresAt: order.phoneClock?.expiresAt ?? null,
+});
 
 export const useHomeOrders = () => {
   const [dataSourceNew, setDataSourceNew] = useState<Order[]>([]);
@@ -45,23 +55,35 @@ export const useHomeOrders = () => {
     queryKey: [QueryKeys.orderHistory],
   });
 
-  // One countdown per offer (row 60). `useRef` keeps the same object for the
-  // whole life of the screen, so a re-render or a refetch never makes a new one.
+  // Bumped by each reminder, so the "Waiting X min" line is drawn again.
+  const [, setReminderTick] = useState(0);
+
+  // One countdown per offer (rows 60, 61). `useRef` keeps the same object for
+  // the whole life of the screen, so a re-render or a refetch never makes a
+  // new one. Its timers fire long after this render, so they call whatever
+  // function is in `refetchNewRef` then, not one captured now.
+  const refetchNewRef = useRef<() => void>(() => undefined);
+  refetchNewRef.current = () => {
+    refetchNew();
+  };
   const countdownsRef = useRef<OfferCountdowns | null>(null);
-  // The timer calls whatever function is in this ref when it fires, so it
-  // always sees the latest user setting, not the one from when it started.
-  const onExpireRef = useRef<(orderId: string) => void>(() => undefined);
   if (countdownsRef.current === null) {
-    countdownsRef.current = new OfferCountdowns(
-      AUTO_ACCEPT_DECLINE_TIMER,
-      orderId => onExpireRef.current(orderId),
-    );
+    countdownsRef.current = new OfferCountdowns({
+      // The deadline passed: look again, in case the socket message saying
+      // the offer ended was missed. The phone never declines by itself.
+      onDeadline: () => refetchNewRef.current(),
+      // Expiry off: the offer is still waiting, alert the rider again (AC-4).
+      onReminder: (orderId, waitedMs) => {
+        remindRiderOfOffer(orderId, waitedMs);
+        setReminderTick(tick => tick + 1);
+      },
+    });
   }
   const countdowns = countdownsRef.current;
 
-  // Latest fetched offers, read when a failed send puts an offer back.
+  // Latest fetched offers, read when a failed send puts an offer back. Set
+  // on every render, below, once the rider's status is known.
   const newOrdersRef = useRef<Order[] | undefined>(newOrders);
-  newOrdersRef.current = newOrders;
 
   // Show the fetched offers the rider can still answer. This skips offers
   // being accepted or declined, and offers already answered whose refetch has
@@ -78,6 +100,16 @@ export const useHomeOrders = () => {
     showUnclaimedOffers();
   };
 
+  // The server said the offer had already ended (409, AC-5): it expired, the
+  // rider went Offline, or an admin moved it. Drop it, say so once, and do
+  // not try again.
+  const dropEndedOffer = (orderId: string) => {
+    countdowns.forget(orderId);
+    setDataSourceNew(current => current.filter(order => order.id !== orderId));
+    refetchNewRef.current();
+    Alert.alert(i18next.t('translations:offer_has_ended'));
+  };
+
   // mutations
 
   const { mutate: acceptOrder } = useMutation({
@@ -89,6 +121,10 @@ export const useHomeOrders = () => {
       refetchInProgress();
     },
     onError: (error, orderId) => {
+      if (isOfferEndedError(error)) {
+        dropEndedOffer(orderId);
+        return;
+      }
       releaseOffer(orderId);
       Alert.alert('Error accepting order', error.message);
     },
@@ -101,6 +137,10 @@ export const useHomeOrders = () => {
       refetchNew();
     },
     onError: (error, orderId) => {
+      if (isOfferEndedError(error)) {
+        dropEndedOffer(orderId);
+        return;
+      }
       releaseOffer(orderId);
       Alert.alert('Error declining order', error.message);
     },
@@ -113,6 +153,12 @@ export const useHomeOrders = () => {
   ]);
 
   const { user } = useUser();
+
+  // An Offline rider holds no offers: the server ends every offer the moment
+  // the rider goes Offline (AC-6), and the live connection that would say so
+  // closes at the same moment, so the phone does not wait to be told.
+  const isOffline = user?.status === UserStatus.Offline;
+  newOrdersRef.current = newOrders === undefined || !isOffline ? newOrders : [];
 
   const acceptOrderFn = (orderId: string) => {
     // Only the first accept or decline for an offer is sent.
@@ -131,22 +177,31 @@ export const useHomeOrders = () => {
     setDataSourceNew(current => current.filter(order => order.id !== orderId));
   };
 
-  onExpireRef.current = (orderId: string) =>
-    user?.deliverySetting === OrderSetting.auto_accept
-      ? acceptOrderFn(orderId)
-      : declineOrderFn(orderId);
+  const autoAccept = user?.deliverySetting === OrderSetting.auto_accept;
 
   useEffect(() => {
-    if (newOrders !== undefined) {
-      // Starts a countdown only for offers seen for the first time; stops the
-      // countdown of offers that are gone.
-      countdowns.sync(newOrders.map(order => order.id));
+    const offers = newOrdersRef.current;
+    if (offers !== undefined) {
+      // Tracks offers seen for the first time (or offered again); stops the
+      // timer of offers that are gone.
+      countdowns.sync(offers.map(offerTimingOf));
+      // Auto accept riders: the phone accepts each offer as soon as it
+      // arrives (AC-8), at most once per offer. The server never accepts on
+      // the rider's behalf.
+      if (autoAccept) {
+        for (const order of offers) {
+          if (countdowns.claimForAutoAccept(order.id)) {
+            acceptOrder(order.id);
+          }
+        }
+      }
       showUnclaimedOffers();
     }
     // `countdowns` is the same object for the screen's whole life and
-    // `showUnclaimedOffers` reads refs, so only a new fetch should rerun this.
+    // `showUnclaimedOffers` reads refs, so only a new fetch, going Offline or
+    // a change of the rider's setting should rerun this.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [newOrders]);
+  }, [newOrders, autoAccept, isOffline]);
 
   // Stop every countdown when the screen goes away.
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -190,8 +245,13 @@ export const useHomeOrders = () => {
     dataSourceNew,
     dataSourceHistory,
     dataSourceInProgress,
-    // Milliseconds left on an offer's countdown, for the progress bar.
+    // Milliseconds left before an offer's deadline, for the progress bar;
+    // null when the offer has no deadline (no bar is shown).
     timeLeftForOffer: (orderId: string) => countdowns.timeLeft(orderId),
+    // The offer's whole countdown length, for the bar; null with no deadline.
+    totalTimeForOffer: (orderId: string) => countdowns.totalTime(orderId),
+    // How long an offer has waited since it was made ("Waiting X min").
+    waitedTimeForOffer: (orderId: string) => countdowns.waitedTime(orderId),
     acceptOrderFn,
     declineOrderFn,
     //Temp fix

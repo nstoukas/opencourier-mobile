@@ -18,7 +18,17 @@ export const SCREEN_HORIZONTAL_MARGIN = 32;
 
 export const isSmallDevice = SCREEN_WIDTH < 330;
 
-export const AUTO_ACCEPT_DECLINE_TIMER = 60000;
+// Offer timing on the phone (spec 0002). The deadline itself always comes
+// from the server; these only say when the phone looks again or alerts again.
+//
+// The server ends an expired offer 3 s after its deadline (a network
+// allowance). The phone fetches the list once, 1 s after that, in case the
+// socket message saying the offer ended was missed. It sends nothing.
+export const OFFER_END_CHECK_DELAY_MS = 4000;
+// With Offer expiry off, a waiting offer alerts again this often (AC-4)...
+export const OFFER_REMINDER_EVERY_MS = 30000;
+// ...and vibrates longer once it has waited this long (AC-4).
+export const OFFER_REMINDER_LONGER_AFTER_MS = 120000;
 export const MAP_ACTION_SHEET_OPTIONS_IOS = [
   MapLinkingOptions.apple,
   MapLinkingOptions.google,

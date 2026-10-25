@@ -16,6 +16,12 @@ export const styles = StyleSheet.create({
     color: Colors.black3,
     textAlign: 'center',
   },
+  textWaiting: {
+    fontSize: 16,
+    color: Colors.black7,
+    textAlign: 'center',
+    marginTop: 4,
+  },
   separator: {
     height: 2,
     backgroundColor: Colors.gray1,

@@ -60,6 +60,8 @@ export const HomeScreen = ({ navigation }: Props) => {
     dataSourceHistory,
     dataSourceInProgress,
     timeLeftForOffer,
+    totalTimeForOffer,
+    waitedTimeForOffer,
     refetchNew,
     refetchInProgress,
     refechHistory,
@@ -116,6 +118,8 @@ export const HomeScreen = ({ navigation }: Props) => {
         return (
           <NewOrderCell
             millisRemaining={timeLeftForOffer(item.id)}
+            totalMillis={totalTimeForOffer(item.id)}
+            millisWaited={waitedTimeForOffer(item.id)}
             autoAcceptOrders={autoAcceptOrders}
             order={item}
             onAccept={order => acceptOrderFn(order.id)}
@@ -375,9 +379,10 @@ export const HomeScreen = ({ navigation }: Props) => {
       )}
 
       <FlatList
-        // Key each row by its delivery id, so a row (and its countdown bar)
-        // stays with its own offer when the list changes.
-        keyExtractor={item => item.id}
+        // Key each row by its delivery id and offer time, so a row (and its
+        // countdown bar) stays with its own offer when the list changes, and a
+        // new offer of the same delivery gets a fresh row.
+        keyExtractor={item => `${item.id}-${item.offeredAt ?? ''}`}
         data={dataSource}
         renderItem={renderItem}
         ListEmptyComponent={ListEmptyComponent}
