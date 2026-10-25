@@ -26,7 +26,11 @@ type SectionListItem = {
 export const AccessibilityScreen = ({ navigation }: Props) => {
   const { t } = useTranslation();
 
-  const [form, setForm] = useState({
+  // A partial map from every option to a switch value, since the list looks the form
+  // up by any option, not only the six switches set here.
+  const [form, setForm] = useState<
+    Partial<Record<AccessibilitySettingsOptions, boolean>>
+  >({
     [AccessibilitySettingsOptions.differentSounds]: false,
     [AccessibilitySettingsOptions.screenFlash]: false,
     [AccessibilitySettingsOptions.vibration]: false,

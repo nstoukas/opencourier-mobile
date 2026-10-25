@@ -21,7 +21,9 @@ type Props = {
 
 type TextFieldProps = TextInputProps & Props;
 
-export const TextField = forwardRef((props: TextFieldProps, ref) => {
+// forwardRef<TextInput, ...> says what the ref points at (the inner TextInput), so a
+// parent's ref type is checked. The generic only adds types; runtime is unchanged.
+export const TextField = forwardRef<TextInput, TextFieldProps>((props, ref) => {
   const {
     value,
     placeholder,

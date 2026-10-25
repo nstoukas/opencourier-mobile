@@ -1,5 +1,11 @@
 import { Order, Photo, OrderItem } from '@app/types/types';
-import { NavigationProp, RouteProp } from '@react-navigation/native';
+import {
+  CompositeNavigationProp,
+  NavigationProp,
+  RouteProp,
+} from '@react-navigation/native';
+// `import type` brings in only the type, so no runtime import cycle with ../types.
+import type { RootStackParamList } from '../types';
 
 export enum MainScreens {
   Drawer = 'Drawer',
@@ -45,7 +51,8 @@ export type MainStackParamList = {
   Licences: undefined;
   LanguageScreen: undefined;
   ThemeScreen: undefined;
-  OperatingArea: undefined;
+  // The key must equal the route name, which is the enum's value 'operatingArea' (lower case o).
+  operatingArea: undefined;
   Accessibility: undefined;
   DefaultSound: undefined;
   MyLanguages: undefined;
@@ -71,7 +78,15 @@ export type MainStackParamList = {
   };
 };
 
-export type MainNavigationProp = NavigationProp<MainStackParamList>;
+/**
+ * The main stack sits inside the root stack, so a main screen can also open the root's
+ * modals (AddNoteModal, SelectOrganizationModal). The composite type lets TypeScript
+ * accept both sets of route names; at runtime React Navigation already bubbles the call up.
+ */
+export type MainNavigationProp = CompositeNavigationProp<
+  NavigationProp<MainStackParamList>,
+  NavigationProp<RootStackParamList>
+>;
 export type MainRouteProp<T extends MainScreens> = RouteProp<
   MainStackParamList,
   T

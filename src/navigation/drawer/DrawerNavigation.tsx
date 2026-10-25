@@ -1,5 +1,5 @@
 import React from 'react';
-import { DrawerScreens } from './types';
+import { DrawerScreens, DrawerStackParamList } from './types';
 import { HomeScreen } from '@app/screens/Home/Home';
 import { createDrawerNavigator } from '@react-navigation/drawer';
 import { SideMenu } from '@app/screens/SideMenu/SideMenu';
@@ -7,7 +7,8 @@ import { Earnings } from '@app/screens/Earnings/Earnings';
 import { PaymentMethods } from '@app/screens/PaymentMethods/PaymentMethods';
 import { SettingsScreen } from '@app/screens/Settings/Settings';
 
-const DrawerNavigator = createDrawerNavigator();
+// Same idea as the main stack: the param list types each drawer screen's route.
+const DrawerNavigator = createDrawerNavigator<DrawerStackParamList>();
 
 const DEFAULT_OPTIONS = { headerShown: false };
 

@@ -1,10 +1,8 @@
 import { DeliveryType, User, UserResponse } from '@app/types/types';
 import { UClient } from './Client';
 import {
-  UserParams,
   LoginParams,
   SignupParams,
-  SettingsParams,
   UserServiceResponse,
   LoginResponse,
   UserSettings,
@@ -16,8 +14,11 @@ export interface UserService {
   signup: (params: SignupParams) => Promise<LoginResponse>;
   getUser: () => Promise<User>;
   getUserSettings: () => Promise<UserSettings>;
-  updateUserSettings: (params: Partial<UserSettings>) => Promise<UserSettings>;
-  updateUser: (params: UserParams) => Promise<UserServiceResponse>;
+  // Resolves with the raw PATCH response; the only caller (useUserSettings) ignores it
+  // and refetches the settings instead.
+  updateUserSettings: (
+    params: Partial<UserSettings>,
+  ) => Promise<UserServiceResponse>;
   setUserStatus: (status: string) => Promise<any>;
   setDeliverySettings: (settings: string) => Promise<any>;
   setUserLocation: (params: {
@@ -58,13 +59,13 @@ const userService = (client: UClient): UserService => {
     return client.patch('courier/delivery-setting', { deliverySetting });
   };
 
-  const getUserSettings = async (): Promise<UserServiceResponse> => {
+  const getUserSettings = async (): Promise<UserSettings> => {
     const { data } = await client.get('courier-settings');
     return data.result;
   };
 
   const updateUserSettings = async (
-    params: SettingsParams,
+    params: Partial<UserSettings>,
   ): Promise<UserServiceResponse> => {
     return client.patch('courier-settings', params);
   };

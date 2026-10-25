@@ -1,8 +1,6 @@
-import {
-  CompositeNavigationProp,
-  NavigationProp,
-  RouteProp,
-} from '@react-navigation/native';
+import { CompositeNavigationProp, RouteProp } from '@react-navigation/native';
+// Renamed on import because this file exports its own DrawerNavigationProp below.
+import { DrawerNavigationProp as LibraryDrawerNavigationProp } from '@react-navigation/drawer';
 import { MainNavigationProp } from '../main/types';
 
 export enum DrawerScreens {
@@ -25,7 +23,9 @@ export type DrawerStackParamList = {
  * screens EarningsDay / PayoutActivity without TypeScript rejecting the route name.
  */
 export type DrawerNavigationProp = CompositeNavigationProp<
-  NavigationProp<DrawerStackParamList>,
+  // The drawer library's own prop type adds openDrawer, closeDrawer and toggleDrawer,
+  // which the plain NavigationProp does not know about.
+  LibraryDrawerNavigationProp<DrawerStackParamList>,
   MainNavigationProp
 >;
 export type DrawerRouteProp<T extends DrawerScreens> = RouteProp<

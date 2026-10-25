@@ -8,7 +8,8 @@
     "start": "react-native start",
     "test": "jest",
     "lint": "eslint . --ext .js,.jsx,.ts,.tsx",
-    "postinstall": "patch-package && npm-license-crawler -onlyDirectDependencies -json licenses.json"
+    "postinstall": "patch-package && npm-license-crawler -onlyDirectDependencies -json licenses.json",
+    "typecheck:baseline": "node scripts/typecheck-baseline.js"
   },
   "proxy": "http://10.0.0.187:3001/",
   "dependencies": {

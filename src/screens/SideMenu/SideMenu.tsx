@@ -1,8 +1,11 @@
 import React, { useContext, useEffect, useState } from 'react';
 import { View, Text, Alert } from 'react-native';
-import { RootScreen, RootScreenProp } from '@app/navigation/types';
+import { RootScreen } from '@app/navigation/types';
 import { styles } from './SideMenu.styles';
-import { DrawerContentScrollView } from '@react-navigation/drawer';
+import {
+  DrawerContentComponentProps,
+  DrawerContentScrollView,
+} from '@react-navigation/drawer';
 import { ProfileBadge } from '@app/components/ProfileBadge/ProfileBadge';
 import { Organization, SideMenuItem, UserStatus } from '@app/types/types';
 import { UserStatusSelector } from '@app/components/UserStatusSelector/UserStatusSelector';
@@ -28,7 +31,9 @@ import { useQueryClient } from '@tanstack/react-query';
 import { services } from '@app/services/service';
 import useInstance from '@app/hooks/useInstance';
 
-type Props = RootScreenProp<RootScreen.Loading>;
+// The side menu is the drawer's content, not a screen, so it receives the drawer's
+// content props (no route), which is the type the drawer library exports for it.
+type Props = DrawerContentComponentProps;
 
 const section1 = [SideMenuItem.Location, SideMenuItem.AutoOrders];
 const section2 = [

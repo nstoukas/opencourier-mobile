@@ -1,6 +1,5 @@
 import useUser from '@app/hooks/useUser';
 import { services } from '@app/services/service';
-import { Order } from '@app/types/types';
 import { QueryKeys } from '@app/utilities/queryKeys';
 import { filterInProgressOrdersForDisplay } from '@app/utilities/inProgressListFilter';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -47,10 +46,7 @@ const SocketProvider = ({ children }: Props) => {
     queryKey: [QueryKeys.inProgressOrders],
     enabled: !!user,
     // Same filter as the In Progress tab: delivered or canceled jobs do not count.
-    // The service's declared return type is wrong (it really returns a list of
-    // orders), so the value is cast here rather than trusted.
-    select: data =>
-      filterInProgressOrdersForDisplay(data as unknown as Order[]),
+    select: data => filterInProgressOrdersForDisplay(data),
   });
 
   const refetch = (keys: string[]) =>

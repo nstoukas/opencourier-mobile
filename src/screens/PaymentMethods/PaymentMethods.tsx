@@ -6,7 +6,7 @@ import {
   KeyboardAvoidingView,
   ScrollView,
 } from 'react-native';
-import { RootScreen, RootScreenProp } from '@app/navigation/types';
+import { DrawerScreenProp, DrawerScreens } from '@app/navigation/drawer/types';
 import { styles } from './PaymentMethods.styles';
 import LinearGradient from 'react-native-linear-gradient';
 import { BackNavButton } from '@app/components/BackNavButton/BackNavButton';
@@ -18,7 +18,7 @@ import { PaymentTabItem } from '@app/types/types';
 import { Button } from '@app/components/Button/Button';
 import { useTranslation } from 'react-i18next';
 
-type Props = RootScreenProp<RootScreen.Loading>;
+type Props = DrawerScreenProp<DrawerScreens.PaymentMethods>;
 
 export const PaymentMethods = ({ navigation }: Props) => {
   const { t } = useTranslation();

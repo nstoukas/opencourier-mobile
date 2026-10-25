@@ -5,8 +5,9 @@ import { Order } from '@app/types/types';
 export interface OrderService {
   // The list of offers (the `data` array of the paginated response).
   getNewOrders: () => Promise<Order[]>;
-  getInProgressOrders: () => Promise<OrderServiceReponse>;
-  getOrdersHistory: () => Promise<OrderServiceReponse>;
+  // Both return `data.result.data`, the same orders array as getNewOrders.
+  getInProgressOrders: () => Promise<Order[]>;
+  getOrdersHistory: () => Promise<Order[]>;
   acceptOrder: (id: string) => Promise<OrderServiceReponse>;
   declineOrder: (id: string) => Promise<OrderServiceReponse>;
   confirmItems: (params: {
@@ -27,14 +28,14 @@ const orderService = (client: UClient): OrderService => {
     return data.result.data;
   };
 
-  const getInProgressOrders = async (): Promise<OrderServiceReponse> => {
+  const getInProgressOrders = async (): Promise<Order[]> => {
     const { data } = await client.get(
       'deliveries/in-progress?page=0&perPage=10',
     );
     return data.result.data;
   };
 
-  const getOrdersHistory = async (): Promise<OrderServiceReponse> => {
+  const getOrdersHistory = async (): Promise<Order[]> => {
     const { data } = await client.get('deliveries/done?page=0&perPage=50');
     return data.result.data;
   };
