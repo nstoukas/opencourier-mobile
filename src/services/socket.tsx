@@ -13,6 +13,7 @@ import React, {
   useState,
 } from 'react';
 import { AppState } from 'react-native';
+import { Order } from '@app/types/types';
 import {
   ConnectionStatus,
   createCourierSocket,
@@ -59,6 +60,19 @@ const SocketProvider = ({ children }: Props) => {
     connectionRef.current = new LiveConnection(createCourierSocket, {
       onStatus: setStatus,
       onOffer: () => refetch([QueryKeys.newOrders]),
+      // The server ended an offer (spec 0002): take it off the screen at
+      // once, then fetch the list again so the server has the last word.
+      // Nothing is shown to the rider about it, and nothing is counted.
+      onOfferEnded: deliveryId => {
+        if (deliveryId !== null) {
+          // `setQueryData` edits the cached offer list in place; the Home
+          // screen redraws from it straight away.
+          queryClient.setQueryData<Order[]>([QueryKeys.newOrders], offers =>
+            offers?.filter(offer => offer.id !== deliveryId),
+          );
+        }
+        refetch([QueryKeys.newOrders]);
+      },
       onDeliveryStatusUpdated: () =>
         refetch([
           QueryKeys.newOrders,
