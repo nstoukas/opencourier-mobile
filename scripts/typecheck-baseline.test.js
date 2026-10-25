@@ -221,5 +221,116 @@ describe('typecheck-baseline script', () => {
         updated: '2026-10-25',
       });
     });
+
+    it('(1) an unlocated config error alone, with a non zero tsc status, fails (returns 1) and leaves the baseline file byte identical', () => {
+      // Baseline allows 15 errors; a single config error must not read as 1 < 15 and lower the baseline
+      const initialContent =
+        JSON.stringify({ errors: 15, updated: '2026-10-20' }, null, 2) + '\n';
+      fs.writeFileSync(baselinePath, initialContent);
+
+      const errors = [];
+      const code = main({
+        baselinePath,
+        run: () => ({
+          status: 1,
+          output: "error TS6053: File 'tsconfig.json' not found.",
+        }),
+        error: msg => errors.push(msg),
+      });
+
+      expect(code).toBe(1);
+      expect(fs.readFileSync(baselinePath, 'utf8')).toBe(initialContent);
+      expect(errors).toContain(
+        'tsc could not check the app; fix its configuration first:',
+      );
+      expect(errors).toContain("error TS6053: File 'tsconfig.json' not found.");
+    });
+
+    it('(2) a config error located in tsconfig.json(3,5) fails the same way', () => {
+      // Config error located in a .json file must also be rejected without touching the baseline
+      const initialContent =
+        JSON.stringify({ errors: 15, updated: '2026-10-20' }, null, 2) + '\n';
+      fs.writeFileSync(baselinePath, initialContent);
+
+      const errors = [];
+      const code = main({
+        baselinePath,
+        run: () => ({
+          status: 1,
+          output:
+            "tsconfig.json(3,5): error TS5083: Cannot read file 'tsconfig.base.json'.",
+        }),
+        error: msg => errors.push(msg),
+      });
+
+      expect(code).toBe(1);
+      expect(fs.readFileSync(baselinePath, 'utf8')).toBe(initialContent);
+      expect(errors).toContain(
+        'tsc could not check the app; fix its configuration first:',
+      );
+      expect(errors).toContain(
+        "tsconfig.json(3,5): error TS5083: Cannot read file 'tsconfig.base.json'.",
+      );
+    });
+
+    it('(3) a config error mixed with ordinary located type errors still fails and does not rewrite the file', () => {
+      // Even if mixed with real type errors, any config error aborts and prevents lowering the baseline
+      const initialContent =
+        JSON.stringify({ errors: 15, updated: '2026-10-20' }, null, 2) + '\n';
+      fs.writeFileSync(baselinePath, initialContent);
+
+      const errors = [];
+      const fakeOutput = [
+        "src/screens/Home.tsx(10,5): error TS2322: Type 'string' is not assignable to type 'number'.",
+        "error TS5023: Unknown compiler option 'target'.",
+      ].join('\n');
+
+      const code = main({
+        baselinePath,
+        run: () => ({ status: 1, output: fakeOutput }),
+        error: msg => errors.push(msg),
+      });
+
+      expect(code).toBe(1);
+      expect(fs.readFileSync(baselinePath, 'utf8')).toBe(initialContent);
+      expect(errors).toContain(
+        'tsc could not check the app; fix its configuration first:',
+      );
+      expect(
+        errors.some(e =>
+          e.includes("error TS5023: Unknown compiler option 'target'."),
+        ),
+      ).toBe(true);
+    });
+
+    it('(4) ordinary located errors including code TS6133 (an unused variable, a real type error) are still counted normally and the drop case still lowers the baseline', () => {
+      // Real type errors (like TS6133 unused variable) should be counted normally and allow lowering the baseline
+      const initialContent =
+        JSON.stringify({ errors: 15, updated: '2026-10-20' }, null, 2) + '\n';
+      fs.writeFileSync(baselinePath, initialContent);
+
+      const logs = [];
+      const errors = [];
+      const fakeOutput = [
+        "src/screens/Home.tsx(14,7): error TS6133: 'unusedVar' is declared but its value is never read.",
+        "src/services/api.ts(42,3): error TS2322: Type 'number' is not assignable to type 'string'.",
+      ].join('\n');
+
+      const code = main({
+        baselinePath,
+        run: () => ({ status: 1, output: fakeOutput }),
+        today: () => '2026-10-25',
+        log: msg => logs.push(msg),
+        error: msg => errors.push(msg),
+      });
+
+      expect(code).toBe(0);
+      expect(logs[0]).toMatch(/2 errors, down from 15\. Lowered the baseline/);
+      const rewritten = JSON.parse(fs.readFileSync(baselinePath, 'utf8'));
+      expect(rewritten).toEqual({
+        errors: 2,
+        updated: '2026-10-25',
+      });
+    });
   });
 });
