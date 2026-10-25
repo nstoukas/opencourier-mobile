@@ -153,6 +153,16 @@ export const SideMenu = ({ navigation }: Props) => {
   }, [locationPermission]);
 
   const onLogoutHandle = async () => {
+    // Go Offline first, while the session still works (spec 0002, AC-6): the
+    // server then ends any offer this rider holds at once and gives it to the
+    // next rider, instead of it waiting on a phone that has logged out.
+    try {
+      await services.userService.setUserStatus(UserStatus.Offline);
+    } catch (error) {
+      // No network, for example. Logging out must still work, so carry on;
+      // an offer left behind still ends at its deadline when expiry is on.
+      console.log('Could not go Offline before logging out', error);
+    }
     await AsyncStorage.multiRemove(['token', 'BASE_URL', 'SOCKET_BASE_URL']);
     services.logout();
     queryClient.resetQueries();
