@@ -9,6 +9,9 @@
  * each, with only what the app calls.
  *
  * A test file can still override any of these with its own `jest.mock`.
+ *
+ * Because these modules are stand ins, a test that renders the app cannot catch a failure
+ * in push registration, location or permissions; those still need a check on a phone.
  */
 
 /* ---------- Mocks the libraries ship themselves ---------- */

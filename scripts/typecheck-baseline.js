@@ -32,6 +32,20 @@ function findErrorLines(output) {
     .filter(line => /^\S/.test(line) && /\berror TS\d+:/.test(line));
 }
 
+/**
+ * Picks out the error lines that mean tsc could not check the app at all: an error with no
+ * "file(line,col):" in front ("error TS6053: File 'tsconfig.json' not found."), or one
+ * pointing into a .json file (a broken tsconfig). Counting those as type errors would let a
+ * broken config look like "1 error, down from 15" and lower the baseline.
+ */
+function findConfigErrors(errorLines) {
+  return errorLines.filter(
+    line =>
+      !/^[^(]+\(\d+,\d+\): error TS\d+:/.test(line) ||
+      /^[^(]+\.json\(/.test(line),
+  );
+}
+
 /** Runs `tsc --noEmit` in the app folder and returns its exit status and output. */
 function runTsc(cwd = ROOT) {
   const tscPath = require.resolve('typescript/bin/tsc', { paths: [cwd] });
@@ -102,6 +116,15 @@ function main({
     return 1;
   }
 
+  // A config error means the count below is not a count of type errors, so stop here and
+  // leave the baseline file alone.
+  const configErrors = findConfigErrors(errorLines);
+  if (configErrors.length > 0) {
+    error('tsc could not check the app; fix its configuration first:');
+    error(configErrors.join('\n'));
+    return 1;
+  }
+
   if (count > baseline.errors) {
     error(errorLines.join('\n'));
     error(
@@ -128,7 +151,14 @@ function main({
   return 0;
 }
 
-module.exports = { findErrorLines, runTsc, localDate, readBaseline, main };
+module.exports = {
+  findErrorLines,
+  findConfigErrors,
+  runTsc,
+  localDate,
+  readBaseline,
+  main,
+};
 
 // Only run the check when called as a script, not when a test requires this file.
 if (require.main === module) {
