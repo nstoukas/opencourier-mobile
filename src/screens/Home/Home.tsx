@@ -29,6 +29,7 @@ import { SkeletonOrderHistoryCell } from '@app/components/SkeletonOrderHistoryCe
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import useUser from '@app/hooks/useUser';
 import { useFocusEffect } from '@react-navigation/native';
+import { useConnectionStatus } from '@app/services/socket';
 
 type Props = DrawerScreenProp<DrawerScreens.Home>;
 
@@ -39,6 +40,7 @@ export const HomeScreen = ({ navigation }: Props) => {
     useState<boolean>(false);
   const { t } = useTranslation();
   const { user, isLoading, updateStatus } = useUser();
+  const connectionStatus = useConnectionStatus();
   const [availableMapApps, setAvailableMapApps] = useState<string[]>([
     t('translations:cancel'),
   ]);
@@ -366,6 +368,7 @@ export const HomeScreen = ({ navigation }: Props) => {
         searchText={searchText}
         onSearchTextChange={setSearchText}
         loadingNewOrders={selectedTab === HomeTabItem.New && isLoadingOrders}
+        connectionStatus={connectionStatus}
       />
       {selectedTab === HomeTabItem.History && !reportIncidentDismissed && (
         <ReportAnIncident onDismiss={() => setReportIncidentDismissed(true)} />
