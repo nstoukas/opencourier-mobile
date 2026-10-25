@@ -101,6 +101,7 @@ export default {
   connection_live: 'Connected',
   connection_connecting: 'Connecting…',
   connection_lost: 'No connection, retrying',
+  connection_refused: 'Not connected, reopen the app to retry',
   connection_off: 'Not connected',
   offline: 'Offline',
   last_call: 'Last Call',

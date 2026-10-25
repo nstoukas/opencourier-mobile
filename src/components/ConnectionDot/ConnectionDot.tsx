@@ -20,6 +20,11 @@ export const connectionDotLook = (
       };
     case 'disconnected':
       return { color: Colors.red1, labelKey: 'translations:connection_lost' };
+    case 'refused':
+      return {
+        color: Colors.red1,
+        labelKey: 'translations:connection_refused',
+      };
     case 'off':
       return { color: Colors.gray5, labelKey: 'translations:connection_off' };
   }

@@ -6,11 +6,14 @@ import { UserStatus } from '@app/types/types';
 // - 'connecting': a connection is being opened.
 // - 'connected': the server can reach this phone right now.
 // - 'disconnected': the connection dropped; socket.io keeps retrying on its own.
+// - 'refused': the server turned the login down; socket.io does not retry this
+//   on its own, so the app tries again when it comes back to the foreground.
 export type ConnectionStatus =
   | 'off'
   | 'connecting'
   | 'connected'
-  | 'disconnected';
+  | 'disconnected'
+  | 'refused';
 
 // Event names the backend sends (backend `NotificationEventType`).
 export const OFFER_EVENT = 'NEW_DELIVERY_OFFER';
@@ -97,7 +100,11 @@ export class LiveConnection {
       this.handlers.onConnected();
     });
     socket.on('disconnect', () => this.setStatus('disconnected'));
-    socket.on('connect_error', () => this.setStatus('disconnected'));
+    // `socket.active` is false when socket.io has given up retrying (a refused
+    // login); true while it is still retrying a dropped connection.
+    socket.on('connect_error', () =>
+      this.setStatus(socket.active ? 'disconnected' : 'refused'),
+    );
     socket.on(OFFER_EVENT, () => this.handlers.onOffer());
     socket.on(DELIVERY_STATUS_UPDATED_EVENT, () =>
       this.handlers.onDeliveryStatusUpdated(),
