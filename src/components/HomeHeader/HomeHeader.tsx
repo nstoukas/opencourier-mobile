@@ -13,6 +13,8 @@ import { WaitingForOrders } from '../WaitingForOrders/WaitingForOrders';
 import { OrderDelivered } from '../OrderDelivered/OrderDelivered';
 import { useTranslation } from 'react-i18next';
 import { Toast } from '../Toast/Toast';
+import { ConnectionDot } from '../ConnectionDot/ConnectionDot';
+import { ConnectionStatus } from '@app/services/liveConnection';
 
 type Props = {
   style?: StyleProp<ViewStyle>;
@@ -29,6 +31,7 @@ type Props = {
   orderDeliveredNotification: boolean;
   onCloseOrderDeliveredNotification: () => void;
   loadingNewOrders: boolean;
+  connectionStatus: ConnectionStatus;
 };
 
 export const HomeHeader = ({
@@ -46,6 +49,7 @@ export const HomeHeader = ({
   orderDeliveredNotification = false,
   onCloseOrderDeliveredNotification,
   loadingNewOrders,
+  connectionStatus,
 }: Props) => {
   const { t } = useTranslation();
   const { top } = useSafeAreaInsets();
@@ -94,6 +98,8 @@ export const HomeHeader = ({
         />
         <ButtonSearch onPress={onSearch} isSearching={searchShown} />
       </View>
+
+      <ConnectionDot status={connectionStatus} />
 
       {searchShown && (
         <SearchBar

@@ -32,8 +32,10 @@ const App = () => {
       }}>
       <QueryClientProvider client={queryClient}>
         <NavigationContainer>
-          <Router />
-          <SocketProvider />
+          {/* Wraps the screens so the home screen can read the connection status. */}
+          <SocketProvider>
+            <Router />
+          </SocketProvider>
         </NavigationContainer>
       </QueryClientProvider>
     </UserContext.Provider>
