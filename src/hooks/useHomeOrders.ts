@@ -1,6 +1,6 @@
 import { Order, UserStatus } from '@app/types/types';
 import { services } from '@app/services/service';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { AUTO_ACCEPT_DECLINE_TIMER } from '@app/utilities/constants';
 import { OrderSetting } from '@app/types/enums';
 import { filterInProgressOrdersForDisplay } from '@app/utilities/inProgressListFilter';
@@ -8,36 +8,12 @@ import { Alert } from 'react-native';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { QueryKeys } from '@app/utilities/queryKeys';
 import useUser from './useUser';
-
-class Timer {
-  started: Date;
-  callback: () => void;
-  delay: number;
-  id: NodeJS.Timeout;
-
-  constructor(callback: () => void, delay: number) {
-    this.callback = callback;
-    this.delay = delay;
-    this.started = new Date();
-    this.id = setTimeout(this.callback, this.delay);
-  }
-
-  stop() {
-    clearTimeout(this.id);
-  }
-
-  getTimeLeftMilli() {
-    return this.started ? this.started.valueOf() + this.delay - Date.now() : 0;
-  }
-}
+import { OfferCountdowns } from '@app/utilities/offerCountdowns';
 
 export const useHomeOrders = () => {
   const [dataSourceNew, setDataSourceNew] = useState<Order[]>([]);
   const [dataSourceInProgress, setDataSourceInProgress] = useState<Order[]>([]);
   const [dataSourceHistory, setDataSourceHistory] = useState<Order[]>([]);
-  const [offerExpirationTimers, setOfferExpirationTimers] = useState<
-    Map<string, Timer>
-  >(new Map());
 
   // quieries
 
@@ -69,23 +45,65 @@ export const useHomeOrders = () => {
     queryKey: [QueryKeys.orderHistory],
   });
 
+  // One countdown per offer (row 60). `useRef` keeps the same object for the
+  // whole life of the screen, so a re-render or a refetch never makes a new one.
+  const countdownsRef = useRef<OfferCountdowns | null>(null);
+  // The timer calls whatever function is in this ref when it fires, so it
+  // always sees the latest user setting, not the one from when it started.
+  const onExpireRef = useRef<(orderId: string) => void>(() => undefined);
+  if (countdownsRef.current === null) {
+    countdownsRef.current = new OfferCountdowns(
+      AUTO_ACCEPT_DECLINE_TIMER,
+      orderId => onExpireRef.current(orderId),
+    );
+  }
+  const countdowns = countdownsRef.current;
+
+  // Latest fetched offers, read when a failed send puts an offer back.
+  const newOrdersRef = useRef<Order[] | undefined>(newOrders);
+  newOrdersRef.current = newOrders;
+
+  // Show the fetched offers the rider can still answer. This skips offers
+  // being accepted or declined, and offers already answered whose refetch has
+  // not landed yet (a failed send elsewhere can redraw from the older list).
+  const showUnclaimedOffers = () => {
+    setDataSourceNew(
+      (newOrdersRef.current ?? []).filter(order => countdowns.isOpen(order.id)),
+    );
+  };
+
+  // A send failed: let the rider try again by hand.
+  const releaseOffer = (orderId: string) => {
+    countdowns.release(orderId);
+    showUnclaimedOffers();
+  };
+
   // mutations
 
   const { mutate: acceptOrder } = useMutation({
     mutationFn: services.orderService.acceptOrder,
-    onSuccess: () => {
+    // The second argument is the offer id we passed to `acceptOrder(id)`.
+    onSuccess: (_result, orderId) => {
+      countdowns.forget(orderId);
       refetchNew();
       refetchInProgress();
     },
-    onError: error => Alert.alert('Error accepting order', error.message),
+    onError: (error, orderId) => {
+      releaseOffer(orderId);
+      Alert.alert('Error accepting order', error.message);
+    },
   });
 
   const { mutate: declineOrder } = useMutation({
     mutationFn: services.orderService.declineOrder,
-    onSuccess: () => {
+    onSuccess: (_result, orderId) => {
+      countdowns.forget(orderId);
       refetchNew();
     },
-    onError: error => Alert.alert('Error declining order', error.message),
+    onError: (error, orderId) => {
+      releaseOffer(orderId);
+      Alert.alert('Error declining order', error.message);
+    },
   });
 
   //Temp fix
@@ -97,46 +115,42 @@ export const useHomeOrders = () => {
   const { user } = useUser();
 
   const acceptOrderFn = (orderId: string) => {
-    offerExpirationTimers.get(orderId)?.stop();
-    offerExpirationTimers.delete(orderId);
-
+    // Only the first accept or decline for an offer is sent.
+    if (!countdowns.claim(orderId)) {
+      return;
+    }
     acceptOrder(orderId);
-
-    const updateNewOrders = newOrders!.filter(
-      newOrder => newOrder.id !== orderId,
-    );
-    setDataSourceNew(updateNewOrders);
+    setDataSourceNew(current => current.filter(order => order.id !== orderId));
   };
 
   const declineOrderFn = (orderId: string) => {
-    offerExpirationTimers.get(orderId)?.stop();
-    offerExpirationTimers.delete(orderId);
-
+    if (!countdowns.claim(orderId)) {
+      return;
+    }
     declineOrder(orderId);
-
-    const updateNewOrders = newOrders!.filter(item => item.id !== orderId);
-    setDataSourceNew(updateNewOrders);
+    setDataSourceNew(current => current.filter(order => order.id !== orderId));
   };
+
+  onExpireRef.current = (orderId: string) =>
+    user?.deliverySetting === OrderSetting.auto_accept
+      ? acceptOrderFn(orderId)
+      : declineOrderFn(orderId);
 
   useEffect(() => {
     if (newOrders !== undefined) {
-      const newOfferExpirationTimers = new Map(offerExpirationTimers);
-      newOrders.forEach(order =>
-        newOfferExpirationTimers.set(
-          order.id,
-          new Timer(
-            () =>
-              user!.deliverySetting === OrderSetting.auto_accept
-                ? acceptOrderFn(order.id)
-                : declineOrderFn(order.id),
-            AUTO_ACCEPT_DECLINE_TIMER,
-          ),
-        ),
-      );
-      setOfferExpirationTimers(newOfferExpirationTimers);
-      setDataSourceNew(newOrders);
+      // Starts a countdown only for offers seen for the first time; stops the
+      // countdown of offers that are gone.
+      countdowns.sync(newOrders.map(order => order.id));
+      showUnclaimedOffers();
     }
+    // `countdowns` is the same object for the screen's whole life and
+    // `showUnclaimedOffers` reads refs, so only a new fetch should rerun this.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [newOrders]);
+
+  // Stop every countdown when the screen goes away.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  useEffect(() => () => countdowns.stopAll(), []);
 
   useEffect(() => {
     setDataSourceInProgress(inProgressOrders ?? []);
@@ -176,8 +190,8 @@ export const useHomeOrders = () => {
     dataSourceNew,
     dataSourceHistory,
     dataSourceInProgress,
-    offerExpirationTimers,
-    setOfferExpirationTimers,
+    // Milliseconds left on an offer's countdown, for the progress bar.
+    timeLeftForOffer: (orderId: string) => countdowns.timeLeft(orderId),
     acceptOrderFn,
     declineOrderFn,
     //Temp fix

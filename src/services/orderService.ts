@@ -1,8 +1,10 @@
 import { UClient } from './Client';
 import { OrderServiceReponse } from './types';
+import { Order } from '@app/types/types';
 
 export interface OrderService {
-  getNewOrders: () => Promise<OrderServiceReponse>;
+  // The list of offers (the `data` array of the paginated response).
+  getNewOrders: () => Promise<Order[]>;
   getInProgressOrders: () => Promise<OrderServiceReponse>;
   getOrdersHistory: () => Promise<OrderServiceReponse>;
   acceptOrder: (id: string) => Promise<OrderServiceReponse>;
@@ -20,7 +22,7 @@ export interface OrderService {
 }
 
 const orderService = (client: UClient): OrderService => {
-  const getNewOrders = async (): Promise<OrderServiceReponse> => {
+  const getNewOrders = async (): Promise<Order[]> => {
     const { data } = await client.get('deliveries/new?page=1&perPage=10');
     return data.result.data;
   };

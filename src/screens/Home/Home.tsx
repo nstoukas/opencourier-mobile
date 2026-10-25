@@ -57,7 +57,7 @@ export const HomeScreen = ({ navigation }: Props) => {
     dataSourceNew,
     dataSourceHistory,
     dataSourceInProgress,
-    offerExpirationTimers,
+    timeLeftForOffer,
     refetchNew,
     refetchInProgress,
     refechHistory,
@@ -113,9 +113,7 @@ export const HomeScreen = ({ navigation }: Props) => {
       case HomeTabItem.New:
         return (
           <NewOrderCell
-            millisRemaining={
-              offerExpirationTimers.get(item.id)?.getTimeLeftMilli() ?? 0
-            }
+            millisRemaining={timeLeftForOffer(item.id)}
             autoAcceptOrders={autoAcceptOrders}
             order={item}
             onAccept={order => acceptOrderFn(order.id)}
@@ -374,7 +372,9 @@ export const HomeScreen = ({ navigation }: Props) => {
       )}
 
       <FlatList
-        keyExtractor={(item, index) => index.toString()}
+        // Key each row by its delivery id, so a row (and its countdown bar)
+        // stays with its own offer when the list changes.
+        keyExtractor={item => item.id}
         data={dataSource}
         renderItem={renderItem}
         ListEmptyComponent={ListEmptyComponent}
