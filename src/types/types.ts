@@ -326,6 +326,22 @@ export type Order = {
   dropoffLocationFormattedAddress?: string;
   pickupLocation: Location;
   dropoffLocation: Location;
+  // When the server made this offer, and when it ends (spec 0002), as ISO
+  // date text on the server's clock. `offerExpiresAt` null means the offer has
+  // no deadline (Offer expiry is off, or an admin made the offer). Only the
+  // offer list (deliveries/new) sends these.
+  offeredAt?: string | null;
+  offerExpiresAt?: string | null;
+  // The two times above moved onto this phone's clock, worked out once when
+  // the offer list arrives (see `utilities/offerClock.ts`). Not sent by the
+  // server.
+  phoneClock?: OfferTimesOnPhone;
+};
+
+// An offer's times in milliseconds on the phone's own clock (like Date.now()).
+export type OfferTimesOnPhone = {
+  offeredAt: number | null;
+  expiresAt: number | null;
 };
 
 export type PickupruInstruction = {
