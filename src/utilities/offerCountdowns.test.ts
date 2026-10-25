@@ -256,4 +256,71 @@ describe('OfferCountdowns', () => {
       expect(countdowns.timeLeft('order-1')).toBe(0);
     });
   });
+
+  describe('isOpen', () => {
+    it('is true for a tracked unclaimed offer', () => {
+      const countdowns = new OfferCountdowns(DURATION_MS, onExpireMock);
+      countdowns.sync(['order-1']);
+      expect(countdowns.isOpen('order-1')).toBe(true);
+    });
+
+    it('is false for an id never seen', () => {
+      const countdowns = new OfferCountdowns(DURATION_MS, onExpireMock);
+      expect(countdowns.isOpen('never-seen-order')).toBe(false);
+    });
+
+    it('is false while claimed', () => {
+      const countdowns = new OfferCountdowns(DURATION_MS, onExpireMock);
+      countdowns.sync(['order-1']);
+      expect(countdowns.claim('order-1')).toBe(true);
+      expect(countdowns.isOpen('order-1')).toBe(false);
+    });
+
+    it('is true again after release', () => {
+      const countdowns = new OfferCountdowns(DURATION_MS, onExpireMock);
+      countdowns.sync(['order-1']);
+      countdowns.claim('order-1');
+      expect(countdowns.isOpen('order-1')).toBe(false);
+
+      countdowns.release('order-1');
+      expect(countdowns.isOpen('order-1')).toBe(true);
+    });
+
+    it('is false after forget', () => {
+      const countdowns = new OfferCountdowns(DURATION_MS, onExpireMock);
+      countdowns.sync(['order-1']);
+      countdowns.claim('order-1');
+      countdowns.forget('order-1');
+      expect(countdowns.isOpen('order-1')).toBe(false);
+    });
+
+    it('follows the full lifecycle: unseen -> synced -> claimed -> released -> forgotten', () => {
+      const countdowns = new OfferCountdowns(DURATION_MS, onExpireMock);
+
+      // (1) Unseen id is not open
+      expect(countdowns.isOpen('order-1')).toBe(false);
+
+      // (2) Tracked unclaimed offer is open
+      countdowns.sync(['order-1']);
+      expect(countdowns.isOpen('order-1')).toBe(true);
+
+      // (3) While claimed (send in flight) is not open
+      countdowns.claim('order-1');
+      expect(countdowns.isOpen('order-1')).toBe(false);
+
+      // (4) After release (failed send) is open again
+      countdowns.release('order-1');
+      expect(countdowns.isOpen('order-1')).toBe(true);
+
+      // (5) After forget (successful send) is not open
+      countdowns.forget('order-1');
+      expect(countdowns.isOpen('order-1')).toBe(false);
+    });
+
+    it('remains false when releasing an untracked id', () => {
+      const countdowns = new OfferCountdowns(DURATION_MS, onExpireMock);
+      countdowns.release('untracked-order');
+      expect(countdowns.isOpen('untracked-order')).toBe(false);
+    });
+  });
 });

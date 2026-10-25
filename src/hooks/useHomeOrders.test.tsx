@@ -19,11 +19,12 @@ jest.mock('./useUser', () => () => ({
 
 const mockAcceptOrder = jest.fn();
 const mockDeclineOrder = jest.fn();
+const mockGetNewOrders = jest.fn();
 
 jest.mock('@app/services/service', () => ({
   services: {
     orderService: {
-      getNewOrders: () => Promise.resolve([]),
+      getNewOrders: () => mockGetNewOrders(),
       getInProgressOrders: () =>
         Promise.resolve({ data: { result: { data: [] } } }),
       getOrdersHistory: () =>
@@ -52,6 +53,7 @@ describe('useHomeOrders', () => {
   beforeEach(() => {
     jest.useFakeTimers();
     jest.clearAllMocks();
+    mockGetNewOrders.mockResolvedValue([]);
     mockAcceptOrder.mockResolvedValue({});
     mockDeclineOrder.mockResolvedValue({});
     mockDeliverySetting = OrderSetting.manual;
@@ -212,5 +214,271 @@ describe('useHomeOrders', () => {
 
     expect(mockDeclineOrder).not.toHaveBeenCalled();
     expect(mockAcceptOrder).not.toHaveBeenCalled();
+  });
+
+  describe('Clause 2 & Review Minor 1: Stale list after forgotten offer', () => {
+    it('does not re-show forgotten offer A when offer B send fails before a new fetch lands', async () => {
+      // Keep refetch pending so the new fetch has not landed yet, preserving stale newOrdersRef
+      mockGetNewOrders.mockReturnValue(new Promise(() => {}));
+
+      // Initial fetch lists both offer A and offer B
+      queryClient.setQueryData(
+        [QueryKeys.newOrders],
+        [{ id: 'order-A' }, { id: 'order-B' }],
+      );
+
+      let hookResult: ReturnType<typeof useHomeOrders> | undefined;
+      let tree: renderer.ReactTestRenderer;
+      await act(async () => {
+        tree = renderer.create(
+          <QueryClientProvider client={queryClient}>
+            <HookHost
+              onRender={h => {
+                hookResult = h;
+              }}
+            />
+          </QueryClientProvider>,
+        );
+      });
+
+      expect(hookResult?.dataSourceNew.map(o => o.id)).toEqual([
+        'order-A',
+        'order-B',
+      ]);
+
+      // Offer A is accepted successfully and forgotten
+      mockAcceptOrder.mockResolvedValueOnce({});
+      await act(async () => {
+        hookResult?.acceptOrderFn('order-A');
+        await Promise.resolve();
+      });
+
+      // Offer A is gone, only offer B remains on screen
+      expect(hookResult?.dataSourceNew.map(o => o.id)).toEqual(['order-B']);
+
+      // Offer B send fails before any new fetch lands (newOrdersRef still contains [A, B])
+      mockAcceptOrder.mockRejectedValueOnce(new Error('Network error for B'));
+      await act(async () => {
+        hookResult?.acceptOrderFn('order-B');
+        await Promise.resolve();
+      });
+
+      // B is released and shows again, but forgotten offer A must NOT reappear
+      expect(hookResult?.dataSourceNew.map(o => o.id)).toEqual(['order-B']);
+
+      act(() => {
+        tree.unmount();
+      });
+    });
+
+    it('does not re-show forgotten declined offer A when offer B send fails before a new fetch lands', async () => {
+      // Keep refetch pending so the new fetch has not landed yet
+      mockGetNewOrders.mockReturnValue(new Promise(() => {}));
+
+      queryClient.setQueryData(
+        [QueryKeys.newOrders],
+        [{ id: 'order-A' }, { id: 'order-B' }],
+      );
+
+      let hookResult: ReturnType<typeof useHomeOrders> | undefined;
+      let tree: renderer.ReactTestRenderer;
+      await act(async () => {
+        tree = renderer.create(
+          <QueryClientProvider client={queryClient}>
+            <HookHost
+              onRender={h => {
+                hookResult = h;
+              }}
+            />
+          </QueryClientProvider>,
+        );
+      });
+
+      // Decline offer A successfully -> forgotten
+      mockDeclineOrder.mockResolvedValueOnce({});
+      await act(async () => {
+        hookResult?.declineOrderFn('order-A');
+        await Promise.resolve();
+      });
+
+      expect(hookResult?.dataSourceNew.map(o => o.id)).toEqual(['order-B']);
+
+      // Offer B decline fails -> releaseOffer called
+      mockDeclineOrder.mockRejectedValueOnce(new Error('Network error for B'));
+      await act(async () => {
+        hookResult?.declineOrderFn('order-B');
+        await Promise.resolve();
+      });
+
+      // New list shows B again, but must NOT show A
+      expect(hookResult?.dataSourceNew.map(o => o.id)).toEqual(['order-B']);
+
+      act(() => {
+        tree.unmount();
+      });
+    });
+  });
+
+  describe('Clause 3 & Review Minor 3: Failed send recovery and re-offer countdown', () => {
+    it('puts offer back on New list after failed accept, and subsequent manual tap sends once', async () => {
+      queryClient.setQueryData([QueryKeys.newOrders], [{ id: 'order-123' }]);
+
+      let hookResult: ReturnType<typeof useHomeOrders> | undefined;
+      let tree: renderer.ReactTestRenderer;
+      await act(async () => {
+        tree = renderer.create(
+          <QueryClientProvider client={queryClient}>
+            <HookHost
+              onRender={h => {
+                hookResult = h;
+              }}
+            />
+          </QueryClientProvider>,
+        );
+      });
+
+      expect(hookResult?.dataSourceNew.map(o => o.id)).toEqual(['order-123']);
+
+      // First accept attempt fails
+      mockAcceptOrder.mockRejectedValueOnce(new Error('Network failure'));
+      await act(async () => {
+        hookResult?.acceptOrderFn('order-123');
+        await Promise.resolve();
+      });
+
+      // Failed accept puts the offer back on the New list
+      expect(hookResult?.dataSourceNew.map(o => o.id)).toEqual(['order-123']);
+      expect(mockAcceptOrder).toHaveBeenCalledTimes(1);
+
+      // Rider taps accept manually (tapped twice in rapid succession)
+      mockAcceptOrder.mockResolvedValueOnce({});
+      await act(async () => {
+        hookResult?.acceptOrderFn('order-123');
+        hookResult?.acceptOrderFn('order-123');
+        await Promise.resolve();
+      });
+
+      // Sent once on retry (total 2 calls: 1 initial failed + 1 manual retry; 2nd tap ignored)
+      expect(mockAcceptOrder).toHaveBeenCalledTimes(2);
+      expect(hookResult?.dataSourceNew).toEqual([]);
+
+      act(() => {
+        tree.unmount();
+      });
+    });
+
+    it('puts offer back on New list after failed decline without restarting automatic timer', async () => {
+      mockDeliverySetting = OrderSetting.manual;
+      queryClient.setQueryData([QueryKeys.newOrders], [{ id: 'order-123' }]);
+
+      let hookResult: ReturnType<typeof useHomeOrders> | undefined;
+      let tree: renderer.ReactTestRenderer;
+      await act(async () => {
+        tree = renderer.create(
+          <QueryClientProvider client={queryClient}>
+            <HookHost
+              onRender={h => {
+                hookResult = h;
+              }}
+            />
+          </QueryClientProvider>,
+        );
+      });
+
+      // Automatic decline on expiry fails
+      mockDeclineOrder.mockRejectedValueOnce(new Error('Decline failed'));
+      await act(async () => {
+        jest.advanceTimersByTime(AUTO_ACCEPT_DECLINE_TIMER);
+        await Promise.resolve();
+      });
+
+      expect(mockDeclineOrder).toHaveBeenCalledTimes(1);
+      // Offer is back on the New list
+      expect(hookResult?.dataSourceNew.map(o => o.id)).toEqual(['order-123']);
+
+      // Advancing time further does not fire a second automatic decline
+      await act(async () => {
+        jest.advanceTimersByTime(AUTO_ACCEPT_DECLINE_TIMER * 2);
+        await Promise.resolve();
+      });
+      expect(mockDeclineOrder).toHaveBeenCalledTimes(1);
+
+      // Rider can manually decline after failure
+      mockDeclineOrder.mockResolvedValueOnce({});
+      await act(async () => {
+        hookResult?.declineOrderFn('order-123');
+        await Promise.resolve();
+      });
+      expect(mockDeclineOrder).toHaveBeenCalledTimes(2);
+
+      act(() => {
+        tree.unmount();
+      });
+    });
+
+    it('removes offer on successful send, and a later fetch still listing the same id starts a fresh countdown', async () => {
+      queryClient.setQueryData([QueryKeys.newOrders], [{ id: 'order-123' }]);
+
+      let hookResult: ReturnType<typeof useHomeOrders> | undefined;
+      let tree: renderer.ReactTestRenderer;
+      await act(async () => {
+        tree = renderer.create(
+          <QueryClientProvider client={queryClient}>
+            <HookHost
+              onRender={h => {
+                hookResult = h;
+              }}
+            />
+          </QueryClientProvider>,
+        );
+      });
+
+      expect(hookResult?.timeLeftForOffer('order-123')).toBe(
+        AUTO_ACCEPT_DECLINE_TIMER,
+      );
+
+      // Successful accept removes the offer and forgets it
+      mockAcceptOrder.mockResolvedValueOnce({});
+      mockGetNewOrders.mockResolvedValueOnce([]);
+      await act(async () => {
+        hookResult?.acceptOrderFn('order-123');
+        await Promise.resolve();
+      });
+
+      expect(hookResult?.dataSourceNew).toEqual([]);
+      expect(hookResult?.timeLeftForOffer('order-123')).toBe(0);
+
+      // Simulate time passing (30s)
+      act(() => {
+        jest.advanceTimersByTime(30000);
+      });
+
+      // A later fetch still lists the same id (decision 60.3)
+      mockGetNewOrders.mockResolvedValueOnce([{ id: 'order-123' }]);
+      await act(async () => {
+        await hookResult?.refetchNew();
+        jest.advanceTimersByTime(0);
+        await Promise.resolve();
+      });
+
+      // Offer is back on New list with a fresh full countdown
+      expect(hookResult?.dataSourceNew.map(o => o.id)).toEqual(['order-123']);
+      expect(hookResult?.timeLeftForOffer('order-123')).toBe(
+        AUTO_ACCEPT_DECLINE_TIMER,
+      );
+
+      // Advancing timers by 60s expires the newly offered countdown and declines it
+      await act(async () => {
+        jest.advanceTimersByTime(AUTO_ACCEPT_DECLINE_TIMER);
+        await Promise.resolve();
+      });
+
+      expect(mockDeclineOrder).toHaveBeenCalledTimes(1);
+      expect(mockDeclineOrder).toHaveBeenCalledWith('order-123');
+
+      act(() => {
+        tree.unmount();
+      });
+    });
   });
 });
