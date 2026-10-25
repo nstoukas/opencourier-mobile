@@ -98,7 +98,7 @@ export default {
   hide: 'hide',
   hi: 'Hi',
   online: 'Online',
-  connection_live: 'Live: offers can reach you',
+  connection_live: 'Connected',
   connection_connecting: 'Connecting…',
   connection_lost: 'No connection, retrying',
   connection_off: 'Not connected',
