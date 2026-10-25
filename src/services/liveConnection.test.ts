@@ -19,6 +19,7 @@ jest.mock('socket.io-client', () => ({
 // Minimal EventEmitter-like fake socket for testing LiveConnection in isolation.
 class FakeSocket {
   connected = false;
+  active = true;
   events = new Map<string, Array<(...args: any[]) => void>>();
   connectCalls = 0;
   disconnectCalls = 0;
@@ -192,14 +193,26 @@ describe('liveConnection', () => {
       expect(handlers.onStatus).toHaveBeenCalledWith('disconnected');
     });
 
-    it('transitions to disconnected when socket emits connect_error (failure case)', () => {
+    it('transitions to disconnected when socket emits connect_error with active true (network drop retry)', () => {
       liveConn.open('http://localhost:3000', 'token-1');
       handlers.onStatus.mockClear();
 
-      fakeSocket.emit('connect_error', new Error('Authentication failed'));
+      fakeSocket.active = true;
+      fakeSocket.emit('connect_error', new Error('Network timeout'));
 
       expect(liveConn.getStatus()).toBe('disconnected');
       expect(handlers.onStatus).toHaveBeenCalledWith('disconnected');
+    });
+
+    it('transitions to refused when socket emits connect_error with active false (login refused, no retry)', () => {
+      liveConn.open('http://localhost:3000', 'token-1');
+      handlers.onStatus.mockClear();
+
+      fakeSocket.active = false;
+      fakeSocket.emit('connect_error', new Error('Authentication failed'));
+
+      expect(liveConn.getStatus()).toBe('refused');
+      expect(handlers.onStatus).toHaveBeenCalledWith('refused');
     });
 
     it('transitions to off when closed on purpose', () => {

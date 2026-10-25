@@ -114,4 +114,28 @@ describe('ConnectionDot (Clause 1: Different colour AND words for each status)',
       expect(flatStyle.paddingHorizontal).toBe(20);
     });
   });
+
+  describe('refused status (Minor 1: server turned login down)', () => {
+    it('returns red1 color and translations:connection_refused key', () => {
+      expect(connectionDotLook('refused')).toEqual({
+        color: Colors.red1,
+        labelKey: 'translations:connection_refused',
+      });
+    });
+
+    it('renders localized text "Not connected, reopen the app to retry" and red dot', () => {
+      const tree = renderer.create(<ConnectionDot status="refused" />);
+      const textNode = tree.root.findByType(Text);
+      expect(textNode.props.children).toBe(
+        'Not connected, reopen the app to retry',
+      );
+
+      const dotNode = tree.root.find(
+        (node: ReactTestInstance) =>
+          node.props.testID === 'connection-dot-refused',
+      );
+      const flatStyle = StyleSheet.flatten(dotNode.props.style);
+      expect(flatStyle.backgroundColor).toBe(Colors.red1);
+    });
+  });
 });
