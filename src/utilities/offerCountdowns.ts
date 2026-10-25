@@ -104,6 +104,14 @@ export class OfferCountdowns {
     return this.entries.get(offerId)?.claimed ?? false;
   }
 
+  // True for an offer the rider can still answer: seen, not forgotten, and
+  // no send in flight. A forgotten offer (its send succeeded) is not open,
+  // even if an older fetch still lists it.
+  isOpen(offerId: string): boolean {
+    const entry = this.entries.get(offerId);
+    return entry !== undefined && !entry.claimed;
+  }
+
   // Stop every timer, for when the screen goes away.
   stopAll() {
     for (const entry of this.entries.values()) {

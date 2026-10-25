@@ -63,12 +63,12 @@ export const useHomeOrders = () => {
   const newOrdersRef = useRef<Order[] | undefined>(newOrders);
   newOrdersRef.current = newOrders;
 
-  // Show every fetched offer except those already being accepted or declined.
+  // Show the fetched offers the rider can still answer. This skips offers
+  // being accepted or declined, and offers already answered whose refetch has
+  // not landed yet (a failed send elsewhere can redraw from the older list).
   const showUnclaimedOffers = () => {
     setDataSourceNew(
-      (newOrdersRef.current ?? []).filter(
-        order => !countdowns.isClaimed(order.id),
-      ),
+      (newOrdersRef.current ?? []).filter(order => countdowns.isOpen(order.id)),
     );
   };
 
