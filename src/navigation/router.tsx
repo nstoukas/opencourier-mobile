@@ -6,7 +6,7 @@ import { OnboardingStack } from '@app/navigation/onboarding/OnboardingNavigation
 import { MainStack } from './main/MainNavigation';
 import { SelectOrganizationModal } from '@app/screens/SelectOrganizationModal/SelectOrganizationModal';
 import { StatusPopupScreen } from '@app/screens/StatusPopup/StatusPopupScreen';
-import usePushNotifications from '@app/services/notifications';
+import { useOfferPushRegistration } from '@app/services/offerPush/registration';
 import { AddNote } from '@app/screens/AddNote/AddNote';
 import { DeleteNote } from '@app/screens/DeleteNote/DeleteNote';
 import { DatePickerScreen } from '@app/screens/DatePicker/DatePicker';
@@ -26,7 +26,8 @@ export const Router = () => {
   const { setWatchId, watchId } = useContext(UserContext);
   const { locationPermission } = useLocationPermission();
 
-  // usePushNotifications(true);
+  // Register this phone for offer alerts while a rider is logged in (row 58).
+  useOfferPushRegistration(user?.id);
   // if (user.isLoading) {
   //   return <RootStack.Screen
   //     name={RootScreen.Loading}
