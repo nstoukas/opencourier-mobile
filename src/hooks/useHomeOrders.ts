@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from 'react';
 import { OrderSetting } from '@app/types/enums';
 import { filterInProgressOrdersForDisplay } from '@app/utilities/inProgressListFilter';
 import { Alert } from 'react-native';
-import { useMutation, useQuery } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { QueryKeys } from '@app/utilities/queryKeys';
 import useUser from './useUser';
 import { OfferCountdowns, OfferTiming } from '@app/utilities/offerCountdowns';
@@ -24,6 +24,7 @@ const offerTimingOf = (order: Order): OfferTiming => ({
 });
 
 export const useHomeOrders = () => {
+  const queryClient = useQueryClient();
   const [dataSourceNew, setDataSourceNew] = useState<Order[]>([]);
   const [dataSourceInProgress, setDataSourceInProgress] = useState<Order[]>([]);
   const [dataSourceHistory, setDataSourceHistory] = useState<Order[]>([]);
@@ -110,6 +111,11 @@ export const useHomeOrders = () => {
   // not try again.
   const dropEndedOffer = (orderId: string) => {
     countdowns.forget(orderId);
+    // Take it out of the cached list too, as the socket's OFFER_ENDED does, so
+    // a redraw from the cache before the refetch lands cannot bring it back.
+    queryClient.setQueryData<Order[]>([QueryKeys.newOrders], offers =>
+      offers?.filter(offer => offer.id !== orderId),
+    );
     setDataSourceNew(current => current.filter(order => order.id !== orderId));
     refetchNewRef.current();
     Alert.alert(i18next.t('translations:offer_has_ended'));
