@@ -18,7 +18,12 @@ const register = async (token: string) => {
   } catch (error) {
     // No network, or an older server without the endpoint: offers still
     // arrive over the live connection. The next start or refresh tries again.
-    console.log('Could not register this phone for offer alerts', error);
+    // Only the error's name and message: the whole error object holds the
+    // request, login token included, and the log is readable on the phone.
+    console.log(
+      'Could not register this phone for offer alerts',
+      String(error),
+    );
   }
 };
 
@@ -37,7 +42,9 @@ export const useOfferPushRegistration = (userId: string | undefined) => {
           register(token);
         }
       })
-      .catch(error => console.log('No push token on this phone', error));
+      .catch(error =>
+        console.log('No push token on this phone', String(error)),
+      );
 
     // Firebase can replace the token at any time (an app update, a reset).
     // `onTokenRefresh` returns the function that stops listening, which the
@@ -72,6 +79,9 @@ export const unregisterThisPhone = async (timeoutMs: number): Promise<void> => {
       });
     }
   } catch (error) {
-    console.log('Could not unregister this phone from offer alerts', error);
+    console.log(
+      'Could not unregister this phone from offer alerts',
+      String(error),
+    );
   }
 };

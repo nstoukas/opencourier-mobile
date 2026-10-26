@@ -135,17 +135,31 @@ const warnIfSilenced = async () => {
   );
 };
 
+// The longest the questions may hold up going Online. If a dialog never
+// reports back (Android has dropped one before, 58.23), the rider goes Online
+// anyway; a question still on screen after that only opens a settings page.
+export const ONLINE_CHECKS_LIMIT_MS = 30000;
+
 // Call just before setting the rider Online. Resolves once the rider has
-// answered whatever was asked (often nothing).
+// answered whatever was asked (often nothing), or after the limit above.
 export const prepareToGoOnline = async (): Promise<void> => {
   if (Platform.OS !== 'android') {
     return;
   }
-  try {
-    await askAlertPermissionsOnce();
-    await warnIfSilenced();
-  } catch (error) {
-    // A check that fails must never keep a rider from working.
-    console.log('Going Online checks failed', error);
-  }
+  const checks = async () => {
+    try {
+      await askAlertPermissionsOnce();
+      await warnIfSilenced();
+    } catch (error) {
+      // A check that fails must never keep a rider from working.
+      console.log('Going Online checks failed', String(error));
+    }
+  };
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const limit = new Promise<void>(resolve => {
+    timer = setTimeout(resolve, ONLINE_CHECKS_LIMIT_MS);
+  });
+  // `Promise.race` goes on with whichever finishes first.
+  await Promise.race([checks(), limit]);
+  clearTimeout(timer);
 };

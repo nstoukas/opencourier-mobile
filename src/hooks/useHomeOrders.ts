@@ -17,9 +17,14 @@ import i18next from 'i18next';
 import {
   isOfferAnswered,
   loadAnsweredOffers,
+  markOfferAnswered,
   offerKeyOf,
+  unmarkOfferAnswered,
 } from '@app/services/offerPush/answeredOffers';
-import { cancelOfferAlert } from '@app/services/offerPush/offerAlert';
+import {
+  cancelOfferAlert,
+  isOfferAlertDisplayed,
+} from '@app/services/offerPush/offerAlert';
 import { playOfferSound } from '@app/services/offerPush/phone';
 import { isHomeInFront } from '@app/navigation/navigationRef';
 
@@ -85,8 +90,14 @@ export const useHomeOrders = () => {
       // the offer ended was missed. The phone never declines by itself.
       onDeadline: () => refetchNewRef.current(),
       // Expiry off: the offer is still waiting, alert the rider again (AC-4).
+      // Not while the offer's push alert is up: it is ringing already, and a
+      // second notification for one offer only adds noise (row 58, 58.26).
       onReminder: (orderId, waitedMs) => {
-        remindRiderOfOffer(orderId, waitedMs);
+        isOfferAlertDisplayed(orderId).then(alertIsUp => {
+          if (!alertIsUp) {
+            remindRiderOfOffer(orderId, waitedMs);
+          }
+        });
         setReminderTick(tick => tick + 1);
       },
       // The offer left: take its reminder out of the notification tray.
@@ -111,9 +122,10 @@ export const useHomeOrders = () => {
     );
   };
 
-  // A send failed: let the rider try again by hand.
+  // A send failed: let the rider try again by hand, from the app or the alert.
   const releaseOffer = (orderId: string) => {
     countdowns.release(orderId);
+    unmarkOfferAnswered(answeredKeyOf(orderId));
     showUnclaimedOffers();
   };
 
@@ -202,11 +214,24 @@ export const useHomeOrders = () => {
       .then(() => queryClient.setQueryData<Order[]>([QueryKeys.newOrders], []));
   }, [isOffline, queryClient]);
 
-  // True when this phone already answered the offer from its alert (row 58,
-  // AC-5): a tap in the app then sends nothing.
-  const answeredFromAlert = (orderId: string) => {
+  // The offer's entry in this phone's answered list (row 58, AC-5), shared
+  // with the alert's Accept and Decline buttons.
+  const answeredKeyOf = (orderId: string) => {
     const order = newOrdersRef.current?.find(offer => offer.id === orderId);
-    return isOfferAnswered(offerKeyOf(orderId, order?.offeredAt));
+    return offerKeyOf(orderId, order?.offeredAt);
+  };
+
+  // True when this phone already answered the offer from its alert: a tap in
+  // the app then sends nothing.
+  const answeredFromAlert = (orderId: string) =>
+    isOfferAnswered(answeredKeyOf(orderId));
+
+  // Answered here: the alert's buttons, and a late re send of the offer, must
+  // not answer or ring again (a failed send takes it back, in releaseOffer).
+  const answerHere = (orderId: string) => {
+    markOfferAnswered(answeredKeyOf(orderId));
+    // Its alert, if one is up, stops ringing.
+    cancelOfferAlert(orderId);
   };
 
   const acceptOrderFn = (orderId: string) => {
@@ -214,8 +239,7 @@ export const useHomeOrders = () => {
     if (answeredFromAlert(orderId) || !countdowns.claim(orderId)) {
       return;
     }
-    // Answered here: its alert, if one is up, stops ringing (row 58).
-    cancelOfferAlert(orderId);
+    answerHere(orderId);
     acceptOrder(orderId);
     setDataSourceNew(current => current.filter(order => order.id !== orderId));
   };
@@ -224,7 +248,7 @@ export const useHomeOrders = () => {
     if (answeredFromAlert(orderId) || !countdowns.claim(orderId)) {
       return;
     }
-    cancelOfferAlert(orderId);
+    answerHere(orderId);
     declineOrder(orderId);
     setDataSourceNew(current => current.filter(order => order.id !== orderId));
   };
@@ -246,7 +270,7 @@ export const useHomeOrders = () => {
             !answeredFromAlert(order.id) &&
             countdowns.claimForAutoAccept(order.id)
           ) {
-            cancelOfferAlert(order.id);
+            answerHere(order.id);
             acceptOrder(order.id);
           }
         }

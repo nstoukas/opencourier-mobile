@@ -198,7 +198,7 @@ export const cancelOfferAlert = async (deliveryId: string): Promise<void> => {
   try {
     await notifee.cancelNotification(deliveryId);
   } catch (error) {
-    console.log('Offer alert could not be cancelled', error);
+    console.log('Offer alert could not be cancelled', String(error));
   }
 };
 
@@ -249,6 +249,14 @@ export const showOfferNotice = async (
       },
     });
   } catch (error) {
-    console.log('Offer notice could not be shown', error);
+    console.log('Offer notice could not be shown', String(error));
   }
 };
+
+// True while this offer's alert is on display (its ring is going).
+export const isOfferAlertDisplayed = async (
+  deliveryId: string,
+): Promise<boolean> =>
+  (await displayedOfferAlerts()).some(
+    alert => alert.notificationId === deliveryId,
+  );
