@@ -33,6 +33,10 @@ class OfferAlertModule(private val reactContext: ReactApplicationContext) :
 
   override fun getName(): String = "OfferAlert"
 
+  // The ring playing now. Held here until it finishes: a player kept only in a local
+  // variable can be garbage collected, which cuts the sound off after a moment.
+  private var ringPlayer: MediaPlayer? = null
+
   /** { ringerMode: "normal" | "vibrate" | "silent", doNotDisturb: boolean }. */
   @ReactMethod
   fun getRingerState(promise: Promise) {
@@ -116,8 +120,26 @@ class OfferAlertModule(private val reactContext: ReactApplicationContext) :
     val player =
         MediaPlayer.create(reactContext, R.raw.offer_ring, attributes, audio.generateAudioSessionId())
             ?: return
-    player.setOnCompletionListener { it.release() }
+    // A new ring replaces one still playing.
+    ringPlayer?.release()
+    ringPlayer = player
+    player.setOnCompletionListener {
+      it.release()
+      if (ringPlayer === it) {
+        ringPlayer = null
+      }
+    }
     player.start()
+  }
+
+  /**
+   * True while the offer screen is the app's screen in front. React Native calls the app
+   * "active" whichever of its screens is in front, so the offers list asks this before it
+   * quiets an alert: the rider may be looking at that alert over the lock screen.
+   */
+  @ReactMethod
+  fun isAlertScreenInFront(promise: Promise) {
+    promise.resolve(currentActivity is OfferAlertActivity)
   }
 
   /** Closes the offer screen, if it is the screen in front. */

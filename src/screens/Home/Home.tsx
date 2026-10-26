@@ -38,6 +38,7 @@ import { useFocusEffect, useIsFocused } from '@react-navigation/native';
 import { useConnectionStatus } from '@app/services/socket';
 import { prepareToGoOnline } from '@app/services/offerPush/goOnlineChecks';
 import { cancelOfferAlert } from '@app/services/offerPush/offerAlert';
+import { isHomeInFront } from '@app/navigation/navigationRef';
 
 type Props = DrawerScreenProp<DrawerScreens.Home>;
 
@@ -87,14 +88,15 @@ export const HomeScreen = ({ navigation }: Props) => {
   // AC-12: while this list is in front, an offer it shows needs no system
   // alert as well. An alert posted while the phone was locked, or while
   // another screen was in front, stops ringing once the rider is here.
-  // `useIsFocused` is true while this screen is the one in front.
+  // `useIsFocused` is true while this screen is the one in front; the offer
+  // screen can still be open over it (isHomeInFront checks that too).
   const isFocused = useIsFocused();
   useEffect(() => {
     if (!isFocused) {
       return;
     }
-    const quietShownOffers = () => {
-      if (AppState.currentState === 'active') {
+    const quietShownOffers = async () => {
+      if (await isHomeInFront()) {
         dataSourceNew.forEach(order => cancelOfferAlert(order.id));
       }
     };

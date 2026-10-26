@@ -21,6 +21,7 @@ type OfferAlertNativeModule = {
   openFullScreenAlertSettings: () => void;
   openSoundSettings: () => void;
   playOfferSound: () => void;
+  isAlertScreenInFront: () => Promise<boolean>;
   closeAlertScreen: () => void;
   openApp: () => void;
 };
@@ -63,6 +64,17 @@ export const openSoundSettings = () => native()?.openSoundSettings();
 
 // The offer ring, once, when the offers list on screen shows a new offer.
 export const playOfferSound = () => native()?.playOfferSound();
+
+// True while the offer screen (OfferAlertActivity) is in front. React Native
+// calls the app "active" whichever of its screens is in front, so "the offers
+// list is in front" must also mean "the offer screen is not".
+export const isAlertScreenInFront = async (): Promise<boolean> => {
+  try {
+    return (await native()?.isAlertScreenInFront()) ?? false;
+  } catch {
+    return false;
+  }
+};
 
 // The offer screen (OfferAlertActivity) closes itself, or opens the app.
 export const closeAlertScreen = () => native()?.closeAlertScreen();

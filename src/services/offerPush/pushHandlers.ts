@@ -71,7 +71,7 @@ export const onRemoteMessage = async (
 
   const appInFront =
     where === 'foreground' && AppState.currentState === 'active';
-  if (appInFront && isHomeInFront()) {
+  if (appInFront && (await isHomeInFront())) {
     // AC-12: the offers list is on screen. It shows the offer and rings once
     // when it sees it (useHomeOrders), so no system alert stacks on top.
     return;

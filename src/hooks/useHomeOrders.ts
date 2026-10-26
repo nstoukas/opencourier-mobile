@@ -275,8 +275,8 @@ export const useHomeOrders = () => {
         anyNew = true;
       }
     }
-    if (anyNew && !autoAccept && isHomeInFront()) {
-      playOfferSound();
+    if (anyNew && !autoAccept) {
+      isHomeInFront().then(inFront => inFront && playOfferSound());
     }
   };
 
