@@ -95,7 +95,12 @@ describe('useHomeOrders', () => {
 
     queryClient = new QueryClient({
       defaultOptions: {
-        queries: { retry: false, gcTime: 0, staleTime: Infinity },
+        queries: {
+          retry: false,
+          gcTime: 0,
+          staleTime: Infinity,
+          structuralSharing: false,
+        },
         mutations: { retry: false, gcTime: 0 },
       },
     });
@@ -110,10 +115,19 @@ describe('useHomeOrders', () => {
   describe('AC-8: Auto accept rider', () => {
     it('accepts offer on arrival immediately and exactly once even across refetches', async () => {
       mockDeliverySetting = OrderSetting.auto_accept;
+      // In-flight accept request so the offer remains in the list while further passes occur
+      mockAcceptOrder.mockReturnValue(new Promise(() => {}));
+
       const testOffer: Order = {
         id: 'order-123',
         offeredAt: '2026-10-26T12:00:00.000Z',
         phoneClock: { offeredAt: 100000, expiresAt: 160000 },
+      } as Order;
+
+      const testOffer2: Order = {
+        id: 'order-456',
+        offeredAt: '2026-10-26T12:00:05.000Z',
+        phoneClock: { offeredAt: 105000, expiresAt: 165000 },
       } as Order;
 
       queryClient.setQueryData([QueryKeys.newOrders], [testOffer]);
@@ -137,15 +151,49 @@ describe('useHomeOrders', () => {
       expect(mockAcceptOrder).toHaveBeenCalledWith('order-123');
       expect(mockDeclineOrder).not.toHaveBeenCalled();
 
-      // Refetch occurs delivering the same offer
-      mockGetNewOrders.mockResolvedValueOnce([testOffer]);
+      // Trigger further passes with the SAME offer still in the list:
+      // 1. Refetch occurs returning the same offer id
+      mockGetNewOrders.mockResolvedValueOnce([{ ...testOffer }]);
       await act(async () => {
         await hookResult?.refetchNew();
+        jest.runOnlyPendingTimers();
         await Promise.resolve();
       });
 
-      // Still called only once (claimForAutoAccept prevented duplicate send)
+      // 2. A rerender of the component tree with the same offer still listed
+      await act(async () => {
+        tree.update(
+          <QueryClientProvider client={queryClient}>
+            <HookHost
+              onRender={h => {
+                hookResult = h;
+              }}
+            />
+          </QueryClientProvider>,
+        );
+        await Promise.resolve();
+      });
+
+      // 3. A fake timer tick
+      await act(async () => {
+        jest.advanceTimersByTime(1000);
+        await Promise.resolve();
+      });
+
+      // Still called exactly once for order-123 (claimForAutoAccept prevented duplicate send)
       expect(mockAcceptOrder).toHaveBeenCalledTimes(1);
+      expect(mockAcceptOrder).toHaveBeenCalledWith('order-123');
+
+      // A second offer id arrives and is accepted once too
+      mockGetNewOrders.mockResolvedValueOnce([{ ...testOffer }, testOffer2]);
+      await act(async () => {
+        await hookResult?.refetchNew();
+        jest.runOnlyPendingTimers();
+        await Promise.resolve();
+      });
+
+      expect(mockAcceptOrder).toHaveBeenCalledTimes(2);
+      expect(mockAcceptOrder).toHaveBeenLastCalledWith('order-456');
 
       act(() => {
         tree.unmount();
