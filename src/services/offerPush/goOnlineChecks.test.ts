@@ -1,7 +1,7 @@
 import { Alert, AppState, PermissionsAndroid, Platform } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import '@app/localization/i18n';
-import { prepareToGoOnline } from './goOnlineChecks';
+import { ONLINE_CHECKS_LIMIT_MS, prepareToGoOnline } from './goOnlineChecks';
 import * as phone from './phone';
 
 jest.mock('./phone', () => ({
@@ -300,6 +300,113 @@ describe('goOnlineChecks (spec 0003, AC-8, AC-9, Decisions 58.22, 58.23)', () =>
       // Fast forward past the 1500ms fallback timer
       jest.advanceTimersByTime(1500);
 
+      await expect(promise).resolves.toBeUndefined();
+    });
+  });
+
+  describe('ONLINE_CHECKS_LIMIT_MS and settings transition behavior (Job B3, Job C5)', () => {
+    it('prepareToGoOnline resolves within ONLINE_CHECKS_LIMIT_MS (literal 30000) even when Alert.alert never calls any button or onDismiss', async () => {
+      // Must assert the literal 30000
+      expect(ONLINE_CHECKS_LIMIT_MS).toBe(30000);
+
+      (phone.getRingerState as jest.Mock).mockResolvedValue({
+        ringerMode: 'silent',
+        doNotDisturb: false,
+      });
+
+      // Alert.alert is triggered, but neither button nor onDismiss is ever called
+      alertSpy.mockImplementation(() => {});
+
+      let settled = false;
+      const promise = prepareToGoOnline().then(() => {
+        settled = true;
+      });
+
+      await flushMicrotasks();
+      expect(alertSpy).toHaveBeenCalled();
+      expect(settled).toBe(false);
+
+      // 29999ms elapsed: still pending
+      jest.advanceTimersByTime(29999);
+      await flushMicrotasks();
+      expect(settled).toBe(false);
+
+      // Reaching 30000ms: resolves without hanging
+      jest.advanceTimersByTime(1);
+      await flushMicrotasks();
+      expect(settled).toBe(true);
+      await expect(promise).resolves.toBeUndefined();
+    });
+
+    it('after pressing "Turn sound on" the promise is still pending until AppState goes to background then active', async () => {
+      await AsyncStorage.setItem('offer_alert_permissions_asked', 'yes');
+      (phone.getRingerState as jest.Mock).mockResolvedValue({
+        ringerMode: 'silent',
+        doNotDisturb: false,
+      });
+
+      let settled = false;
+      const promise = prepareToGoOnline().then(() => {
+        settled = true;
+      });
+      await flushMicrotasks();
+
+      const buttons = alertSpy.mock.calls[0][2];
+      const turnSoundOnBtn = buttons.find(
+        (b: any) => b.text === 'Turn sound on',
+      );
+      turnSoundOnBtn.onPress();
+
+      expect(phone.openSoundSettings).toHaveBeenCalledTimes(1);
+      await flushMicrotasks();
+
+      // Must remain pending right after pressing button (not resolved at once)
+      expect(settled).toBe(false);
+
+      // Transition to background: still pending
+      triggerAppState('background');
+      await flushMicrotasks();
+      expect(settled).toBe(false);
+
+      // Transition back to active: now resolves
+      triggerAppState('active');
+      await flushMicrotasks();
+      expect(settled).toBe(true);
+      await expect(promise).resolves.toBeUndefined();
+    });
+
+    it('after pressing "Turn sound on" the promise is still pending and resolves after 1500 ms if the app never leaves', async () => {
+      await AsyncStorage.setItem('offer_alert_permissions_asked', 'yes');
+      (phone.getRingerState as jest.Mock).mockResolvedValue({
+        ringerMode: 'silent',
+        doNotDisturb: false,
+      });
+
+      let settled = false;
+      const promise = prepareToGoOnline().then(() => {
+        settled = true;
+      });
+      await flushMicrotasks();
+
+      const buttons = alertSpy.mock.calls[0][2];
+      const turnSoundOnBtn = buttons.find(
+        (b: any) => b.text === 'Turn sound on',
+      );
+      turnSoundOnBtn.onPress();
+
+      await flushMicrotasks();
+      // Must NOT resolve at once
+      expect(settled).toBe(false);
+
+      // Advance to 1499ms: still pending
+      jest.advanceTimersByTime(1499);
+      await flushMicrotasks();
+      expect(settled).toBe(false);
+
+      // Advance to 1500ms: resolves
+      jest.advanceTimersByTime(1);
+      await flushMicrotasks();
+      expect(settled).toBe(true);
       await expect(promise).resolves.toBeUndefined();
     });
   });

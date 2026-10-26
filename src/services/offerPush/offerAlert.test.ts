@@ -118,6 +118,9 @@ describe('offerAlert (spec 0003, AC-3, AC-6, AC-7, Decisions 58.13, 58.15)', () 
   });
 
   it('AC-3 and AC-6 local stop: sets chronometer countdown to deadline and timeoutAfter to deadline plus 5s', async () => {
+    // Decision 58.11 / spec: local stop grace period must be literal 5000 ms (5s)
+    expect(ALERT_GRACE_AFTER_DEADLINE_MS).toBe(5000);
+
     const receivedAt = 100000;
     const now = 100000;
     jest.spyOn(Date, 'now').mockReturnValue(now);
@@ -129,9 +132,8 @@ describe('offerAlert (spec 0003, AC-3, AC-6, AC-7, Decisions 58.13, 58.15)', () 
 
     await showOfferAlert(offerWithDeadline, receivedAt, 'full-screen');
 
-    const expectedDeadline = receivedAt + 20000; // 120000
-    const expectedStopAfter =
-      expectedDeadline + ALERT_GRACE_AFTER_DEADLINE_MS - now; // 25000
+    const expectedDeadline = 120000; // receivedAt (100000) + 20000
+    const expectedStopAfter = 25000; // deadline (120000) + literal 5000 - now (100000)
 
     expect(notifee.displayNotification).toHaveBeenCalledWith(
       expect.objectContaining({

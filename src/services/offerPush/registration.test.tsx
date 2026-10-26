@@ -161,4 +161,83 @@ describe('registration (spec 0003, AC-1, Value 5)', () => {
       services.notificationDeviceService.unregisterDevice,
     ).not.toHaveBeenCalled();
   });
+
+  describe('no bearer token in log lines on error (Job B6, Job C4)', () => {
+    it('register failure does not log bearer token or FCM token in any console.log argument', async () => {
+      const axiosError: any = new Error('Request failed with status code 500');
+      axiosError.name = 'AxiosError';
+      axiosError.config = {
+        headers: {
+          Authorization: 'Bearer secret-token',
+        },
+      };
+
+      const pushToken = 'fcm-secret-registration-token';
+      (
+        services.notificationDeviceService.registerDevice as jest.Mock
+      ).mockRejectedValueOnce(axiosError);
+      (messaging().getToken as jest.Mock).mockResolvedValueOnce(pushToken);
+
+      let tree: renderer.ReactTestRenderer;
+      await act(async () => {
+        tree = renderer.create(<HookHost userId="courier-user-err" />);
+        await Promise.resolve();
+      });
+
+      const logCalls = logSpy.mock.calls;
+      expect(logCalls.length).toBeGreaterThan(0);
+
+      // Verify no console.log argument (stringified or direct value) contains 'secret-token' or the push token
+      for (const callArgs of logCalls) {
+        for (const arg of callArgs) {
+          const directStr = String(arg);
+          expect(directStr).not.toContain('secret-token');
+          expect(directStr).not.toContain(pushToken);
+
+          if (typeof arg === 'object' && arg !== null) {
+            const jsonStr = JSON.stringify(arg);
+            expect(jsonStr).not.toContain('secret-token');
+            expect(jsonStr).not.toContain(pushToken);
+          }
+        }
+      }
+
+      tree!.unmount();
+    });
+
+    it('unregister failure does not log bearer token or FCM token in any console.log argument', async () => {
+      const axiosError: any = new Error('Request failed with status code 500');
+      axiosError.name = 'AxiosError';
+      axiosError.config = {
+        headers: {
+          Authorization: 'Bearer secret-token',
+        },
+      };
+
+      const pushToken = 'fcm-secret-unregistration-token';
+      (
+        services.notificationDeviceService.unregisterDevice as jest.Mock
+      ).mockRejectedValueOnce(axiosError);
+      (messaging().getToken as jest.Mock).mockResolvedValueOnce(pushToken);
+
+      await unregisterThisPhone(3000);
+
+      const logCalls = logSpy.mock.calls;
+      expect(logCalls.length).toBeGreaterThan(0);
+
+      for (const callArgs of logCalls) {
+        for (const arg of callArgs) {
+          const directStr = String(arg);
+          expect(directStr).not.toContain('secret-token');
+          expect(directStr).not.toContain(pushToken);
+
+          if (typeof arg === 'object' && arg !== null) {
+            const jsonStr = JSON.stringify(arg);
+            expect(jsonStr).not.toContain('secret-token');
+            expect(jsonStr).not.toContain(pushToken);
+          }
+        }
+      }
+    });
+  });
 });

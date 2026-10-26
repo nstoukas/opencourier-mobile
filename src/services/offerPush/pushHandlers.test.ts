@@ -105,6 +105,21 @@ describe('pushHandlers (spec 0003, AC-6, AC-12)', () => {
       expect(showOfferAlert).not.toHaveBeenCalled();
     });
 
+    it('with Home as current route but AppState not active (e.g. background), still posts an alert', async () => {
+      (isHomeInFront as jest.Mock).mockResolvedValue(true);
+      AppState.currentState = 'background';
+
+      await onRemoteMessage({ data: newOfferData } as any, 'foreground');
+
+      // Home counts as in front only when the app is active; in background it must still post an alert
+      expect(showOfferAlert).toHaveBeenCalledTimes(1);
+      expect(showOfferAlert).toHaveBeenCalledWith(
+        expect.objectContaining({ deliveryId: 'del-push-1' }),
+        expect.any(Number),
+        'full-screen',
+      );
+    });
+
     it('on any other screen (Home not in front), posts a heads-up alert with id = deliveryId', async () => {
       (isHomeInFront as jest.Mock).mockResolvedValue(false);
       AppState.currentState = 'active';

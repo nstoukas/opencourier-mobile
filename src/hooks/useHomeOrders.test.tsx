@@ -13,13 +13,38 @@ import { OFFER_HAS_ENDED_CODE } from '@app/services/orderService';
 import { AxiosError } from 'axios';
 import '@app/localization/i18n';
 import {
+  isOfferAnswered,
   markOfferAnswered,
   offerKeyOf,
 } from '@app/services/offerPush/answeredOffers';
+import { isOfferAlertDisplayed } from '@app/services/offerPush/offerAlert';
+import { answerOffer } from '@app/services/offerPush/answerOffer';
 
 jest.mock('@app/services/offerPush/offerAlert', () => ({
   cancelOfferAlert: jest.fn(),
+  isOfferAlertDisplayed: jest.fn().mockResolvedValue(false),
 }));
+
+let mockAnsweredSet = new Set<string>();
+
+jest.mock('@app/services/offerPush/answeredOffers', () => {
+  const actual = jest.requireActual('@app/services/offerPush/answeredOffers');
+  return {
+    ...actual,
+    isOfferAnswered: jest.fn((key: string) => mockAnsweredSet.has(key)),
+    markOfferAnswered: jest.fn((key: string) => {
+      if (mockAnsweredSet.has(key)) {
+        return false;
+      }
+      mockAnsweredSet.add(key);
+      return true;
+    }),
+    unmarkOfferAnswered: jest.fn((key: string) => {
+      mockAnsweredSet.delete(key);
+    }),
+    loadAnsweredOffers: jest.fn().mockResolvedValue(undefined),
+  };
+});
 
 jest.mock('@react-native-async-storage/async-storage', () =>
   require('@react-native-async-storage/async-storage/jest/async-storage-mock'),
@@ -95,6 +120,7 @@ describe('useHomeOrders', () => {
   beforeEach(() => {
     jest.useFakeTimers();
     jest.clearAllMocks();
+    mockAnsweredSet.clear();
     mockGetNewOrders.mockReturnValue(new Promise(() => {}));
     mockAcceptOrder.mockResolvedValue({});
     mockDeclineOrder.mockResolvedValue({});
@@ -420,6 +446,55 @@ describe('useHomeOrders', () => {
 
       // M7: unmount triggers stopAll, which cancels notification for the reminded offer
       expect(mockCancelOfferReminder).toHaveBeenCalledWith('order-123');
+    });
+
+    it("row 61's 30s reminder (remindRiderOfOffer) is NOT called while isOfferAlertDisplayed(orderId) is true, and IS called when false", async () => {
+      mockDeliverySetting = OrderSetting.manual;
+      const now = Date.now();
+      const testOffer: Order = {
+        id: 'order-reminder-check',
+        offeredAt: new Date(now).toISOString(),
+        phoneClock: { offeredAt: now, expiresAt: null },
+      } as Order;
+
+      queryClient.setQueryData([QueryKeys.newOrders], [testOffer]);
+
+      let tree: renderer.ReactTestRenderer;
+      await act(async () => {
+        tree = renderer.create(
+          <QueryClientProvider client={queryClient}>
+            <HookHost onRender={() => {}} />
+          </QueryClientProvider>,
+        );
+      });
+
+      // 1. When isOfferAlertDisplayed is true (alert is ringing): reminder is skipped
+      (isOfferAlertDisplayed as jest.Mock).mockResolvedValue(true);
+
+      await act(async () => {
+        jest.advanceTimersByTime(OFFER_REMINDER_EVERY_MS);
+        await Promise.resolve();
+      });
+
+      expect(mockRemindRiderOfOffer).not.toHaveBeenCalled();
+
+      // 2. When isOfferAlertDisplayed is false (alert is not displayed): reminder runs
+      (isOfferAlertDisplayed as jest.Mock).mockResolvedValue(false);
+
+      await act(async () => {
+        jest.advanceTimersByTime(OFFER_REMINDER_EVERY_MS);
+        await Promise.resolve();
+      });
+
+      expect(mockRemindRiderOfOffer).toHaveBeenCalledTimes(1);
+      expect(mockRemindRiderOfOffer).toHaveBeenCalledWith(
+        'order-reminder-check',
+        60000,
+      );
+
+      act(() => {
+        tree.unmount();
+      });
     });
   });
 
@@ -1057,6 +1132,212 @@ describe('useHomeOrders', () => {
 
       expect(mockAcceptOrder).toHaveBeenCalledTimes(1);
       expect(mockAcceptOrder).toHaveBeenCalledWith(orderId);
+
+      act(() => {
+        tree.unmount();
+      });
+    });
+  });
+
+  describe('Home writes the answered list on answer and recovers on error (Job B4)', () => {
+    it('acceptOrder in app marks the offer answered with key deliveryId@offeredAt, so a following answerOffer sends nothing', async () => {
+      const orderId = 'order-home-acc';
+      const offeredAt = '2026-10-26T10:00:00.000Z';
+      const key = offerKeyOf(orderId, offeredAt);
+
+      queryClient.setQueryData(
+        [QueryKeys.newOrders],
+        [{ id: orderId, offeredAt }],
+      );
+
+      let hookResult: ReturnType<typeof useHomeOrders> | undefined;
+      let tree: renderer.ReactTestRenderer;
+      await act(async () => {
+        tree = renderer.create(
+          <QueryClientProvider client={queryClient}>
+            <HookHost
+              onRender={h => {
+                hookResult = h;
+              }}
+            />
+          </QueryClientProvider>,
+        );
+      });
+
+      // Answer in the app via accept
+      await act(async () => {
+        hookResult?.acceptOrderFn(orderId);
+      });
+
+      // Must be marked answered in shared list
+      expect(isOfferAnswered(key)).toBe(true);
+
+      // A following answerOffer from the alert for the same offer sends nothing
+      const outcome = await answerOffer(
+        { deliveryId: orderId, offeredAt },
+        'accept',
+      );
+      expect(outcome).toBe('already-answered');
+
+      act(() => {
+        tree.unmount();
+      });
+    });
+
+    it('declineOrder in app marks the offer answered with key deliveryId@offeredAt, so a following answerOffer sends nothing', async () => {
+      const orderId = 'order-home-dec';
+      const offeredAt = '2026-10-26T10:05:00.000Z';
+      const key = offerKeyOf(orderId, offeredAt);
+
+      queryClient.setQueryData(
+        [QueryKeys.newOrders],
+        [{ id: orderId, offeredAt }],
+      );
+
+      let hookResult: ReturnType<typeof useHomeOrders> | undefined;
+      let tree: renderer.ReactTestRenderer;
+      await act(async () => {
+        tree = renderer.create(
+          <QueryClientProvider client={queryClient}>
+            <HookHost
+              onRender={h => {
+                hookResult = h;
+              }}
+            />
+          </QueryClientProvider>,
+        );
+      });
+
+      // Answer in the app via decline
+      await act(async () => {
+        hookResult?.declineOrderFn(orderId);
+      });
+
+      expect(isOfferAnswered(key)).toBe(true);
+
+      const outcome = await answerOffer(
+        { deliveryId: orderId, offeredAt },
+        'decline',
+      );
+      expect(outcome).toBe('already-answered');
+
+      act(() => {
+        tree.unmount();
+      });
+    });
+
+    it('auto-accept marks the offer answered with key deliveryId@offeredAt, so a following answerOffer sends nothing', async () => {
+      mockDeliverySetting = OrderSetting.auto_accept;
+      const orderId = 'order-home-auto';
+      const offeredAt = '2026-10-26T10:10:00.000Z';
+      const key = offerKeyOf(orderId, offeredAt);
+
+      queryClient.setQueryData(
+        [QueryKeys.newOrders],
+        [{ id: orderId, offeredAt }],
+      );
+
+      let tree: renderer.ReactTestRenderer;
+      await act(async () => {
+        tree = renderer.create(
+          <QueryClientProvider client={queryClient}>
+            <HookHost onRender={() => {}} />
+          </QueryClientProvider>,
+        );
+      });
+
+      expect(mockAcceptOrder).toHaveBeenCalledWith(orderId);
+      expect(isOfferAnswered(key)).toBe(true);
+
+      const outcome = await answerOffer(
+        { deliveryId: orderId, offeredAt },
+        'accept',
+      );
+      expect(outcome).toBe('already-answered');
+
+      act(() => {
+        tree.unmount();
+      });
+    });
+
+    it('a failed non-409 send unmarks the offer so the rider can try again', async () => {
+      const orderIdFail = 'order-home-fail';
+      const offeredAtFail = '2026-10-26T10:20:00.000Z';
+      const keyFail = offerKeyOf(orderIdFail, offeredAtFail);
+
+      mockAcceptOrder.mockRejectedValueOnce(
+        new AxiosError('Internal Server Error'),
+      );
+
+      queryClient.setQueryData(
+        [QueryKeys.newOrders],
+        [{ id: orderIdFail, offeredAt: offeredAtFail }],
+      );
+
+      let hookResult: ReturnType<typeof useHomeOrders> | undefined;
+      let tree: renderer.ReactTestRenderer;
+      await act(async () => {
+        tree = renderer.create(
+          <QueryClientProvider client={queryClient}>
+            <HookHost
+              onRender={h => {
+                hookResult = h;
+              }}
+            />
+          </QueryClientProvider>,
+        );
+      });
+
+      await act(async () => {
+        hookResult?.acceptOrderFn(orderIdFail);
+      });
+
+      // Failed non-409 send unmarks it so the rider can try again
+      expect(isOfferAnswered(keyFail)).toBe(false);
+
+      act(() => {
+        tree.unmount();
+      });
+    });
+
+    it('a 409 OFFER_HAS_ENDED failure keeps the offer marked answered', async () => {
+      const orderId409 = 'order-home-409';
+      const offeredAt409 = '2026-10-26T10:25:00.000Z';
+      const key409 = offerKeyOf(orderId409, offeredAt409);
+
+      mockAcceptOrder.mockRejectedValueOnce(makeOfferEndedError());
+
+      queryClient.setQueryData(
+        [QueryKeys.newOrders],
+        [{ id: orderId409, offeredAt: offeredAt409 }],
+      );
+
+      let hookResult: ReturnType<typeof useHomeOrders> | undefined;
+      let tree: renderer.ReactTestRenderer;
+      await act(async () => {
+        tree = renderer.create(
+          <QueryClientProvider client={queryClient}>
+            <HookHost
+              onRender={h => {
+                hookResult = h;
+              }}
+            />
+          </QueryClientProvider>,
+        );
+      });
+
+      await act(async () => {
+        hookResult?.acceptOrderFn(orderId409);
+      });
+
+      // 409 keeps it marked
+      expect(isOfferAnswered(key409)).toBe(true);
+
+      const outcome = await answerOffer(
+        { deliveryId: orderId409, offeredAt: offeredAt409 },
+        'accept',
+      );
+      expect(outcome).toBe('already-answered');
 
       act(() => {
         tree.unmount();
