@@ -399,4 +399,26 @@ export default {
   offer_waiting_just_now: 'Waiting less than 1 min',
   offer_reminder_title: 'An offer is waiting for you',
   offer_has_ended: 'This offer has ended',
+  // Offer alerts on the phone (row 58, spec 0003).
+  offer_alert_title: 'New offer: {{pay}}',
+  offer_alert_body_area: '{{restaurant}} to {{area}}',
+  offer_alert_distance: '{{km}} km',
+  offer_alert_minutes: '{{minutes}} min',
+  offer_alert_channel: 'New offers',
+  offer_alert_channel_insistent: 'Offers still waiting',
+  offer_alert_channel_notices: 'Offer notices',
+  offer_alert_open_app: 'Open the app',
+  offer_alert_close: 'Close',
+  offer_alert_time_left: '{{seconds}} s left',
+  offer_alert_no_deadline: 'Waiting for your answer',
+  offer_alert_answer_failed:
+    'Could not send your answer. Open the app to try again.',
+  phone_silent_message: 'Your phone is on silent. You may miss offers.',
+  phone_silent_turn_on: 'Turn sound on',
+  phone_silent_go_anyway: 'Go Online anyway',
+  full_screen_title: 'Show offers on a locked phone',
+  full_screen_message:
+    'To show a new offer over the lock screen, allow full screen alerts for this app on the next screen. Without it, offers still come as a normal alert.',
+  full_screen_open_settings: 'Open settings',
+  not_now: 'Not now',
 };
