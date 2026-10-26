@@ -1,7 +1,7 @@
 import { Vibration, Platform } from 'react-native';
 import notifee, { AndroidImportance } from '@notifee/react-native';
 import '@app/localization/i18n';
-import { remindRiderOfOffer } from './offerReminder';
+import { remindRiderOfOffer, cancelOfferReminder } from './offerReminder';
 
 describe('offerReminder (spec 0002, AC-4)', () => {
   let vibrateSpy: jest.SpyInstance;
@@ -89,5 +89,45 @@ describe('offerReminder (spec 0002, AC-4)', () => {
 
     // Vibration was still called before notification attempt
     expect(vibrateSpy).toHaveBeenCalledWith([0, 400]);
+  });
+
+  describe('M2: 30 s reminder text', () => {
+    it('uses "Waiting less than 1 min" (offer_waiting_just_now) instead of "Waiting 0 min" under 1 minute', async () => {
+      await remindRiderOfOffer('order-30s', 30000);
+
+      expect(notifee.displayNotification).toHaveBeenCalledWith(
+        expect.objectContaining({
+          id: 'offer-reminder-order-30s',
+          title: 'An offer is waiting for you',
+          body: 'Waiting less than 1 min',
+        }),
+      );
+
+      // Explicitly guard against the "Waiting 0 min" bug
+      const call = (notifee.displayNotification as jest.Mock).mock.calls.find(
+        c => c[0]?.id === 'offer-reminder-order-30s',
+      );
+      expect(call[0]?.body).not.toBe('Waiting 0 min');
+      expect(call[0]?.body).toBe('Waiting less than 1 min');
+    });
+  });
+
+  describe('M7: cancelOfferReminder', () => {
+    it('cancels the notification in tray using offer-reminder-<id>', async () => {
+      await cancelOfferReminder('order-abc');
+
+      expect(notifee.cancelNotification).toHaveBeenCalledTimes(1);
+      expect(notifee.cancelNotification).toHaveBeenCalledWith(
+        'offer-reminder-order-abc',
+      );
+    });
+
+    it('swallows errors when cancelNotification fails and does not throw', async () => {
+      (notifee.cancelNotification as jest.Mock).mockRejectedValueOnce(
+        new Error('Failed to cancel notification'),
+      );
+
+      await expect(cancelOfferReminder('order-abc')).resolves.toBeUndefined();
+    });
   });
 });

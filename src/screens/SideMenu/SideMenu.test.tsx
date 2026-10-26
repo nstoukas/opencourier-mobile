@@ -4,6 +4,7 @@ import { Alert } from 'react-native';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { SideMenuItem, UserStatus } from '@app/types/types';
+import { LOGOUT_OFFLINE_TIMEOUT_MS } from '@app/utilities/constants';
 import '@app/localization/i18n';
 
 // Mock dependencies of SideMenu
@@ -32,7 +33,7 @@ const mockUserData = {
 jest.mock('@app/services/service', () => ({
   services: {
     userService: {
-      setUserStatus: (status: UserStatus) => mockSetUserStatus(status),
+      setUserStatus: (...args: any[]) => mockSetUserStatus(...args),
     },
     logout: () => mockLogout(),
   },
@@ -145,9 +146,11 @@ describe('SideMenu logout (spec 0002, AC-6)', () => {
       await yesButton.onPress();
     });
 
-    // 1. Sets status Offline first
+    // 1. Sets status Offline first with 3s timeout (M5)
     expect(mockSetUserStatus).toHaveBeenCalledTimes(1);
-    expect(mockSetUserStatus).toHaveBeenCalledWith(UserStatus.Offline);
+    expect(mockSetUserStatus).toHaveBeenCalledWith(UserStatus.Offline, {
+      timeoutMs: LOGOUT_OFFLINE_TIMEOUT_MS,
+    });
 
     // 2. Clears storage, logs out, and resets queries
     expect(multiRemoveSpy).toHaveBeenCalledWith([
@@ -192,7 +195,9 @@ describe('SideMenu logout (spec 0002, AC-6)', () => {
       await yesButton.onPress();
     });
 
-    expect(mockSetUserStatus).toHaveBeenCalledWith(UserStatus.Offline);
+    expect(mockSetUserStatus).toHaveBeenCalledWith(UserStatus.Offline, {
+      timeoutMs: LOGOUT_OFFLINE_TIMEOUT_MS,
+    });
 
     // AsyncStorage, logout and query reset MUST still happen so user is not stuck logged in
     expect(multiRemoveSpy).toHaveBeenCalledWith([

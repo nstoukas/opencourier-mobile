@@ -75,24 +75,33 @@ describe('orderService & isOfferEndedError (spec 0002, AC-5)', () => {
   });
 
   describe('getNewOrders attaches phoneClock', () => {
-    it('fetches new orders and sets phoneClock on each offer using serverNow and phone time', async () => {
+    it('corrects phoneClock using request midpoint for a 2s network round-trip (M4)', async () => {
+      let currentTime = 1_000_000;
+      const dateNowSpy = jest
+        .spyOn(Date, 'now')
+        .mockImplementation(() => currentTime);
+
       const serverNow = '2026-10-26T12:00:00.000Z';
       const offeredAt = '2026-10-26T11:59:40.000Z';
       const offerExpiresAt = '2026-10-26T12:00:40.000Z';
 
-      const mockGet = jest.fn().mockResolvedValue({
-        data: {
-          result: {
-            serverNow,
-            data: [
-              {
-                id: 'order-1',
-                offeredAt,
-                offerExpiresAt,
-              },
-            ],
+      const mockGet = jest.fn().mockImplementation(async () => {
+        // Simulate a 2s network round-trip
+        currentTime += 2000;
+        return {
+          data: {
+            result: {
+              serverNow,
+              data: [
+                {
+                  id: 'order-1',
+                  offeredAt,
+                  offerExpiresAt,
+                },
+              ],
+            },
           },
-        },
+        };
       });
 
       const client = {
@@ -100,19 +109,27 @@ describe('orderService & isOfferEndedError (spec 0002, AC-5)', () => {
       } as unknown as UClient;
 
       const service = orderService(client);
-      const orders = await service.getNewOrders();
 
-      expect(mockGet).toHaveBeenCalledWith('deliveries/new?page=1&perPage=10');
-      expect(orders).toHaveLength(1);
-      expect(orders[0].id).toBe('order-1');
-      expect(orders[0].phoneClock).toBeDefined();
-      expect(typeof orders[0].phoneClock?.offeredAt).toBe('number');
-      expect(typeof orders[0].phoneClock?.expiresAt).toBe('number');
+      try {
+        const orders = await service.getNewOrders();
 
-      // Remaining duration calculated on phone matches server duration (40s = 40,000ms)
-      const phoneDuration =
-        orders[0].phoneClock!.expiresAt! - orders[0].phoneClock!.offeredAt!;
-      expect(phoneDuration).toBe(60000);
+        expect(mockGet).toHaveBeenCalledWith(
+          'deliveries/new?page=1&perPage=10',
+        );
+        expect(orders).toHaveLength(1);
+        expect(orders[0].id).toBe('order-1');
+        expect(orders[0].phoneClock).toBeDefined();
+
+        // sentAt = 1,000,000; receivedAt = 1,002,000; midpoint phoneNow = 1,001,000.
+        // serverExpiresAt - serverNow = +40,000 ms.
+        // Midpoint phone deadline = 1,001,000 + 40,000 = 1,041,000.
+        // If phoneNow were read only after the response (post-response bug), it would be
+        // 1,002,000 + 40,000 = 1,042,000 (1 s later than true server deadline).
+        expect(orders[0].phoneClock?.expiresAt).toBe(1041000);
+        expect(orders[0].phoneClock?.offeredAt).toBe(981000);
+      } finally {
+        dateNowSpy.mockRestore();
+      }
     });
   });
 });

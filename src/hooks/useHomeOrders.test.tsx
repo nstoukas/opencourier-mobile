@@ -45,8 +45,10 @@ jest.mock('@app/services/service', () => ({
 }));
 
 const mockRemindRiderOfOffer = jest.fn();
+const mockCancelOfferReminder = jest.fn();
 jest.mock('@app/services/offerReminder', () => ({
   remindRiderOfOffer: (...args: any[]) => mockRemindRiderOfOffer(...args),
+  cancelOfferReminder: (...args: any[]) => mockCancelOfferReminder(...args),
 }));
 
 import { useHomeOrders } from './useHomeOrders';
@@ -407,6 +409,9 @@ describe('useHomeOrders', () => {
       act(() => {
         tree.unmount();
       });
+
+      // M7: unmount triggers stopAll, which cancels notification for the reminded offer
+      expect(mockCancelOfferReminder).toHaveBeenCalledWith('order-123');
     });
   });
 
@@ -501,6 +506,53 @@ describe('useHomeOrders', () => {
       expect(hookResult?.dataSourceNew).toEqual([]);
       expect(alertSpy).toHaveBeenCalledWith('This offer has ended');
       expect(mockGetNewOrders).toHaveBeenCalledTimes(1);
+
+      act(() => {
+        tree.unmount();
+      });
+    });
+
+    it('dropEndedOffer removes the ended offer from [QueryKeys.newOrders] query cache (M6)', async () => {
+      const offerEnded: Order = {
+        id: 'order-ended-m6',
+        offeredAt: '2026-10-26T12:00:00.000Z',
+      } as Order;
+      const offerKeep: Order = {
+        id: 'order-keep-m6',
+        offeredAt: '2026-10-26T12:00:05.000Z',
+      } as Order;
+
+      queryClient.setQueryData([QueryKeys.newOrders], [offerEnded, offerKeep]);
+
+      let hookResult: ReturnType<typeof useHomeOrders> | undefined;
+      let tree: renderer.ReactTestRenderer;
+      await act(async () => {
+        tree = renderer.create(
+          <QueryClientProvider client={queryClient}>
+            <HookHost
+              onRender={h => {
+                hookResult = h;
+              }}
+            />
+          </QueryClientProvider>,
+        );
+      });
+
+      // Decline offerEnded -> triggers 409 -> dropEndedOffer
+      mockDeclineOrder.mockRejectedValueOnce(makeOfferEndedError());
+      await act(async () => {
+        hookResult?.declineOrderFn('order-ended-m6');
+        await Promise.resolve();
+      });
+
+      // M6: query cache MUST be updated so offerEnded is removed while offerKeep remains
+      const cachedOffers = queryClient.getQueryData<Order[]>([
+        QueryKeys.newOrders,
+      ]);
+      expect(cachedOffers?.map(o => o.id)).toEqual(['order-keep-m6']);
+      expect(
+        cachedOffers?.find(o => o.id === 'order-ended-m6'),
+      ).toBeUndefined();
 
       act(() => {
         tree.unmount();
@@ -614,6 +666,105 @@ describe('useHomeOrders', () => {
       });
 
       expect(hookResult?.dataSourceNew).toEqual([]);
+
+      act(() => {
+        tree.unmount();
+      });
+    });
+
+    it('cancels in-flight fetch and empties query cache on Offline, so Online round trip never re-tracks or auto-accepts stale cached offers (M1)', async () => {
+      mockUserStatus = UserStatus.Online;
+      mockDeliverySetting = OrderSetting.auto_accept;
+
+      const preOfflineOffer: Order = {
+        id: 'pre-offline-offer',
+        offeredAt: '2026-10-26T12:00:00.000Z',
+        phoneClock: { offeredAt: 100000, expiresAt: 160000 },
+      } as Order;
+
+      // Online initially with offer in query cache
+      queryClient.setQueryData([QueryKeys.newOrders], [preOfflineOffer]);
+
+      const cancelQueriesSpy = jest.spyOn(queryClient, 'cancelQueries');
+
+      let hookResult: ReturnType<typeof useHomeOrders> | undefined;
+      let tree: renderer.ReactTestRenderer;
+      await act(async () => {
+        tree = renderer.create(
+          <QueryClientProvider client={queryClient}>
+            <HookHost
+              onRender={h => {
+                hookResult = h;
+              }}
+            />
+          </QueryClientProvider>,
+        );
+      });
+
+      // Auto-accepted initially
+      expect(mockAcceptOrder).toHaveBeenCalledWith('pre-offline-offer');
+      mockAcceptOrder.mockClear();
+
+      // Rider goes Offline
+      mockUserStatus = UserStatus.Offline;
+      await act(async () => {
+        tree.update(
+          <QueryClientProvider client={queryClient}>
+            <HookHost
+              onRender={h => {
+                hookResult = h;
+              }}
+            />
+          </QueryClientProvider>,
+        );
+        // Wait for cancelQueries and .then() to finish emptying the cache
+        await Promise.resolve();
+      });
+
+      // M1: In-flight queries cancelled, and cache emptied
+      expect(cancelQueriesSpy).toHaveBeenCalledWith({
+        queryKey: [QueryKeys.newOrders],
+      });
+      expect(hookResult?.dataSourceNew).toEqual([]);
+      expect(queryClient.getQueryData([QueryKeys.newOrders])).toEqual([]);
+
+      // Rider goes back Online
+      mockUserStatus = UserStatus.Online;
+      await act(async () => {
+        tree.update(
+          <QueryClientProvider client={queryClient}>
+            <HookHost
+              onRender={h => {
+                hookResult = h;
+              }}
+            />
+          </QueryClientProvider>,
+        );
+        await Promise.resolve();
+      });
+
+      // M1: Cached preOfflineOffer must NOT be re-tracked or auto-accepted!
+      expect(mockAcceptOrder).not.toHaveBeenCalledWith('pre-offline-offer');
+      expect(hookResult?.dataSourceNew).toEqual([]);
+
+      const freshOnlineOffer: Order = {
+        id: 'fresh-online-offer',
+        offeredAt: '2026-10-26T12:05:00.000Z',
+        phoneClock: { offeredAt: 150000, expiresAt: 210000 },
+      } as Order;
+
+      // Now the fresh fetch lands from backend
+      mockGetNewOrders.mockResolvedValueOnce([freshOnlineOffer]);
+      await act(async () => {
+        await hookResult?.refetchNew();
+        jest.runOnlyPendingTimers();
+        await Promise.resolve();
+      });
+
+      // Only the fresh offer is accepted and tracked
+      expect(mockAcceptOrder).toHaveBeenCalledTimes(1);
+      expect(mockAcceptOrder).toHaveBeenCalledWith('fresh-online-offer');
+      expect(mockAcceptOrder).not.toHaveBeenCalledWith('pre-offline-offer');
 
       act(() => {
         tree.unmount();

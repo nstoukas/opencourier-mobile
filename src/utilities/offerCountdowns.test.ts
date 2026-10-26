@@ -5,12 +5,14 @@ describe('OfferCountdowns', () => {
   const DURATION_MS = 60000;
   let onDeadlineMock: jest.Mock;
   let onReminderMock: jest.Mock;
+  let onRemindersEndedMock: jest.Mock;
 
   const makeCountdowns = (now: () => number = Date.now) =>
     new OfferCountdowns(
       {
         onDeadline: onDeadlineMock,
         onReminder: onReminderMock,
+        onRemindersEnded: onRemindersEndedMock,
       },
       now,
     );
@@ -35,6 +37,7 @@ describe('OfferCountdowns', () => {
     jest.useFakeTimers();
     onDeadlineMock = jest.fn();
     onReminderMock = jest.fn();
+    onRemindersEndedMock = jest.fn();
   });
 
   afterEach(() => {
@@ -267,12 +270,12 @@ describe('OfferCountdowns', () => {
       expect(onDeadlineMock).toHaveBeenCalledWith('order-1');
     });
 
-    it('does not schedule a deadline timer if deadline + 4s has already passed on sync', () => {
+    it('schedules an immediate 0ms onDeadline check on first sight if deadline + 4s has already passed (M3)', () => {
       let currentTime = 100000;
       const now = () => currentTime;
       const countdowns = makeCountdowns(now);
 
-      // Offer whose deadline was 10 seconds ago
+      // Offer whose deadline was 10 seconds ago (overdue past deadline + 4s grace)
       countdowns.sync([
         makeTiming(
           'order-1',
@@ -281,10 +284,89 @@ describe('OfferCountdowns', () => {
         ),
       ]);
 
-      // Check delay is 4s, which is 6s before currentTime, so checkAt < now
+      // Exactly one immediate check is scheduled (0 ms timer)
+      expect(jest.getTimerCount()).toBe(1);
+      jest.advanceTimersByTime(0);
+      expect(onDeadlineMock).toHaveBeenCalledTimes(1);
+      expect(onDeadlineMock).toHaveBeenCalledWith('order-1');
+    });
+
+    it('cancels the 0ms onDeadline check if overdue offer is claimed or forgotten before timer fires (M3)', () => {
+      let currentTime = 100000;
+      const now = () => currentTime;
+      const countdowns = makeCountdowns(now);
+
+      countdowns.sync([
+        makeTiming(
+          'order-1',
+          { offeredAt: currentTime - 70000, expiresAt: currentTime - 10000 },
+          now,
+        ),
+      ]);
+
+      expect(jest.getTimerCount()).toBe(1);
+      // Rider claims or offer is forgotten before timer fires
+      expect(countdowns.claim('order-1')).toBe(true);
+      expect(jest.getTimerCount()).toBe(0);
+
+      jest.advanceTimersByTime(1000);
+      expect(onDeadlineMock).not.toHaveBeenCalled();
+    });
+
+    it('does not loop into repeated checks when overdue offer is refetched with same key (M3)', () => {
+      let currentTime = 100000;
+      const now = () => currentTime;
+      const countdowns = makeCountdowns(now);
+
+      const timing = makeTiming(
+        'order-1',
+        {
+          offerKey: 'key-1',
+          offeredAt: currentTime - 70000,
+          expiresAt: currentTime - 10000,
+        },
+        now,
+      );
+
+      // First sync schedules and fires check
+      countdowns.sync([timing]);
+      jest.advanceTimersByTime(0);
+      expect(onDeadlineMock).toHaveBeenCalledTimes(1);
+
+      // Subsequent syncs with identical offerKey do not schedule again
+      countdowns.sync([timing]);
+      countdowns.sync([timing]);
+      expect(jest.getTimerCount()).toBe(0);
+      expect(onDeadlineMock).toHaveBeenCalledTimes(1);
+    });
+
+    it('does not schedule a deadline check when an overdue offer send fails and is undone via release (M3)', () => {
+      let currentTime = 100000;
+      const now = () => currentTime;
+      const countdowns = makeCountdowns(now);
+
+      countdowns.sync([
+        makeTiming(
+          'order-1',
+          { offeredAt: currentTime - 70000, expiresAt: currentTime - 10000 },
+          now,
+        ),
+      ]);
+
+      // Advance timer so initial check fires
+      jest.advanceTimersByTime(0);
+      expect(onDeadlineMock).toHaveBeenCalledTimes(1);
+
+      // Rider attempts manual accept (claims offer)
+      expect(countdowns.claim('order-1')).toBe(true);
+
+      // Send fails, undone via release (firstSight is false)
+      countdowns.release('order-1');
+
+      // No new check timer is scheduled
       expect(jest.getTimerCount()).toBe(0);
       jest.advanceTimersByTime(10000);
-      expect(onDeadlineMock).not.toHaveBeenCalled();
+      expect(onDeadlineMock).toHaveBeenCalledTimes(1);
     });
   });
 
@@ -460,6 +542,103 @@ describe('OfferCountdowns', () => {
       countdowns.sync([makeTiming('order-1')]);
       countdowns.forget('order-1');
       expect(countdowns.isOpen('order-1')).toBe(false);
+    });
+  });
+
+  describe('M7: Reminder cancellation when offer ends (onRemindersEnded)', () => {
+    it('notifies onRemindersEnded when an offer that rang is forgotten', () => {
+      let currentTime = 100000;
+      const now = () => currentTime;
+      const countdowns = makeCountdowns(now);
+
+      countdowns.sync([
+        makeTiming('order-1', { offeredAt: currentTime, expiresAt: null }, now),
+      ]);
+
+      // 30s pass: reminder rings
+      currentTime += OFFER_REMINDER_EVERY_MS;
+      jest.advanceTimersByTime(OFFER_REMINDER_EVERY_MS);
+      expect(onReminderMock).toHaveBeenCalledTimes(1);
+
+      // Offer is answered or leaves: forget called
+      countdowns.forget('order-1');
+      expect(onRemindersEndedMock).toHaveBeenCalledTimes(1);
+      expect(onRemindersEndedMock).toHaveBeenCalledWith('order-1');
+    });
+
+    it('notifies onRemindersEnded on stopAll for offers that have reminded', () => {
+      let currentTime = 100000;
+      const now = () => currentTime;
+      const countdowns = makeCountdowns(now);
+
+      countdowns.sync([
+        makeTiming('order-1', { offeredAt: currentTime, expiresAt: null }, now),
+        makeTiming('order-2', { offeredAt: currentTime, expiresAt: null }, now),
+      ]);
+
+      // Ring reminder for both
+      currentTime += OFFER_REMINDER_EVERY_MS;
+      jest.advanceTimersByTime(OFFER_REMINDER_EVERY_MS);
+      expect(onReminderMock).toHaveBeenCalledTimes(2);
+
+      // Screen unmounts -> stopAll
+      countdowns.stopAll();
+      expect(onRemindersEndedMock).toHaveBeenCalledTimes(2);
+      expect(onRemindersEndedMock).toHaveBeenCalledWith('order-1');
+      expect(onRemindersEndedMock).toHaveBeenCalledWith('order-2');
+    });
+
+    it('notifies onRemindersEnded when a newer offer of the same delivery replaces a reminded offer', () => {
+      let currentTime = 100000;
+      const now = () => currentTime;
+      const countdowns = makeCountdowns(now);
+
+      countdowns.sync([
+        makeTiming(
+          'order-1',
+          { offerKey: 'key-v1', offeredAt: currentTime, expiresAt: null },
+          now,
+        ),
+      ]);
+
+      // Reminder rings for v1
+      currentTime += OFFER_REMINDER_EVERY_MS;
+      jest.advanceTimersByTime(OFFER_REMINDER_EVERY_MS);
+      expect(onReminderMock).toHaveBeenCalledTimes(1);
+
+      // Server offers same delivery again with new offeredAt/key
+      currentTime += 10000;
+      countdowns.sync([
+        makeTiming(
+          'order-1',
+          { offerKey: 'key-v2', offeredAt: currentTime, expiresAt: null },
+          now,
+        ),
+      ]);
+
+      expect(onRemindersEndedMock).toHaveBeenCalledTimes(1);
+      expect(onRemindersEndedMock).toHaveBeenCalledWith('order-1');
+    });
+
+    it('does NOT notify onRemindersEnded if the offer never rang a reminder', () => {
+      let currentTime = 100000;
+      const now = () => currentTime;
+      const countdowns = makeCountdowns(now);
+
+      countdowns.sync([
+        makeTiming('order-1', { offeredAt: currentTime, expiresAt: null }, now),
+      ]);
+
+      // Offer forgotten BEFORE 30s reminder fires
+      countdowns.forget('order-1');
+      expect(onRemindersEndedMock).not.toHaveBeenCalled();
+
+      // Another offer stopped before reminder
+      countdowns.sync([
+        makeTiming('order-2', { offeredAt: currentTime, expiresAt: null }, now),
+      ]);
+      countdowns.stopAll();
+      expect(onRemindersEndedMock).not.toHaveBeenCalled();
     });
   });
 });
