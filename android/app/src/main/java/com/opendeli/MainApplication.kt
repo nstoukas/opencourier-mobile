@@ -19,6 +19,8 @@ class MainApplication : Application(), ReactApplication {
             PackageList(this).packages.apply {
               // Packages that cannot be autolinked yet can be added manually here, for example:
               // add(MyReactNativePackage())
+              // The app's own module for offer alerts (row 58): ringer, full screen setting.
+              add(OfferAlertPackage())
             }
 
         override fun getJSMainModuleName(): String = "index"
