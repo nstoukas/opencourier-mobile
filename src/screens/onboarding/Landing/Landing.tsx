@@ -49,8 +49,7 @@ export const LandingScreen = ({ navigation }: Props) => {
   const { requestCameraPermission, cameraPermission } = useCameraPermission();
   const { requestLocationPermission, locationPermission } =
     useLocationPermission();
-  const { requestUserPermission, permissionsGiven } =
-    usePushNotifications(false);
+  const { requestUserPermission, permissionsGiven } = usePushNotifications();
   const { setUserLatitude, setUserLongitude } = useContext(UserContext);
 
   // Get and store location when permission is granted
