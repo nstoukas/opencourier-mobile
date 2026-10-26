@@ -75,6 +75,41 @@ and merged on 26 October, together with the backend and adminweb halves of the s
   timer (an answer sent at zero); agy wrote the row 60 rules that still hold back in.
   `85d29dc`, `d2ca36d`, `c37067a`
 
+### Offers ring on a locked Android phone (row 58) — `013d6ed` to `690f047`
+This is the courier app half of offer push. It was built on the branch `feat/android-offer-push`
+and merged on 26 October, together with the backend half. Real push waits on the co-op's own
+Firebase project (scope row 1); until then the app ships upstream's Firebase settings and every
+part below was checked on the emulator with messages handed to the app's own handler.
+- **The phone registers for push** while a rider is logged in (on every start, and when Firebase
+  replaces the token) and unregisters first on logout. The token never appears in a log.
+- **A new offer is a full screen alert on a locked phone**, or a heads up alert when the rider
+  has not allowed full screen alerts. It loops the co-op's own ring (`offer_ring.wav`, an original
+  tone made by `scripts/make-offer-ring.py`) until the rider answers or the offer ends, and counts
+  down to the deadline when there is one. A re send after 2 minutes (expiry off) uses a second
+  channel with a longer vibration.
+- **Accept and Decline work from the lock screen** without opening the app, even with the app
+  closed. Each offer is answered at most once from the phone, whether from the alert or the app
+  (the answered list is shared); a 409 leaves a short "This offer has ended" notice.
+- **The offer screen** (`OfferAlertActivity`) is the only screen allowed over the lock screen. It
+  shows the offer card's facts from the alert itself, at once, and nothing else of the app;
+  "Open the app" asks for the phone's PIN first.
+- **The alert goes when the offer goes**: an `OFFER_ENDED` push or socket message cancels it, and
+  Android removes it by itself 5 s after its deadline.
+- **On the offers list, no second alert**: the list shows the offer and rings once. On any other
+  screen of the app, a heads up alert.
+- **Going Online checks the phone can ring**: the first time, it asks for notification permission
+  and explains the full screen alert setting; on silent, vibrate or Do Not Disturb it warns "Your
+  phone is on silent. You may miss offers." The rider decides; nothing is stored or sent, and the
+  questions hold going Online up for at most 30 s.
+- Row 61's 30 s reminder stays the fallback and is skipped while an offer's alert is up.
+- After the review (2026-10-26): the offer screen follows the alert that reopened it, no "ended"
+  while an answer is sending, the 30 s limit, Home writes the answered list, logs without the
+  token, the ring player's cleanup. `361e512`, `22480f3`
+- Found in the live verify: the offer screen could take an old offer notifee kept from a button
+  pressed in the shade, and say it had ended over a live one. `690f047`
+- Tests by agy: 292 pass in all (214 before). `b93ae41`, `902534c`
+- The old push code this replaces (`pushNavigation.ts`, `onMessageReceived`) is gone. `f08df5e`
+
 ## Fixed
 
 - **One countdown per offer, and accept or decline sent at most once (row 60).** Every
@@ -135,6 +170,11 @@ and merged on 26 October, together with the backend and adminweb halves of the s
   `user!.deliverySetting`, from upstream). Queued in the co-op scope, row 66.
 - A wrong phone clock (row 61) is covered by unit tests only; the emulator's clock could not
   be changed without root, which drops the `adb reverse` tunnels.
-- Offer reminders only run while the app is running. Alerts with the app closed are push,
-  co-op scope row 58.
+- Offer reminders only run while the app is on screen (React Native's timers stop in the
+  background). With push on (row 1), the push alert covers a closed or backgrounded app.
+- With offer expiry off, a late offer push that arrives after that offer's `OFFER_ENDED` rings
+  until answered (the answer gets a 409). Needs `offeredAt` on `OFFER_ENDED`; queued in the
+  co-op scope.
+- Real push, a token refresh and the server's 2 minute re send are unchecked on a phone until
+  the co-op's Firebase project exists (row 1).
 - Building for Android needs JDK 17.
