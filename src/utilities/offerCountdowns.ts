@@ -181,7 +181,8 @@ export class OfferCountdowns {
 
   // True for an offer the rider can still answer: seen, not forgotten, and
   // no send in flight. A forgotten offer (its send succeeded) is not open,
-  // even if an older fetch still lists it.
+  // until a `sync` is given a list that still holds it: an older fetch
+  // synced again tracks it as if new. Only a fresh fetch keeps it away.
   isOpen(offerId: string): boolean {
     const entry = this.entries.get(offerId);
     return entry !== undefined && !entry.claimed;

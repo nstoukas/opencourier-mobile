@@ -93,7 +93,10 @@ export const useHomeOrders = () => {
 
   // Show the fetched offers the rider can still answer. This skips offers
   // being accepted or declined, and offers already answered whose refetch has
-  // not landed yet (a failed send elsewhere can redraw from the older list).
+  // not landed yet, when only this redraw runs (a failed send elsewhere
+  // redraws from the older list). It cannot hide an answered offer from a
+  // sync: if the effect below reruns from that older list before the
+  // refetch lands (the rider's setting changed), it tracks the offer again.
   const showUnclaimedOffers = () => {
     setDataSourceNew(
       (newOrdersRef.current ?? []).filter(order => countdowns.isOpen(order.id)),
