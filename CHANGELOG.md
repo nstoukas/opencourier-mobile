@@ -44,6 +44,37 @@ has the full reasoning and verification notes.
 - Tests by agy: 48 at first, then the refused state and the connection life cycle.
   `316e807`, `917c1a8`
 
+### Offers follow the server's deadline (row 61, not merged yet) — `ec79791`, `9389518`, `d6e56ad`, `77cdece`
+This is the courier app half of offer expiry. It lives on the branch `feat/offer-expiry` and
+merges with the backend and adminweb halves of the same row.
+- Each offer's countdown runs to the deadline the server set (`offerExpiresAt`), moved onto
+  the phone's clock with the `serverNow` sent alongside the list, so a phone clock that is
+  wrong does not move it (`src/utilities/offerClock.ts`). The phone reads its own clock on
+  both sides of the request and uses the midpoint.
+- At zero the phone sends nothing for the rider. It fetches the list once, 4 s after the
+  deadline, and the server decides what happened. An offer already that late the first time
+  the phone sees it gets the same single check at once.
+- A rider on auto accept has each offer accepted as soon as it arrives, once per offer. The
+  fixed auto accept timer is gone.
+- With expiry off there is no countdown bar. The offer reads "Waiting X min" ("Waiting less
+  than 1 min" at first) and alerts the rider again every 30 s, with a longer vibration after
+  2 min, through a notification on its own `offer_reminders` channel. The reminder leaves
+  the tray when its offer goes.
+- When the server ends an offer (socket `OFFER_ENDED`), the offer leaves the screen at once
+  and the list is fetched again. Accepting or declining an offer that has already ended gets
+  a 409 with the code `OFFER_HAS_ENDED`: the offer is dropped, the rider sees "This offer has
+  ended", and nothing is retried.
+- An Offline rider's screen holds no offers, and going Offline empties the cached list, so
+  going Online again shows only what a fresh fetch returns.
+- Logging out sets the rider Offline first, waiting at most 3 s; if that call fails, logout
+  carries on. So the next login starts Offline.
+- After the review (both reviews on 2026-10-26): the midpoint clock, the words under a
+  minute, the late offer check, the 3 s logout timeout, ended offers leaving the cache,
+  reminders leaving the tray, Offline emptying the list. `8804870` to `6cf001e`
+- Tests by agy: 214 pass in all. The builder removed 11 row 60 tests that asserted the old
+  timer (an answer sent at zero); agy wrote the row 60 rules that still hold back in.
+  `85d29dc`, `d2ca36d`, `c37067a`
+
 ## Fixed
 
 - **One countdown per offer, and accept or decline sent at most once (row 60).** Every
@@ -102,6 +133,8 @@ has the full reasoning and verification notes.
   walkthrough in the co-op workspace). The ratchet keeps the count from growing.
 - Home crashes if it renders without a signed in user (`Home.tsx` reads
   `user!.deliverySetting`, from upstream). Queued in the co-op scope, row 66.
-- An offer's countdown starts when the phone first sees it, because the backend does not
-  send when the offer went out yet.
+- A wrong phone clock (row 61) is covered by unit tests only; the emulator's clock could not
+  be changed without root, which drops the `adb reverse` tunnels.
+- Offer reminders only run while the app is running. Alerts with the app closed are push,
+  co-op scope row 58.
 - Building for Android needs JDK 17.
