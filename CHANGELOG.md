@@ -4,7 +4,7 @@ This fork adapts [Princeton-HCI/opencourier-mobile](https://github.com/Princeton
 the courier app, for a Greek workers' cooperative delivering by moped in Volos.
 
 Everything below sits on top of upstream `main` on the branch `feat/courier-earnings`
-(31 commits, 26 July – 26 October 2026). Each entry names its commit, and the commit message
+(48 commits, 26 July – 26 October 2026). Each entry names its commit, and the commit message
 has the full reasoning and verification notes.
 
 ---
@@ -44,9 +44,9 @@ has the full reasoning and verification notes.
 - Tests by agy: 48 at first, then the refused state and the connection life cycle.
   `316e807`, `917c1a8`
 
-### Offers follow the server's deadline (row 61, not merged yet) — `ec79791`, `9389518`, `d6e56ad`, `77cdece`
-This is the courier app half of offer expiry. It lives on the branch `feat/offer-expiry` and
-merges with the backend and adminweb halves of the same row.
+### Offers follow the server's deadline (row 61) — `ec79791`, `9389518`, `d6e56ad`, `77cdece`
+This is the courier app half of offer expiry. It was built on the branch `feat/offer-expiry`
+and merged on 26 October, together with the backend and adminweb halves of the same row.
 - Each offer's countdown runs to the deadline the server set (`offerExpiresAt`), moved onto
   the phone's clock with the `serverNow` sent alongside the list, so a phone clock that is
   wrong does not move it (`src/utilities/offerClock.ts`). The phone reads its own clock on
