@@ -70,6 +70,12 @@ describe('OfferAlertScreen (spec 0003, AC-4, AC-5, Decision 58.14, Commit 50f9d9
         data: validOfferData,
       },
     });
+    (displayedOfferAlerts as jest.Mock).mockResolvedValue([
+      {
+        notificationId: 'del-screen-1',
+        data: validOfferData,
+      },
+    ]);
 
     let tree!: renderer.ReactTestRenderer;
     await act(async () => {
@@ -209,6 +215,12 @@ describe('OfferAlertScreen (spec 0003, AC-4, AC-5, Decision 58.14, Commit 50f9d9
         data: validOfferData,
       },
     });
+    (displayedOfferAlerts as jest.Mock).mockResolvedValue([
+      {
+        notificationId: 'del-screen-1',
+        data: validOfferData,
+      },
+    ]);
 
     let resolveAnswer!: (outcome: any) => void;
     (answerOffer as jest.Mock).mockReturnValue(
@@ -269,6 +281,12 @@ describe('OfferAlertScreen (spec 0003, AC-4, AC-5, Decision 58.14, Commit 50f9d9
         data: validOfferData,
       },
     });
+    (displayedOfferAlerts as jest.Mock).mockResolvedValue([
+      {
+        notificationId: 'del-screen-1',
+        data: validOfferData,
+      },
+    ]);
 
     let tree!: renderer.ReactTestRenderer;
     await act(async () => {
@@ -307,6 +325,12 @@ describe('OfferAlertScreen (spec 0003, AC-4, AC-5, Decision 58.14, Commit 50f9d9
         data: validOfferData,
       },
     });
+    (displayedOfferAlerts as jest.Mock).mockResolvedValue([
+      {
+        notificationId: 'del-screen-1',
+        data: validOfferData,
+      },
+    ]);
 
     let tree!: renderer.ReactTestRenderer;
     await act(async () => {
@@ -345,6 +369,12 @@ describe('OfferAlertScreen (spec 0003, AC-4, AC-5, Decision 58.14, Commit 50f9d9
         data: validOfferData,
       },
     });
+    (displayedOfferAlerts as jest.Mock).mockResolvedValue([
+      {
+        notificationId: 'del-screen-1',
+        data: validOfferData,
+      },
+    ]);
 
     let tree!: renderer.ReactTestRenderer;
     await act(async () => {
@@ -385,6 +415,176 @@ describe('OfferAlertScreen (spec 0003, AC-4, AC-5, Decision 58.14, Commit 50f9d9
     const root = tree.root;
     const texts = root.findAllByType('Text' as any).map(t => t.props.children);
     expect(texts).toContain('This offer has ended');
+
+    tree.unmount();
+  });
+
+  it('shows offer A when stale initial notification is for offer B whose alert is no longer displayed (commit 690f047)', async () => {
+    const offerA = {
+      ...validOfferData,
+      deliveryId: 'del-screen-A',
+      restaurantName: 'Pizza Roma',
+      payTotal: '650',
+    };
+    const offerB = {
+      ...validOfferData,
+      deliveryId: 'del-screen-B',
+      restaurantName: 'Burger Queen',
+      payTotal: '850',
+    };
+
+    (payText as jest.Mock).mockImplementation((data: any) =>
+      data?.deliveryId === 'del-screen-B' ? '€8.50' : '€6.50',
+    );
+    (offerSummary as jest.Mock).mockImplementation((data: any) =>
+      data?.deliveryId === 'del-screen-B'
+        ? 'Burger Queen to Ermou · 1.5 km · 8 min'
+        : 'Pizza Roma to Iasonos · 2.4 km · 12 min',
+    );
+
+    // Initial notification points to B (stale, alert no longer displayed)
+    (notifee.getInitialNotification as jest.Mock).mockResolvedValue({
+      notification: {
+        id: 'del-screen-B',
+        data: offerB,
+      },
+    });
+
+    // Alert for offer A is currently displayed
+    (displayedOfferAlerts as jest.Mock).mockResolvedValue([
+      {
+        notificationId: 'del-screen-A',
+        data: offerA,
+      },
+    ]);
+
+    let tree!: renderer.ReactTestRenderer;
+    await act(async () => {
+      tree = renderer.create(<OfferAlertScreen />);
+      await Promise.resolve();
+    });
+
+    // Screen shows offer A, not B, and never "This offer has ended"
+    let texts = tree.root
+      .findAllByType('Text' as any)
+      .map(t => t.props.children);
+    expect(texts).toContain('€6.50');
+    expect(texts).toContain('Pizza Roma to Iasonos · 2.4 km · 12 min');
+    expect(texts).not.toContain('€8.50');
+    expect(texts).not.toContain('This offer has ended');
+
+    // Advance 1s tick
+    await act(async () => {
+      jest.advanceTimersByTime(1000);
+      await Promise.resolve();
+    });
+
+    // Still shows offer A after the 1s tick
+    texts = tree.root.findAllByType('Text' as any).map(t => t.props.children);
+    expect(texts).toContain('€6.50');
+    expect(texts).toContain('Pizza Roma to Iasonos · 2.4 km · 12 min');
+    expect(texts).not.toContain('This offer has ended');
+
+    tree.unmount();
+  });
+
+  it('prefers initial notification offer A when both A and B alerts are displayed and B is newest (commit 690f047)', async () => {
+    const offerA = {
+      ...validOfferData,
+      deliveryId: 'del-screen-A',
+      restaurantName: 'Pizza Roma',
+      payTotal: '650',
+    };
+    const offerB = {
+      ...validOfferData,
+      deliveryId: 'del-screen-B',
+      restaurantName: 'Burger Queen',
+      payTotal: '850',
+    };
+
+    (payText as jest.Mock).mockImplementation((data: any) =>
+      data?.deliveryId === 'del-screen-B' ? '€8.50' : '€6.50',
+    );
+    (offerSummary as jest.Mock).mockImplementation((data: any) =>
+      data?.deliveryId === 'del-screen-B'
+        ? 'Burger Queen to Ermou · 1.5 km · 8 min'
+        : 'Pizza Roma to Iasonos · 2.4 km · 12 min',
+    );
+
+    // Initial notification is for offer A (the tapped one)
+    (notifee.getInitialNotification as jest.Mock).mockResolvedValue({
+      notification: {
+        id: 'del-screen-A',
+        data: offerA,
+      },
+    });
+
+    // Both A and B are displayed, with B being newest (last)
+    (displayedOfferAlerts as jest.Mock).mockResolvedValue([
+      {
+        notificationId: 'del-screen-A',
+        data: offerA,
+      },
+      {
+        notificationId: 'del-screen-B',
+        data: offerB,
+      },
+    ]);
+
+    let tree!: renderer.ReactTestRenderer;
+    await act(async () => {
+      tree = renderer.create(<OfferAlertScreen />);
+      await Promise.resolve();
+    });
+
+    // Screen shows A (the tapped one), winning over newest B
+    const texts = tree.root
+      .findAllByType('Text' as any)
+      .map(t => t.props.children);
+    expect(texts).toContain('€6.50');
+    expect(texts).toContain('Pizza Roma to Iasonos · 2.4 km · 12 min');
+    expect(texts).not.toContain('€8.50');
+    expect(texts).not.toContain('Burger Queen to Ermou · 1.5 km · 8 min');
+
+    tree.unmount();
+  });
+
+  it('shows "This offer has ended" when initial notification is for offer B but nothing is displayed (commit 690f047)', async () => {
+    const offerB = {
+      ...validOfferData,
+      deliveryId: 'del-screen-B',
+      restaurantName: 'Burger Queen',
+      payTotal: '850',
+    };
+
+    (payText as jest.Mock).mockImplementation((data: any) =>
+      data?.deliveryId === 'del-screen-B' ? '€8.50' : '€6.50',
+    );
+
+    // Initial notification has stale offer B
+    (notifee.getInitialNotification as jest.Mock).mockResolvedValue({
+      notification: {
+        id: 'del-screen-B',
+        data: offerB,
+      },
+    });
+
+    // Nothing displayed
+    (displayedOfferAlerts as jest.Mock).mockResolvedValue([]);
+
+    let tree!: renderer.ReactTestRenderer;
+    await act(async () => {
+      tree = renderer.create(<OfferAlertScreen />);
+      await Promise.resolve();
+    });
+
+    // Screen shows "This offer has ended" and not offer B
+    const texts = tree.root
+      .findAllByType('Text' as any)
+      .map(t => t.props.children);
+    expect(texts).toContain('This offer has ended');
+    expect(texts).not.toContain('€8.50');
+    expect(texts).not.toContain('Accept');
 
     tree.unmount();
   });
