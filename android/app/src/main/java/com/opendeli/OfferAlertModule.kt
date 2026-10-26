@@ -11,10 +11,12 @@ import android.net.Uri
 import android.os.Build
 import android.provider.Settings
 import com.facebook.react.bridge.Arguments
+import com.facebook.react.bridge.BaseActivityEventListener
 import com.facebook.react.bridge.Promise
 import com.facebook.react.bridge.ReactApplicationContext
 import com.facebook.react.bridge.ReactContextBaseJavaModule
 import com.facebook.react.bridge.ReactMethod
+import com.facebook.react.modules.core.DeviceEventManagerModule
 
 /**
  * The little the offer alert needs from Android that no installed library gives
@@ -35,7 +37,36 @@ class OfferAlertModule(private val reactContext: ReactApplicationContext) :
 
   // The ring playing now. Held here until it finishes: a player kept only in a local
   // variable can be garbage collected, which cuts the sound off after a moment.
+  // Touched from more than one thread (JavaScript's calls, the player's own
+  // callbacks), so only through the @Synchronized functions below.
   private var ringPlayer: MediaPlayer? = null
+
+  // When an alert opens the offer screen while it is already up (OfferAlertActivity's
+  // onNewIntent), tell JavaScript, with the alert's id, so the screen shows that offer.
+  private val newIntentListener =
+      object : BaseActivityEventListener() {
+        override fun onNewIntent(intent: Intent) {
+          if (intent.component?.className != OfferAlertActivity::class.java.name) {
+            return
+          }
+          // notifee puts the alert it opened from in the intent as "notification".
+          val notificationId = intent.getBundleExtra("notification")?.getString("id")
+          reactContext
+              .getJSModule(DeviceEventManagerModule.RCTDeviceEventEmitter::class.java)
+              .emit(ALERT_SCREEN_REOPENED, notificationId)
+        }
+      }
+
+  init {
+    reactContext.addActivityEventListener(newIntentListener)
+  }
+
+  // The app is closing its JavaScript: stop listening and let go of any ring.
+  override fun invalidate() {
+    reactContext.removeActivityEventListener(newIntentListener)
+    releaseRing(null)
+    super.invalidate()
+  }
 
   /** { ringerMode: "normal" | "vibrate" | "silent", doNotDisturb: boolean }. */
   // @ReactMethod makes the function callable from JavaScript; its answer comes back
@@ -109,6 +140,7 @@ class OfferAlertModule(private val reactContext: ReactApplicationContext) :
    * the ringer is on, as a notification sound would.
    */
   @ReactMethod
+  @Synchronized
   fun playOfferSound() {
     val audio = reactContext.getSystemService(Context.AUDIO_SERVICE) as AudioManager
     if (audio.ringerMode != AudioManager.RINGER_MODE_NORMAL) {
@@ -123,15 +155,25 @@ class OfferAlertModule(private val reactContext: ReactApplicationContext) :
         MediaPlayer.create(reactContext, R.raw.offer_ring, attributes, audio.generateAudioSessionId())
             ?: return
     // A new ring replaces one still playing.
-    ringPlayer?.release()
+    releaseRing(null)
     ringPlayer = player
-    player.setOnCompletionListener {
-      it.release()
-      if (ringPlayer === it) {
-        ringPlayer = null
-      }
+    player.setOnCompletionListener { releaseRing(it) }
+    // A player that fails is let go too, or it would hold on to the sound.
+    player.setOnErrorListener { failed, _, _ ->
+      releaseRing(failed)
+      true
     }
     player.start()
+  }
+
+  /** Lets go of `player`, or of whichever ring is playing when it is null. */
+  @Synchronized
+  private fun releaseRing(player: MediaPlayer?) {
+    val toRelease = player ?: ringPlayer ?: return
+    toRelease.release()
+    if (ringPlayer === toRelease) {
+      ringPlayer = null
+    }
   }
 
   /**
@@ -194,5 +236,10 @@ class OfferAlertModule(private val reactContext: ReactApplicationContext) :
                   Uri.parse("package:" + reactContext.packageName))
               .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
     }
+  }
+
+  companion object {
+    // The event JavaScript listens for (src/services/offerPush/phone.ts).
+    const val ALERT_SCREEN_REOPENED = "OfferAlertScreenReopened"
   }
 }

@@ -33,25 +33,40 @@ import {
 import { answerOffer, OfferAnswer } from '@app/services/offerPush/answerOffer';
 import {
   closeAlertScreen,
+  onAlertScreenReopened,
   openAppFromAlert,
 } from '@app/services/offerPush/phone';
 
-// Which offer to show: the alert that opened this screen, or, if Android did
-// not pass it along, the newest offer alert still on display.
-const findOffer = async (): Promise<StoredOfferAlert | null> => {
+// Which offer to show: the alert that opened this screen (by its id, when the
+// screen was reopened for it), or the one Android passed along, or else the
+// newest offer alert still on display.
+const findOffer = async (
+  notificationId: string | null = null,
+): Promise<StoredOfferAlert | null> => {
+  // Android can add a summary of its own (it groups an app's notifications)
+  // on the same channel, with no offer data: only real offer alerts count.
+  const displayed = (await displayedOfferAlerts())
+    .filter(
+      alert =>
+        notificationId === null || alert.notificationId === notificationId,
+    )
+    .map(alert => fromNotificationData(alert.data))
+    // `offer is StoredOfferAlert` tells TypeScript the kept items are never
+    // null, so the list's type loses its `| null`.
+    .filter((offer): offer is StoredOfferAlert => offer !== null);
+  if (notificationId !== null && displayed.length > 0) {
+    return displayed[0];
+  }
   const initial = await notifee.getInitialNotification().catch(() => null);
   const fromInitial = fromNotificationData(initial?.notification.data);
   if (fromInitial !== null) {
     return fromInitial;
   }
-  // Android can add a summary of its own (it groups an app's notifications)
-  // on the same channel, with no offer data: only real offer alerts count.
-  const offers = (await displayedOfferAlerts())
-    .map(alert => fromNotificationData(alert.data))
-    // `offer is StoredOfferAlert` tells TypeScript the kept items are never
-    // null, so the list's type loses its `| null`.
-    .filter((offer): offer is StoredOfferAlert => offer !== null);
-  return offers[offers.length - 1] ?? null;
+  if (notificationId !== null) {
+    // That alert is gone already (the offer ended, or was answered).
+    return null;
+  }
+  return displayed[displayed.length - 1] ?? null;
 };
 
 // How often the screen redraws its countdown and checks the alert is still up.
@@ -68,11 +83,22 @@ export const OfferAlertScreen = () => {
   // Read inside the timer below, which keeps its first render's values.
   const offerRef = useRef<StoredOfferAlert | null | undefined>(undefined);
   offerRef.current = offer;
+  const sendingRef = useRef(false);
+  sendingRef.current = sending;
 
   useEffect(() => {
-    findOffer().then(setOffer);
-    // The app, if it is open behind this screen, fetches its offers now.
-    queryClient.invalidateQueries({ queryKey: [QueryKeys.newOrders] });
+    const show = (notificationId: string | null) => {
+      findOffer(notificationId).then(found => {
+        setSending(false);
+        setOffer(found);
+      });
+      // The app, if it is open behind this screen, fetches its offers now.
+      queryClient.invalidateQueries({ queryKey: [QueryKeys.newOrders] });
+    };
+    show(null);
+    // Android reuses this screen for the next alert that opens it (the rider
+    // pressed Home on it, or a second offer came): show that alert's offer.
+    return onAlertScreenReopened(show);
   }, []);
 
   // Every second: redraw the countdown, and notice when the alert is gone
@@ -81,7 +107,9 @@ export const OfferAlertScreen = () => {
     const timer = setInterval(async () => {
       setNow(Date.now());
       const shown = offerRef.current;
-      if (!shown) {
+      // While an answer is on its way its alert is already gone (the ring
+      // stops at the tap); that is not the offer ending.
+      if (!shown || sendingRef.current) {
         return;
       }
       const displayed = await displayedOfferAlerts();

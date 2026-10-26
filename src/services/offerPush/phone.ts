@@ -7,7 +7,7 @@
 // the module is missing: every function below then does nothing and reports
 // "all fine", so going Online never gets stuck on a missing module.
 
-import { NativeModules, Platform } from 'react-native';
+import { DeviceEventEmitter, NativeModules, Platform } from 'react-native';
 
 export type RingerState = {
   ringerMode: 'normal' | 'vibrate' | 'silent';
@@ -74,6 +74,22 @@ export const isAlertScreenInFront = async (): Promise<boolean> => {
   } catch {
     return false;
   }
+};
+
+// Sent by the Kotlin module when an alert opens the offer screen while it is
+// already up (it is reused, not opened afresh). Same name as there.
+const ALERT_SCREEN_REOPENED = 'OfferAlertScreenReopened';
+
+// Calls `onReopened` with the alert's id (or null if Android did not pass it)
+// each time that happens. Returns the function that stops listening.
+export const onAlertScreenReopened = (
+  onReopened: (notificationId: string | null) => void,
+): (() => void) => {
+  const subscription = DeviceEventEmitter.addListener(
+    ALERT_SCREEN_REOPENED,
+    (notificationId?: string | null) => onReopened(notificationId ?? null),
+  );
+  return () => subscription.remove();
 };
 
 // The offer screen (OfferAlertActivity) closes itself, or opens the app.

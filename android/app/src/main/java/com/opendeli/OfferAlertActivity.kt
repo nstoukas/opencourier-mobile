@@ -1,5 +1,6 @@
 package com.opendeli
 
+import android.content.Intent
 import android.os.Build
 import android.os.Bundle
 import android.view.WindowManager
@@ -22,6 +23,17 @@ class OfferAlertActivity : ReactActivity() {
 
   override fun createReactActivityDelegate(): ReactActivityDelegate =
       DefaultReactActivityDelegate(this, mainComponentName, fabricEnabled)
+
+  /**
+   * Android reuses this screen (it is `singleInstance`) when another alert opens it while
+   * it is still alive: the rider pressed Home on it, or a second offer arrived. The new
+   * alert comes as a new intent. Keeping it as the screen's intent lets notifee read the
+   * right alert; OfferAlertModule then tells the screen to show it.
+   */
+  override fun onNewIntent(intent: Intent) {
+    setIntent(intent)
+    super.onNewIntent(intent)
+  }
 
   override fun onCreate(savedInstanceState: Bundle?) {
     super.onCreate(savedInstanceState)
