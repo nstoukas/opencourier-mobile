@@ -107,7 +107,7 @@ part below was checked on the emulator with messages handed to the app's own han
   token, the ring player's cleanup. `361e512`, `22480f3`
 - Found in the live verify: the offer screen could take an old offer notifee kept from a button
   pressed in the shade, and say it had ended over a live one. `690f047`
-- Tests by agy: 292 pass in all (214 before). `b93ae41`, `902534c`
+- Tests by agy: 295 pass in all (214 before). `b93ae41`, `902534c`, `4faab04`
 - The old push code this replaces (`pushNavigation.ts`, `onMessageReceived`) is gone. `f08df5e`
 
 ## Fixed
