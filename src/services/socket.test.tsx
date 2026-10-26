@@ -8,7 +8,11 @@ import { Socket } from 'socket.io-client';
 import { Order, UserStatus } from '@app/types/types';
 import { OrderStatus } from '@app/types/enums';
 import { QueryKeys } from '@app/utilities/queryKeys';
-import { DELIVERY_STATUS_UPDATED_EVENT, OFFER_EVENT } from './liveConnection';
+import {
+  DELIVERY_STATUS_UPDATED_EVENT,
+  OFFER_ENDED_EVENT,
+  OFFER_EVENT,
+} from './liveConnection';
 
 // Mock AsyncStorage using the official jest mock
 jest.mock('@react-native-async-storage/async-storage', () =>
@@ -235,6 +239,48 @@ describe('SocketProvider and useConnectionStatus', () => {
       });
       expect(invalidateQueriesSpy).toHaveBeenCalledWith({
         queryKey: [QueryKeys.orderHistory],
+      });
+
+      act(() => {
+        tree.unmount();
+      });
+    });
+
+    it('removes ended offer from newOrders query cache immediately and refetches on OFFER_ENDED (AC-5, Value 5)', async () => {
+      let tree!: renderer.ReactTestRenderer;
+      await act(async () => {
+        tree = renderer.create(renderTree(queryClient));
+      });
+
+      expect(latestSocket).not.toBeNull();
+
+      // Populate newOrders in TanStack Query cache
+      queryClient.setQueryData<Order[]>(
+        [QueryKeys.newOrders],
+        [{ id: 'order-to-keep' } as Order, { id: 'order-expired' } as Order],
+      );
+
+      expect(
+        queryClient.getQueryData<Order[]>([QueryKeys.newOrders]),
+      ).toHaveLength(2);
+      invalidateQueriesSpy.mockClear();
+
+      // Emit OFFER_ENDED for order-expired
+      act(() => {
+        latestSocket!.emit(OFFER_ENDED_EVENT, {
+          deliveryId: 'order-expired',
+          reason: 'EXPIRED',
+        });
+      });
+
+      // Cache updated in place: order-expired is removed immediately without waiting for network
+      const cached = queryClient.getQueryData<Order[]>([QueryKeys.newOrders]);
+      expect(cached?.map(o => o.id)).toEqual(['order-to-keep']);
+
+      // TanStack Query invalidation triggered for newOrders
+      expect(invalidateQueriesSpy).toHaveBeenCalledTimes(1);
+      expect(invalidateQueriesSpy).toHaveBeenCalledWith({
+        queryKey: [QueryKeys.newOrders],
       });
 
       act(() => {

@@ -5,9 +5,11 @@ import {
   DELIVERY_STATUS_UPDATED_EVENT,
   LiveConnection,
   LiveConnectionHandlers,
+  OFFER_ENDED_EVENT,
   OFFER_EVENT,
   courierSocketUrl,
   createCourierSocket,
+  endedDeliveryId,
   shouldBeConnected,
 } from './liveConnection';
 
@@ -423,6 +425,79 @@ describe('liveConnection', () => {
       });
 
       expect(handlers.onDeliveryStatusUpdated).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  describe('endedDeliveryId (spec 0002, AC-5)', () => {
+    it('extracts deliveryId from valid OFFER_ENDED message payload', () => {
+      expect(
+        endedDeliveryId({ deliveryId: 'order-123', reason: 'EXPIRED' }),
+      ).toBe('order-123');
+      expect(
+        endedDeliveryId({ deliveryId: 'order-456', reason: 'OFFLINE' }),
+      ).toBe('order-456');
+    });
+
+    it('returns null if deliveryId is empty string, missing, or non-string', () => {
+      expect(endedDeliveryId({ deliveryId: '', reason: 'EXPIRED' })).toBeNull();
+      expect(endedDeliveryId({ reason: 'EXPIRED' })).toBeNull();
+      expect(endedDeliveryId({ deliveryId: 123 })).toBeNull();
+    });
+
+    it('returns null for null, undefined, or primitive payloads', () => {
+      expect(endedDeliveryId(null)).toBeNull();
+      expect(endedDeliveryId(undefined)).toBeNull();
+      expect(endedDeliveryId('not-an-object')).toBeNull();
+      expect(endedDeliveryId(42)).toBeNull();
+    });
+  });
+
+  describe('LiveConnection - OFFER_ENDED handler', () => {
+    it('triggers onOfferEnded with deliveryId when OFFER_ENDED event arrives', () => {
+      const fakeSocket = new FakeSocket();
+      const onOfferEndedMock = jest.fn();
+      const handlers: LiveConnectionHandlers = {
+        onStatus: jest.fn(),
+        onOffer: jest.fn(),
+        onDeliveryStatusUpdated: jest.fn(),
+        onOfferEnded: onOfferEndedMock,
+        onConnected: jest.fn(),
+      };
+      const liveConn = new LiveConnection(
+        () => fakeSocket as unknown as any,
+        handlers,
+      );
+      liveConn.open('http://localhost:3000', 'token-1');
+
+      fakeSocket.emit(OFFER_ENDED_EVENT, {
+        deliveryId: 'order-789',
+        reason: 'EXPIRED',
+      });
+
+      expect(onOfferEndedMock).toHaveBeenCalledTimes(1);
+      expect(onOfferEndedMock).toHaveBeenCalledWith('order-789');
+    });
+
+    it('does not throw when OFFER_ENDED arrives and onOfferEnded handler is omitted', () => {
+      const fakeSocket = new FakeSocket();
+      const handlers: LiveConnectionHandlers = {
+        onStatus: jest.fn(),
+        onOffer: jest.fn(),
+        onDeliveryStatusUpdated: jest.fn(),
+        onConnected: jest.fn(),
+      };
+      const liveConn = new LiveConnection(
+        () => fakeSocket as unknown as any,
+        handlers,
+      );
+      liveConn.open('http://localhost:3000', 'token-1');
+
+      expect(() => {
+        fakeSocket.emit(OFFER_ENDED_EVENT, {
+          deliveryId: 'order-789',
+          reason: 'EXPIRED',
+        });
+      }).not.toThrow();
     });
   });
 });
