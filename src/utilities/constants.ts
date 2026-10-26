@@ -31,6 +31,8 @@ export const OFFER_REMINDER_EVERY_MS = 30000;
 export const OFFER_REMINDER_LONGER_AFTER_MS = 120000;
 // Logging out sets the rider Offline first, but waits at most this long for
 // the server, so a bad network never holds the rider at the logout button.
+// Taking this phone off the rider's push list, just before, waits the same
+// (row 58).
 export const LOGOUT_OFFLINE_TIMEOUT_MS = 3000;
 export const MAP_ACTION_SHEET_OPTIONS_IOS = [
   MapLinkingOptions.apple,
@@ -47,8 +49,6 @@ export const MAP_ACTION_SHEET_OPTIONS_ANDROID = [
 export const ADD_NOTE_CELL = 'const_add_note_cell';
 
 export const CELL_EARNINGS_EMPTY = 'const_earnings_empty';
-
-export const ANDROID_CHANNEL_ID = 'fcm_channel_opendeli';
 
 export const SUPPORTED_LANGUAGES: Language[] = [
   {

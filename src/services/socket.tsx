@@ -14,6 +14,7 @@ import React, {
 } from 'react';
 import { AppState } from 'react-native';
 import { Order } from '@app/types/types';
+import { cancelOfferAlert } from './offerPush/offerAlert';
 import {
   ConnectionStatus,
   createCourierSocket,
@@ -65,6 +66,8 @@ const SocketProvider = ({ children }: Props) => {
       // Nothing is shown to the rider about it, and nothing is counted.
       onOfferEnded: deliveryId => {
         if (deliveryId !== null) {
+          // Its alert stops ringing too, if one is up (row 58, AC-6).
+          cancelOfferAlert(deliveryId);
           // `setQueryData` edits the cached offer list in place; the Home
           // screen redraws from it straight away.
           queryClient.setQueryData<Order[]>([QueryKeys.newOrders], offers =>

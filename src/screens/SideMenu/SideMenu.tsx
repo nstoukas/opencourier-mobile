@@ -31,6 +31,9 @@ import { useQueryClient } from '@tanstack/react-query';
 import { LOGOUT_OFFLINE_TIMEOUT_MS } from '@app/utilities/constants';
 import { services } from '@app/services/service';
 import useInstance from '@app/hooks/useInstance';
+import { unregisterThisPhone } from '@app/services/offerPush/registration';
+import { cancelAllOfferAlerts } from '@app/services/offerPush/offerAlert';
+import { prepareToGoOnline } from '@app/services/offerPush/goOnlineChecks';
 
 // The side menu is the drawer's content, not a screen, so it receives the drawer's
 // content props (no route), which is the type the drawer library exports for it.
@@ -154,7 +157,11 @@ export const SideMenu = ({ navigation }: Props) => {
   }, [locationPermission]);
 
   const onLogoutHandle = async () => {
-    // Go Offline first, while the session still works (spec 0002, AC-6): the
+    // Take this phone off the rider's push list first, while the session
+    // still works (spec 0003, AC-1), so the next person to log in here never
+    // gets this rider's offers. It waits at most 3 s and never stops logout.
+    await unregisterThisPhone(LOGOUT_OFFLINE_TIMEOUT_MS);
+    // Then go Offline, while the session still works (spec 0002, AC-6): the
     // server then ends any offer this rider holds at once and gives it to the
     // next rider, instead of it waiting on a phone that has logged out.
     try {
@@ -169,6 +176,8 @@ export const SideMenu = ({ navigation }: Props) => {
       console.log('Could not go Offline before logging out', error);
     }
     await AsyncStorage.multiRemove(['token', 'BASE_URL', 'SOCKET_BASE_URL']);
+    // Nothing may keep ringing on a phone nobody is logged in on.
+    await cancelAllOfferAlerts();
     services.logout();
     queryClient.resetQueries();
   };
@@ -208,7 +217,13 @@ export const SideMenu = ({ navigation }: Props) => {
     }
     navigation.navigate(RootScreen.UserStatusModal, {
       status: newStatus,
-      onAccept: () => {
+      onAccept: async () => {
+        // Going Online: the first time, ask for the alert permissions; every
+        // time, warn if the phone is on silent (spec 0003, AC-8, AC-9). The
+        // rider decides; either answer goes Online.
+        if (newStatus === UserStatus.Online) {
+          await prepareToGoOnline();
+        }
         updateStatus(newStatus);
       },
       onCancel: () => undefined,

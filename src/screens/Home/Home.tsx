@@ -1,5 +1,11 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { FlatList, Linking, RefreshControl, View } from 'react-native';
+import {
+  AppState,
+  FlatList,
+  Linking,
+  RefreshControl,
+  View,
+} from 'react-native';
 import { styles } from './Home.styles';
 import { HomeHeader } from '@app/components/HomeHeader/HomeHeader';
 import {
@@ -28,8 +34,10 @@ import ButtonSwipe from '@app/components/ButtonSwipe/ButtonSwipe';
 import { SkeletonOrderHistoryCell } from '@app/components/SkeletonOrderHistoryCell/SkeletonOrderHistoryCell';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import useUser from '@app/hooks/useUser';
-import { useFocusEffect } from '@react-navigation/native';
+import { useFocusEffect, useIsFocused } from '@react-navigation/native';
 import { useConnectionStatus } from '@app/services/socket';
+import { prepareToGoOnline } from '@app/services/offerPush/goOnlineChecks';
+import { cancelOfferAlert } from '@app/services/offerPush/offerAlert';
 
 type Props = DrawerScreenProp<DrawerScreens.Home>;
 
@@ -76,6 +84,29 @@ export const HomeScreen = ({ navigation }: Props) => {
     refechHistory();
   });
 
+  // AC-12: while this list is in front, an offer it shows needs no system
+  // alert as well. An alert posted while the phone was locked, or while
+  // another screen was in front, stops ringing once the rider is here.
+  // `useIsFocused` is true while this screen is the one in front.
+  const isFocused = useIsFocused();
+  useEffect(() => {
+    if (!isFocused) {
+      return;
+    }
+    const quietShownOffers = () => {
+      if (AppState.currentState === 'active') {
+        dataSourceNew.forEach(order => cancelOfferAlert(order.id));
+      }
+    };
+    quietShownOffers();
+    const subscription = AppState.addEventListener('change', state => {
+      if (state === 'active') {
+        quietShownOffers();
+      }
+    });
+    return () => subscription.remove();
+  }, [isFocused, dataSourceNew]);
+
   const onProfilePress = () => {
     navigation.toggleDrawer();
   };
@@ -104,11 +135,14 @@ export const HomeScreen = ({ navigation }: Props) => {
     }
   }, [selectedTab, dataSourceHistory, dataSourceNew, dataSourceInProgress]);
 
-  const onGoOnline = (didSwipe: boolean) => {
+  const onGoOnline = async (didSwipe: boolean) => {
     if (!didSwipe) {
       return;
     }
 
+    // The first time, ask for the alert permissions; every time, warn if the
+    // phone is on silent (spec 0003, AC-8, AC-9). Either answer goes Online.
+    await prepareToGoOnline();
     updateStatus(UserStatus.Online);
   };
 

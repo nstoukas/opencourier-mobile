@@ -14,6 +14,14 @@ import {
   remindRiderOfOffer,
 } from '@app/services/offerReminder';
 import i18next from 'i18next';
+import {
+  isOfferAnswered,
+  loadAnsweredOffers,
+  offerKeyOf,
+} from '@app/services/offerPush/answeredOffers';
+import { cancelOfferAlert } from '@app/services/offerPush/offerAlert';
+import { playOfferSound } from '@app/services/offerPush/phone';
+import { isHomeInFront } from '@app/navigation/navigationRef';
 
 // An offer's timing as the countdowns need it (spec 0002).
 const offerTimingOf = (order: Order): OfferTiming => ({
@@ -194,19 +202,29 @@ export const useHomeOrders = () => {
       .then(() => queryClient.setQueryData<Order[]>([QueryKeys.newOrders], []));
   }, [isOffline, queryClient]);
 
+  // True when this phone already answered the offer from its alert (row 58,
+  // AC-5): a tap in the app then sends nothing.
+  const answeredFromAlert = (orderId: string) => {
+    const order = newOrdersRef.current?.find(offer => offer.id === orderId);
+    return isOfferAnswered(offerKeyOf(orderId, order?.offeredAt));
+  };
+
   const acceptOrderFn = (orderId: string) => {
     // Only the first accept or decline for an offer is sent.
-    if (!countdowns.claim(orderId)) {
+    if (answeredFromAlert(orderId) || !countdowns.claim(orderId)) {
       return;
     }
+    // Answered here: its alert, if one is up, stops ringing (row 58).
+    cancelOfferAlert(orderId);
     acceptOrder(orderId);
     setDataSourceNew(current => current.filter(order => order.id !== orderId));
   };
 
   const declineOrderFn = (orderId: string) => {
-    if (!countdowns.claim(orderId)) {
+    if (answeredFromAlert(orderId) || !countdowns.claim(orderId)) {
       return;
     }
+    cancelOfferAlert(orderId);
     declineOrder(orderId);
     setDataSourceNew(current => current.filter(order => order.id !== orderId));
   };
@@ -224,11 +242,16 @@ export const useHomeOrders = () => {
       // the rider's behalf.
       if (autoAccept) {
         for (const order of offers) {
-          if (countdowns.claimForAutoAccept(order.id)) {
+          if (
+            !answeredFromAlert(order.id) &&
+            countdowns.claimForAutoAccept(order.id)
+          ) {
+            cancelOfferAlert(order.id);
             acceptOrder(order.id);
           }
         }
       }
+      ringForNewOffers(offers);
       showUnclaimedOffers();
     }
     // `countdowns` is the same object for the screen's whole life and
@@ -236,6 +259,32 @@ export const useHomeOrders = () => {
     // a change of the rider's setting should rerun this.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [newOrders, autoAccept, isOffline]);
+
+  // The offers this screen has already rung for, by delivery id and offer
+  // time, so each new offer rings once and a refetch never rings again.
+  const rungForRef = useRef<Set<string>>(new Set());
+  // AC-12: with the offers list in front, a new offer rings once here instead
+  // of posting a system alert (the push handler posts none on this screen).
+  // Auto accept riders are not rung for: the phone accepts the offer at once.
+  const ringForNewOffers = (offers: Order[]) => {
+    let anyNew = false;
+    for (const order of offers) {
+      const key = offerKeyOf(order.id, order.offeredAt);
+      if (!rungForRef.current.has(key)) {
+        rungForRef.current.add(key);
+        anyNew = true;
+      }
+    }
+    if (anyNew && !autoAccept && isHomeInFront()) {
+      playOfferSound();
+    }
+  };
+
+  // The list of offers the alert buttons answered lives in storage: read it
+  // once, so a tap here can check it straight away.
+  useEffect(() => {
+    loadAnsweredOffers();
+  }, []);
 
   // Stop every countdown when the screen goes away.
   // eslint-disable-next-line react-hooks/exhaustive-deps
