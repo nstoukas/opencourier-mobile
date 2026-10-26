@@ -41,6 +41,15 @@ const ensureChannel = async () => {
   }
 };
 
+// The same words the offer card shows: "Waiting 3 min", or "Waiting less
+// than 1 min" in the first minute (the 30 s reminder), never "Waiting 0 min".
+const waitingText = (waitedMs: number): string => {
+  const minutes = Math.floor(waitedMs / 60000);
+  return minutes < 1
+    ? i18next.t('translations:offer_waiting_just_now')
+    : i18next.t('translations:offer_waiting_minutes', { minutes });
+};
+
 // `waitedMs`: how long the offer has waited since the server made it.
 export const remindRiderOfOffer = async (
   offerId: string,
@@ -55,9 +64,7 @@ export const remindRiderOfOffer = async (
       // One notification per offer: a new reminder replaces the last one.
       id: `offer-reminder-${offerId}`,
       title: i18next.t('translations:offer_reminder_title'),
-      body: i18next.t('translations:offer_waiting_minutes', {
-        minutes: Math.floor(waitedMs / 60000),
-      }),
+      body: waitingText(waitedMs),
       android: {
         channelId: REMINDER_CHANNEL_ID,
         importance: AndroidImportance.HIGH,
