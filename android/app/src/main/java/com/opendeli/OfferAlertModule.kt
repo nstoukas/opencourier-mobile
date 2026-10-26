@@ -38,6 +38,8 @@ class OfferAlertModule(private val reactContext: ReactApplicationContext) :
   private var ringPlayer: MediaPlayer? = null
 
   /** { ringerMode: "normal" | "vibrate" | "silent", doNotDisturb: boolean }. */
+  // @ReactMethod makes the function callable from JavaScript; its answer comes back
+  // through the Promise argument, which JavaScript sees as an ordinary promise.
   @ReactMethod
   fun getRingerState(promise: Promise) {
     try {

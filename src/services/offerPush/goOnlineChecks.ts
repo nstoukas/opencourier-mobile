@@ -63,6 +63,7 @@ const ask = (
   second: Choice,
 ): Promise<void> =>
   new Promise(resolve => {
+    // `answer(choice)` returns the function the button runs when pressed.
     const answer = (choice: Choice) => () => {
       if (choice.opensSettings) {
         choice.opensSettings();

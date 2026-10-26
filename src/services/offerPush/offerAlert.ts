@@ -176,9 +176,12 @@ export const showOfferAlert = async (
         },
       ],
       // A countdown to the deadline, drawn by Android itself, when there is one.
+      // `...(test ? { fields } : {})` adds the fields only when the test holds.
       ...(deadlineAt !== null && stopAfterMs !== null
         ? {
             showChronometer: true,
+            // `as const` keeps the type 'down' rather than any string, which
+            // is what notifee's type asks for.
             chronometerDirection: 'down' as const,
             timestamp: deadlineAt,
             // The local stop (AC-6): Android removes the alert, and its sound,

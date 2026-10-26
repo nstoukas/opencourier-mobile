@@ -91,6 +91,7 @@ export const parseOfferMessage = (data: RawData): OfferMessage | null => {
 // Accept and Decline buttons can work from the notification alone (AC-4,
 // AC-5). notifee data must be strings too. `deadlineAt` is the deadline on
 // this phone's clock, worked out once when the message arrived.
+// `Omit<T, 'x'> & { ... }`: the type T without field x, plus the fields listed.
 export type StoredOfferAlert = Omit<OfferAlertData, 'msLeftAtSend'> & {
   deadlineAt: number | null;
 };
