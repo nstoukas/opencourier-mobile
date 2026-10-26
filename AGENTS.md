@@ -14,6 +14,7 @@ react-native-maps. It uses the backend's `courier` API.
 | `src/screens/`, `src/navigation/` | Screens and routing |
 | `src/services/`, `src/hooks/` | API calls and data hooks |
 | `src/utilities/config.ts` | Reads `API_URL` from `.env` via `@env` |
+| `src/utilities/offerCountdowns.ts`, `src/utilities/offerClock.ts` | Offer timing: counts down to the server's `offerExpiresAt`, corrected by `serverNow`; the phone never answers for the rider at zero (spec 0002) |
 
 ## Commands
 
