@@ -4,6 +4,7 @@ import { Text } from 'react-native';
 import { AppState, AppStateStatus } from 'react-native';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import notifee from '@notifee/react-native';
 import { Socket } from 'socket.io-client';
 import { Order, UserStatus } from '@app/types/types';
 import { OrderStatus } from '@app/types/enums';
@@ -282,6 +283,9 @@ describe('SocketProvider and useConnectionStatus', () => {
       expect(invalidateQueriesSpy).toHaveBeenCalledWith({
         queryKey: [QueryKeys.newOrders],
       });
+
+      // Cancels any ongoing alert for the ended offer (spec 0003, AC-6)
+      expect(notifee.cancelNotification).toHaveBeenCalledWith('order-expired');
 
       act(() => {
         tree.unmount();

@@ -23,12 +23,17 @@ jest.mock('@react-navigation/drawer', () => {
 
 const mockSetUserStatus = jest.fn();
 const mockLogout = jest.fn();
+const mockUnregisterThisPhone = jest.fn();
 const mockUserData = {
   id: 'courier-1',
   status: 'ONLINE',
   deliverySetting: 'MANUAL',
   name: 'Courier User',
 };
+
+jest.mock('@app/services/offerPush/registration', () => ({
+  unregisterThisPhone: (...args: any[]) => mockUnregisterThisPhone(...args),
+}));
 
 jest.mock('@app/services/service', () => ({
   services: {
@@ -69,6 +74,7 @@ describe('SideMenu logout (spec 0002, AC-6)', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
+    mockUnregisterThisPhone.mockResolvedValue(undefined);
     mockSetUserStatus.mockResolvedValue({});
     mockLogout.mockReturnValue(undefined);
 
@@ -103,6 +109,10 @@ describe('SideMenu logout (spec 0002, AC-6)', () => {
 
   it('sets rider Offline before clearing session on logout', async () => {
     const executionOrder: string[] = [];
+
+    mockUnregisterThisPhone.mockImplementation(async () => {
+      executionOrder.push('unregisterThisPhone');
+    });
 
     mockSetUserStatus.mockImplementation(async (status: UserStatus) => {
       executionOrder.push(`setUserStatus:${status}`);
@@ -146,13 +156,19 @@ describe('SideMenu logout (spec 0002, AC-6)', () => {
       await yesButton.onPress();
     });
 
-    // 1. Sets status Offline first with 3s timeout (M5)
+    // 1. Unregisters phone first with 3s timeout (AC-1)
+    expect(mockUnregisterThisPhone).toHaveBeenCalledTimes(1);
+    expect(mockUnregisterThisPhone).toHaveBeenCalledWith(
+      LOGOUT_OFFLINE_TIMEOUT_MS,
+    );
+
+    // 2. Sets status Offline first with 3s timeout (M5)
     expect(mockSetUserStatus).toHaveBeenCalledTimes(1);
     expect(mockSetUserStatus).toHaveBeenCalledWith(UserStatus.Offline, {
       timeoutMs: LOGOUT_OFFLINE_TIMEOUT_MS,
     });
 
-    // 2. Clears storage, logs out, and resets queries
+    // 3. Clears storage, logs out, and resets queries
     expect(multiRemoveSpy).toHaveBeenCalledWith([
       'token',
       'BASE_URL',
@@ -161,8 +177,9 @@ describe('SideMenu logout (spec 0002, AC-6)', () => {
     expect(mockLogout).toHaveBeenCalledTimes(1);
     expect(resetQueriesSpy).toHaveBeenCalledTimes(1);
 
-    // Verify strict order: Offline PATCH occurs BEFORE storage clearance and logout
+    // Verify strict order: unregister and Offline occur BEFORE storage clearance and logout (AC-1)
     expect(executionOrder).toEqual([
+      'unregisterThisPhone',
       'setUserStatus:OFFLINE',
       'multiRemove:token,BASE_URL,SOCKET_BASE_URL',
       'logout',

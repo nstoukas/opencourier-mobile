@@ -12,6 +12,14 @@ import {
 import { OFFER_HAS_ENDED_CODE } from '@app/services/orderService';
 import { AxiosError } from 'axios';
 import '@app/localization/i18n';
+import {
+  markOfferAnswered,
+  offerKeyOf,
+} from '@app/services/offerPush/answeredOffers';
+
+jest.mock('@app/services/offerPush/offerAlert', () => ({
+  cancelOfferAlert: jest.fn(),
+}));
 
 jest.mock('@react-native-async-storage/async-storage', () =>
   require('@react-native-async-storage/async-storage/jest/async-storage-mock'),
@@ -905,6 +913,150 @@ describe('useHomeOrders', () => {
       });
 
       expect(hookResult?.dataSourceNew.map(o => o.id)).toEqual(['order-B']);
+
+      act(() => {
+        tree.unmount();
+      });
+    });
+  });
+
+  describe('AC-5 at most once across paths (spec 0003, AC-5, Decision 58.16)', () => {
+    it('skips accepting an offer already answered from the alert so a tap in the app sends no second request', async () => {
+      const orderId = 'order-answered-alert-acc';
+      const offeredAt = '2026-10-26T10:00:00.000Z';
+      markOfferAnswered(offerKeyOf(orderId, offeredAt));
+
+      queryClient.setQueryData(
+        [QueryKeys.newOrders],
+        [{ id: orderId, offeredAt }],
+      );
+
+      let hookResult: ReturnType<typeof useHomeOrders> | undefined;
+      let tree: renderer.ReactTestRenderer;
+      await act(async () => {
+        tree = renderer.create(
+          <QueryClientProvider client={queryClient}>
+            <HookHost
+              onRender={h => {
+                hookResult = h;
+              }}
+            />
+          </QueryClientProvider>,
+        );
+      });
+
+      // Tap accept in the app
+      await act(async () => {
+        hookResult?.acceptOrderFn(orderId);
+      });
+
+      // No second request is sent
+      expect(mockAcceptOrder).not.toHaveBeenCalled();
+
+      act(() => {
+        tree.unmount();
+      });
+    });
+
+    it('skips declining an offer already answered from the alert so a tap in the app sends no second request', async () => {
+      const orderId = 'order-answered-alert-dec';
+      const offeredAt = '2026-10-26T10:05:00.000Z';
+      markOfferAnswered(offerKeyOf(orderId, offeredAt));
+
+      queryClient.setQueryData(
+        [QueryKeys.newOrders],
+        [{ id: orderId, offeredAt }],
+      );
+
+      let hookResult: ReturnType<typeof useHomeOrders> | undefined;
+      let tree: renderer.ReactTestRenderer;
+      await act(async () => {
+        tree = renderer.create(
+          <QueryClientProvider client={queryClient}>
+            <HookHost
+              onRender={h => {
+                hookResult = h;
+              }}
+            />
+          </QueryClientProvider>,
+        );
+      });
+
+      // Tap decline in the app
+      await act(async () => {
+        hookResult?.declineOrderFn(orderId);
+      });
+
+      // No request is sent
+      expect(mockDeclineOrder).not.toHaveBeenCalled();
+
+      act(() => {
+        tree.unmount();
+      });
+    });
+
+    it('skips auto-accepting an offer already answered from the alert', async () => {
+      mockDeliverySetting = OrderSetting.auto_accept;
+      const orderId = 'order-answered-alert-auto';
+      const offeredAt = '2026-10-26T10:10:00.000Z';
+      markOfferAnswered(offerKeyOf(orderId, offeredAt));
+
+      queryClient.setQueryData(
+        [QueryKeys.newOrders],
+        [{ id: orderId, offeredAt }],
+      );
+
+      let tree: renderer.ReactTestRenderer;
+      await act(async () => {
+        tree = renderer.create(
+          <QueryClientProvider client={queryClient}>
+            <HookHost onRender={() => {}} />
+          </QueryClientProvider>,
+        );
+      });
+
+      expect(mockAcceptOrder).not.toHaveBeenCalled();
+
+      act(() => {
+        tree.unmount();
+      });
+    });
+
+    it('decision 58.16: a later re-offer of the same delivery with a new offeredAt is still answerable', async () => {
+      const orderId = 'order-reoffer-1';
+      const firstOfferedAt = '2026-10-26T10:00:00.000Z';
+      const secondOfferedAt = '2026-10-26T10:30:00.000Z';
+
+      // First offer was answered from alert
+      markOfferAnswered(offerKeyOf(orderId, firstOfferedAt));
+
+      // Same delivery arrives later with a new offer time
+      queryClient.setQueryData(
+        [QueryKeys.newOrders],
+        [{ id: orderId, offeredAt: secondOfferedAt }],
+      );
+
+      let hookResult: ReturnType<typeof useHomeOrders> | undefined;
+      let tree: renderer.ReactTestRenderer;
+      await act(async () => {
+        tree = renderer.create(
+          <QueryClientProvider client={queryClient}>
+            <HookHost
+              onRender={h => {
+                hookResult = h;
+              }}
+            />
+          </QueryClientProvider>,
+        );
+      });
+
+      // Answering the re-offered delivery works and sends the request
+      await act(async () => {
+        hookResult?.acceptOrderFn(orderId);
+      });
+
+      expect(mockAcceptOrder).toHaveBeenCalledTimes(1);
+      expect(mockAcceptOrder).toHaveBeenCalledWith(orderId);
 
       act(() => {
         tree.unmount();
