@@ -49,10 +49,15 @@ export interface OrderService {
 
 const orderService = (client: UClient): OrderService => {
   const getNewOrders = async (): Promise<Order[]> => {
+    // Read the phone's clock on both sides of the request. The server read
+    // its clock (`serverNow`) somewhere in between, most likely near the
+    // middle, so the midpoint is the phone time that best matches it. Using
+    // the time the answer arrived instead would push every deadline late by
+    // the whole round trip; the midpoint is off by at most half of it.
+    const sentAt = Date.now();
     const { data } = await client.get('deliveries/new?page=1&perPage=10');
-    // Read the phone's clock as soon as the answer is here, so the time the
-    // request took is not counted twice.
-    const phoneNow = Date.now();
+    const receivedAt = Date.now();
+    const phoneNow = sentAt + (receivedAt - sentAt) / 2;
     const offers: Order[] = data.result.data;
     return offers.map(offer => ({
       ...offer,

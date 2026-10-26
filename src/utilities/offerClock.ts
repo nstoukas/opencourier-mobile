@@ -5,9 +5,11 @@
 // be minutes wrong, so the app never compares a server time with Date.now()
 // directly. It takes the difference between two server times (for example
 // "this offer ends 45 s after serverNow"), which no phone clock can change,
-// and adds that difference to the phone's clock at the moment the list arrived.
-// From then on the phone's own clock counts down, and the deadline lands at
-// the same real moment as on the server, give or take the network delay.
+// and adds that difference to the phone's clock at the moment the server built
+// the list. The phone cannot see that moment, so it takes the midpoint of the
+// request (`getNewOrders`). From then on the phone's own clock counts down, and
+// the deadline lands at the same real moment as on the server, give or take
+// half the request's round trip.
 
 import { OfferTimesOnPhone } from '@app/types/types';
 
@@ -20,9 +22,9 @@ const toMillis = (value: string | null | undefined): number | null => {
   return Number.isNaN(millis) ? null : millis;
 };
 
-// `serverNow` is the list's server clock; `phoneNow` is Date.now() when the
-// list arrived. Without a readable `serverNow` (an older server), the server
-// times are used as they are.
+// `serverNow` is the list's server clock; `phoneNow` is the phone's clock at
+// about the same moment (the midpoint of the request). Without a readable
+// `serverNow` (an older server), the server times are used as they are.
 export const offerTimesOnPhone = (
   offer: { offeredAt?: string | null; offerExpiresAt?: string | null },
   serverNow: string | null | undefined,
