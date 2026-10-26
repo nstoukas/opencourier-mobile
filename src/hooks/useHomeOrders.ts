@@ -167,9 +167,29 @@ export const useHomeOrders = () => {
 
   // An Offline rider holds no offers: the server ends every offer the moment
   // the rider goes Offline (AC-6), and the live connection that would say so
-  // closes at the same moment, so the phone does not wait to be told.
+  // closes at the same moment, so the phone does not wait to be told. This
+  // hides them on the render that sees Offline; the effect below then empties
+  // the cached list, so going Online again starts from nothing.
   const isOffline = user?.status === UserStatus.Offline;
   newOrdersRef.current = newOrders === undefined || !isOffline ? newOrders : [];
+
+  // Going Offline empties the cached offers. Otherwise, back Online, the
+  // offers from before (all ended by the server meanwhile) would be tracked
+  // again before the fresh fetch lands: a manual rider would see dead offers
+  // and an auto accept rider's phone would accept them. Online, the list is
+  // only what the fetch made on going Online returns (the effect further
+  // down).
+  useEffect(() => {
+    if (!isOffline) {
+      return;
+    }
+    // A fetch still on its way could bring the old list back, so stop it
+    // first. Stopping a fetch puts back the list from before it, which is
+    // why the list is emptied only after that has finished (`.then`).
+    queryClient
+      .cancelQueries({ queryKey: [QueryKeys.newOrders] })
+      .then(() => queryClient.setQueryData<Order[]>([QueryKeys.newOrders], []));
+  }, [isOffline, queryClient]);
 
   const acceptOrderFn = (orderId: string) => {
     // Only the first accept or decline for an offer is sent.
