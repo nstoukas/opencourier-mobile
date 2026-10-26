@@ -37,36 +37,35 @@ import {
   openAppFromAlert,
 } from '@app/services/offerPush/phone';
 
-// Which offer to show: the alert that opened this screen (by its id, when the
-// screen was reopened for it), or the one Android passed along, or else the
-// newest offer alert still on display.
+// Which offer to show: the alert that reopened this screen (by its id), or
+// the alert notifee says opened it, or else the newest offer alert on display.
+// Only an offer whose alert is still on display counts. notifee also keeps a
+// button press (Accept or Decline in the notification shade, which opens no
+// screen) as the "initial" notification, and hands it to the next screen that
+// asks, long after that offer was answered or ended.
 const findOffer = async (
   notificationId: string | null = null,
 ): Promise<StoredOfferAlert | null> => {
   // Android can add a summary of its own (it groups an app's notifications)
   // on the same channel, with no offer data: only real offer alerts count.
   const displayed = (await displayedOfferAlerts())
-    .filter(
-      alert =>
-        notificationId === null || alert.notificationId === notificationId,
-    )
     .map(alert => fromNotificationData(alert.data))
     // `offer is StoredOfferAlert` tells TypeScript the kept items are never
     // null, so the list's type loses its `| null`.
     .filter((offer): offer is StoredOfferAlert => offer !== null);
-  if (notificationId !== null && displayed.length > 0) {
-    return displayed[0];
-  }
+  const onDisplay = (deliveryId: string) =>
+    displayed.find(offer => offer.deliveryId === deliveryId) ?? null;
+
+  // Read even when the id is known, so an old one is not left for later.
   const initial = await notifee.getInitialNotification().catch(() => null);
-  const fromInitial = fromNotificationData(initial?.notification.data);
-  if (fromInitial !== null) {
-    return fromInitial;
-  }
   if (notificationId !== null) {
-    // That alert is gone already (the offer ended, or was answered).
-    return null;
+    // Null when that alert is gone already (the offer ended, or was answered).
+    return onDisplay(notificationId);
   }
-  return displayed[displayed.length - 1] ?? null;
+  const fromInitial = fromNotificationData(initial?.notification.data);
+  const opened =
+    fromInitial === null ? null : onDisplay(fromInitial.deliveryId);
+  return opened ?? displayed[displayed.length - 1] ?? null;
 };
 
 // How often the screen redraws its countdown and checks the alert is still up.
