@@ -44,9 +44,14 @@ const findOffer = async (): Promise<StoredOfferAlert | null> => {
   if (fromInitial !== null) {
     return fromInitial;
   }
-  const displayed = await displayedOfferAlerts();
-  const newest = displayed[displayed.length - 1];
-  return newest ? fromNotificationData(newest.data) : null;
+  // Android can add a summary of its own (it groups an app's notifications)
+  // on the same channel, with no offer data: only real offer alerts count.
+  const offers = (await displayedOfferAlerts())
+    .map(alert => fromNotificationData(alert.data))
+    // `offer is StoredOfferAlert` tells TypeScript the kept items are never
+    // null, so the list's type loses its `| null`.
+    .filter((offer): offer is StoredOfferAlert => offer !== null);
+  return offers[offers.length - 1] ?? null;
 };
 
 // How often the screen redraws its countdown and checks the alert is still up.
