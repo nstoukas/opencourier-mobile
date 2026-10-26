@@ -201,24 +201,34 @@ export class OfferCountdowns {
       autoAccepted: false,
     };
     this.entries.set(offer.id, entry);
-    this.schedule(offer.id, entry);
+    this.schedule(offer.id, entry, true);
   }
 
   // Set the one timer this offer needs: the deadline check if it has a
-  // deadline, otherwise the next 30 s reminder.
-  private schedule(offerId: string, entry: OfferEntry) {
+  // deadline, otherwise the next 30 s reminder. `firstSight` is true when the
+  // offer has just been tracked, false when a failed send is being undone
+  // (`= false` makes that the value when the caller leaves it out).
+  private schedule(offerId: string, entry: OfferEntry, firstSight = false) {
     this.stopTimer(entry);
     const now = this.now();
 
     if (entry.expiresAt !== null) {
       const checkAt = entry.expiresAt + OFFER_END_CHECK_DELAY_MS;
-      // Already past (the server should have ended it): no check, so a
-      // stuck offer never turns into a loop of fetches.
       if (checkAt > now) {
         entry.timeout = setTimeout(() => {
           entry.timeout = undefined;
           this.handlers.onDeadline(offerId);
         }, checkAt - now);
+      } else if (firstSight) {
+        // Seen for the first time already past its deadline and the grace
+        // (the phone was asleep, or the list was old): check at once, with
+        // the same single fetch as at the deadline. Never an answer. It
+        // happens only on first sight, because a refetch of the same offer
+        // does not track it again, so a stuck offer cannot loop into fetches.
+        entry.timeout = setTimeout(() => {
+          entry.timeout = undefined;
+          this.handlers.onDeadline(offerId);
+        }, 0);
       }
       return;
     }
