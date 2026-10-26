@@ -38,6 +38,10 @@ export type OfferCountdownHandlers = {
   onDeadline: (offerId: string) => void;
   // An offer with no deadline has waited another 30 s: alert the rider.
   onReminder: (offerId: string, waitedMs: number) => void;
+  // An offer that has alerted the rider at least once is forgotten: take its
+  // reminder away. Optional (`?`), so code that builds the handlers without
+  // it still compiles.
+  onRemindersEnded?: (offerId: string) => void;
 };
 
 // What we remember about one offer that is on screen.
@@ -55,6 +59,9 @@ type OfferEntry = {
   // True once the phone has accepted this offer for an auto accept rider, so
   // a failed automatic accept is never sent again on its own.
   autoAccepted: boolean;
+  // True once a reminder has gone out for this offer, so its notification is
+  // taken away when the offer is forgotten.
+  reminded: boolean;
 };
 
 export class OfferCountdowns {
@@ -162,7 +169,7 @@ export class OfferCountdowns {
   forget(offerId: string) {
     const entry = this.entries.get(offerId);
     if (entry) {
-      this.stopTimer(entry);
+      this.end(offerId, entry);
     }
     this.entries.delete(offerId);
   }
@@ -182,16 +189,18 @@ export class OfferCountdowns {
 
   // Stop every timer, for when the screen goes away.
   stopAll() {
-    for (const entry of this.entries.values()) {
-      this.stopTimer(entry);
+    // `entries()` gives each id with its entry, as [id, entry] pairs.
+    for (const [offerId, entry] of this.entries.entries()) {
+      this.end(offerId, entry);
     }
     this.entries.clear();
   }
 
   private track(offer: OfferTiming) {
+    // A new offer of the same delivery: the old offer is done with.
     const previous = this.entries.get(offer.id);
     if (previous) {
-      this.stopTimer(previous);
+      this.end(offer.id, previous);
     }
     const entry: OfferEntry = {
       offerKey: offer.offerKey,
@@ -199,6 +208,7 @@ export class OfferCountdowns {
       expiresAt: offer.expiresAt,
       claimed: false,
       autoAccepted: false,
+      reminded: false,
     };
     this.entries.set(offer.id, entry);
     this.schedule(offer.id, entry, true);
@@ -240,12 +250,22 @@ export class OfferCountdowns {
     const nextAt = entry.offeredAt + steps * OFFER_REMINDER_EVERY_MS;
     entry.timeout = setTimeout(() => {
       entry.timeout = undefined;
+      entry.reminded = true;
       this.handlers.onReminder(offerId, this.now() - entry.offeredAt);
       // Still on screen and unanswered: set the next reminder.
       if (this.entries.get(offerId) === entry && !entry.claimed) {
         this.schedule(offerId, entry);
       }
     }, nextAt - now);
+  }
+
+  // Stop an offer's timer and, if it alerted the rider, its reminder.
+  private end(offerId: string, entry: OfferEntry) {
+    this.stopTimer(entry);
+    if (entry.reminded) {
+      entry.reminded = false;
+      this.handlers.onRemindersEnded?.(offerId);
+    }
   }
 
   private stopTimer(entry: OfferEntry) {

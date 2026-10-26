@@ -41,6 +41,11 @@ const ensureChannel = async () => {
   }
 };
 
+// The same id for every reminder of one offer, so a new reminder replaces the
+// last one and `cancelOfferReminder` can find it.
+const reminderNotificationId = (offerId: string): string =>
+  `offer-reminder-${offerId}`;
+
 // The same words the offer card shows: "Waiting 3 min", or "Waiting less
 // than 1 min" in the first minute (the 30 s reminder), never "Waiting 0 min".
 const waitingText = (waitedMs: number): string => {
@@ -62,7 +67,7 @@ export const remindRiderOfOffer = async (
     await ensureChannel();
     await notifee.displayNotification({
       // One notification per offer: a new reminder replaces the last one.
-      id: `offer-reminder-${offerId}`,
+      id: reminderNotificationId(offerId),
       title: i18next.t('translations:offer_reminder_title'),
       body: waitingText(waitedMs),
       android: {
@@ -77,5 +82,16 @@ export const remindRiderOfOffer = async (
     // No notification permission, for example. The vibration above still
     // happened, and the offer is still on screen, so nothing else is needed.
     console.log('Offer reminder could not show a notification', error);
+  }
+};
+
+// The offer left (answered, ended by the server, or gone from the list): take
+// its reminder out of the tray, so the rider never taps a dead offer.
+export const cancelOfferReminder = async (offerId: string): Promise<void> => {
+  try {
+    await notifee.cancelNotification(reminderNotificationId(offerId));
+  } catch (error) {
+    // Nothing to cancel, or notifications are off: nothing else to do.
+    console.log('Offer reminder could not be cancelled', error);
   }
 };

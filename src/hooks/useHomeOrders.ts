@@ -9,7 +9,10 @@ import { QueryKeys } from '@app/utilities/queryKeys';
 import useUser from './useUser';
 import { OfferCountdowns, OfferTiming } from '@app/utilities/offerCountdowns';
 import { isOfferEndedError } from '@app/services/orderService';
-import { remindRiderOfOffer } from '@app/services/offerReminder';
+import {
+  cancelOfferReminder,
+  remindRiderOfOffer,
+} from '@app/services/offerReminder';
 import i18next from 'i18next';
 
 // An offer's timing as the countdowns need it (spec 0002).
@@ -77,6 +80,8 @@ export const useHomeOrders = () => {
         remindRiderOfOffer(orderId, waitedMs);
         setReminderTick(tick => tick + 1);
       },
+      // The offer left: take its reminder out of the notification tray.
+      onRemindersEnded: orderId => cancelOfferReminder(orderId),
     });
   }
   const countdowns = countdownsRef.current;
