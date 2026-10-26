@@ -29,6 +29,9 @@ export const OFFER_END_CHECK_DELAY_MS = 4000;
 export const OFFER_REMINDER_EVERY_MS = 30000;
 // ...and vibrates longer once it has waited this long (AC-4).
 export const OFFER_REMINDER_LONGER_AFTER_MS = 120000;
+// Logging out sets the rider Offline first, but waits at most this long for
+// the server, so a bad network never holds the rider at the logout button.
+export const LOGOUT_OFFLINE_TIMEOUT_MS = 3000;
 export const MAP_ACTION_SHEET_OPTIONS_IOS = [
   MapLinkingOptions.apple,
   MapLinkingOptions.google,

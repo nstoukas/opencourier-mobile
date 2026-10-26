@@ -28,6 +28,7 @@ import Geolocation from 'react-native-geolocation-service';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import useUser from '@app/hooks/useUser';
 import { useQueryClient } from '@tanstack/react-query';
+import { LOGOUT_OFFLINE_TIMEOUT_MS } from '@app/utilities/constants';
 import { services } from '@app/services/service';
 import useInstance from '@app/hooks/useInstance';
 
@@ -157,10 +158,14 @@ export const SideMenu = ({ navigation }: Props) => {
     // server then ends any offer this rider holds at once and gives it to the
     // next rider, instead of it waiting on a phone that has logged out.
     try {
-      await services.userService.setUserStatus(UserStatus.Offline);
+      // At most 3 s, not the client's usual 10 s.
+      await services.userService.setUserStatus(UserStatus.Offline, {
+        timeoutMs: LOGOUT_OFFLINE_TIMEOUT_MS,
+      });
     } catch (error) {
-      // No network, for example. Logging out must still work, so carry on;
-      // an offer left behind still ends at its deadline when expiry is on.
+      // No network, or no answer within 3 s. Logging out must still work, so
+      // carry on; an offer left behind still ends at its deadline when expiry
+      // is on, and the next login starts Offline.
       console.log('Could not go Offline before logging out', error);
     }
     await AsyncStorage.multiRemove(['token', 'BASE_URL', 'SOCKET_BASE_URL']);

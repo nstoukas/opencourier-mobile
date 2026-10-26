@@ -19,7 +19,12 @@ export interface UserService {
   updateUserSettings: (
     params: Partial<UserSettings>,
   ) => Promise<UserServiceResponse>;
-  setUserStatus: (status: string) => Promise<any>;
+  // `options.timeoutMs` replaces the client's usual 10 s wait, for a call
+  // that must not hold the rider up (logging out, spec 0002).
+  setUserStatus: (
+    status: string,
+    options?: { timeoutMs?: number },
+  ) => Promise<any>;
   setDeliverySettings: (settings: string) => Promise<any>;
   setUserLocation: (params: {
     latitude: number;
@@ -51,8 +56,17 @@ const userService = (client: UClient): UserService => {
     return user;
   };
 
-  const setUserStatus = async (status: string): Promise<any> => {
-    return client.patch('courier/status', { status: status.toUpperCase() });
+  const setUserStatus = async (
+    status: string,
+    options?: { timeoutMs?: number },
+  ): Promise<any> => {
+    return client.patch(
+      'courier/status',
+      { status: status.toUpperCase() },
+      // `?.` reads `timeoutMs` only if `options` was given; with no timeout
+      // here axios keeps the client's own 10 s.
+      { timeout: options?.timeoutMs },
+    );
   };
 
   const setDeliverySettings = async (deliverySetting: string): Promise<any> => {

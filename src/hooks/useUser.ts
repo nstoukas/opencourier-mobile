@@ -17,7 +17,9 @@ const useUser = (enabled: boolean = true) => {
   });
 
   const { mutate: updateStatus } = useMutation({
-    mutationFn: services.userService.setUserStatus,
+    // Only the status is passed on: react-query also hands a mutation function
+    // its own context object, which must not reach setUserStatus's options.
+    mutationFn: (status: string) => services.userService.setUserStatus(status),
     onError: error => Alert.alert('Ooops', error.toString()),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [QueryKeys.user] });
