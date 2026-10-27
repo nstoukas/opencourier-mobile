@@ -91,8 +91,9 @@ export const SideMenu = ({ navigation }: Props) => {
           requestLocationPermission();
         } else {
           // An app cannot take back its own permission; the phone's settings
-          // for this app are where the rider switches location off.
-          Linking.openSettings();
+          // for this app are where the rider switches location off. The switch
+          // springs back to on until the rider has done that, as it should.
+          Linking.openSettings().catch(() => undefined);
         }
         break;
     }

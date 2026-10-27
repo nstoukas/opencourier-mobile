@@ -80,11 +80,29 @@ export const useLocationPermission = (
     }
   }, [setLocationPermission]);
 
+  useEffect(() => {
+    if (autoRequestPermission) {
+      requestLocationPermission();
+    }
+  }, [autoRequestPermission, requestLocationPermission]);
+
+  return {
+    requestLocationPermission,
+    locationPermission,
+  };
+};
+
+// Keeps the shared location permission flag in step with what the phone has
+// granted (row 67).
+export const useGrantedLocationPermission = () => {
+  const { setLocationPermission } = useContext(UserContext);
+
   // Reads what the phone has already granted, without asking (row 67). Before,
   // the app knew it had location only after asking in the same run, so after
   // a restart it never tracked at all. Read again each time the app comes
   // back, so a permission switched off in the phone's settings stops tracking.
   // iOS keeps its old behaviour until it can be checked on a Mac (row 85).
+  // Called once, by the Router, so there is one reader and one listener.
   useEffect(() => {
     if (Platform.OS !== 'android') {
       return;
@@ -103,15 +121,4 @@ export const useLocationPermission = (
     });
     return () => subscription.remove();
   }, [setLocationPermission]);
-
-  useEffect(() => {
-    if (autoRequestPermission) {
-      requestLocationPermission();
-    }
-  }, [autoRequestPermission, requestLocationPermission]);
-
-  return {
-    requestLocationPermission,
-    locationPermission,
-  };
 };

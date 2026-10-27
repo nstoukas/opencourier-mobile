@@ -10,7 +10,10 @@ import { useOfferPushRegistration } from '@app/services/offerPush/registration';
 import { AddNote } from '@app/screens/AddNote/AddNote';
 import { DeleteNote } from '@app/screens/DeleteNote/DeleteNote';
 import { DatePickerScreen } from '@app/screens/DatePicker/DatePicker';
-import { useLocationPermission } from '@app/hooks/useLocationPermission';
+import {
+  useGrantedLocationPermission,
+  useLocationPermission,
+} from '@app/hooks/useLocationPermission';
 import useUser from '@app/hooks/useUser';
 import { useLocationTracking } from '@app/hooks/useLocationTracking';
 
@@ -21,6 +24,7 @@ const DEFAULT_OPTIONS = { headerShown: false };
 export const Router = () => {
   const { user } = useUser();
   const { locationPermission } = useLocationPermission();
+  useGrantedLocationPermission();
 
   // Register this phone for offer alerts while a rider is logged in (row 58).
   useOfferPushRegistration(user?.id);
