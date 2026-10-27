@@ -214,7 +214,7 @@ describe('SocketProvider and useConnectionStatus', () => {
       });
     });
 
-    it('refetches offers, in progress jobs, history, and user on DELIVERY_STATUS_UPDATED (spec 0008, AC-9)', async () => {
+    it('refetches offers, history, then inProgressOrders, and only after that resolves is user invalidated on DELIVERY_STATUS_UPDATED (spec 0008, AC-9)', async () => {
       let tree!: renderer.ReactTestRenderer;
       await act(async () => {
         tree = renderer.create(renderTree(queryClient));
@@ -222,6 +222,19 @@ describe('SocketProvider and useConnectionStatus', () => {
 
       expect(latestSocket).not.toBeNull();
       invalidateQueriesSpy.mockClear();
+
+      // Control the resolution of inProgressOrders invalidation to pin the order
+      let resolveInProgress!: () => void;
+      const inProgressPromise = new Promise<void>(resolve => {
+        resolveInProgress = resolve;
+      });
+
+      invalidateQueriesSpy.mockImplementation((filters?: any) => {
+        if (filters?.queryKey?.[0] === QueryKeys.inProgressOrders) {
+          return inProgressPromise;
+        }
+        return Promise.resolve();
+      });
 
       // Emit delivery status updated event
       act(() => {
@@ -231,17 +244,31 @@ describe('SocketProvider and useConnectionStatus', () => {
         });
       });
 
-      expect(invalidateQueriesSpy).toHaveBeenCalledTimes(4);
-      expect(invalidateQueriesSpy).toHaveBeenCalledWith({
+      // newOrders, orderHistory, and inProgressOrders are called in the first wave
+      expect(invalidateQueriesSpy).toHaveBeenCalledTimes(3);
+      expect(invalidateQueriesSpy).toHaveBeenNthCalledWith(1, {
         queryKey: [QueryKeys.newOrders],
       });
-      expect(invalidateQueriesSpy).toHaveBeenCalledWith({
-        queryKey: [QueryKeys.inProgressOrders],
-      });
-      expect(invalidateQueriesSpy).toHaveBeenCalledWith({
+      expect(invalidateQueriesSpy).toHaveBeenNthCalledWith(2, {
         queryKey: [QueryKeys.orderHistory],
       });
-      expect(invalidateQueriesSpy).toHaveBeenCalledWith({
+      expect(invalidateQueriesSpy).toHaveBeenNthCalledWith(3, {
+        queryKey: [QueryKeys.inProgressOrders],
+      });
+
+      // Crucial: user is NOT invalidated yet while inProgressOrders is in flight
+      expect(invalidateQueriesSpy).not.toHaveBeenCalledWith({
+        queryKey: [QueryKeys.user],
+      });
+
+      // Now inProgressOrders resolves
+      await act(async () => {
+        resolveInProgress();
+      });
+
+      // Now user must be invalidated (4th call, strictly after inProgressOrders resolves)
+      expect(invalidateQueriesSpy).toHaveBeenCalledTimes(4);
+      expect(invalidateQueriesSpy).toHaveBeenNthCalledWith(4, {
         queryKey: [QueryKeys.user],
       });
 

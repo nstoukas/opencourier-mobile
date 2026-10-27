@@ -102,6 +102,16 @@ describe('useLocationTracking (Row 67, Clauses 1, 2, 3, 4)', () => {
 
     mockGetUser.mockResolvedValue(null);
     mockGetInProgressOrders.mockResolvedValue([]);
+
+    (notifee.createChannel as jest.Mock).mockImplementation(() =>
+      Promise.resolve('online'),
+    );
+    (notifee.displayNotification as jest.Mock).mockImplementation(() =>
+      Promise.resolve('online-status'),
+    );
+    (notifee.stopForegroundService as jest.Mock).mockImplementation(() =>
+      Promise.resolve(),
+    );
   });
 
   afterEach(async () => {
@@ -606,6 +616,202 @@ describe('useLocationTracking (Row 67, Clauses 1, 2, 3, 4)', () => {
       await waitFor(() => {
         expect(notifee.stopForegroundService).toHaveBeenCalled();
       });
+    });
+
+    it('a mode change from waiting to job while the first show is still pending results in one more showOnlineService call with the job text after it resolves (and no stopForegroundService)', async () => {
+      let resolveDisplay!: (id: string) => void;
+      (notifee.displayNotification as jest.Mock).mockImplementation(
+        () =>
+          new Promise(resolve => {
+            resolveDisplay = () => resolve('online-status');
+          }),
+      );
+
+      // Mount while Online with no jobs (mode: Waiting)
+      const { result } = renderHook(
+        () => useLocationTracking(onlineUser, true),
+        {
+          wrapper: createWrapper(),
+        },
+      );
+
+      // The initial show is called with Waiting text and is currently pending
+      await waitFor(() => {
+        expect(notifee.displayNotification).toHaveBeenCalledTimes(1);
+        expect(notifee.displayNotification).toHaveBeenCalledWith(
+          expect.objectContaining({
+            id: 'online-status',
+            title: 'OpenCourier is online',
+          }),
+        );
+      });
+
+      // A job arrives while the first show is still pending
+      act(() => {
+        queryClient.setQueryData([QueryKeys.inProgressOrders], [activeJob]);
+      });
+
+      await waitFor(() => {
+        expect(result.current).toBe(TrackingMode.Job);
+      });
+
+      // While the first show was pending, serviceRunning was still false, so text effect skipped
+      expect(notifee.displayNotification).toHaveBeenCalledTimes(1);
+
+      // Subsequent displayNotification calls resolve normally
+      (notifee.displayNotification as jest.Mock).mockImplementation(() =>
+        Promise.resolve('online-status'),
+      );
+
+      // Resolve the initial pending show
+      await act(async () => {
+        resolveDisplay('online-status');
+      });
+
+      // After resolving, the start effect checks latest.current.mode !== shownMode
+      // and calls showOnlineService one more time with the Job text
+      await waitFor(() => {
+        expect(notifee.displayNotification).toHaveBeenCalledTimes(2);
+        expect(notifee.displayNotification).toHaveBeenLastCalledWith(
+          expect.objectContaining({
+            id: 'online-status',
+            title: 'OpenCourier: delivery in progress',
+            body: 'Your location is shared until this delivery ends.',
+          }),
+        );
+      });
+
+      // Crucial: no stopForegroundService was called
+      expect(notifee.stopForegroundService).not.toHaveBeenCalled();
+    });
+
+    it('tracking turning off while a text update is in flight leaves no service (the final call to notifee is stopForegroundService, displayNotification is not called after it)', async () => {
+      const callLog: string[] = [];
+
+      (notifee.createChannel as jest.Mock).mockImplementation(async () => {
+        callLog.push('createChannel');
+        return 'online';
+      });
+      (notifee.displayNotification as jest.Mock).mockImplementation(
+        async () => {
+          callLog.push('displayNotification');
+          return 'online-status';
+        },
+      );
+      (notifee.stopForegroundService as jest.Mock).mockImplementation(
+        async () => {
+          callLog.push('stopForegroundService');
+        },
+      );
+
+      // Start Online in Waiting mode
+      const { result, rerender } = renderHook(
+        ({ user, hasPermission }) => useLocationTracking(user, hasPermission),
+        {
+          initialProps: {
+            user: onlineUser as User | undefined,
+            hasPermission: true,
+          },
+          wrapper: createWrapper(),
+        },
+      );
+
+      // Wait for initial start to complete
+      await waitFor(() => {
+        expect(result.current).toBe(TrackingMode.Waiting);
+        expect(notifee.displayNotification).toHaveBeenCalledTimes(1);
+      });
+
+      // Prepare deferred createChannel for the upcoming text update
+      let resolveTextCreateChannel!: (channelId: string) => void;
+      (notifee.createChannel as jest.Mock).mockImplementation(
+        () =>
+          new Promise(resolve => {
+            callLog.push('createChannel');
+            resolveTextCreateChannel = resolve;
+          }),
+      );
+
+      // Transition to Job mode: text effect triggers showOnlineService(Job)
+      act(() => {
+        queryClient.setQueryData([QueryKeys.inProgressOrders], [activeJob]);
+      });
+
+      await waitFor(() => {
+        expect(result.current).toBe(TrackingMode.Job);
+        expect(callLog).toContain('createChannel');
+      });
+
+      // While the text update is in flight, tracking turns off (rider logs out)
+      rerender({ user: undefined, hasPermission: true });
+
+      await waitFor(() => {
+        expect(result.current).toBe(TrackingMode.Off);
+        expect(callLog).toContain('stopForegroundService');
+      });
+
+      // Now resolve the deferred createChannel from the text update
+      await act(async () => {
+        resolveTextCreateChannel('online');
+      });
+
+      await flushMicrotasks();
+
+      // displayNotification must NOT have been called after stopForegroundService!
+      // In fact, displayNotification was only called once (the initial Waiting display)
+      expect(notifee.displayNotification).toHaveBeenCalledTimes(1);
+
+      // The final call to notifee must be stopForegroundService
+      expect(callLog[callLog.length - 1]).toBe('stopForegroundService');
+    });
+
+    it('the unmount cleanup sets serviceRunning back so a remount (a fresh renderHook after unmount) starts the service again while tracking', async () => {
+      // Simulate React preserving hook refs across unmount and remount (Fast Refresh in dev)
+      let preservedRef: any = null;
+      const originalUseRef = React.useRef;
+      const useRefSpy = jest
+        .spyOn(React, 'useRef')
+        .mockImplementation((initial: any) => {
+          const stack = new Error().stack ?? '';
+          if (
+            stack.includes('useLocationTracking') &&
+            typeof initial === 'boolean'
+          ) {
+            if (!preservedRef) {
+              preservedRef = { current: initial };
+            }
+            return preservedRef;
+          }
+          return originalUseRef(initial);
+        });
+
+      // First mount while Online
+      const first = renderHook(() => useLocationTracking(onlineUser, true), {
+        wrapper: createWrapper(),
+      });
+
+      await waitFor(() => {
+        expect(notifee.displayNotification).toHaveBeenCalledTimes(1);
+        expect(preservedRef?.current).toBe(true);
+      });
+
+      // Unmount: cleanup must set serviceRunning.current = false
+      first.unmount();
+
+      expect(preservedRef?.current).toBe(false);
+
+      // Fresh renderHook (remount) while still tracking
+      const second = renderHook(() => useLocationTracking(onlineUser, true), {
+        wrapper: createWrapper(),
+      });
+
+      // Because serviceRunning was set back to false, the remounted hook starts the service again
+      await waitFor(() => {
+        expect(notifee.displayNotification).toHaveBeenCalledTimes(2);
+      });
+
+      second.unmount();
+      useRefSpy.mockRestore();
     });
 
     it('with AppState not active when tracking turns on, displayNotification is not called (AC-6)', async () => {

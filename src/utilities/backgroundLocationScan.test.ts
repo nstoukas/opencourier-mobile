@@ -11,7 +11,7 @@ describe('Background location declarations and service registration (spec 0008, 
   const infoPlistPath = path.join(rootDir, 'ios/OpenCourier/Info.plist');
 
   describe('AC-5: AndroidManifest.xml and index.js', () => {
-    it('declares FOREGROUND_SERVICE_LOCATION in AndroidManifest.xml', () => {
+    it('declares FOREGROUND_SERVICE_LOCATION in the source AndroidManifest.xml (the merged manifest stays a build step)', () => {
       const manifest = fs.readFileSync(manifestPath, 'utf-8');
 
       expect(manifest).toMatch(
