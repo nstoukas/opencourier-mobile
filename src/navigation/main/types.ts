@@ -1,4 +1,4 @@
-import { Order, Photo, OrderItem } from '@app/types/types';
+import { Order, OrderItem } from '@app/types/types';
 import {
   CompositeNavigationProp,
   NavigationProp,
@@ -11,24 +11,15 @@ export enum MainScreens {
   Drawer = 'Drawer',
   ItemsCollected = 'ItemsCollected',
   MarkAsDelivered = 'MarkAsDelivered',
-  PhotoAttachment = 'PhotoAttachment',
   PayoutActivity = 'PayoutActivity',
   Licences = 'Licences',
   LanguageScreen = 'LanguageScreen',
-  ThemeScreen = 'ThemeScreen',
   OperatingArea = 'operatingArea',
-  Accessibility = 'Accessibility',
   DefaultSound = 'DefaultSound',
-  MyLanguages = 'MyLanguages',
   VolumeScreen = 'VolumeScreen',
   EmergencyContact = 'EmergencyContact',
   NavigationScreen = 'NavigationScreen',
   VehicleTypeScreen = 'VehicleTypeScreen',
-  RestaurantTypeScreen = 'RestaurantTypeScreen',
-  CuisineTypeScreen = 'CuisineTypeScreen',
-  EarningsMethodScreen = 'EarningsMethodScreen',
-  WeightOrderScreen = 'WeightOrderScreen',
-  OrderPreferenceScreen = 'OrderPreferenceScreen',
   ShiftAvailabilityScreen = 'ShiftAvailabilityScreen',
   ReportIssue = 'ReportIssue',
   EarningsDay = 'EarningsDay',
@@ -44,27 +35,16 @@ export type MainStackParamList = {
   MarkAsDelivered: {
     order: Order;
   };
-  PhotoAttachment: {
-    onAttach: (photo: Photo) => void;
-  };
   PayoutActivity: undefined;
   Licences: undefined;
   LanguageScreen: undefined;
-  ThemeScreen: undefined;
   // The key must equal the route name, which is the enum's value 'operatingArea' (lower case o).
   operatingArea: undefined;
-  Accessibility: undefined;
   DefaultSound: undefined;
-  MyLanguages: undefined;
   VolumeScreen: undefined;
   EmergencyContact: undefined;
   NavigationScreen: undefined;
   VehicleTypeScreen: undefined;
-  RestaurantTypeScreen: undefined;
-  CuisineTypeScreen: undefined;
-  EarningsMethodScreen: undefined;
-  WeightOrderScreen: undefined;
-  OrderPreferenceScreen: undefined;
   ShiftAvailabilityScreen: undefined;
   ReportIssue: {
     order: Order;

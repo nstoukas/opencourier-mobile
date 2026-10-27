@@ -12,9 +12,8 @@ import { styles } from './MarkAsDelivered.styles';
 import { MainScreenProp, MainScreens } from '@app/navigation/main/types';
 import { BackNavButton } from '@app/components/BackNavButton/BackNavButton';
 import { QuickNote } from '@app/components/QuickNote/QuickNote';
-import { CustomerNotes, Photo } from '@app/types/types';
+import { CustomerNotes } from '@app/types/types';
 import { Button, ButtonType } from '@app/components/Button/Button';
-import { PhotoCell } from '@app/components/PhotoCell/PhotoCell';
 import { services } from '@app/services/service';
 import { useTranslation } from 'react-i18next';
 import { RootScreen } from '@app/navigation/types';
@@ -24,7 +23,6 @@ import { hideInProgressOrderAfterDelivery } from '@app/utilities/inProgressListF
 import { hitSlopFor } from '@app/utilities/touch';
 import { Icon } from '@app/components/Icon/Icon';
 import { PlusIcon } from 'phosphor-react-native/src/icons/Plus';
-import { CameraIcon } from 'phosphor-react-native/src/icons/Camera';
 import { CheckCircleIcon } from 'phosphor-react-native/src/icons/CheckCircle';
 
 type Props = MainScreenProp<MainScreens.MarkAsDelivered>;
@@ -38,9 +36,6 @@ export const MarkAsDelivered = ({ navigation, route }: Props) => {
   const queryClient = useQueryClient();
 
   const { order } = route.params;
-  const [selectedPhoto, setSelectedPhoto] = useState<Photo | undefined>(
-    undefined,
-  );
   const [data, setData] = useState<SectionListData<SectionListItem>[]>([
     {
       data: [
@@ -106,10 +101,6 @@ export const MarkAsDelivered = ({ navigation, route }: Props) => {
     });
   };
 
-  const onDeletePhoto = (photo: Photo) => {
-    setSelectedPhoto(undefined);
-  };
-
   const renderItem = ({
     section,
   }: {
@@ -162,10 +153,6 @@ export const MarkAsDelivered = ({ navigation, route }: Props) => {
     );
   };
 
-  const onAttachPhoto = (photo: Photo) => {
-    setSelectedPhoto(photo);
-  };
-
   const handleConfirm = () => {
     markAsDelivered({
       id: order.id,
@@ -193,38 +180,6 @@ export const MarkAsDelivered = ({ navigation, route }: Props) => {
           stickySectionHeadersEnabled={true}
         />
 
-        <Text style={styles.textShow}>
-          {t('translations:show_the_customer')}
-        </Text>
-
-        {selectedPhoto && (
-          <PhotoCell
-            style={{ marginBottom: 16 }}
-            image={selectedPhoto}
-            onDelete={() => onDeletePhoto(selectedPhoto)}
-            onRetake={() =>
-              navigation.navigate(MainScreens.PhotoAttachment, {
-                onAttach: onAttachPhoto,
-              })
-            }
-          />
-        )}
-        {!selectedPhoto && (
-          <Button
-            textStyle={styles.buttonTextStyle}
-            style={styles.buttonConfirm}
-            icon={CameraIcon}
-            iconWeight="fill"
-            type={ButtonType.black}
-            title={t('translations:take_a_photo')}
-            onPress={() =>
-              navigation.navigate(MainScreens.PhotoAttachment, {
-                onAttach: onAttachPhoto,
-              })
-            }
-          />
-        )}
-
         <Button
           isLoading={isPending}
           style={styles.buttonConfirm}
@@ -236,15 +191,6 @@ export const MarkAsDelivered = ({ navigation, route }: Props) => {
           onPress={handleConfirm}
         />
 
-        {selectedPhoto && (
-          <Button
-            style={styles.buttonConfirm}
-            textStyle={styles.buttonTextStyle}
-            type={ButtonType.white}
-            title={t('translations:handed_to_customer')}
-            onPress={() => undefined}
-          />
-        )}
         <Button
           style={styles.buttonConfirm}
           textStyle={styles.buttonTextStyle}

@@ -137,12 +137,6 @@
         "licenseUrl": "https://github.com/yfuks/react-native-action-sheet/raw/master/LICENSE",
         "parents": "opencourier"
     },
-    "react-native-camera@4.2.1": {
-        "licenses": "MIT AND Apache-2.0 AND BSD-3-Clause",
-        "repository": "https://github.com/react-native-community/react-native-camera",
-        "licenseUrl": "https://github.com/react-native-community/react-native-camera/raw/master/LICENSE",
-        "parents": "opencourier"
-    },
     "react-native-dashed-line@1.1.0": {
         "licenses": "MIT",
         "repository": "https://github.com/RBrNx/react-native-dashed-line",

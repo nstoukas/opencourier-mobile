@@ -60,11 +60,6 @@ export const styles = StyleSheet.create({
     fontSize: typeScale.body.fontSize,
     fontWeight: '700',
   },
-  textShow: {
-    fontSize: typeScale.body.fontSize,
-    color: Colors.black1,
-    marginBottom: 19,
-  },
   noteHeader: {
     flexDirection: 'row',
     alignItems: 'center',

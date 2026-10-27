@@ -35,9 +35,6 @@ export const SettingsScreen = ({ navigation }: Props) => {
   const [form, setForm] = useState<Partial<Record<SettingsOptions, boolean>>>({
     [SettingsOptions.notifications]: false,
     [SettingsOptions.cashOnDelivery]: false,
-    [SettingsOptions.includeOrdersWithDrinks]: false,
-    [SettingsOptions.rushedOrders]: false,
-    [SettingsOptions.deliveryBag]: false,
   });
 
   const settings: SectionListData<SectionListItem>[] = [
@@ -46,14 +43,6 @@ export const SettingsScreen = ({ navigation }: Props) => {
         {
           cellType: SettingsCellType.plain,
           cellData: SettingsOptions.accountInformation,
-        },
-        {
-          cellType: SettingsCellType.plain,
-          cellData: SettingsOptions.accessibility,
-        },
-        {
-          cellType: SettingsCellType.plain,
-          cellData: SettingsOptions.earningMethod,
         },
         {
           cellType: SettingsCellType.plain,
@@ -70,10 +59,6 @@ export const SettingsScreen = ({ navigation }: Props) => {
         {
           cellType: SettingsCellType.plain,
           cellData: SettingsOptions.operatingArea,
-        },
-        {
-          cellType: SettingsCellType.plain,
-          cellData: SettingsOptions.theme,
         },
         {
           cellType: SettingsCellType.plain,
@@ -99,34 +84,6 @@ export const SettingsScreen = ({ navigation }: Props) => {
         {
           cellType: SettingsCellType.plain,
           cellData: SettingsOptions.shiftAvailability,
-        },
-        {
-          cellType: SettingsCellType.plain,
-          cellData: SettingsOptions.cuisineTypes,
-        },
-        {
-          cellType: SettingsCellType.plain,
-          cellData: SettingsOptions.restaurantTypes,
-        },
-        {
-          cellType: SettingsCellType.plain,
-          cellData: SettingsOptions.orderTypes,
-        },
-        {
-          cellType: SettingsCellType.plain,
-          cellData: SettingsOptions.weightOrder,
-        },
-        {
-          cellType: SettingsCellType.switch,
-          cellData: SettingsOptions.includeOrdersWithDrinks,
-        },
-        {
-          cellType: SettingsCellType.switch,
-          cellData: SettingsOptions.rushedOrders,
-        },
-        {
-          cellType: SettingsCellType.switch,
-          cellData: SettingsOptions.deliveryBag,
         },
       ],
       title: t('translations:orders'),
@@ -155,8 +112,6 @@ export const SettingsScreen = ({ navigation }: Props) => {
     switch (setting) {
       case SettingsOptions.accountInformation:
         return 'manage_your_account';
-      case SettingsOptions.accessibility:
-        return 'enable_enhcanced_accessibility';
       case SettingsOptions.emergencyContact:
         return 'add_trusted_contact';
       case SettingsOptions.language:
@@ -165,34 +120,16 @@ export const SettingsScreen = ({ navigation }: Props) => {
         return 'customize_navigation';
       case SettingsOptions.operatingArea:
         return 'manage_you_areas';
-      case SettingsOptions.theme:
-        return 'select_theme';
       case SettingsOptions.verification:
         return 'manage_verification';
       case SettingsOptions.notifications:
         return 'push_notifications';
       case SettingsOptions.cashOnDelivery:
         return 'enable_cash';
-      case SettingsOptions.deliveryBag:
-        return 'having_delivery_bag';
-      case SettingsOptions.includeOrdersWithDrinks:
-        return 'enable_include_orders';
       case SettingsOptions.licenses:
         return undefined;
-      case SettingsOptions.earningMethod:
-        return 'select_earning_method';
       case SettingsOptions.vehicleType:
         return 'select_vehicle';
-      case SettingsOptions.cuisineTypes:
-        return 'select_cuisine';
-      case SettingsOptions.restaurantTypes:
-        return 'select_restaurant_type';
-      case SettingsOptions.orderTypes:
-        return 'select_order_types';
-      case SettingsOptions.weightOrder:
-        return 'select_weight_order';
-      case SettingsOptions.rushedOrders:
-        return 'enable_rushed';
       case SettingsOptions.shiftAvailability:
         return 'shift_availability_more';
     }
@@ -205,14 +142,8 @@ export const SettingsScreen = ({ navigation }: Props) => {
     if (item === SettingsOptions.language) {
       navigation.navigate(MainScreens.LanguageScreen);
     }
-    if (item === SettingsOptions.theme) {
-      navigation.navigate(MainScreens.ThemeScreen);
-    }
     if (item === SettingsOptions.operatingArea) {
       navigation.navigate(MainScreens.OperatingArea);
-    }
-    if (item === SettingsOptions.accessibility) {
-      navigation.navigate(MainScreens.Accessibility);
     }
     if (item === SettingsOptions.emergencyContact) {
       navigation.navigate(MainScreens.EmergencyContact);
@@ -222,21 +153,6 @@ export const SettingsScreen = ({ navigation }: Props) => {
     }
     if (item === SettingsOptions.vehicleType) {
       navigation.navigate(MainScreens.VehicleTypeScreen);
-    }
-    if (item === SettingsOptions.restaurantTypes) {
-      navigation.navigate(MainScreens.RestaurantTypeScreen);
-    }
-    if (item === SettingsOptions.cuisineTypes) {
-      navigation.navigate(MainScreens.CuisineTypeScreen);
-    }
-    if (item === SettingsOptions.earningMethod) {
-      navigation.navigate(MainScreens.EarningsMethodScreen);
-    }
-    if (item === SettingsOptions.orderTypes) {
-      navigation.navigate(MainScreens.OrderPreferenceScreen);
-    }
-    if (item === SettingsOptions.weightOrder) {
-      navigation.navigate(MainScreens.WeightOrderScreen);
     }
     if (item === SettingsOptions.shiftAvailability) {
       navigation.navigate(MainScreens.ShiftAvailabilityScreen);

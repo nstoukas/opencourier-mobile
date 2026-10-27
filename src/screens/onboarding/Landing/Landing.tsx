@@ -26,7 +26,6 @@ import {
 } from '@app/navigation/onboarding/types';
 import { styles } from './Landing.styles';
 import { useTranslation } from 'react-i18next';
-import { useCameraPermission } from '@app/hooks/useCameraPermission';
 import { useLocationPermission } from '@app/hooks/useLocationPermission';
 import usePushNotifications from '@app/services/notifications';
 import UserContext from '@app/context/userContext';
@@ -48,7 +47,6 @@ export const LandingScreen = ({ navigation }: Props) => {
   const [page, setPage] = useState<number>(0);
   const [permissionRequested, setPermissionRequested] = useState(false);
   const ref = useRef<PagerView>(null);
-  const { requestCameraPermission, cameraPermission } = useCameraPermission();
   const { requestLocationPermission, locationPermission } =
     useLocationPermission();
   const { requestUserPermission, permissionsGiven } = usePushNotifications();
@@ -127,11 +125,6 @@ export const LandingScreen = ({ navigation }: Props) => {
         image: Images.WelcomePin,
       },
       {
-        title: t('translations:enable_camera'),
-        description: t('translations:enable_camera_text'),
-        image: Images.WelcomeCam,
-      },
-      {
         title: t('translations:enable_notifications'),
         description: t('translations:enable_notifications_text'),
         image: Images.WelcomeBell,
@@ -159,13 +152,10 @@ export const LandingScreen = ({ navigation }: Props) => {
       return locationPermission;
     }
     if (page === 4) {
-      return cameraPermission;
-    }
-    if (page === 5) {
       return permissionsGiven;
     }
     return false;
-  }, [cameraPermission, locationPermission, page, permissionsGiven]);
+  }, [locationPermission, page, permissionsGiven]);
 
   const permissionButtonTitle = useMemo(() => {
     if (page === 3) {
@@ -174,11 +164,6 @@ export const LandingScreen = ({ navigation }: Props) => {
         : t('translations:allow');
     }
     if (page === 4) {
-      return permissionButtonState
-        ? t('translations:camera_allowed')
-        : t('translations:allow');
-    }
-    if (page === 5) {
       return permissionButtonState
         ? t('translations:notifications_allowed')
         : t('translations:allow');
@@ -191,9 +176,6 @@ export const LandingScreen = ({ navigation }: Props) => {
       requestLocationPermission();
       setPermissionRequested(true);
     } else if (page === 4) {
-      requestCameraPermission();
-      setPermissionRequested(true);
-    } else if (page === 5) {
       requestUserPermission();
       setPermissionRequested(true);
     }
@@ -217,16 +199,12 @@ export const LandingScreen = ({ navigation }: Props) => {
       if (page === 3 && locationPermission) {
         setPermissionRequested(false);
         onContinue();
-      } else if (page === 4 && cameraPermission) {
-        setPermissionRequested(false);
-        onContinue();
-      } else if (page === 5 && permissionsGiven) {
+      } else if (page === 4 && permissionsGiven) {
         setPermissionRequested(false);
         onContinue();
       }
     }
   }, [
-    cameraPermission,
     locationPermission,
     permissionsGiven,
     permissionRequested,

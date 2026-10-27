@@ -11,7 +11,6 @@ import Buildings from '@app/assets/icons/Buildings.png';
 import avatar from '@app/assets/icons/avatar.png';
 import NoiseBG from '@app/assets/icons/noise_bg.png';
 import welcomePin from '@app/assets/icons/illustration-pin-order.png';
-import welcomeCam from '@app/assets/icons/illustration-cam-order.png';
 import welcomeBell from '@app/assets/icons/illustration-bell-order.png';
 import Cone from '@app/assets/icons/cone.png';
 
@@ -21,7 +20,6 @@ import Cone from '@app/assets/icons/cone.png';
 export const Images = {
   Cone: Cone,
   WelcomePin: welcomePin,
-  WelcomeCam: welcomeCam,
   WelcomeBell: welcomeBell,
   NoiseBG: NoiseBG,
   Avatar: avatar,

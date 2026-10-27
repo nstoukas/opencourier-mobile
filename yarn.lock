@@ -8400,7 +8400,6 @@ __metadata:
     react-i18next: "npm:^13.5.0"
     react-native: "npm:0.74.0"
     react-native-action-sheet: "npm:^2.2.0"
-    react-native-camera: "npm:^4.2.1"
     react-native-dashed-line: "npm:^1.1.0"
     react-native-date-picker: "npm:^4.3.5"
     react-native-dotenv: "npm:^3.4.9"
@@ -8824,7 +8823,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"prop-types@npm:^15.5.10, prop-types@npm:^15.6.2, prop-types@npm:^15.7.2, prop-types@npm:^15.8.1":
+"prop-types@npm:^15.5.10, prop-types@npm:^15.7.2, prop-types@npm:^15.8.1":
   version: 15.8.1
   resolution: "prop-types@npm:15.8.1"
   dependencies:
@@ -8960,15 +8959,6 @@ __metadata:
   version: 2.2.0
   resolution: "react-native-action-sheet@npm:2.2.0"
   checksum: 10/e0689f90c53a27186593f40211485d7788631f53d0747ad0b2eefe49dba1dfcf7ad43125d6dedce68bc214bc74e9d813ee00968cbf4d7dab8bcd9dd77968365d
-  languageName: node
-  linkType: hard
-
-"react-native-camera@npm:^4.2.1":
-  version: 4.2.1
-  resolution: "react-native-camera@npm:4.2.1"
-  dependencies:
-    prop-types: "npm:^15.6.2"
-  checksum: 10/0d15fc1731270012c36860d9f9df0ff7a4ad28f3200ec54740e32888fec88cb2c5361955c3f01d3b77018e62757c5ba98192aa21979a5816625ebd8a45106674
   languageName: node
   linkType: hard
 

@@ -425,25 +425,15 @@ export type Instance = {
 
 export enum SettingsOptions {
   accountInformation = 'account_information',
-  accessibility = 'accessibility',
   emergencyContact = 'emergency_contact',
-  earningMethod = 'earning_method',
   language = 'language',
   navigation = 'navigation',
   operatingArea = 'specify_operating',
-  theme = 'theme',
   verification = 'verification',
   notifications = 'notifications',
   cashOnDelivery = 'cash_on_delivery',
-  deliveryBag = 'delivery_bag',
-  includeOrdersWithDrinks = 'include_orders_drinks',
   licenses = 'licenses',
   vehicleType = 'vehicle_type',
-  cuisineTypes = 'cuisine_types',
-  restaurantTypes = 'restaurant_types',
-  orderTypes = 'order_types',
-  weightOrder = 'weight_order',
-  rushedOrders = 'rushed_orders',
   shiftAvailability = 'shift_availability',
 }
 
@@ -566,13 +556,6 @@ export type Item = {
   height?: number;
   weight?: number;
   keepUpright?: boolean;
-};
-
-export type Photo = {
-  uri: string;
-  data: Blob;
-  name: string;
-  type: string;
 };
 
 // export type OrderItem = {

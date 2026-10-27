@@ -145,18 +145,6 @@ jest.mock('react-native-action-sheet', () => ({
   default: { showActionSheetWithOptions: jest.fn() },
 }));
 
-// The camera is a native view; the photo screen only needs it to render.
-jest.mock('react-native-camera', () => {
-  const React = require('react');
-  const { View } = require('react-native');
-  const RNCamera = props => React.createElement(View, props);
-  RNCamera.Constants = {
-    Type: { back: 'back', front: 'front' },
-    FlashMode: { on: 'on', off: 'off', torch: 'torch', auto: 'auto' },
-  };
-  return { RNCamera };
-});
-
 // The date picker is a native wheel; a View stands in.
 jest.mock('react-native-date-picker', () => {
   const React = require('react');

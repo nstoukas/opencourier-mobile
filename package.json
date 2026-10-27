@@ -38,7 +38,6 @@
     "react-i18next": "^13.5.0",
     "react-native": "0.74.0",
     "react-native-action-sheet": "^2.2.0",
-    "react-native-camera": "^4.2.1",
     "react-native-dashed-line": "^1.1.0",
     "react-native-date-picker": "^4.3.5",
     "react-native-dotenv": "^3.4.9",
