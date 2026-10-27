@@ -417,6 +417,8 @@ export default {
   report_failed_title: 'Report not sent',
   report_failed_body:
     'The report could not reach the co-op. Check your signal and try again.',
+  report_refused_body:
+    'The co-op could not accept this report (the delivery may no longer be yours). Call the co-op instead.',
   report_note_placeholder: 'What happened? The co-op reads this.',
   report_send: 'Send report',
   handed_to_customer: 'Handed Over Directly To Customer',

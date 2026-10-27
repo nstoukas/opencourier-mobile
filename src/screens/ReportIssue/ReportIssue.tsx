@@ -8,7 +8,10 @@ import {
   TouchableOpacity,
   Alert,
   TextInput,
+  KeyboardAvoidingView,
+  Platform,
 } from 'react-native';
+import axios from 'axios';
 import { Images } from '@app/utilities/images';
 import { styles } from './ReportIssue.styles';
 import { MainScreenProp, MainScreens } from '@app/navigation/main/types';
@@ -75,10 +78,19 @@ export const ReportIssue = ({ navigation, route }: Props) => {
       });
       setDidSelectIssue(true);
     } catch (error) {
-      console.log('Could not send the report', error);
+      // The message only: the whole error would print the rider's token in the log.
+      console.log('Could not send the report', (error as Error)?.message);
+      // With a response, the server got the report and refused it (404 when the
+      // delivery is no longer this rider's), so retrying cannot help; without one,
+      // it never arrived, which is usually the signal.
+      const refused = axios.isAxiosError(error) && !!error.response;
       Alert.alert(
         t('translations:report_failed_title'),
-        t('translations:report_failed_body'),
+        t(
+          refused
+            ? 'translations:report_refused_body'
+            : 'translations:report_failed_body',
+        ),
       );
     } finally {
       setSending(false);
@@ -86,10 +98,14 @@ export const ReportIssue = ({ navigation, route }: Props) => {
   };
 
   const renderItem = ({ item }: { item: (typeof items)[number] }) => {
+    // While a note is written, the other rows wait, so a mis-tap cannot send a
+    // bare reason and throw the note away (decision 66.17).
+    const waitsForNote =
+      item.reason !== DeliveryIssueReason.Other && note.trim() !== '';
     return (
       <TouchableOpacity
-        style={touchRow}
-        disabled={sending}
+        style={[touchRow, waitsForNote && styles.rowWaiting]}
+        disabled={sending || waitsForNote}
         onPress={() =>
           item.reason === DeliveryIssueReason.Other
             ? setWritingNote(true)
@@ -118,40 +134,50 @@ export const ReportIssue = ({ navigation, route }: Props) => {
               <BackNavButton onPress={() => navigation.goBack()} />
             </View>
 
-            <FlatList
-              keyExtractor={item => item.reason}
-              data={items}
-              renderItem={renderItem}
-            />
+            {/* iOS has no adjustResize, so this lifts the note box above the keyboard
+                (as in AddNote); Android resizes the window itself. */}
+            <KeyboardAvoidingView
+              style={styles.keyboardArea}
+              behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+              <FlatList
+                keyExtractor={item => item.reason}
+                data={items}
+                renderItem={renderItem}
+              />
 
-            {/* A bare "Other" tells the admin nothing, so Send waits for a note. */}
-            {writingNote && (
-              // React Native's SafeAreaView pads only on iOS, so the bottom inset keeps
-              // Send report clear of Android's gesture bar (as on Home and Landing).
-              <View style={[styles.noteBox, { paddingBottom: bottom }]}>
-                <TextInput
-                  style={styles.noteInput}
-                  value={note}
-                  onChangeText={setNote}
-                  placeholder={t('translations:report_note_placeholder')}
-                  multiline
-                  autoFocus
-                  maxLength={NOTE_MAX_LENGTH}
-                />
-                <Text style={styles.noteCount}>
-                  {`${note.length}/${NOTE_MAX_LENGTH}`}
-                </Text>
-                <Button
-                  type={ButtonType.redBGRedText}
-                  title={t('translations:report_send')}
-                  disabled={sending || !note.trim()}
-                  isLoading={sending}
-                  onPress={() =>
-                    sendReport(DeliveryIssueReason.Other, note.trim())
-                  }
-                />
-              </View>
-            )}
+              {/* A bare "Other" tells the admin nothing, so Send waits for a note. */}
+              {writingNote && (
+                // React Native's SafeAreaView pads the bottom only on iOS, so Android adds
+                // the inset itself to keep Send report clear of the gesture bar.
+                <View
+                  style={[
+                    styles.noteBox,
+                    { paddingBottom: Platform.OS === 'android' ? bottom : 0 },
+                  ]}>
+                  <TextInput
+                    style={styles.noteInput}
+                    value={note}
+                    onChangeText={setNote}
+                    placeholder={t('translations:report_note_placeholder')}
+                    multiline
+                    autoFocus
+                    maxLength={NOTE_MAX_LENGTH}
+                  />
+                  <Text style={styles.noteCount}>
+                    {`${note.length}/${NOTE_MAX_LENGTH}`}
+                  </Text>
+                  <Button
+                    type={ButtonType.redBGRedText}
+                    title={t('translations:report_send')}
+                    disabled={sending || !note.trim()}
+                    isLoading={sending}
+                    onPress={() =>
+                      sendReport(DeliveryIssueReason.Other, note.trim())
+                    }
+                  />
+                </View>
+              )}
+            </KeyboardAvoidingView>
           </>
         )}
 

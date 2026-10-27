@@ -50,6 +50,14 @@ export const styles = StyleSheet.create({
     fontWeight: '600',
     flex: 1,
   },
+  // Fills the space under the header, so the note box sits at its bottom.
+  keyboardArea: {
+    flex: 1,
+  },
+  // A row that waits while a note is written (decision 66.17).
+  rowWaiting: {
+    opacity: 0.4,
+  },
   noteBox: {
     marginTop: 16,
   },
