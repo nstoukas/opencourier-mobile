@@ -4,7 +4,9 @@
 //    and later explain and open the full screen alert setting. Saying no
 //    still lets the rider work: offers then come as a normal alert, or only
 //    in the app's list and over the live connection.
-// 2. Every time: if the phone is on silent, vibrate only, or Do Not Disturb,
+// 2. Every time, on Android 13 and later: if notifications are off, say that
+//    the "online" sign will not show while location is shared (row 68).
+// 3. Every time: if the phone is on silent, vibrate only, or Do Not Disturb,
 //    warn "Your phone is on silent. You may miss offers." with "Turn sound on"
 //    and "Go Online anyway".
 //
@@ -15,6 +17,7 @@
 import { Alert, AppState, PermissionsAndroid, Platform } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import i18next from 'i18next';
+import notifee from '@notifee/react-native';
 import {
   canUseFullScreenAlert,
   getRingerState,
@@ -135,6 +138,35 @@ const warnIfSilenced = async () => {
   );
 };
 
+// Android 13 and later hide every notification of an app whose notifications
+// are switched off, including the "OpenCourier is online" sign, while the
+// location sharing behind it still runs (row 68, spec 0008, AC-8). Value 5
+// says the rider must be able to see that sharing, so say it, every time they
+// go Online like this; both answers go Online.
+const warnIfOnlineSignHidden = async () => {
+  if (Number(Platform.Version) < 33) {
+    return;
+  }
+  const granted = await PermissionsAndroid.check(
+    PermissionsAndroid.PERMISSIONS.POST_NOTIFICATIONS,
+  );
+  if (granted) {
+    return;
+  }
+  await ask(
+    i18next.t('translations:online_sign_hidden_title'),
+    i18next.t('translations:online_sign_hidden_body'),
+    { text: i18next.t('translations:phone_silent_go_anyway') },
+    {
+      text: i18next.t('translations:online_sign_hidden_turn_on'),
+      // The app's own notification settings in Android.
+      opensSettings: () => {
+        notifee.openNotificationSettings().catch(() => undefined);
+      },
+    },
+  );
+};
+
 // The longest the questions may hold up going Online. If a dialog never
 // reports back (Android has dropped one before, 58.23), the rider goes Online
 // anyway; a question still on screen after that only opens a settings page.
@@ -149,6 +181,7 @@ export const prepareToGoOnline = async (): Promise<void> => {
   const checks = async () => {
     try {
       await askAlertPermissionsOnce();
+      await warnIfOnlineSignHidden();
       await warnIfSilenced();
     } catch (error) {
       // A check that fails must never keep a rider from working.

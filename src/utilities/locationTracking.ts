@@ -36,6 +36,8 @@ export type WatchOptions = {
   interval: number;
   fastestInterval: number;
   distanceFilter: number;
+  // false asks for a rough position (about 100 m) that costs less battery.
+  enableHighAccuracy: boolean;
 };
 
 // `Record<A, B>` is an object with one B for every A: here, options for each
@@ -49,6 +51,7 @@ export const WATCH_OPTIONS: Record<
     interval: 10000,
     fastestInterval: 10000,
     distanceFilter: 30,
+    enableHighAccuracy: true,
   },
   // Less often while waiting for offers: about once a minute or 100 m
   // (decision 67.2).
@@ -56,5 +59,7 @@ export const WATCH_OPTIONS: Record<
     interval: 60000,
     fastestInterval: 30000,
     distanceFilter: 100,
+    // Matching needs only a rough position (decision 68.5).
+    enableHighAccuracy: false,
   },
 };

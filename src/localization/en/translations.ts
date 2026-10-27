@@ -177,6 +177,10 @@ export default {
   card_number: 'Card Number',
   zip_code: 'ZIP CODE',
   online_service_channel: 'Online status',
+  online_sign_hidden_title: 'Notifications are off',
+  online_sign_hidden_body:
+    'While you are Online your location is shared to get offers. Android will not show the "OpenCourier is online" sign while notifications are off for this app.',
+  online_sign_hidden_turn_on: 'Turn on notifications',
   online_service_title_waiting: 'OpenCourier is online',
   online_service_body_waiting:
     'Your location is shared to get offers. Go offline to stop.',

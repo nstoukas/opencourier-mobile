@@ -76,11 +76,15 @@ const SocketProvider = ({ children }: Props) => {
         }
         refetch([QueryKeys.newOrders]);
       },
+      // The rider too: the server may change their status with a delivery
+      // (a Last Call rider is set Offline on accepting), and no other message
+      // says so. Tracking and the "online" sign follow it (row 68, AC-9).
       onDeliveryStatusUpdated: () =>
         refetch([
           QueryKeys.newOrders,
           QueryKeys.inProgressOrders,
           QueryKeys.orderHistory,
+          QueryKeys.user,
         ]),
       // After any (re)connect, fetch what may have been sent while away.
       onConnected: () =>
@@ -119,10 +123,13 @@ const SocketProvider = ({ children }: Props) => {
     const subscription = AppState.addEventListener('change', state => {
       if (state === 'active') {
         connection.resume();
+        // Learn any status change made while the app was away (an admin, or
+        // the server), so tracking and the "online" sign follow it (AC-9).
+        queryClient.invalidateQueries({ queryKey: [QueryKeys.user] });
       }
     });
     return () => subscription.remove();
-  }, [connection]);
+  }, [connection, queryClient]);
 
   // Close the socket if the provider itself goes away.
   useEffect(() => () => connection.close(), [connection]);

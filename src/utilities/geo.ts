@@ -19,14 +19,20 @@ export function track(
       onUpdate(toPoint(position.coords.latitude, position.coords.longitude)),
     error => console.error('Location error: ', error),
     // See https://developer.mozilla.org/en-US/docs/Web/API/Geolocation/getCurrentPosition for
-    // details on options
+    // details on options. The first read is always high accuracy, on purpose:
+    // the server should start from a good position.
     { enableHighAccuracy: true, timeout: 15000, maximumAge: 10000 },
   );
   return Geolocation.watchPosition(
     position =>
       onUpdate(toPoint(position.coords.latitude, position.coords.longitude)),
     error => console.error('Location error: ', error),
-    { enableHighAccuracy: true, ...options },
+    {
+      ...options,
+      // iOS shows its blue location bar while the app tracks in the
+      // background (row 68); Android shows the "online" notification instead.
+      showsBackgroundLocationIndicator: true,
+    },
   );
 }
 

@@ -28,6 +28,7 @@ import {
   offerKeyOf,
 } from './answeredOffers';
 import { answerOffer } from './answerOffer';
+import { onOnlineSignDismissed } from '@app/services/onlineService';
 
 // Where the message was caught: `onMessage` (the app open in front) or
 // `setBackgroundMessageHandler` (closed, in the background, or locked).
@@ -90,6 +91,11 @@ export const onNotificationEvent = async ({
   type,
   detail,
 }: Event): Promise<void> => {
+  if (type === EventType.DISMISSED) {
+    // The "online" sign is never left swiped away while tracking (row 68).
+    await onOnlineSignDismissed(detail.notification?.id);
+    return;
+  }
   if (type !== EventType.ACTION_PRESS) {
     // A tap on the alert itself opens the offer screen (OfferAlertActivity)
     // through the alert's own `pressAction`: nothing to do here.

@@ -21,6 +21,10 @@ export const ONLINE_NOTIFICATION_ID = 'online-status';
 // The two modes that track; `off` never shows the sign.
 export type TrackingOnMode = TrackingMode.Waiting | TrackingMode.Job;
 
+// The mode the sign shows now, or null while it is stopped. Kept here so the
+// notification event handler, which has no screen state, can put the sign back.
+let shownMode: TrackingOnMode | null = null;
+
 // Shows the sign and starts the service, or updates the text if it already
 // runs. Rejects when Android refuses to start it (the app is not in front);
 // the caller tries again when the app returns.
@@ -58,6 +62,7 @@ export const showOnlineService = async (
       pressAction: { id: 'default' },
     },
   });
+  shownMode = mode;
 };
 
 // Stops the service, which also removes the sign. Safe when nothing runs.
@@ -65,5 +70,20 @@ export const stopOnlineService = async (): Promise<void> => {
   if (Platform.OS !== 'android') {
     return;
   }
+  shownMode = null;
   await notifee.stopForegroundService();
+};
+
+// Android 14 and later let a rider swipe even a foreground service's
+// notification away, while the service and the location sharing go on. The
+// sign must stay while location is shared (value 5, spec 0008 AC-3), so a
+// swiped sign is shown again at once. Called from the notifee event handler.
+export const onOnlineSignDismissed = async (
+  notificationId: string | undefined,
+): Promise<void> => {
+  if (notificationId !== ONLINE_NOTIFICATION_ID || shownMode === null) {
+    return;
+  }
+  console.log('The online sign was swiped away; showing it again');
+  await showOnlineService(shownMode);
 };
