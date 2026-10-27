@@ -1,5 +1,5 @@
-import React, { useMemo } from 'react';
-import { Colors } from '@app/styles/colors';
+import React from 'react';
+import { color } from '@app/styles/theme';
 import {
   StyleProp,
   Text,
@@ -24,6 +24,72 @@ export enum ButtonType {
   redBGRedText,
 }
 
+type ButtonLook = {
+  background: string;
+  text: string;
+  border: string;
+  borderWidth: number;
+};
+
+// Each type's fill, text (and icon and spinner) color and border, from the tokens (spec 0007).
+// `Record<ButtonType, ...>` makes TypeScript insist on an entry for every type.
+const BUTTON_LOOKS: Record<ButtonType, ButtonLook> = {
+  [ButtonType.black]: {
+    background: color.primary,
+    text: color['primary-foreground'],
+    border: color.input,
+    borderWidth: 0,
+  },
+  [ButtonType.green]: {
+    background: color.success,
+    text: color['success-foreground'],
+    border: color.input,
+    borderWidth: 0,
+  },
+  [ButtonType.red]: {
+    background: color.destructive,
+    text: color['destructive-foreground'],
+    border: color.input,
+    borderWidth: 0,
+  },
+  [ButtonType.yellow]: {
+    background: color.warning,
+    text: color['warning-foreground'],
+    border: color.warning,
+    borderWidth: 2,
+  },
+  [ButtonType.white]: {
+    background: color.background,
+    text: color.foreground,
+    border: color.input,
+    borderWidth: 2,
+  },
+  [ButtonType.gray]: {
+    background: color.secondary,
+    text: color['secondary-foreground'],
+    border: color.input,
+    borderWidth: 0,
+  },
+  [ButtonType.grayBGBlackText]: {
+    background: color.secondary,
+    text: color['secondary-foreground'],
+    border: color.secondary,
+    borderWidth: 0,
+  },
+  [ButtonType.grayBGRedText]: {
+    background: color.secondary,
+    text: color.destructive,
+    border: color['destructive-soft'],
+    borderWidth: 2,
+  },
+  [ButtonType.redBGRedText]: {
+    background: color['destructive-soft'],
+    text: color.destructive,
+    border: color.destructive,
+    borderWidth: 0,
+  },
+};
+
 type Props = {
   title: string;
   disabled?: boolean;
@@ -47,147 +113,9 @@ export const Button = ({
   isLoading,
   iconPosition = 'left',
 }: Props) => {
-  const backgroundColor = useMemo(() => {
-    if (disabled) {
-      return Colors.gray8;
-    }
-    switch (type) {
-      case ButtonType.black:
-        return Colors.black1;
-      case ButtonType.green:
-        return Colors.green1;
-      case ButtonType.red:
-        return Colors.red1;
-      case ButtonType.yellow:
-        return Colors.yellow1;
-      case ButtonType.white:
-        return Colors.white;
-      case ButtonType.gray:
-        return Colors.gray8;
-      case ButtonType.grayBGBlackText:
-        return Colors.gray8;
-      case ButtonType.grayBGRedText:
-        return Colors.gray20;
-      case ButtonType.redBGRedText:
-        return Colors.red5;
-    }
-  }, [type, disabled]);
-
-  const textColor = useMemo(() => {
-    if (disabled) {
-      return Colors.gray9;
-    }
-    switch (type) {
-      case ButtonType.yellow:
-        return Colors.black1;
-      case ButtonType.gray:
-        return Colors.gray9;
-      case ButtonType.red:
-        return Colors.white;
-      case ButtonType.green:
-        return Colors.white;
-      case ButtonType.black:
-        return Colors.white;
-      case ButtonType.white:
-        return Colors.black1;
-      case ButtonType.grayBGBlackText:
-        return Colors.black1;
-      case ButtonType.grayBGRedText:
-        return Colors.red1;
-      case ButtonType.redBGRedText:
-        return Colors.red1;
-    }
-  }, [type, disabled]);
-
-  const iconTint = useMemo(() => {
-    if (disabled) {
-      return Colors.gray9;
-    }
-    switch (type) {
-      case ButtonType.red:
-        return Colors.white;
-      case ButtonType.black:
-        return Colors.white;
-      case ButtonType.green:
-        return Colors.white;
-      case ButtonType.white:
-        return Colors.black1;
-      case ButtonType.yellow:
-        return Colors.black1;
-      case ButtonType.gray:
-        return Colors.gray9;
-      case ButtonType.grayBGBlackText:
-        return Colors.black1;
-      case ButtonType.grayBGRedText:
-        return Colors.red6;
-      case ButtonType.redBGRedText:
-        return Colors.red1;
-    }
-  }, [type, disabled]);
-
-  const borderColor = useMemo(() => {
-    switch (type) {
-      case ButtonType.yellow:
-        return Colors.yellow2;
-      case ButtonType.red:
-        return Colors.gray4;
-      case ButtonType.gray:
-      case ButtonType.black:
-      case ButtonType.green:
-      case ButtonType.white:
-        return Colors.gray4;
-      case ButtonType.grayBGBlackText:
-        return Colors.gray8;
-      case ButtonType.grayBGRedText:
-        return Colors.red6;
-      case ButtonType.redBGRedText:
-        return Colors.red1;
-    }
-  }, [type]);
-
-  const borderWidth = useMemo(() => {
-    switch (type) {
-      case ButtonType.black:
-        return 0;
-      case ButtonType.green:
-        return 0;
-      case ButtonType.red:
-        return 0;
-      case ButtonType.white:
-        return 2;
-      case ButtonType.yellow:
-        return 2;
-      case ButtonType.gray:
-        return 0;
-      case ButtonType.grayBGBlackText:
-        return 0;
-      case ButtonType.grayBGRedText:
-        return 2;
-      case ButtonType.redBGRedText:
-        return 0;
-    }
-  }, [type]);
-
-  const loaderColor = useMemo(() => {
-    switch (type) {
-      case ButtonType.yellow:
-        return Colors.white;
-      case ButtonType.red:
-        return Colors.white;
-      case ButtonType.gray:
-        return Colors.white;
-      case ButtonType.black:
-        return Colors.white;
-      case ButtonType.green:
-        return Colors.white;
-      case ButtonType.white:
-        return Colors.black1;
-      case ButtonType.grayBGBlackText:
-        return Colors.black1;
-      case ButtonType.grayBGBlackText:
-        return Colors.red6;
-    }
-  }, [type]);
+  // The type's colors from the design system tokens (spec 0007, the button table). A disabled button
+  // keeps them and fades to 50 % instead of turning gray.
+  const look = BUTTON_LOOKS[type];
 
   return (
     <TouchableOpacity
@@ -197,28 +125,30 @@ export const Button = ({
       style={[
         styles.container,
         {
-          backgroundColor: backgroundColor,
-          borderWidth: borderWidth,
-          borderColor: borderColor,
+          backgroundColor: look.background,
+          borderWidth: look.borderWidth,
+          borderColor: look.border,
         },
+        disabled && styles.disabled,
         style,
       ]}>
-      {isLoading && <ActivityIndicator color={loaderColor} />}
+      {/* The spinner takes the button's text color, so it shows on every type. */}
+      {isLoading && <ActivityIndicator color={look.text} />}
       {!isLoading && icon && iconPosition === 'left' && (
         <Image
           source={icon}
-          style={[styles.icon, { tintColor: iconTint, marginRight: 10 }]}
+          style={[styles.icon, { tintColor: look.text, marginRight: 10 }]}
         />
       )}
       {!isLoading && (
-        <Text style={[styles.textTitle, { color: textColor }, textStyle]}>
+        <Text style={[styles.textTitle, { color: look.text }, textStyle]}>
           {title}
         </Text>
       )}
       {!isLoading && icon && iconPosition === 'right' && (
         <Image
           source={icon}
-          style={[styles.icon, { tintColor: iconTint, marginLeft: 10 }]}
+          style={[styles.icon, { tintColor: look.text, marginLeft: 10 }]}
         />
       )}
     </TouchableOpacity>

@@ -1,4 +1,5 @@
 import { Colors } from '@app/styles/colors';
+import { color } from '@app/styles/theme';
 import { Platform, StyleSheet } from 'react-native';
 
 export const styles = StyleSheet.create({
@@ -49,7 +50,7 @@ export const styles = StyleSheet.create({
   textAddNote: {
     fontSize: 14,
     fontWeight: '500',
-    color: Colors.gray9,
+    color: color['muted-foreground'],
     marginLeft: 4,
   },
   buttonConfirm: {

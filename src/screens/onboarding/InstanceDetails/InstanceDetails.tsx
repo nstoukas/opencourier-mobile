@@ -23,6 +23,7 @@ import { BackNavButton } from '@app/components/BackNavButton/BackNavButton';
 import { client } from '@app/services/Client';
 import { Instance } from '@app/types/types';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { color } from '@app/styles/theme';
 
 type Props = OnboardingScreenProp<OnboardingScreen.InstanceDetails>;
 
@@ -90,7 +91,9 @@ export const InstanceDetails = ({ navigation, route }: Props) => {
       client.defaults.baseURL = sanitizedLink + '/api/courier/v1';
       await AsyncStorage.setItem('BASE_URL', sanitizedLink + '/api/courier/v1');
 
-      const wsLink = instance?.details?.websocketLink || sanitizedLink.replace(/^http/, 'ws');
+      const wsLink =
+        instance?.details?.websocketLink ||
+        sanitizedLink.replace(/^http/, 'ws');
       await AsyncStorage.setItem('SOCKET_BASE_URL', wsLink);
     };
 
@@ -107,7 +110,7 @@ export const InstanceDetails = ({ navigation, route }: Props) => {
 
   const markdownStyles = {
     body: {
-      color: '#000',
+      color: color.foreground,
     },
   };
 
@@ -174,13 +177,13 @@ export const InstanceDetails = ({ navigation, route }: Props) => {
                 }}>
                 <Text
                   style={{
-                    color: '#434343',
+                    color: color.foreground,
                     textDecorationLine: 'underline',
                   }}>
                   {t('translations:terms_of_service')}
                 </Text>
               </TouchableOpacity>
-              <Text style={{ color: '#434343' }}>|</Text>
+              <Text style={{ color: color.foreground }}>|</Text>
               <TouchableOpacity
                 onPress={() => {
                   if (instance?.details.privacyPolicyUrl) {
@@ -189,7 +192,7 @@ export const InstanceDetails = ({ navigation, route }: Props) => {
                 }}>
                 <Text
                   style={{
-                    color: '#434343',
+                    color: color.foreground,
                     textDecorationLine: 'underline',
                   }}>
                   {t('translations:privacy_policy')}
