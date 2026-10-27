@@ -3,7 +3,11 @@
     "jsx": "react",
     "baseUrl": ".",
     "paths": {
-      "@app/*": ["./src/*"]
+      "@app/*": ["./src/*"],
+      // One module per Phosphor icon: TypeScript reads its published types, not its source (spec 0007).
+      "phosphor-react-native/src/icons/*": [
+        "node_modules/phosphor-react-native/lib/typescript/icons/*"
+      ]
     }
   },
   "extends": "@react-native/typescript-config/tsconfig.json"

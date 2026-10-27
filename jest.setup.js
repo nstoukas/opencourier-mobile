@@ -51,6 +51,35 @@ jest.mock('@react-native-clipboard/clipboard', () =>
 
 /* ---------- Hand mocks (the library ships none) ---------- */
 
+// react-native-svg draws on a native view and ships no Jest mock (spec 0007). Every element it
+// exports (Svg, G, Path, ...) becomes a plain View that keeps its props, so a test can read an
+// icon's size and color. One component per name, kept in a Map, so React sees the same type on
+// every render.
+jest.mock('react-native-svg', () => {
+  const React = require('react');
+  const { View } = require('react-native');
+  const made = new Map();
+  const element = name => {
+    if (!made.has(name)) {
+      const Element = ({ children, ...props }) =>
+        React.createElement(View, { ...props, svgElement: name }, children);
+      Element.displayName = name;
+      made.set(name, Element);
+    }
+    return made.get(name);
+  };
+  return new Proxy(
+    { __esModule: true },
+    {
+      get: (target, key) => {
+        if (key === '__esModule') return true;
+        if (typeof key !== 'string') return undefined;
+        return element(key === 'default' ? 'Svg' : key);
+      },
+    },
+  );
+});
+
 // react-native-restart ships no mock; the side menu calls restart() after an instance switch.
 jest.mock('react-native-restart', () => ({
   __esModule: true,

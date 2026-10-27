@@ -8,6 +8,8 @@ import {
   TouchableOpacity,
 } from 'react-native';
 import { Images } from '@app/utilities/images';
+import { Icon } from '@app/components/Icon/Icon';
+import { CaretDown } from 'phosphor-react-native/src/icons/CaretDown';
 import { styles } from './HistoryCell.styles';
 import { Order } from '@app/types/types';
 import moment from 'moment';
@@ -55,8 +57,9 @@ export const HistoryCell = ({ style, order, onPress }: Props) => {
                 )}
               </Text>
             </View>
-            <Image
-              source={Images.CaretDown}
+            <Icon
+              icon={CaretDown}
+              weight="bold"
               style={[
                 styles.imageCarret,
                 !colapsed && { transform: [{ rotate: '180deg' }] },
@@ -74,7 +77,7 @@ export const HistoryCell = ({ style, order, onPress }: Props) => {
           <View style={[styles.containerInfo]}>
             <Image source={Images.Storefront} style={styles.iconSmall} />
             <Text style={styles.textInfo}>
-              {order.pickupBusinessName?? 'N/A'}
+              {order.pickupBusinessName ?? 'N/A'}
             </Text>
           </View>
           <View style={[styles.containerInfo]}>
