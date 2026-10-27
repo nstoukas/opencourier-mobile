@@ -83,7 +83,6 @@ android {
         // targetSdkVersion rootProject.ext.targetSdkVersion
         versionCode 24
         versionName "1"
-        missingDimensionStrategy 'react-native-camera', 'general'
     }
     signingConfigs {
         debug {

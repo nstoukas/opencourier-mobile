@@ -31,7 +31,7 @@ export const SettingsScreen = ({ navigation }: Props) => {
   const [token, setToken] = useState<string>('');
 
   // Typed as a partial map from every option to a switch value, because the list
-  // below looks the form up by any option, not only the five switches set here.
+  // below looks the form up by any option, not only the two switches set here.
   const [form, setForm] = useState<Partial<Record<SettingsOptions, boolean>>>({
     [SettingsOptions.notifications]: false,
     [SettingsOptions.cashOnDelivery]: false,
