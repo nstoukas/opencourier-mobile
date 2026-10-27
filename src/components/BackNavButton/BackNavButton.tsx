@@ -33,6 +33,7 @@ export const BackNavButton = ({
       onPress={onPress}>
       <Icon
         icon={ArrowLeftIcon}
+        weight="bold"
         size={20}
         tone={type === BackButtonType.white ? 'foreground' : 'background'}
       />

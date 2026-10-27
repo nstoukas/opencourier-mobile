@@ -60,7 +60,7 @@ export const AddNote = ({ navigation, route }: Props) => {
                 hitSlop={hitSlopFor(40)}
                 style={styles.backButton}
                 onPress={() => navigation.goBack()}>
-                <Icon icon={ArrowLeftIcon} size={20} />
+                <Icon icon={ArrowLeftIcon} weight="bold" size={20} />
               </TouchableOpacity>
             </View>
             <View style={styles.separator} />
