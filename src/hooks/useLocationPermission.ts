@@ -1,7 +1,7 @@
 import UserContext from '@app/context/userContext';
 import { useContext, useEffect, useCallback } from 'react';
 import Geolocation from 'react-native-geolocation-service';
-import { PermissionsAndroid, Platform } from 'react-native';
+import { AppState, PermissionsAndroid, Platform } from 'react-native';
 
 export const useLocationPermission = (
   autoRequestPermission: boolean = false,
@@ -78,6 +78,30 @@ export const useLocationPermission = (
         setLocationPermission(false);
       }
     }
+  }, [setLocationPermission]);
+
+  // Reads what the phone has already granted, without asking (row 67). Before,
+  // the app knew it had location only after asking in the same run, so after
+  // a restart it never tracked at all. Read again each time the app comes
+  // back, so a permission switched off in the phone's settings stops tracking.
+  // iOS keeps its old behaviour until it can be checked on a Mac (row 85).
+  useEffect(() => {
+    if (Platform.OS !== 'android') {
+      return;
+    }
+    const readGranted = () =>
+      PermissionsAndroid.check(
+        PermissionsAndroid.PERMISSIONS.ACCESS_FINE_LOCATION,
+      )
+        .then(granted => setLocationPermission(granted))
+        .catch(() => undefined);
+    readGranted();
+    const subscription = AppState.addEventListener('change', state => {
+      if (state === 'active') {
+        readGranted();
+      }
+    });
+    return () => subscription.remove();
   }, [setLocationPermission]);
 
   useEffect(() => {
