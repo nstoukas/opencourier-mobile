@@ -12,6 +12,7 @@ import {
   TextInputProps,
 } from 'react-native';
 import { styles } from './TextField.styles';
+import { hitSlopFor } from '@app/utilities/touch';
 
 type Props = {
   error?: string;
@@ -92,6 +93,7 @@ export const TextField = forwardRef<TextInput, TextFieldProps>((props, ref) => {
         </View>
         {secureTextEntry && (
           <TouchableOpacity
+            hitSlop={hitSlopFor(18, 18, 4)}
             activeOpacity={0.9}
             onPress={() => setInputTextHidden(!inputTextHidden)}>
             <Image source={!inputTextHidden ? Images.Eye : Images.EyeClosed} />

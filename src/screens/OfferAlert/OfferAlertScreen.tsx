@@ -36,7 +36,7 @@ import {
   onAlertScreenReopened,
   openAppFromAlert,
 } from '@app/services/offerPush/phone';
-import { radius, typeScale } from '@app/styles/theme';
+import { control, radius, typeScale } from '@app/styles/theme';
 
 // Which offer to show: the alert that reopened this screen (by its id), or
 // the alert notifee says opened it, or else the newest offer alert on display.
@@ -223,7 +223,8 @@ const styles = StyleSheet.create({
     color: Colors.gray13,
   },
   button: {
-    height: 64,
+    // The offer's Accept and Decline: the design system's offer size (spec 0007).
+    height: control.offer,
     borderRadius: radius.full,
     justifyContent: 'center',
     alignItems: 'center',

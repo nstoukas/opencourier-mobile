@@ -17,6 +17,7 @@ import { services } from '@app/services/service';
 import { useMutation } from '@tanstack/react-query';
 import useUser from '@app/hooks/useUser';
 import { typeScale } from '@app/styles/theme';
+import { hitSlopFor } from '@app/utilities/touch';
 
 type Props = OnboardingScreenProp<OnboardingScreen.LoginInstance>;
 
@@ -156,6 +157,7 @@ export const LoginInstance = ({ navigation, route }: Props) => {
                   {t('translations:password_reset')}
                 </Text>
                 <TouchableOpacity
+                  hitSlop={hitSlopFor(20)}
                   onPress={() => setScreenState(ScreenState.login)}>
                   <Image source={Images.X} style={styles.imageX} />
                 </TouchableOpacity>

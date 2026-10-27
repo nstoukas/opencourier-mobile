@@ -22,6 +22,7 @@ import { Colors } from '@app/styles/colors';
 import { Images } from '@app/utilities/images';
 import { Button, ButtonType } from '@app/components/Button/Button';
 import { typeScale } from '@app/styles/theme';
+import { hitSlopFor } from '@app/utilities/touch';
 
 type Props = MainScreenProp<MainScreens.MyLanguages>;
 
@@ -77,7 +78,9 @@ export const MyLanguages = ({ navigation }: Props) => {
               <Text style={styles.cardTitle}>
                 {t('translations:languages_i_know')}
               </Text>
-              <TouchableOpacity onPress={() => setInfoShown(false)}>
+              <TouchableOpacity
+                hitSlop={hitSlopFor(20)}
+                onPress={() => setInfoShown(false)}>
                 <Image source={Images.X} style={styles.iconX} />
               </TouchableOpacity>
             </View>
@@ -88,7 +91,7 @@ export const MyLanguages = ({ navigation }: Props) => {
               <Button
                 title={t('translations:language')}
                 textStyle={{ fontSize: typeScale['body-sm'].fontSize }}
-                style={{ width: 116, height: 40 }}
+                style={{ width: 116 }}
                 onPress={() => {
                   setInfoShown(false);
                   navigation.navigate(MainScreens.LanguageScreen);
@@ -98,7 +101,7 @@ export const MyLanguages = ({ navigation }: Props) => {
               <Button
                 title={t('translations:dismiss')}
                 textStyle={{ fontSize: typeScale['body-sm'].fontSize }}
-                style={{ width: 77, height: 40, marginLeft: 16 }}
+                style={{ width: 77, marginLeft: 16 }}
                 onPress={() => setInfoShown(false)}
                 type={ButtonType.white}
               />

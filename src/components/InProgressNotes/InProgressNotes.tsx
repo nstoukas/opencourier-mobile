@@ -14,6 +14,7 @@ import { Images } from '@app/utilities/images';
 import { useNavigation } from '@react-navigation/native';
 import { RootNavigationProp, RootScreen } from '@app/navigation/types';
 import useComment from '@app/hooks/useComment';
+import { hitSlopFor } from '@app/utilities/touch';
 
 type Props = {
   style?: StyleProp<ViewStyle>;
@@ -72,7 +73,10 @@ export const InProgressNotes = ({
         <Text style={styles.textNotesHeader}>{headerTitle}</Text>
         <View style={styles.notesDash} />
         {!noteCreationDisabled && (
-          <TouchableOpacity style={styles.addNote} onPress={onNoteAdd}>
+          <TouchableOpacity
+            hitSlop={hitSlopFor(32)}
+            style={styles.addNote}
+            onPress={onNoteAdd}>
             <Image source={Images.PlusBlack} />
           </TouchableOpacity>
         )}

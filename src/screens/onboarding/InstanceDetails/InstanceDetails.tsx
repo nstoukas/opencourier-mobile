@@ -24,6 +24,7 @@ import { client } from '@app/services/Client';
 import { Instance } from '@app/types/types';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { color } from '@app/styles/theme';
+import { touchRow } from '@app/utilities/touch';
 
 type Props = OnboardingScreenProp<OnboardingScreen.InstanceDetails>;
 
@@ -170,6 +171,7 @@ export const InstanceDetails = ({ navigation, route }: Props) => {
                 marginBottom: 22,
               }}>
               <TouchableOpacity
+                style={touchRow}
                 onPress={() => {
                   if (instance?.details.termsOfServiceUrl) {
                     Linking.openURL(instance?.details.termsOfServiceUrl);
@@ -185,6 +187,7 @@ export const InstanceDetails = ({ navigation, route }: Props) => {
               </TouchableOpacity>
               <Text style={{ color: color.foreground }}>|</Text>
               <TouchableOpacity
+                style={touchRow}
                 onPress={() => {
                   if (instance?.details.privacyPolicyUrl) {
                     Linking.openURL(instance?.details.privacyPolicyUrl);

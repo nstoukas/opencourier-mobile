@@ -14,6 +14,7 @@ import moment, { Moment } from 'moment';
 import { endOfWeek, formatEarnings, startOfWeek } from '@app/utilities/dates';
 import { useTranslation } from 'react-i18next';
 import { formatCurrencyFromCents } from '@app/utilities/currency';
+import { hitSlopFor } from '@app/utilities/touch';
 
 type Props = {
   style?: StyleProp<ViewStyle>;
@@ -61,7 +62,9 @@ export const WeekSelector = ({
   return (
     <View style={[styles.container, style]}>
       {type === EarningsTabItem.Weekly && (
-        <TouchableOpacity onPress={() => setSubstractor(substractor + 1)}>
+        <TouchableOpacity
+          hitSlop={hitSlopFor(32, 32, 8)}
+          onPress={() => setSubstractor(substractor + 1)}>
           <Image source={Images.CaretCircleLeft} />
         </TouchableOpacity>
       )}
@@ -74,6 +77,7 @@ export const WeekSelector = ({
       </View>
       {type === EarningsTabItem.Weekly && (
         <TouchableOpacity
+          hitSlop={hitSlopFor(32, 32, 8)}
           onPress={() => setSubstractor(Math.max(0, substractor - 1))}>
           <Image source={Images.CaretCircleRight} />
         </TouchableOpacity>

@@ -17,6 +17,7 @@ import { Colors } from '@app/styles/colors';
 import { Comment } from '@app/types/types';
 import { ScrollView } from 'react-native-gesture-handler';
 import { typeScale } from '@app/styles/theme';
+import { hitSlopFor } from '@app/utilities/touch';
 
 type Props = RootScreenProp<RootScreen.AddNoteModal>;
 
@@ -54,6 +55,7 @@ export const AddNote = ({ navigation, route }: Props) => {
             <View style={styles.header}>
               <Text style={styles.title}>{t('translations:note')}</Text>
               <TouchableOpacity
+                hitSlop={hitSlopFor(40)}
                 style={styles.backButton}
                 onPress={() => navigation.goBack()}>
                 <Image source={Images.ArrowLeft} />

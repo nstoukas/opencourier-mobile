@@ -16,6 +16,7 @@ import useComment from '@app/hooks/useComment';
 import { useNavigation } from '@react-navigation/native';
 import { RootScreen, RootNavigationProp } from '@app/navigation/types';
 import useUser from '@app/hooks/useUser';
+import { hitSlopFor } from '@app/utilities/touch';
 
 type Props = {
   style?: StyleProp<ViewStyle>;
@@ -126,6 +127,7 @@ export const PickupInstructionCell = ({ style, note }: Props) => {
           //TODO: API for up and down vote
           <View style={styles.containerVoteButtons}>
             <TouchableOpacity
+              hitSlop={hitSlopFor(22, 22, 4)}
               style={styles.containerVoteButton}
               onPress={onUpvote}>
               <Image
@@ -142,6 +144,7 @@ export const PickupInstructionCell = ({ style, note }: Props) => {
               {likes}
             </Text>
             <TouchableOpacity
+              hitSlop={hitSlopFor(22, 22, 4)}
               style={styles.containerVoteButton}
               onPress={onDownvote}>
               <Image
@@ -162,7 +165,10 @@ export const PickupInstructionCell = ({ style, note }: Props) => {
               ? { backgroundColor: Colors.yellow4, borderColor: Colors.yellow3 }
               : { backgroundColor: Colors.gray20, borderColor: Colors.gray21 },
           ]}>
-          <TouchableOpacity style={styles.buttonEdit} onPress={onDelete}>
+          <TouchableOpacity
+            hitSlop={hitSlopFor(28, 28, 4)}
+            style={styles.buttonEdit}
+            onPress={onDelete}>
             <Image source={Images.Trash} style={styles.iconDelete} />
           </TouchableOpacity>
           <View
@@ -178,7 +184,10 @@ export const PickupInstructionCell = ({ style, note }: Props) => {
                   }
             }
           />
-          <TouchableOpacity style={styles.buttonEdit} onPress={onEdit}>
+          <TouchableOpacity
+            hitSlop={hitSlopFor(28, 28, 4)}
+            style={styles.buttonEdit}
+            onPress={onEdit}>
             <Image source={Images.Edit} />
           </TouchableOpacity>
         </View>

@@ -1,6 +1,6 @@
 import { Colors } from '@app/styles/colors';
 import { StyleSheet } from 'react-native';
-import { radius, typeScale } from '@app/styles/theme';
+import { control, radius, typeScale } from '@app/styles/theme';
 
 export const styles = StyleSheet.create({
   container: {
@@ -21,7 +21,7 @@ export const styles = StyleSheet.create({
     color: Colors.black,
     fontSize: typeScale['body-sm'].fontSize,
     fontWeight: '600',
-    height: 24,
+    minHeight: control.xl,
     paddingVertical: 0,
   },
   labelError: {
@@ -38,7 +38,8 @@ export const styles = StyleSheet.create({
     borderWidth: 2,
     borderRadius: radius.xl,
     paddingHorizontal: 12,
-    paddingVertical: 8,
+    // The input itself fills the 48 px, so the whole box is the touch area (spec 0007).
+    minHeight: control.xl,
   },
   textShow: {
     fontSize: typeScale.caption.fontSize,
@@ -46,6 +47,7 @@ export const styles = StyleSheet.create({
     textTransform: 'uppercase',
   },
   textLabel: {
+    paddingTop: 6,
     fontSize: typeScale.caption.fontSize,
     color: Colors.black1,
   },

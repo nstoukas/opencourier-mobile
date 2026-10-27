@@ -16,6 +16,7 @@ import { SCREEN_WIDTH } from '@app/utilities/constants';
 import { useTranslation } from 'react-i18next';
 import { Images } from '@app/utilities/images';
 import { useCountdownBar } from '@app/hooks/useCountdownBar';
+import { control } from '@app/styles/theme';
 
 export enum ButtonOrderType {
   accept = 'accept',
@@ -108,7 +109,7 @@ export const ButtonOrder = ({
           backgroundColor: backgroundColor,
         },
         (type === ButtonOrderType.accept ||
-          type === ButtonOrderType.decline) && { height: 100 },
+          type === ButtonOrderType.decline) && { height: control.offer },
       ]}>
       {(type === ButtonOrderType.accept ||
         type === ButtonOrderType.decline) && (

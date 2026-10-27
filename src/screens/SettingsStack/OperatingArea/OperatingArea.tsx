@@ -17,6 +17,7 @@ import {
 } from '@app/components/SettingsCell/SettingsCell';
 import { Images } from '@app/utilities/images';
 import useUserSettings from '@app/hooks/useUserSetttings';
+import { hitSlopFor } from '@app/utilities/touch';
 
 type Props = MainScreenProp<MainScreens.OperatingArea>;
 
@@ -45,7 +46,10 @@ export const OperatingArea = ({ navigation }: Props) => {
         <View style={styles.navHeader}>
           <BackNavButton onPress={() => navigation.goBack()} />
           <Text style={styles.title}>{t('translations:operating_area')}</Text>
-          <TouchableOpacity onPress={() => undefined} style={styles.buttonAdd}>
+          <TouchableOpacity
+            hitSlop={hitSlopFor(24)}
+            onPress={() => undefined}
+            style={styles.buttonAdd}>
             <Image source={Images.PlusBlack} />
           </TouchableOpacity>
         </View>

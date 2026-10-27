@@ -5,6 +5,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { RootScreen, RootScreenProp } from '@app/navigation/types';
 import { useTranslation } from 'react-i18next';
 import DatePicker from 'react-native-date-picker';
+import { touchRow } from '@app/utilities/touch';
 
 type Props = RootScreenProp<RootScreen.DatePickerScreen>;
 
@@ -24,7 +25,7 @@ export const DatePickerScreen = ({ navigation, route }: Props) => {
   return (
     <View style={styles.container}>
       <View style={[styles.content, { paddingBottom: bottom }]}>
-        <TouchableOpacity onPress={handleSelect}>
+        <TouchableOpacity style={touchRow} onPress={handleSelect}>
           <Text style={styles.textDone}>{t('translations:done')}</Text>
         </TouchableOpacity>
         <DatePicker mode={'time'} date={selected} onDateChange={setSelected} />

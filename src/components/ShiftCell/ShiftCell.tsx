@@ -15,6 +15,7 @@ import { Shift, ShiftRange } from '@app/types/types';
 import { Colors } from '@app/styles/colors';
 import moment from 'moment';
 import { formatShift } from '@app/utilities/dates';
+import { hitSlopFor } from '@app/utilities/touch';
 
 type Props = {
   style?: StyleProp<ViewStyle>;
@@ -48,6 +49,7 @@ export const ShiftCell = ({
         <View style={{ flex: 1, height: 0 }} />
         {isSelected && (
           <TouchableOpacity
+            hitSlop={hitSlopFor(30, 24)}
             style={styles.buttonDeleteAdd}
             onPress={() => onAdd(item)}>
             <Text>+</Text>
@@ -58,11 +60,16 @@ export const ShiftCell = ({
         <View style={styles.containerRanges}>
           {item.shiftRanges.map(obj => (
             <View style={styles.containerShift}>
-              <Text style={styles.textTime}>{moment(obj.start).format(formatShift)}</Text>
+              <Text style={styles.textTime}>
+                {moment(obj.start).format(formatShift)}
+              </Text>
               <Text> - </Text>
-              <Text style={styles.textTime}>{moment(obj.end).format(formatShift)}</Text>
+              <Text style={styles.textTime}>
+                {moment(obj.end).format(formatShift)}
+              </Text>
               <View style={{ height: 0, flex: 1 }} />
               <TouchableOpacity
+                hitSlop={hitSlopFor(30, 24)}
                 onPress={() => onDelete(item, obj)}
                 style={styles.buttonDeleteAdd}>
                 <Image source={Images.Trash} style={styles.iconTrash} />

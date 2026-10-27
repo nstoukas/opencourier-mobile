@@ -10,6 +10,7 @@ import {
 import { styles } from './InProgressAdress.styles';
 import { Images } from '@app/utilities/images';
 import { Order } from '@app/types/types';
+import { hitSlopFor } from '@app/utilities/touch';
 
 type Props = {
   style?: StyleProp<ViewStyle>;
@@ -57,11 +58,13 @@ export const InProgressAdress = ({
         {address}
       </Text>
       <TouchableOpacity
+        hitSlop={hitSlopFor(32, 32, 4)}
         style={styles.buttonAddress}
         onPress={() => onCopyAddress(order)}>
         <Image source={Images.Chats} style={styles.iconAddressButton} />
       </TouchableOpacity>
       <TouchableOpacity
+        hitSlop={hitSlopFor(32, 32, 4)}
         style={styles.buttonAddress}
         onPress={() => onCall(order)}>
         <Image source={Images.PhoneSmall} style={styles.iconAddressButton} />

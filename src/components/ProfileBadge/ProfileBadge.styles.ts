@@ -17,12 +17,12 @@ export const styles = StyleSheet.create({
     justifyContent: 'center',
     backgroundColor: Colors.white,
   },
+  // Wider and taller than the avatar so its caption size word fits on one line (spec 0007).
   containerStatus: {
     position: 'absolute',
-    bottom: 0,
-    left: -2,
-    right: -2,
-    height: 14,
+    bottom: -4,
+    left: -12,
+    right: -12,
     borderRadius: radius.sm,
     borderWidth: 1.5,
     borderColor: Colors.white,
@@ -33,6 +33,9 @@ export const styles = StyleSheet.create({
   textStatus: {
     fontWeight: '700',
     fontSize: typeScale.caption.fontSize,
+    lineHeight: typeScale.caption.lineHeight,
+    // Android adds space above and below text by default; without it the word sits centered.
+    includeFontPadding: false,
     color: Colors.white,
   },
   statusIndicatorSmall: {

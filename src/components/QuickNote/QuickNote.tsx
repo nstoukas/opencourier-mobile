@@ -11,6 +11,7 @@ import { Colors } from '@app/styles/colors';
 import { CustomerNotes } from '@app/types/types';
 import { Images } from '@app/utilities/images';
 import { useTranslation } from 'react-i18next';
+import { touchRow } from '@app/utilities/touch';
 
 type Props = {
   style?: StyleProp<ViewStyle>;
@@ -49,6 +50,7 @@ export const QuickNote = ({
     <TouchableOpacity
       onPress={() => onPress(text)}
       style={[
+        touchRow,
         styles.container,
         style,
         createdByUser && { backgroundColor: Colors.white2, borderWidth: 0 },
@@ -72,7 +74,9 @@ export const QuickNote = ({
           selected && { color: Colors.white },
           icon && { marginLeft: 8 },
         ]}>
-        {customerNotes.find(note => note == text) ? t(`translations:${text}`) : text}
+        {customerNotes.find(note => note == text)
+          ? t(`translations:${text}`)
+          : text}
       </Text>
     </TouchableOpacity>
   );

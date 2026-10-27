@@ -12,6 +12,7 @@ import { useTranslation } from 'react-i18next';
 import { Button, ButtonType } from '@app/components/Button/Button';
 import { Images } from '@app/utilities/images';
 import { typeScale } from '@app/styles/theme';
+import { hitSlopFor } from '@app/utilities/touch';
 
 type Props = RootScreenProp<RootScreen.DeleteNoteModal>;
 
@@ -29,6 +30,7 @@ export const DeleteNote = ({ navigation, route }: Props) => {
       <KeyboardAvoidingView style={styles.content}>
         <View style={styles.header}>
           <TouchableOpacity
+            hitSlop={hitSlopFor(40)}
             style={styles.backButton}
             onPress={() => navigation.goBack()}>
             <Image source={Images.ArrowLeft} />

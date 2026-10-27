@@ -10,6 +10,7 @@ import { styles } from './UserStatusSelector.styles';
 import { UserStatus } from '@app/types/types';
 import { Colors } from '@app/styles/colors';
 import { useTranslation } from 'react-i18next';
+import { touchRow } from '@app/utilities/touch';
 
 type Props = {
   style?: StyleProp<ViewStyle>;
@@ -71,7 +72,7 @@ type StatusItemProps = {
 const StatusItem = ({ status, selected, onPress }: StatusItemProps) => {
   const { t } = useTranslation();
   return (
-    <TouchableOpacity onPress={() => onPress(status)}>
+    <TouchableOpacity style={touchRow} onPress={() => onPress(status)}>
       <View
         style={[
           statusButtonStyle(status),

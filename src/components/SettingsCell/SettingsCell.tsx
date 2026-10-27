@@ -11,6 +11,7 @@ import {
 import { styles } from './SettingsCell.styles';
 import { Images } from '@app/utilities/images';
 import { useTranslation } from 'react-i18next';
+import { hitSlopFor } from '@app/utilities/touch';
 
 export enum SettingsCellType {
   plain,
@@ -119,7 +120,9 @@ export const SettingsCell = ({
                   : t(`translations:${title}`)}
               </Text>
             </View>
-            <TouchableOpacity onPress={() => onDelete && onDelete(title)}>
+            <TouchableOpacity
+              hitSlop={hitSlopFor(20)}
+              onPress={() => onDelete && onDelete(title)}>
               <Image source={Images.Trash} style={{ tintColor: 'black' }} />
             </TouchableOpacity>
           </View>

@@ -9,6 +9,7 @@ import {
 } from 'react-native';
 import { Images } from '@app/utilities/images';
 import { styles } from './Cashout.styles';
+import { hitSlopFor } from '@app/utilities/touch';
 
 type Props = {
   style?: StyleProp<ViewStyle>;
@@ -17,12 +18,17 @@ type Props = {
 
 export const Cashout = ({ style, onPress }: Props) => {
   return (
-    <TouchableOpacity style={[styles.container, style]} onPress={onPress}>
+    <TouchableOpacity
+      hitSlop={hitSlopFor(40)}
+      style={[styles.container, style]}
+      onPress={onPress}>
       <View style={styles.containerImage}>
         <Image source={Images.Bank} />
       </View>
       <View style={styles.containerStatus}>
-        <Text style={styles.textStatus}>Cash out</Text>
+        <Text style={styles.textStatus} numberOfLines={1}>
+          Cash out
+        </Text>
       </View>
     </TouchableOpacity>
   );

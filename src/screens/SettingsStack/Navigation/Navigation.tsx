@@ -11,6 +11,7 @@ import { MainScreenProp, MainScreens } from '@app/navigation/main/types';
 import { BackNavButton } from '@app/components/BackNavButton/BackNavButton';
 import { useTranslation } from 'react-i18next';
 import { Colors } from '@app/styles/colors';
+import { touchRow } from '@app/utilities/touch';
 
 type Props = MainScreenProp<MainScreens.NavigationScreen>;
 
@@ -46,6 +47,7 @@ export const NavigationScreen = ({ navigation }: Props) => {
           <TouchableOpacity
             onPress={() => setSelectedApp('apple')}
             style={[
+              touchRow,
               styles.button,
               selectedApp === 'apple' && { backgroundColor: Colors.white },
             ]}>
@@ -54,6 +56,7 @@ export const NavigationScreen = ({ navigation }: Props) => {
           <TouchableOpacity
             onPress={() => setSelectedApp('google')}
             style={[
+              touchRow,
               styles.button,
               selectedApp === 'google' && { backgroundColor: Colors.white },
             ]}>
@@ -62,6 +65,7 @@ export const NavigationScreen = ({ navigation }: Props) => {
           <TouchableOpacity
             onPress={() => setSelectedApp('waze')}
             style={[
+              touchRow,
               styles.button,
               selectedApp === 'waze' && { backgroundColor: Colors.white },
             ]}>

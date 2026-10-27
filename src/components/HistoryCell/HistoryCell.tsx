@@ -101,7 +101,6 @@ export const HistoryCell = ({ style, order, onPress }: Props) => {
           </View>
           <Button
             type={ButtonType.grayBGRedText}
-            style={{ height: 42 }}
             title={t('translations:report_order')}
             onPress={() => undefined}
             textStyle={{

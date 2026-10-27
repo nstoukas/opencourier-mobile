@@ -8,6 +8,7 @@ import { Button, ButtonType } from '../Button/Button';
 import { Images } from '@app/utilities/images';
 import { useTranslation } from 'react-i18next';
 import { typeScale } from '@app/styles/theme';
+import { hitSlopFor } from '@app/utilities/touch';
 
 type Props = {
   style?: StyleProp<ViewStyle>;
@@ -30,7 +31,7 @@ export const ReportAnIncident = ({ style, onDismiss }: Props) => {
             <Text style={styles.textReport}>
               {t('translations:report_incident')}
             </Text>
-            <TouchableOpacity onPress={onDismiss}>
+            <TouchableOpacity hitSlop={hitSlopFor(20)} onPress={onDismiss}>
               <Image source={Images.X} style={styles.imageX} />
             </TouchableOpacity>
           </View>

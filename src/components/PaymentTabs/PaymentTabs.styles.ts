@@ -1,7 +1,7 @@
 import { Colors } from '@app/styles/colors';
 import { SCREEN_WIDTH } from '@app/utilities/constants';
 import { StyleSheet } from 'react-native';
-import { radius, typeScale } from '@app/styles/theme';
+import { control, radius, typeScale } from '@app/styles/theme';
 
 const TOTAL_HORIZONTAL_SPACING = 32;
 
@@ -14,6 +14,8 @@ export const styles = StyleSheet.create({
     flexDirection: 'row',
   },
   tab: {
+    // A rider taps this: at least 48 px tall (spec 0007).
+    minHeight: control.xl,
     width: (SCREEN_WIDTH - TOTAL_HORIZONTAL_SPACING) / 2,
   },
   indicator: {

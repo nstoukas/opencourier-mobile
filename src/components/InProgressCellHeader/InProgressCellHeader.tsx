@@ -11,6 +11,7 @@ import {
 import { styles } from './InProgressCellHeader.styles';
 import { Images } from '@app/utilities/images';
 import { Colors } from '@app/styles/colors';
+import { hitSlopFor } from '@app/utilities/touch';
 
 type Props = {
   style?: StyleProp<ViewStyle>;
@@ -42,6 +43,7 @@ export const InProgressCellHeader = ({
         {title}
       </Text>
       <TouchableOpacity
+        hitSlop={hitSlopFor(24)}
         disabled={finished}
         style={styles.buttonCarret}
         onPress={() => !finished && onExpandedPress()}>

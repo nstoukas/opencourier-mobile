@@ -13,6 +13,7 @@ import { ToastMessage } from '@app/types/types';
 import { useTranslation } from 'react-i18next';
 import { Colors } from '@app/styles/colors';
 import { generateBoxShadowStyle } from '@app/utilities/styles';
+import { hitSlopFor } from '@app/utilities/touch';
 
 type Props = {
   style?: StyleProp<ViewStyle>;
@@ -99,6 +100,7 @@ export const Toast = ({
         toast !== ToastMessage.pickupBeforeContinuing &&
         !disableClose && (
           <TouchableOpacity
+            hitSlop={hitSlopFor(40)}
             style={styles.buttonClose}
             onPress={() => onClose && onClose()}>
             <View style={styles.separator} />

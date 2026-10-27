@@ -27,7 +27,7 @@ export const styles = StyleSheet.create({
   },
   iconAddressButton: {
     width: 14,
-    hegiht: 14,
+    height: 14,
     tintColor: Colors.black1,
   },
 });

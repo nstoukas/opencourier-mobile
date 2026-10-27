@@ -80,14 +80,13 @@ export const StatusPopup = ({ style, type, onAccept, onCancel }: Props) => {
             <Text style={styles.title}>{title}</Text>
             <Text style={styles.subtitle}>{subtitle}</Text>
             <Button
-              style={{ marginBottom: 12, height: 40 }}
+              style={{ marginBottom: 12 }}
               type={primaryButtonType}
               title={primaryButtonTitle}
               onPress={() => onAccept(type)}
               textStyle={{ fontSize: typeScale['body-sm'].fontSize }}
             />
             <Button
-              style={{ height: 40 }}
               type={ButtonType.grayBGBlackText}
               title={t('translations:cancel')}
               onPress={onCancel}

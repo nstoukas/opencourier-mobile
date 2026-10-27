@@ -1,6 +1,6 @@
 import { Colors } from '@app/styles/colors';
 import { StyleSheet } from 'react-native';
-import { radius, typeScale } from '@app/styles/theme';
+import { control, radius, typeScale } from '@app/styles/theme';
 
 export const styles = StyleSheet.create({
   container: {
@@ -11,6 +11,8 @@ export const styles = StyleSheet.create({
     padding: 4,
   },
   button: {
+    // A rider taps this: at least 48 px tall (spec 0007).
+    minHeight: control.xl,
     borderRadius: radius['2xl'],
     paddingVertical: 8,
     justifyContent: 'center',

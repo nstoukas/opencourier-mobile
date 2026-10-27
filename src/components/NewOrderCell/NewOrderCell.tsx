@@ -23,6 +23,7 @@ import { Paralelogram } from '../Paralelogram/Paralelogram';
 import { Colors } from '@app/styles/colors';
 import useUser from '@app/hooks/useUser';
 import { useCountdownBar } from '@app/hooks/useCountdownBar';
+import { hitSlopFor } from '@app/utilities/touch';
 
 const PARALELOGRAM_WIDTH = 16;
 const PARALELOGRAM_HEIGHT = 8;
@@ -111,10 +112,7 @@ export const NewOrderCell = ({
   return (
     <View style={[styles.container, style]}>
       <Text style={styles.textPrice}>
-        {formatCurrencyFromCents(
-          order.totalCompensation,
-          order.currencyCode,
-        )}
+        {formatCurrencyFromCents(order.totalCompensation, order.currencyCode)}
       </Text>
       {!hasDeadline && millisWaited !== null && (
         <Text style={styles.textWaiting} testID="offer-waiting">
@@ -138,7 +136,9 @@ export const NewOrderCell = ({
                   'N/A'}
               </Text>
             </View>
-            <TouchableOpacity onPress={() => onCopyRestaurant(order)}>
+            <TouchableOpacity
+              hitSlop={hitSlopFor(32)}
+              onPress={() => onCopyRestaurant(order)}>
               <View style={styles.containerChats}>
                 <Image source={Images.Chats} />
               </View>
@@ -171,7 +171,9 @@ export const NewOrderCell = ({
                   'N/A'}
               </Text>
             </View>
-            <TouchableOpacity onPress={() => onCopyCustomer(order)}>
+            <TouchableOpacity
+              hitSlop={hitSlopFor(32)}
+              onPress={() => onCopyCustomer(order)}>
               <View style={styles.containerChats}>
                 <Image source={Images.Chats} />
               </View>

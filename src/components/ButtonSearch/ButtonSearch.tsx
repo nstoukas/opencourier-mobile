@@ -8,6 +8,7 @@ import {
 } from 'react-native';
 import { Images } from '@app/utilities/images';
 import { styles } from './ButtonSearch.styles';
+import { hitSlopFor } from '@app/utilities/touch';
 
 type Props = {
   style?: StyleProp<ViewStyle>;
@@ -21,7 +22,10 @@ export const ButtonSearch = ({ style, onPress, isSearching }: Props) => {
   };
 
   return (
-    <TouchableOpacity style={[styles.container, style]} onPress={onToggle}>
+    <TouchableOpacity
+      hitSlop={hitSlopFor(40)}
+      style={[styles.container, style]}
+      onPress={onToggle}>
       <View style={styles.containerOutUntoggled}>
         <Image source={Images.Search} />
       </View>

@@ -9,6 +9,7 @@ import {
 } from 'react-native';
 import { styles } from './OrderDelivered.styles';
 import { Images } from '@app/utilities/images';
+import { hitSlopFor } from '@app/utilities/touch';
 
 type Props = {
   style?: StyleProp<ViewStyle>;
@@ -24,7 +25,10 @@ export const OrderDelivered = ({ style, onClose }: Props) => {
         </View>
         <Text style={styles.text}>Order delivered. Thanks!</Text>
       </View>
-      <TouchableOpacity style={styles.buttonClose} onPress={onClose}>
+      <TouchableOpacity
+        hitSlop={hitSlopFor(40)}
+        style={styles.buttonClose}
+        onPress={onClose}>
         <Image source={Images.X} />
       </TouchableOpacity>
     </View>

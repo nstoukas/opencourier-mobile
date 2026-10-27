@@ -2,6 +2,7 @@ import React from 'react';
 import { Image, StyleProp, ViewStyle, TouchableOpacity } from 'react-native';
 import { Images } from '@app/utilities/images';
 import { styles } from './BackNavButton.styles';
+import { hitSlopFor } from '@app/utilities/touch';
 
 export enum BackButtonType {
   white,
@@ -21,6 +22,7 @@ export const BackNavButton = ({
 }: Props) => {
   return (
     <TouchableOpacity
+      hitSlop={hitSlopFor(40)}
       style={[
         type === BackButtonType.white
           ? styles.containerWhite

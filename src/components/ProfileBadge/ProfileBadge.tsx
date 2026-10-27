@@ -11,6 +11,7 @@ import { Images } from '@app/utilities/images';
 import { styles } from './ProfileBadge.styles';
 import { UserStatus } from '@app/types/types';
 import { Colors } from '@app/styles/colors';
+import { hitSlopFor } from '@app/utilities/touch';
 
 type Props = {
   style?: StyleProp<ViewStyle>;
@@ -38,6 +39,7 @@ export const ProfileBadge = ({
 
   return (
     <TouchableOpacity
+      hitSlop={hitSlopFor(40)}
       style={[styles.container, style]}
       onPress={onPress}
       disabled={discreteStatusIndicator}>
@@ -58,7 +60,9 @@ export const ProfileBadge = ({
             styles.containerStatus,
             { backgroundColor: backgroundColor },
           ]}>
-          <Text style={styles.textStatus}>{userStatus.toLowerCase()}</Text>
+          <Text style={styles.textStatus} numberOfLines={1}>
+            {userStatus.toLowerCase()}
+          </Text>
         </View>
       )}
     </TouchableOpacity>

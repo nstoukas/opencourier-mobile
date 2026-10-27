@@ -23,6 +23,7 @@ import { RootScreen } from '@app/navigation/types';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { QueryKeys } from '@app/utilities/queryKeys';
 import { hideInProgressOrderAfterDelivery } from '@app/utilities/inProgressListFilter';
+import { hitSlopFor } from '@app/utilities/touch';
 
 type Props = MainScreenProp<MainScreens.MarkAsDelivered>;
 
@@ -149,7 +150,10 @@ export const MarkAsDelivered = ({ navigation, route }: Props) => {
       <View style={[styles.noteHeader]}>
         <Text style={styles.textNotesHeader}>{t('translations:add_note')}</Text>
         <View style={styles.notesDash} />
-        <TouchableOpacity style={styles.addNote} onPress={() => onAddNote()}>
+        <TouchableOpacity
+          hitSlop={hitSlopFor(32)}
+          style={styles.addNote}
+          onPress={() => onAddNote()}>
           <Image source={Images.PlusBlack} />
         </TouchableOpacity>
       </View>

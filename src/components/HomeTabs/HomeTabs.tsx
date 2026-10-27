@@ -12,6 +12,7 @@ import { Colors } from '@app/styles/colors';
 import { useTranslation } from 'react-i18next';
 import { SCREEN_WIDTH } from '@app/utilities/constants';
 import { generateBoxShadowStyle } from '@app/utilities/styles';
+import { touchRow } from '@app/utilities/touch';
 
 type Props = {
   style?: StyleProp<ViewStyle>;
@@ -73,7 +74,7 @@ const TabItem = ({
   const { t } = useTranslation();
   return (
     <TouchableOpacity
-      style={[{ width: buttonWidth(tab) }]}
+      style={[touchRow, { width: buttonWidth(tab) }]}
       onPress={() => onTabSelected(tab)}>
       <View
         style={[

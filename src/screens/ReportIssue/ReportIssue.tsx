@@ -16,6 +16,7 @@ import { useTranslation } from 'react-i18next';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Colors } from '@app/styles/colors';
 import { Button, ButtonType } from '@app/components/Button/Button';
+import { touchRow } from '@app/utilities/touch';
 
 type Props = MainScreenProp<MainScreens.ReportIssue>;
 
@@ -33,7 +34,9 @@ export const ReportIssue = ({ navigation, route }: Props) => {
 
   const renderItem = ({ item }: { item: string }) => {
     return (
-      <TouchableOpacity onPress={() => setDidSelectIssue(true)}>
+      <TouchableOpacity
+        style={touchRow}
+        onPress={() => setDidSelectIssue(true)}>
         <View style={styles.cellHorizonal}>
           <Text style={styles.cellText}>{item}</Text>
           <Image source={Images.ArrowRightBlack} style={styles.arrow} />

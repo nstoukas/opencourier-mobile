@@ -1,6 +1,6 @@
 import { Colors } from '@app/styles/colors';
 import { StyleSheet } from 'react-native';
-import { radius, typeScale } from '@app/styles/theme';
+import { control, radius, typeScale } from '@app/styles/theme';
 
 export const styles = StyleSheet.create({
   container: {
@@ -25,7 +25,8 @@ export const styles = StyleSheet.create({
   },
   textInput: {
     flex: 1,
-    height: 40,
+    // The search field is a control: 48 px tall (spec 0007).
+    height: control.xl,
     fontSize: typeScale['body-sm'].fontSize,
     paddingVertical: 0,
     paddingTop: 0,
