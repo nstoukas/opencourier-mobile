@@ -4,7 +4,7 @@ import { styles } from './InProgressMap.styles';
 import Map from '../Map/Map';
 import { useTranslation } from 'react-i18next';
 import { Order, User } from '@app/types/types';
-import { metersToMiles } from '@app/utilities/geo';
+import { formatDistance } from '@app/utilities/geo';
 import { secondsToMinutes } from '@app/utilities/dates';
 import { Icon } from '@app/components/Icon/Icon';
 import { ClockAfternoonIcon } from 'phosphor-react-native/src/icons/ClockAfternoon';
@@ -32,9 +32,11 @@ export const InProgressMap = ({
       <View style={styles.containerAway}>
         <View style={styles.containerTextAway}>
           <Icon icon={PathIcon} size={26} tone="muted-foreground" />
-          <Text style={styles.textDistance} numberOfLines={2}>{`${metersToMiles(
-            distance,
-          )} mi ${t('translations:away')}`}</Text>
+          <Text
+            style={styles.textDistance}
+            numberOfLines={2}>{`${formatDistance(distance)} ${t(
+            'translations:away',
+          )}`}</Text>
         </View>
         <View style={styles.containerTextAway}>
           <Icon

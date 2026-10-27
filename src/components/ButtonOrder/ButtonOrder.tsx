@@ -134,6 +134,8 @@ export const ButtonOrder = ({
               .map(index => {
                 return (
                   <Paralelogram
+                    // Each bar's position is fixed, so its index is a stable key.
+                    key={index}
                     backgroundColor={paralelogramColor(index)}
                     width={PARALELOGRAM_WIDTH}
                     height={PARALELOGRAM_HEIGHT}

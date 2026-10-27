@@ -13,6 +13,19 @@
     <uses-permission android:name="android.permission.USE_FULL_SCREEN_INTENT" />
     <uses-permission android:name="android.permission.VIBRATE" />
 
+    <!-- The map apps a rider can navigate with (row 66). Since Android 11 an app can only
+         see the apps it names here, so without this the map picker found none. -->
+    <queries>
+        <intent>
+            <action android:name="android.intent.action.VIEW" />
+            <data android:scheme="google.navigation" />
+        </intent>
+        <intent>
+            <action android:name="android.intent.action.VIEW" />
+            <data android:scheme="waze" />
+        </intent>
+    </queries>
+
     <application
         android:usesCleartextTraffic="true"
       android:name=".MainApplication"

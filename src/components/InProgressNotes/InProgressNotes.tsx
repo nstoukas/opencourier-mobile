@@ -82,8 +82,10 @@ export const InProgressNotes = ({
         )}
       </View>
       <View style={[styles.containerInstructions]}>
-        {notes?.map(note => {
-          return <PickupInstructionCell note={note} />;
+        {notes?.map((note, index) => {
+          // A saved note has its id; a plain text note is keyed by place and text.
+          const key = typeof note === 'string' ? `${index}-${note}` : note.id;
+          return <PickupInstructionCell key={key} note={note} />;
         })}
       </View>
     </View>

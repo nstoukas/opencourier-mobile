@@ -1,10 +1,10 @@
 import moment, { Moment } from 'moment';
+import { APP_LOCALE } from './locale';
 
-export const formatEarnings = 'MMM DD';
+export const formatEarnings = 'D MMM';
 export const formatDayName = 'dddd';
-export const formatMockDate = 'DD MMM YYYY - h:MM A';
 export const formatServer = 'YYYY-MM-DDThh:mm:ss[Z]';
-export const formatShift = 'hh:mm A';
+export const formatShift = 'HH:mm';
 export const formatSpaced = 'D MMM YYYY';
 // Date-only format the earnings API expects for its `from`/`to` window.
 export const formatApiDate = 'YYYY-MM-DD';
@@ -49,7 +49,7 @@ export const shortDate = (date: Moment): string => {
 };
 
 export const formatTime = (time: string) =>
-  new Date(time).toLocaleTimeString('en-US', { timeStyle: 'short' });
+  new Date(time).toLocaleTimeString(APP_LOCALE, { timeStyle: 'short' });
 
 export function secondsToMinutes(seconds: number): number {
   return Math.ceil(Math.ceil(seconds) / 60);

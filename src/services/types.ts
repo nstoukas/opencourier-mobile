@@ -50,6 +50,7 @@ export type EarningsDayParams = {
 
 export type AccessToken = {
   accessToken: string;
+  refreshToken: string;
   tokenType: string;
   expiresIn: number;
 };

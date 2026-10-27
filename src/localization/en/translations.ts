@@ -176,6 +176,9 @@ export default {
   account_number: 'Account Number',
   card_number: 'Card Number',
   zip_code: 'ZIP CODE',
+  session_ended_title: 'Please log in again',
+  session_ended_body:
+    'Your login has expired, so the app logged you out. Log in again to get orders.',
   save: 'Save',
   licenses: 'Licenses',
   version: 'Version',

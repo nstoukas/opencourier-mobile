@@ -45,7 +45,8 @@ export const PaymentTabs = ({ style, selectedTab, onTabSelected }: Props) => {
     <View style={[styles.container, style]}>
       <View style={styles.tabs}>
         {tabs.map(tab => {
-          return <TabItem tab={tab} />;
+          // Each tab is a different value, so the tab itself is its key.
+          return <TabItem key={tab} tab={tab} />;
         })}
       </View>
     </View>

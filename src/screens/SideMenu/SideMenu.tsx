@@ -175,7 +175,12 @@ export const SideMenu = ({ navigation }: Props) => {
       // is on, and the next login starts Offline.
       console.log('Could not go Offline before logging out', error);
     }
-    await AsyncStorage.multiRemove(['token', 'BASE_URL', 'SOCKET_BASE_URL']);
+    await AsyncStorage.multiRemove([
+      'token',
+      'refreshToken',
+      'BASE_URL',
+      'SOCKET_BASE_URL',
+    ]);
     // Nothing may keep ringing on a phone nobody is logged in on.
     await cancelAllOfferAlerts();
     services.logout();

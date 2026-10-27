@@ -7,7 +7,7 @@ import {
   LoginResponse,
   UserSettings,
 } from './types';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { saveSession } from './session';
 
 export interface UserService {
   login: (params: LoginParams) => Promise<LoginResponse>;
@@ -35,17 +35,17 @@ export interface UserService {
 const userService = (client: UClient): UserService => {
   const login = async (params: LoginParams): Promise<LoginResponse> => {
     const { data } = await client.post<LoginResponse>('auth/login', params);
-    const token = data.result.session.accessToken;
-    client.defaults.headers.common.Authorization = `Bearer ${token}`;
-    AsyncStorage.setItem('token', token);
+    const { accessToken, refreshToken } = data.result.session;
+    // Both tokens: the refresh token renews the login when it expires (row 66).
+    await saveSession(accessToken, refreshToken, client);
     return data;
   };
 
   const signup = async (params: SignupParams): Promise<LoginResponse> => {
     const { data } = await client.post<LoginResponse>('auth/register', params);
-    const token = data.result.session.accessToken;
-    client.defaults.headers.common.Authorization = `Bearer ${token}`;
-    AsyncStorage.setItem('token', token);
+    const { accessToken, refreshToken } = data.result.session;
+    // Both tokens: the refresh token renews the login when it expires (row 66).
+    await saveSession(accessToken, refreshToken, client);
     return data;
   };
 

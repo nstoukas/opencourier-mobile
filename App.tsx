@@ -6,6 +6,10 @@ import { QueryClientProvider } from '@tanstack/react-query';
 import SocketProvider from '@app/services/socket';
 import { queryClient } from '@app/services/queryClient';
 import { navigationRef } from '@app/navigation/navigationRef';
+import { installSessionRefresh } from '@app/services/session';
+
+// Renew an expired login, or log the rider out with a message (row 66).
+installSessionRefresh();
 
 if (__DEV__) {
   require('./ReactotronConfig');

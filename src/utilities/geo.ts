@@ -1,3 +1,4 @@
+import { APP_LOCALE } from './locale';
 import { Point } from 'geojson';
 import Geolocation from 'react-native-geolocation-service';
 export function track(onUpdate: (point: Point) => void) {
@@ -71,6 +72,10 @@ export async function getDistance(coordinates: number[][]) {
     });
 }
 
-export function metersToMiles(meters: number): number {
-  return Math.ceil(Math.ceil(meters / 1000) / 1.6);
+// A distance for a rider to read, in km with one decimal ("2.4 km").
+export function formatDistance(meters: number): string {
+  const km = new Intl.NumberFormat(APP_LOCALE, {
+    maximumFractionDigits: 1,
+  }).format(meters / 1000);
+  return `${km} km`;
 }

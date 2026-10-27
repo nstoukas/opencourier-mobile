@@ -12,7 +12,7 @@ import { Order } from '@app/types/types';
 import { ButtonOrder, ButtonOrderType } from '../ButtonOrder/ButtonOrder';
 import Map from '../Map/Map';
 import { useTranslation } from 'react-i18next';
-import { metersToMiles } from '@app/utilities/geo';
+import { formatDistance } from '@app/utilities/geo';
 import { secondsToMinutes } from '@app/utilities/dates';
 import { getDistance } from '@app/utilities/geo';
 import { formatCurrencyFromCents } from '@app/utilities/currency';
@@ -155,7 +155,7 @@ export const NewOrderCell = ({
                 <Icon icon={PathIcon} size={26} tone="muted-foreground" />
                 <Text style={styles.textDistance}>
                   {' '}
-                  {`${metersToMiles(distance)} mi ${t('translations:away')}`}
+                  {`${formatDistance(distance)} ${t('translations:away')}`}
                 </Text>
               </View>
               <View style={styles.containerTextAway}>
@@ -212,6 +212,8 @@ export const NewOrderCell = ({
             .map(index => {
               return (
                 <Paralelogram
+                  // Each bar's position is fixed, so its index is a stable key.
+                  key={index}
                   backgroundColor={paralelogramColor(index)}
                   width={PARALELOGRAM_WIDTH}
                   height={PARALELOGRAM_HEIGHT}

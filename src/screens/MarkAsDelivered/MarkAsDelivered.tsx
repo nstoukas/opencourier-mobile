@@ -115,6 +115,8 @@ export const MarkAsDelivered = ({ navigation, route }: Props) => {
           item?.notes?.map(note => {
             return (
               <QuickNote
+                // The notes in one section are different texts, so the text is its key.
+                key={note}
                 createdByUser={section.title === t('translations:add_note')}
                 text={note}
                 selected={noteSelected(note)}

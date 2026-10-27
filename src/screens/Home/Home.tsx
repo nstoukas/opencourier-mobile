@@ -14,7 +14,6 @@ import {
   HomeEmptyState,
   HomeTabItem,
   MapDestination,
-  MapLinkingOptions,
   Order,
   UserStatus,
 } from '@app/types/types';
@@ -40,6 +39,7 @@ import { prepareToGoOnline } from '@app/services/offerPush/goOnlineChecks';
 import { cancelOfferAlert } from '@app/services/offerPush/offerAlert';
 import { isHomeInFront } from '@app/navigation/navigationRef';
 import { color } from '@app/styles/theme';
+import { mapAppsFor, mapProbeUrl, mapRouteUrl } from '@app/utilities/mapLinks';
 
 type Props = DrawerScreenProp<DrawerScreens.Home>;
 
@@ -58,7 +58,9 @@ export const HomeScreen = ({ navigation }: Props) => {
   const [isSearching, setIsSearching] = useState<boolean>(false);
   const [searchText, setSearchText] = useState<string>('');
   const [dataSource, setDataSource] = useState<Order[]>([]);
-  const autoAcceptOrders = user!.deliverySetting === OrderSetting.auto_accept;
+  // `?.` because Home can render for a moment with no user (logging out, or a session
+  // that just ended); `user!` crashed there.
+  const autoAcceptOrders = user?.deliverySetting === OrderSetting.auto_accept;
 
   const [showMapActionSheet, setShowMapActionSheet] = useState<
     { order: Order; destination: MapDestination } | undefined
@@ -244,56 +246,18 @@ export const HomeScreen = ({ navigation }: Props) => {
       order.dropoffLocation !== undefined &&
       destination !== undefined
     ) {
-      const labelCustomer =
-        order.dropoffName ?? t('translations:dropoff_address');
-      const labelRestauran =
-        order.pickupName ?? t('translations:pickup_address');
-      const label =
+      // Route to the place the rider tapped: the customer or the restaurant.
+      const point =
         destination === MapDestination.customer
-          ? labelCustomer
-          : labelRestauran;
-
-      const latLngCustomer = `${order.dropoffLocation.latitude}, ${order.dropoffLocation.longitude}.`;
-      const latLngRestaurant = `${order.pickupLocation.latitude}, ${order.pickupLocation.longitude}.`;
-      const latLng = MapDestination.customer
-        ? latLngCustomer
-        : latLngRestaurant;
-
-      if (
-        availableMapApps[buttonIndex] ===
-        t(`translations:${MapLinkingOptions.apple}`)
-      ) {
-        const scheme = 'maps://0,0?q=';
-        const url = `${scheme}${label}@${latLng}`;
-        Linking.canOpenURL(url).then(supported => {
-          if (supported) {
-            Linking.openURL(url);
-          }
-        });
-      }
-      if (
-        availableMapApps[buttonIndex] ===
-        t(`translations:${MapLinkingOptions.google}`)
-      ) {
-        const scheme = 'geo:0,0?q=';
-        const url = `${scheme}${latLng}(${label})`;
-        Linking.canOpenURL(url).then(supported => {
-          if (supported) {
-            Linking.openURL(url);
-          }
-        });
-      }
-      // TODO: Change to addresses
-      if (
-        availableMapApps[buttonIndex] ===
-        t(`translations:${MapLinkingOptions.waze}`)
-      ) {
-        const url = `https://www.waze.com/ul?ll=${latLng}&navigate=yes&zoom=17`;
-        Linking.canOpenURL(url).then(supported => {
-          if (supported) {
-            Linking.openURL(url);
-          }
-        });
+          ? order.dropoffLocation
+          : order.pickupLocation;
+      const app = mapAppsFor().find(
+        option => availableMapApps[buttonIndex] === t(`translations:${option}`),
+      );
+      if (app !== undefined) {
+        Linking.openURL(mapRouteUrl(app, point)).catch(error =>
+          console.log('Could not open the map app', error),
+        );
       }
     }
     setShowMapActionSheet(undefined);
@@ -326,18 +290,11 @@ export const HomeScreen = ({ navigation }: Props) => {
   };
 
   const checkInstalledMapApps = async () => {
-    const waze: boolean = await Linking.canOpenURL('waze://');
-    const google: boolean = await Linking.canOpenURL('comgooglemaps://');
-    const apple: boolean = await Linking.canOpenURL('maps://');
-    const maps = [];
-    if (apple) {
-      maps.push(t(`translations:${MapLinkingOptions.apple}`));
-    }
-    if (google) {
-      maps.push(t(`translations:${MapLinkingOptions.google}`));
-    }
-    if (waze) {
-      maps.push(t(`translations:${MapLinkingOptions.waze}`));
+    const maps: string[] = [];
+    for (const app of mapAppsFor()) {
+      if (await Linking.canOpenURL(mapProbeUrl(app))) {
+        maps.push(t(`translations:${app}`));
+      }
     }
     maps.push(t('translations:cancel'));
     setAvailableMapApps(maps);
