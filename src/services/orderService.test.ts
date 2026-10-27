@@ -148,13 +148,14 @@ describe('orderService & isOfferEndedError (spec 0002, AC-5)', () => {
       });
 
       expect(mockPost).toHaveBeenCalledTimes(1);
+      // Pin literal wire spelling: compare to 'WRONG_ADDRESS', not the enum member
       expect(mockPost).toHaveBeenCalledWith(
         'deliveries/delivery-abc-123/issues',
-        { reason: DeliveryIssueReason.WrongAddress },
+        { reason: 'WRONG_ADDRESS' },
       );
       // Ensure the request body contains only reason and nothing else
       expect(mockPost.mock.calls[0][1]).toEqual({
-        reason: DeliveryIssueReason.WrongAddress,
+        reason: 'WRONG_ADDRESS',
       });
       expect(response).toEqual({ data: { result: 'ok' } });
     });
@@ -175,13 +176,15 @@ describe('orderService & isOfferEndedError (spec 0002, AC-5)', () => {
       });
 
       expect(mockPost).toHaveBeenCalledTimes(1);
+      // Pin literal wire spelling: compare to 'OTHER', not the enum member
       expect(mockPost).toHaveBeenCalledWith(
         'deliveries/delivery-other-456/issues',
         {
-          reason: DeliveryIssueReason.Other,
+          reason: 'OTHER',
           note: 'Customer asked to leave at back door',
         },
       );
+      expect(mockPost.mock.calls[0][1].reason).toBe('OTHER');
       expect(response).toEqual({ data: { result: 'ok' } });
     });
 
@@ -204,7 +207,7 @@ describe('orderService & isOfferEndedError (spec 0002, AC-5)', () => {
       expect(mockPost).toHaveBeenLastCalledWith(
         'deliveries/delivery-789/issues',
         {
-          reason: DeliveryIssueReason.NoSignal,
+          reason: 'NO_SIGNAL',
         },
       );
       expect('note' in mockPost.mock.calls[0][1]).toBe(false);
@@ -221,7 +224,7 @@ describe('orderService & isOfferEndedError (spec 0002, AC-5)', () => {
       expect(mockPost).toHaveBeenLastCalledWith(
         'deliveries/delivery-789/issues',
         {
-          reason: DeliveryIssueReason.OrderHanded,
+          reason: 'ORDER_HANDED',
         },
       );
       expect('note' in mockPost.mock.calls[1][1]).toBe(false);

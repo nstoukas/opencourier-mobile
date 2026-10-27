@@ -1,5 +1,6 @@
 import React from 'react';
 import { Alert } from 'react-native';
+import axios from 'axios';
 import { render, screen, fireEvent, act } from '@testing-library/react-native';
 import { ReportIssue } from './ReportIssue';
 import { services } from '@app/services/service';
@@ -714,6 +715,345 @@ describe('ReportIssue screen (decision 66.11)', () => {
         expect(
           screen.getByText(i18n.t('translations:thanks_for_report')),
         ).toBeTruthy();
+      });
+    });
+  });
+
+  describe('Review rulings & Decision 66.17 (rows wait, refused vs failed, failure log)', () => {
+    describe('Decision 66.17, rows wait: while note has non-blank text, tapping other rows sends nothing', () => {
+      it('while the note has non-blank text, tapping Wrong address, No signal or Order handed sends nothing', async () => {
+        render(<ReportIssue {...defaultProps} />);
+
+        // Open note box via Other
+        await act(async () => {
+          fireEvent.press(screen.getByText(i18n.t('translations:other')));
+        });
+
+        const input = screen.getByPlaceholderText(
+          i18n.t('translations:report_note_placeholder'),
+        );
+
+        // Type non-blank text into the note
+        await act(async () => {
+          fireEvent.changeText(
+            input,
+            'Customer requested delivery at back entrance',
+          );
+        });
+
+        // Tapping the other rows does not trigger a send
+        await act(async () => {
+          fireEvent.press(
+            screen.getByText(i18n.t('translations:wrong_address')),
+          );
+        });
+        await act(async () => {
+          fireEvent.press(screen.getByText(i18n.t('translations:no_signal')));
+        });
+        await act(async () => {
+          fireEvent.press(
+            screen.getByText(i18n.t('translations:order_handed')),
+          );
+        });
+
+        // Nothing sent
+        expect(services.orderService.reportIssue).not.toHaveBeenCalled();
+
+        // Thank you view is not shown, and typed note stays
+        expect(
+          screen.queryByText(i18n.t('translations:thanks_for_report')),
+        ).toBeNull();
+        expect(input.props.value).toBe(
+          'Customer requested delivery at back entrance',
+        );
+      });
+
+      it('with an empty or blank note, Wrong address, No signal and Order handed send at once as before', async () => {
+        (services.orderService.reportIssue as jest.Mock).mockResolvedValue({
+          data: {},
+        });
+
+        // 1. With empty note (writingNote is open, but note is "")
+        const { unmount } = render(<ReportIssue {...defaultProps} />);
+
+        await act(async () => {
+          fireEvent.press(screen.getByText(i18n.t('translations:other')));
+        });
+
+        // Note is empty: tapping Wrong address sends at once
+        await act(async () => {
+          fireEvent.press(
+            screen.getByText(i18n.t('translations:wrong_address')),
+          );
+        });
+
+        expect(services.orderService.reportIssue).toHaveBeenCalledTimes(1);
+        expect(services.orderService.reportIssue).toHaveBeenCalledWith({
+          id: 'test-order-456',
+          reason: DeliveryIssueReason.WrongAddress,
+        });
+
+        unmount();
+        jest.clearAllMocks();
+
+        // 2. With blank note (whitespace only: spaces, tabs, newlines)
+        render(<ReportIssue {...defaultProps} />);
+
+        await act(async () => {
+          fireEvent.press(screen.getByText(i18n.t('translations:other')));
+        });
+
+        const input = screen.getByPlaceholderText(
+          i18n.t('translations:report_note_placeholder'),
+        );
+        await act(async () => {
+          fireEvent.changeText(input, '   \t\n   ');
+        });
+
+        // Note is blank: tapping No signal sends at once
+        await act(async () => {
+          fireEvent.press(screen.getByText(i18n.t('translations:no_signal')));
+        });
+
+        expect(services.orderService.reportIssue).toHaveBeenCalledTimes(1);
+        expect(services.orderService.reportIssue).toHaveBeenCalledWith({
+          id: 'test-order-456',
+          reason: DeliveryIssueReason.NoSignal,
+        });
+      });
+
+      it('clearing the note re-enables Wrong address, No signal and Order handed to send', async () => {
+        (services.orderService.reportIssue as jest.Mock).mockResolvedValue({
+          data: {},
+        });
+
+        render(<ReportIssue {...defaultProps} />);
+
+        await act(async () => {
+          fireEvent.press(screen.getByText(i18n.t('translations:other')));
+        });
+
+        const input = screen.getByPlaceholderText(
+          i18n.t('translations:report_note_placeholder'),
+        );
+
+        // Type note -> rows are waiting
+        await act(async () => {
+          fireEvent.changeText(input, 'Intercom broken');
+        });
+
+        await act(async () => {
+          fireEvent.press(
+            screen.getByText(i18n.t('translations:order_handed')),
+          );
+        });
+        expect(services.orderService.reportIssue).not.toHaveBeenCalled();
+
+        // Clear the note
+        await act(async () => {
+          fireEvent.changeText(input, '');
+        });
+
+        // Now tapping Order handed sends at once
+        await act(async () => {
+          fireEvent.press(
+            screen.getByText(i18n.t('translations:order_handed')),
+          );
+        });
+
+        expect(services.orderService.reportIssue).toHaveBeenCalledTimes(1);
+        expect(services.orderService.reportIssue).toHaveBeenCalledWith({
+          id: 'test-order-456',
+          reason: DeliveryIssueReason.OrderHanded,
+        });
+      });
+    });
+
+    describe('Decision 66.17, refused: alert body differentiates server response from network failure', () => {
+      it('when reportIssue rejects with an axios error that has a response (e.g. 404), alert body is report_refused_body, no thank you, and note stays', async () => {
+        const axiosError404 = new axios.AxiosError(
+          'Request failed with status code 404',
+          'ERR_BAD_REQUEST',
+          undefined,
+          undefined,
+          {
+            status: 404,
+            statusText: 'Not Found',
+            data: { message: 'Delivery not found or no longer assigned' },
+            headers: {},
+            config: {} as any,
+          },
+        );
+
+        (services.orderService.reportIssue as jest.Mock).mockRejectedValue(
+          axiosError404,
+        );
+
+        render(<ReportIssue {...defaultProps} />);
+
+        await act(async () => {
+          fireEvent.press(screen.getByText(i18n.t('translations:other')));
+        });
+
+        const input = screen.getByPlaceholderText(
+          i18n.t('translations:report_note_placeholder'),
+        );
+        await act(async () => {
+          fireEvent.changeText(input, 'Building security denied entry');
+        });
+
+        await act(async () => {
+          fireEvent.press(screen.getByText(i18n.t('translations:report_send')));
+        });
+
+        // Alert body is report_refused_body
+        expect(alertSpy).toHaveBeenCalledTimes(1);
+        expect(alertSpy).toHaveBeenCalledWith(
+          i18n.t('translations:report_failed_title'),
+          i18n.t('translations:report_refused_body'),
+        );
+
+        // No thank you view
+        expect(
+          screen.queryByText(i18n.t('translations:thanks_for_report')),
+        ).toBeNull();
+
+        // The note stays on screen
+        expect(
+          screen.getByPlaceholderText(
+            i18n.t('translations:report_note_placeholder'),
+          ),
+        ).toBeTruthy();
+        expect(input.props.value).toBe('Building security denied entry');
+      });
+
+      it('when reportIssue rejects with an axios error with no response (network error), alert body is report_failed_body, no thank you, and note stays', async () => {
+        const networkError = new axios.AxiosError(
+          'Network Error',
+          'ERR_NETWORK',
+          undefined,
+          undefined,
+          undefined, // no response!
+        );
+
+        (services.orderService.reportIssue as jest.Mock).mockRejectedValue(
+          networkError,
+        );
+
+        render(<ReportIssue {...defaultProps} />);
+
+        await act(async () => {
+          fireEvent.press(screen.getByText(i18n.t('translations:other')));
+        });
+
+        const input = screen.getByPlaceholderText(
+          i18n.t('translations:report_note_placeholder'),
+        );
+        await act(async () => {
+          fireEvent.changeText(input, 'Elevator out of order');
+        });
+
+        await act(async () => {
+          fireEvent.press(screen.getByText(i18n.t('translations:report_send')));
+        });
+
+        // Alert body is report_failed_body
+        expect(alertSpy).toHaveBeenCalledTimes(1);
+        expect(alertSpy).toHaveBeenCalledWith(
+          i18n.t('translations:report_failed_title'),
+          i18n.t('translations:report_failed_body'),
+        );
+
+        // No thank you view
+        expect(
+          screen.queryByText(i18n.t('translations:thanks_for_report')),
+        ).toBeNull();
+
+        // The note stays on screen
+        expect(
+          screen.getByPlaceholderText(
+            i18n.t('translations:report_note_placeholder'),
+          ),
+        ).toBeTruthy();
+        expect(input.props.value).toBe('Elevator out of order');
+      });
+
+      it('when reportIssue rejects with a plain Error (no response), alert body is report_failed_body', async () => {
+        (services.orderService.reportIssue as jest.Mock).mockRejectedValue(
+          new Error('Connection dropped'),
+        );
+
+        render(<ReportIssue {...defaultProps} />);
+
+        await act(async () => {
+          fireEvent.press(
+            screen.getByText(i18n.t('translations:wrong_address')),
+          );
+        });
+
+        expect(alertSpy).toHaveBeenCalledTimes(1);
+        expect(alertSpy).toHaveBeenCalledWith(
+          i18n.t('translations:report_failed_title'),
+          i18n.t('translations:report_failed_body'),
+        );
+      });
+    });
+
+    describe('Failure log does not print the whole error object (Nit & review ruling)', () => {
+      it('prints only the error message and never the whole error object', async () => {
+        const sensitiveError = new Error('Sensitive socket error with auth key');
+        (services.orderService.reportIssue as jest.Mock).mockRejectedValue(
+          sensitiveError,
+        );
+
+        render(<ReportIssue {...defaultProps} />);
+
+        await act(async () => {
+          fireEvent.press(
+            screen.getByText(i18n.t('translations:wrong_address')),
+          );
+        });
+
+        // console.log is called with the message string only
+        expect(consoleLogSpy).toHaveBeenCalledWith(
+          'Could not send the report',
+          'Sensitive socket error with auth key',
+        );
+        // Ensure the error object itself is NOT passed to console.log
+        expect(consoleLogSpy).not.toHaveBeenCalledWith(
+          'Could not send the report',
+          sensitiveError,
+        );
+      });
+
+      it('prints only the axios error message and never the axios error object with request config', async () => {
+        const axiosError = new axios.AxiosError(
+          'Request failed with status code 500',
+          'ERR_BAD_RESPONSE',
+          {
+            headers: { Authorization: 'Bearer sensitive-courier-token-xyz' },
+          } as any,
+        );
+        (services.orderService.reportIssue as jest.Mock).mockRejectedValue(
+          axiosError,
+        );
+
+        render(<ReportIssue {...defaultProps} />);
+
+        await act(async () => {
+          fireEvent.press(
+            screen.getByText(i18n.t('translations:wrong_address')),
+          );
+        });
+
+        expect(consoleLogSpy).toHaveBeenCalledWith(
+          'Could not send the report',
+          'Request failed with status code 500',
+        );
+        expect(consoleLogSpy).not.toHaveBeenCalledWith(
+          'Could not send the report',
+          axiosError,
+        );
       });
     });
   });
