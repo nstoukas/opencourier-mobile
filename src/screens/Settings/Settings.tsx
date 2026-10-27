@@ -18,6 +18,7 @@ import {
   SettingsCell,
   SettingsCellType,
 } from '@app/components/SettingsCell/SettingsCell';
+import { color } from '@app/styles/theme';
 
 type SectionListItem = {
   cellType: SettingsCellType;
@@ -293,7 +294,7 @@ export const SettingsScreen = ({ navigation }: Props) => {
 
         {/* {token && (
           <TouchableOpacity onPress={onTokenPressHandle}>
-            <Text style={{ color: 'black', padding: 20 }}>
+            <Text style={{ color: color.foreground, padding: 20 }}>
               FCM Token: {token}
             </Text>
           </TouchableOpacity>
