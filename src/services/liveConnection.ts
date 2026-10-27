@@ -1,4 +1,5 @@
 import { io, Socket } from 'socket.io-client';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { UserStatus } from '@app/types/types';
 
 // What the dot on the home screen shows (row 57).
@@ -57,7 +58,17 @@ export const courierSocketUrl = (baseUrl: string): string => {
 export const createCourierSocket = (url: string, token: string): Socket =>
   io(courierSocketUrl(url), {
     transports: ['websocket'],
-    auth: { authorization: `Bearer ${token}` },
+    // `auth` as a function is asked again on every connection attempt, so a
+    // reconnect after the login was renewed (row 66) sends the current token,
+    // not the one this socket was first opened with: the backend checks the
+    // token on every handshake.
+    auth: callback => {
+      AsyncStorage.getItem('token')
+        .then(current =>
+          callback({ authorization: `Bearer ${current ?? token}` }),
+        )
+        .catch(() => callback({ authorization: `Bearer ${token}` }));
+    },
   });
 
 // Should the app hold a live connection? Only while logged in, and either not

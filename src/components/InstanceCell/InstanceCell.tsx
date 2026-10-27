@@ -10,6 +10,7 @@ import { styles } from './InstanceCell.styles';
 import { Instance } from '@app/types/types';
 import { useTranslation } from 'react-i18next';
 import { RemoteImage } from '@app/components/RemoteImage/RemoteImage';
+import { APP_LOCALE } from '@app/utilities/locale';
 
 type Props = {
   style?: StyleProp<ViewStyle>;
@@ -31,7 +32,9 @@ export const InstanceCell = ({ style, instance, onPress }: Props) => {
             <Text style={styles.textLink}>
               {t('translations:last_fetched_at') +
                 ' ' +
-                new Date(instance.registry.lastFetchedAt).toLocaleString()}
+                new Date(instance.registry.lastFetchedAt).toLocaleString(
+                  APP_LOCALE,
+                )}
             </Text>
           )}
         </View>

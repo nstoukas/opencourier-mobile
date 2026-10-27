@@ -23,6 +23,7 @@ import {
   unmarkOfferAnswered,
 } from './answeredOffers';
 import { cancelOfferAlert, showOfferNotice } from './offerAlert';
+import { installSessionRefresh } from '@app/services/session';
 import { StoredOfferAlert } from './offerMessage';
 
 export type OfferAnswer = 'accept' | 'decline';
@@ -61,6 +62,9 @@ export const answerOffer = async (
     timeout: REQUEST_TIMEOUT_MS,
     headers: { Accept: 'application/json', Authorization: `Bearer ${token}` },
   });
+  // An expired login is renewed here too, as in the app (row 66), so a tap on
+  // a locked phone still answers after the access token has run out.
+  installSessionRefresh(api);
   const path = `deliveries/${offer.deliveryId}`;
 
   try {

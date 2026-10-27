@@ -11,7 +11,7 @@ import { CaretDownIcon } from 'phosphor-react-native/src/icons/CaretDown';
 import { styles } from './HistoryCell.styles';
 import { Order } from '@app/types/types';
 import moment from 'moment';
-import { formatTime, formatServer, formatSpaced } from '@app/utilities/dates';
+import { formatTime, formatSpaced } from '@app/utilities/dates';
 import { useTranslation } from 'react-i18next';
 import { Button, ButtonType } from '../Button/Button';
 import { formatCurrencyFromCents } from '@app/utilities/currency';
@@ -29,7 +29,9 @@ type Props = {
 
 export const HistoryCell = ({ style, order, onPress }: Props) => {
   const { t } = useTranslation();
-  const date = moment(order.createdAt, formatServer);
+  // The server sends an ISO time in UTC; moment reads that as the moment it is
+  // and shows it in the phone's own time zone, so a late delivery keeps its date.
+  const date = moment(order.createdAt);
   const [colapsed, setColapsed] = useState<boolean>(false);
 
   return (

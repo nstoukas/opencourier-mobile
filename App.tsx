@@ -7,9 +7,12 @@ import SocketProvider from '@app/services/socket';
 import { queryClient } from '@app/services/queryClient';
 import { navigationRef } from '@app/navigation/navigationRef';
 import { installSessionRefresh } from '@app/services/session';
+import { client } from '@app/services/Client';
+// Sets the one locale every date, time and amount uses (row 66).
+import '@app/utilities/locale';
 
 // Renew an expired login, or log the rider out with a message (row 66).
-installSessionRefresh();
+installSessionRefresh(client);
 
 if (__DEV__) {
   require('./ReactotronConfig');

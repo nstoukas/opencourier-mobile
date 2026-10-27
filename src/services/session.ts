@@ -2,7 +2,10 @@ import axios, { AxiosError, InternalAxiosRequestConfig } from 'axios';
 import { Alert } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import i18n from '@app/localization/i18n';
-import { client, UClient } from './Client';
+// `import type` brings in only the type, never the module itself, so this file
+// does not build the shared HTTP client just by being imported (the offer
+// alert's own client uses it too).
+import type { UClient } from './Client';
 import { queryClient } from './queryClient';
 import { cancelAllOfferAlerts } from './offerPush/offerAlert';
 import { navigationRef } from '@app/navigation/navigationRef';
@@ -16,6 +19,13 @@ import { RootScreen } from '@app/navigation/types';
 // The requests the session itself is made of. A 401 from these means a wrong
 // password or a refused refresh token, never an access token to renew.
 const SESSION_PATHS = ['auth/login', 'auth/register', 'auth/refresh-tokens'];
+
+// True for a request to one of those paths. The end of the path must match, so
+// a later `auth/login-history` would not count as `auth/login`.
+const isSessionPath = (url: string | undefined): boolean => {
+  const path = (url ?? '').split('?')[0];
+  return SESSION_PATHS.some(sessionPath => path.endsWith(sessionPath));
+};
 
 // The request's own settings, plus a mark so each request is retried once only.
 type RetriableConfig = InternalAxiosRequestConfig & {
@@ -34,7 +44,7 @@ let ending: Promise<void> | null = null;
 export const saveSession = async (
   accessToken: string,
   refreshToken: string,
-  http: UClient = client,
+  http: UClient,
 ): Promise<void> => {
   http.defaults.headers.common.Authorization = `Bearer ${accessToken}`;
   await AsyncStorage.multiSet([
@@ -45,7 +55,7 @@ export const saveSession = async (
 
 // Asks the backend for a new access token. Requests that fail together share
 // one refresh, so the refresh token is spent once.
-export const refreshSession = (http: UClient = client): Promise<string> => {
+export const refreshSession = (http: UClient): Promise<string> => {
   if (!refreshing) {
     refreshing = (async () => {
       const refreshToken = await AsyncStorage.getItem('refreshToken');
@@ -73,20 +83,27 @@ export const refreshSession = (http: UClient = client): Promise<string> => {
 };
 
 // The backend answered and said no (the refresh token is expired, wrong or
-// missing), as opposed to no answer at all (no signal, a timeout).
+// missing: any 4xx), as opposed to no answer at all (no signal, a timeout, a
+// server error, or 408 and 429, which mean "try again later").
 const isRefused = (error: unknown): boolean => {
   if (error instanceof Error && error.message === 'No refresh token saved') {
     return true;
   }
   const status = (error as AxiosError)?.response?.status;
-  return status === 401 || status === 403;
+  return (
+    status !== undefined &&
+    status >= 400 &&
+    status < 500 &&
+    status !== 408 &&
+    status !== 429
+  );
 };
 
 // Logs the rider out on this phone after the backend refused to renew the
 // session, and tells them why. The server calls that logging out normally
 // makes (going Offline, removing this phone from push) cannot work without a
 // session; an offer left with this rider still ends at its deadline.
-export const endExpiredSession = (http: UClient = client): Promise<void> => {
+export const endExpiredSession = (http: UClient): Promise<void> => {
   if (!ending) {
     ending = (async () => {
       await AsyncStorage.multiRemove(['token', 'refreshToken']);
@@ -119,14 +136,14 @@ export const endExpiredSession = (http: UClient = client): Promise<void> => {
 // What the client does with a failed request: renew and retry it once on a
 // 401, end the session if renewing is refused, and pass every other error on.
 export const onResponseError =
-  (http: UClient = client) =>
+  (http: UClient) =>
   async (error: AxiosError): Promise<unknown> => {
     const config = error.config as RetriableConfig | undefined;
     if (
       error.response?.status !== 401 ||
       !config ||
       config.sessionRetried ||
-      SESSION_PATHS.some(path => config.url?.includes(path)) ||
+      isSessionPath(config.url) ||
       // Sent with no token: nobody was logged in, so there is nothing to renew.
       !config.headers?.Authorization
     ) {
@@ -146,5 +163,5 @@ export const onResponseError =
   };
 
 // Called once when the app starts (App.tsx).
-export const installSessionRefresh = (http: UClient = client): number =>
+export const installSessionRefresh = (http: UClient): number =>
   http.interceptors.response.use(response => response, onResponseError(http));

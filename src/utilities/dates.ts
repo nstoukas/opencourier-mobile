@@ -3,7 +3,6 @@ import { APP_LOCALE } from './locale';
 
 export const formatEarnings = 'D MMM';
 export const formatDayName = 'dddd';
-export const formatServer = 'YYYY-MM-DDThh:mm:ss[Z]';
 export const formatShift = 'HH:mm';
 export const formatSpaced = 'D MMM YYYY';
 // Date-only format the earnings API expects for its `from`/`to` window.
