@@ -1,5 +1,6 @@
 import { Colors } from '@app/styles/colors';
 import { StyleSheet } from 'react-native';
+import { radius, typeScale } from '@app/styles/theme';
 
 export const styles = StyleSheet.create({
   container: {
@@ -15,7 +16,7 @@ export const styles = StyleSheet.create({
     marginBottom: 22,
   },
   title: {
-    fontSize: 32,
+    fontSize: typeScale.h1.fontSize,
     fontWeight: '700',
     color: Colors.black1,
     marginLeft: 16,
@@ -26,7 +27,7 @@ export const styles = StyleSheet.create({
   card: {
     borderWidth: 1,
     borderColor: Colors.gray9,
-    borderRadius: 20,
+    borderRadius: radius['2xl'],
     padding: 24,
     marginBottom: 24,
   },
@@ -46,22 +47,22 @@ export const styles = StyleSheet.create({
   },
   cardTitle: {
     fontWeight: '700',
-    lineHeight: 24,
+    lineHeight: typeScale.body.lineHeight,
     flex: 1,
-    fontSize: 16,
+    fontSize: typeScale.body.fontSize,
   },
   iconX: {
     width: 20,
     height: 20,
   },
   cardText: {
-    fontSize: 14,
+    fontSize: typeScale['body-sm'].fontSize,
     fontWeight: '600',
     color: Colors.black6,
     marginTop: 4,
     marginBottom: 16,
     marginLeft: 40,
     marginRight: 40,
-    lineHeight: 24,
+    lineHeight: typeScale['body-sm'].lineHeight,
   },
 });

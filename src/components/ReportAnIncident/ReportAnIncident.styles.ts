@@ -1,10 +1,11 @@
 import { Colors } from '@app/styles/colors';
 import { StyleSheet } from 'react-native';
+import { radius, typeScale } from '@app/styles/theme';
 
 export const styles = StyleSheet.create({
   container: {
     borderWidth: 1,
-    borderRadius: 20,
+    borderRadius: radius['2xl'],
     borderColor: Colors.gray9,
     backgroundColor: Colors.white,
     paddingTop: 24,
@@ -19,9 +20,9 @@ export const styles = StyleSheet.create({
     marginBottom: 4,
   },
   textReport: {
-    fontSize: 16,
+    fontSize: typeScale.body.fontSize,
     fontWeight: '700',
-    lineHeight: 24,
+    lineHeight: typeScale.body.lineHeight,
     color: Colors.black1,
     flex: 1,
   },
@@ -30,9 +31,9 @@ export const styles = StyleSheet.create({
     height: 20,
   },
   textReportDetails: {
-    fontSize: 14,
+    fontSize: typeScale['body-sm'].fontSize,
     fontWeight: '600',
-    lineHeight: 24,
+    lineHeight: typeScale['body-sm'].lineHeight,
     color: Colors.black6,
     marginBottom: 16,
   },

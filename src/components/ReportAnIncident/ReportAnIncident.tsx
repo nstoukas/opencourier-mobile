@@ -7,6 +7,7 @@ import { TouchableOpacity } from 'react-native';
 import { Button, ButtonType } from '../Button/Button';
 import { Images } from '@app/utilities/images';
 import { useTranslation } from 'react-i18next';
+import { typeScale } from '@app/styles/theme';
 
 type Props = {
   style?: StyleProp<ViewStyle>;
@@ -38,9 +39,9 @@ export const ReportAnIncident = ({ style, onDismiss }: Props) => {
           </Text>
           <Button
             textStyle={{
-              fontSize: 14,
+              fontSize: typeScale['body-sm'].fontSize,
               fontWeight: '700',
-              lineHeight: 24,
+              lineHeight: typeScale['body-sm'].lineHeight,
               color: Colors.black8,
             }}
             type={ButtonType.grayBGBlackText}

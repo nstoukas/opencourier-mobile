@@ -1,16 +1,17 @@
 import { Colors } from '@app/styles/colors';
 import { StyleSheet } from 'react-native';
+import { radius, typeScale } from '@app/styles/theme';
 
 export const styles = StyleSheet.create({
   container: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: Colors.gray8,
-    borderRadius: 16,
+    borderRadius: radius['2xl'],
     padding: 4,
   },
   button: {
-    borderRadius: 16,
+    borderRadius: radius['2xl'],
     paddingVertical: 8,
     justifyContent: 'center',
     alignItems: 'center',
@@ -19,8 +20,8 @@ export const styles = StyleSheet.create({
   },
   text: {
     fontWeight: '600',
-    fontSize: 14,
-    lineHeight: 24,
+    fontSize: typeScale['body-sm'].fontSize,
+    lineHeight: typeScale['body-sm'].lineHeight,
     color: Colors.black6,
   },
   image: {
@@ -33,15 +34,15 @@ export const styles = StyleSheet.create({
   },
   textName: {
     fontWeight: '600',
-    fontSize: 12,
+    fontSize: typeScale.caption.fontSize,
     color: Colors.black1,
-    lineHeight: 16,
+    lineHeight: typeScale.caption.lineHeight,
   },
   textLink: {
     fontWeight: '600',
-    fontSize: 10,
+    fontSize: typeScale.caption.fontSize,
     color: Colors.black5,
-    lineHeight: 16,
+    lineHeight: typeScale.caption.lineHeight,
   },
   separator: {
     height: 1,

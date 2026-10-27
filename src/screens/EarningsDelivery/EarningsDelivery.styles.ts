@@ -1,5 +1,6 @@
 import { Colors } from '@app/styles/colors';
 import { StyleSheet } from 'react-native';
+import { radius, typeScale } from '@app/styles/theme';
 
 export const styles = StyleSheet.create({
   container: {
@@ -22,26 +23,26 @@ export const styles = StyleSheet.create({
     marginBottom: 22,
   },
   title: {
-    fontSize: 28,
+    fontSize: typeScale.h1.fontSize,
     fontWeight: '700',
     color: Colors.black1,
     marginLeft: 16,
     flexShrink: 1,
   },
   card: {
-    borderRadius: 20,
+    borderRadius: radius['2xl'],
     backgroundColor: Colors.white,
     paddingVertical: 14,
     paddingHorizontal: 16,
     marginBottom: 16,
   },
   total: {
-    fontSize: 32,
+    fontSize: typeScale.h1.fontSize,
     fontWeight: '700',
     color: Colors.black1,
   },
   totalLabel: {
-    fontSize: 14,
+    fontSize: typeScale['body-sm'].fontSize,
     color: Colors.gray13,
     marginTop: 2,
   },
@@ -56,12 +57,12 @@ export const styles = StyleSheet.create({
     backgroundColor: Colors.gray1,
   },
   rowLabel: {
-    fontSize: 14,
+    fontSize: typeScale['body-sm'].fontSize,
     color: Colors.gray13,
     marginRight: 16,
   },
   rowValue: {
-    fontSize: 14,
+    fontSize: typeScale['body-sm'].fontSize,
     color: Colors.black1,
     flexShrink: 1,
     textAlign: 'right',
@@ -71,7 +72,7 @@ export const styles = StyleSheet.create({
   },
   // The delivery id is long and only useful verbatim, so give it its own line.
   idValue: {
-    fontSize: 12,
+    fontSize: typeScale.caption.fontSize,
     color: Colors.black1,
     marginTop: 4,
   },

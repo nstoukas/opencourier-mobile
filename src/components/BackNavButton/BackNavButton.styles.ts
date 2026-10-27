@@ -1,5 +1,6 @@
 import { Colors } from '@app/styles/colors';
 import { StyleSheet } from 'react-native';
+import { radius } from '@app/styles/theme';
 
 export const styles = StyleSheet.create({
   containerWhite: {
@@ -10,7 +11,7 @@ export const styles = StyleSheet.create({
     borderWidth: 1,
     width: 40,
     height: 40,
-    borderRadius: 20,
+    borderRadius: radius.full,
   },
   containerBlack: {
     alignItems: 'center',
@@ -20,7 +21,7 @@ export const styles = StyleSheet.create({
     borderWidth: 1,
     width: 40,
     height: 40,
-    borderRadius: 20,
+    borderRadius: radius.full,
   },
   iconBlack: {
     tintColor: Colors.black,

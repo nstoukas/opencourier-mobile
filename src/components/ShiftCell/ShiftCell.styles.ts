@@ -1,5 +1,6 @@
 import { Colors } from '@app/styles/colors';
 import { StyleSheet } from 'react-native';
+import { radius, typeScale } from '@app/styles/theme';
 
 export const styles = StyleSheet.create({
   content: {
@@ -8,15 +9,15 @@ export const styles = StyleSheet.create({
   },
   textTitle: {
     fontWeight: '600',
-    fontSize: 20,
-    lineHeight: 32,
+    fontSize: typeScale.h3.fontSize,
+    lineHeight: typeScale.h3.lineHeight,
     color: Colors.black,
     marginLeft: 12,
   },
   textSubtitle: {
     fontWeight: '500',
-    fontSize: 12,
-    lineHeight: 16,
+    fontSize: typeScale.caption.fontSize,
+    lineHeight: typeScale.caption.lineHeight,
     color: Colors.blackAlpha05,
   },
   imageRadioButton: {
@@ -44,19 +45,19 @@ export const styles = StyleSheet.create({
     marginBottom: 8,
   },
   textTime: {
-    fontSize: 12,
+    fontSize: typeScale.caption.fontSize,
     fontWeight: '600',
     padding: 8,
     borderColor: Colors.green5,
     borderWidth: 1,
-    borderRadius: 12,
+    borderRadius: radius.xl,
   },
   buttonDeleteAdd: {
     width: 30,
     height: 24,
     borderWidth: 1,
     borderColor: Colors.gray9,
-    borderRadius: 8,
+    borderRadius: radius.md,
     alignItems: 'center',
     justifyContent: 'center',
   },

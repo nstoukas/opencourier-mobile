@@ -16,6 +16,7 @@ import { Images } from '@app/utilities/images';
 import { Colors } from '@app/styles/colors';
 import { Comment } from '@app/types/types';
 import { ScrollView } from 'react-native-gesture-handler';
+import { typeScale } from '@app/styles/theme';
 
 type Props = RootScreenProp<RootScreen.AddNoteModal>;
 
@@ -88,7 +89,10 @@ export const AddNote = ({ navigation, route }: Props) => {
             </View>
 
             <Button
-              textStyle={{ fontWeight: '800', fontSize: 16 }}
+              textStyle={{
+                fontWeight: '800',
+                fontSize: typeScale.body.fontSize,
+              }}
               icon={Images.CheckWhite}
               type={ButtonType.green}
               title={t('translations:save')}

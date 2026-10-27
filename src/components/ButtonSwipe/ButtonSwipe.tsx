@@ -21,6 +21,7 @@ import Animated, {
 import { SCREEN_WIDTH } from '@app/utilities/constants';
 import { Images } from '@app/utilities/images';
 import LinearGradient from 'react-native-linear-gradient';
+import { radius, typeScale } from '@app/styles/theme';
 
 const BUTTON_WIDTH = SCREEN_WIDTH / 1.2;
 const BUTTON_HEIGHT = 48;
@@ -157,12 +158,12 @@ const styles = StyleSheet.create({
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
-    borderRadius: BUTTON_HEIGHT,
+    borderRadius: radius.full,
     backgroundColor: Colors.black1,
     alignSelf: 'center',
   },
   swipeable: {
-    borderRadius: SWIPEABLE_DIMENSIONS,
+    borderRadius: radius.full,
     position: 'absolute',
     left: BUTTON_PADDING,
     zIndex: 3,
@@ -173,13 +174,13 @@ const styles = StyleSheet.create({
   },
   swipeText: {
     color: Colors.white,
-    fontSize: 18,
+    fontSize: typeScale.h3.fontSize,
     fontWeight: '700',
     zIndex: 2,
   },
   swipeTextSubtitle: {
     color: Colors.white,
-    fontSize: 12,
+    fontSize: typeScale.caption.fontSize,
     zIndex: 2,
   },
   activityIndicator: {
@@ -189,13 +190,13 @@ const styles = StyleSheet.create({
   },
   textDecline: {
     color: Colors.gray12,
-    fontSize: 14,
+    fontSize: typeScale['body-sm'].fontSize,
     textTransform: 'uppercase',
   },
   containerGradient: {
     width: 32,
     height: 32,
-    borderRadius: 16,
+    borderRadius: radius.full,
     alignItems: 'center',
     justifyContent: 'center',
     overflow: 'hidden',
@@ -203,7 +204,7 @@ const styles = StyleSheet.create({
   containerCheckmark: {
     width: 13,
     height: 13,
-    borderRadius: 6.5,
+    borderRadius: radius.full,
     backgroundColor: Colors.black1,
     alignItems: 'center',
     justifyContent: 'center',

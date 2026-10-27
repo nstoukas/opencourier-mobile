@@ -1,5 +1,6 @@
 import { Colors } from '@app/styles/colors';
 import { StyleSheet } from 'react-native';
+import { radius, typeScale } from '@app/styles/theme';
 
 export const styles = StyleSheet.create({
   container: {
@@ -9,7 +10,7 @@ export const styles = StyleSheet.create({
   containerImage: {
     width: 40,
     height: 40,
-    borderRadius: 20,
+    borderRadius: radius.full,
     borderWidth: 1,
     borderColor: Colors.gray1,
     alignItems: 'center',
@@ -22,7 +23,7 @@ export const styles = StyleSheet.create({
     left: -2,
     right: -2,
     height: 14,
-    borderRadius: 6,
+    borderRadius: radius.sm,
     borderWidth: 1.5,
     borderColor: Colors.white,
     flexDirection: 'row',
@@ -32,7 +33,7 @@ export const styles = StyleSheet.create({
   },
   textStatus: {
     fontWeight: '700',
-    fontSize: 8,
+    fontSize: typeScale.caption.fontSize,
     color: Colors.white,
   },
   statusIndicatorSmall: {
@@ -40,7 +41,7 @@ export const styles = StyleSheet.create({
     height: 12,
     borderWidth: 1,
     borderColor: Colors.white,
-    borderRadius: 6,
+    borderRadius: radius.full,
     position: 'absolute',
     right: 0,
     bottom: 0,

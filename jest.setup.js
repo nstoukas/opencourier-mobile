@@ -72,8 +72,12 @@ jest.mock('react-native-svg', () => {
     { __esModule: true },
     {
       get: (target, key) => {
-        if (key === '__esModule') return true;
-        if (typeof key !== 'string') return undefined;
+        if (key === '__esModule') {
+          return true;
+        }
+        if (typeof key !== 'string') {
+          return undefined;
+        }
         return element(key === 'default' ? 'Svg' : key);
       },
     },

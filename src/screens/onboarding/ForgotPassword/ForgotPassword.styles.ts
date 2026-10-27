@@ -1,6 +1,7 @@
 import { Colors } from '@app/styles/colors';
 import { SCREEN_HORIZONTAL_MARGIN } from '@app/utilities/constants';
 import { StyleSheet } from 'react-native';
+import { typeScale } from '@app/styles/theme';
 
 export const styles = StyleSheet.create({
   container: {
@@ -24,7 +25,7 @@ export const styles = StyleSheet.create({
   },
   textTitle: {
     fontWeight: '700',
-    fontSize: 32,
+    fontSize: typeScale.h1.fontSize,
   },
   buttonLogin: {
     marginTop: 16,

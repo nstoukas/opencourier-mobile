@@ -1,11 +1,12 @@
 import { Colors } from '@app/styles/colors';
 import { StyleSheet } from 'react-native';
+import { radius, typeScale } from '@app/styles/theme';
 
 export const styles = StyleSheet.create({
   container: {
     borderWidth: 1,
     marginHorizontal: 16,
-    borderRadius: 20,
+    borderRadius: radius['2xl'],
     alignItems: 'center',
     paddingVertical: 4,
     paddingHorizontal: 3,
@@ -15,16 +16,16 @@ export const styles = StyleSheet.create({
   containerLoader: {
     width: 21,
     height: 21,
-    borderRadius: 6,
+    borderRadius: radius.sm,
     backgroundColor: Colors.white,
     marginRight: 6,
     justifyContent: 'center',
     alignItems: 'center',
   },
   text: {
-    fontSize: 16,
+    fontSize: typeScale.body.fontSize,
     color: Colors.black1,
-    lineHeight: 24,
+    lineHeight: typeScale.body.lineHeight,
     flex: 1,
     fontWeight: '500',
   },
@@ -50,9 +51,9 @@ export const styles = StyleSheet.create({
     marginRight: 8,
   },
   textEnable: {
-    fontSize: 14,
+    fontSize: typeScale['body-sm'].fontSize,
     fontWeight: '700',
     color: Colors.black1,
-    lineHeight: 24,
+    lineHeight: typeScale['body-sm'].lineHeight,
   },
 });

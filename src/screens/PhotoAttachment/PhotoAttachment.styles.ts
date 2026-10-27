@@ -1,6 +1,7 @@
 import { Colors } from '@app/styles/colors';
 import { SCREEN_WIDTH } from '@app/utilities/constants';
 import { Platform, StyleSheet } from 'react-native';
+import { radius, typeScale } from '@app/styles/theme';
 
 export const styles = StyleSheet.create({
   container: {
@@ -18,7 +19,7 @@ export const styles = StyleSheet.create({
     backgroundColor: Colors.white,
     borderColor: Colors.gray1,
     borderWidth: 4,
-    borderRadius: 30,
+    borderRadius: radius.full,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -28,7 +29,7 @@ export const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: Colors.black,
-    borderRadius: 13,
+    borderRadius: radius.full,
   },
   checkmark: {
     width: 14,
@@ -42,7 +43,7 @@ export const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   imageTaken: {
-    borderRadius: 4,
+    borderRadius: radius.sm,
     flex: 1,
     width: SCREEN_WIDTH * 0.88,
     marginVertical: 10,
@@ -62,7 +63,7 @@ export const styles = StyleSheet.create({
     height: 60,
   },
   textAttach: {
-    fontSize: 18,
+    fontSize: typeScale.h3.fontSize,
     color: Colors.white,
     textAlign: 'center',
     marginBottom: 19,
@@ -76,14 +77,14 @@ export const styles = StyleSheet.create({
   },
   grantText: {
     textAlign: 'center',
-    fontSize: 18,
+    fontSize: typeScale.h3.fontSize,
     fontWeight: '700',
     color: Colors.white,
     marginTop: 200,
   },
   textSettings: {
     textAlign: 'center',
-    fontSize: 18,
+    fontSize: typeScale.h3.fontSize,
     fontWeight: '700',
     color: Colors.white,
   },

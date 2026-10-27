@@ -1,5 +1,6 @@
 import { Colors } from '@app/styles/colors';
 import { StyleSheet } from 'react-native';
+import { radius, typeScale } from '@app/styles/theme';
 
 export const styles = StyleSheet.create({
   container: {
@@ -8,8 +9,8 @@ export const styles = StyleSheet.create({
   },
   labelTitle: {
     color: Colors.black,
-    fontSize: 16,
-    lineHeight: 16,
+    fontSize: typeScale.body.fontSize,
+    lineHeight: typeScale.body.lineHeight,
     fontWeight: '700',
   },
   containerTextField: {
@@ -18,7 +19,7 @@ export const styles = StyleSheet.create({
   },
   textInput: {
     color: Colors.black,
-    fontSize: 14,
+    fontSize: typeScale['body-sm'].fontSize,
     fontWeight: '600',
     height: 24,
     paddingVertical: 0,
@@ -26,8 +27,8 @@ export const styles = StyleSheet.create({
   labelError: {
     alignSelf: 'stretch',
     color: Colors.red1,
-    fontSize: 12,
-    lineHeight: 16,
+    fontSize: typeScale.caption.fontSize,
+    lineHeight: typeScale.caption.lineHeight,
     fontWeight: '600',
     marginLeft: 4,
   },
@@ -35,17 +36,17 @@ export const styles = StyleSheet.create({
     alignItems: 'center',
     flexDirection: 'row',
     borderWidth: 2,
-    borderRadius: 12,
+    borderRadius: radius.xl,
     paddingHorizontal: 12,
     paddingVertical: 8,
   },
   textShow: {
-    fontSize: 11,
+    fontSize: typeScale.caption.fontSize,
     color: Colors.black,
     textTransform: 'uppercase',
   },
   textLabel: {
-    fontSize: 12,
+    fontSize: typeScale.caption.fontSize,
     color: Colors.black1,
   },
   checkmark: {

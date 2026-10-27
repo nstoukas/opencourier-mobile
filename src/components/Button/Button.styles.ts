@@ -1,5 +1,5 @@
 import { StyleSheet } from 'react-native';
-import { control, radius, type } from '@app/styles/theme';
+import { control, radius, typeScale } from '@app/styles/theme';
 
 export const styles = StyleSheet.create({
   container: {
@@ -11,9 +11,9 @@ export const styles = StyleSheet.create({
     flexDirection: 'row',
   },
   textTitle: {
-    fontSize: type.body.fontSize,
+    fontSize: typeScale.body.fontSize,
     fontWeight: '800',
-    lineHeight: type.body.lineHeight,
+    lineHeight: typeScale.body.lineHeight,
   },
   // Disabled: the type's own colors at half strength (the design system's disabled look).
   disabled: {

@@ -1,5 +1,6 @@
 import { Colors } from '@app/styles/colors';
 import { StyleSheet } from 'react-native';
+import { radius, typeScale } from '@app/styles/theme';
 
 export const styles = StyleSheet.create({
   container: {
@@ -10,17 +11,17 @@ export const styles = StyleSheet.create({
     marginBottom: 8,
     paddingHorizontal: 10,
     paddingVertical: 4,
-    borderRadius: 12,
+    borderRadius: radius.xl,
     backgroundColor: Colors.white,
   },
   dot: {
     width: 10,
     height: 10,
-    borderRadius: 5,
+    borderRadius: radius.full,
     marginRight: 6,
   },
   label: {
-    fontSize: 13,
+    fontSize: typeScale['body-sm'].fontSize,
     fontWeight: '600',
     color: Colors.black1,
   },

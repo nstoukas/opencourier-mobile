@@ -1,6 +1,7 @@
 import { Colors } from '@app/styles/colors';
 import { isSmallDevice } from '@app/utilities/constants';
 import { StyleSheet } from 'react-native';
+import { typeScale } from '@app/styles/theme';
 
 const IMAGE_SIZE = isSmallDevice ? 140 : 280;
 
@@ -42,15 +43,15 @@ export const styles = StyleSheet.create({
     right: 0,
   },
   textTitle: {
-    fontSize: 44,
+    fontSize: typeScale.display.fontSize,
     marginHorizontal: 32,
     fontWeight: '700',
     marginBottom: 22,
-    lineHeight: 52,
+    lineHeight: typeScale.display.lineHeight,
     color: Colors.black,
   },
   textSubtitle: {
-    fontSize: 16,
+    fontSize: typeScale.body.fontSize,
     marginLeft: 32,
     marginRight: 120,
     color: Colors.black,

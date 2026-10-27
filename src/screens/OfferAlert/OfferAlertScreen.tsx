@@ -36,6 +36,7 @@ import {
   onAlertScreenReopened,
   openAppFromAlert,
 } from '@app/services/offerPush/phone';
+import { radius, typeScale } from '@app/styles/theme';
 
 // Which offer to show: the alert that reopened this screen (by its id), or
 // the alert notifee says opened it, or else the newest offer alert on display.
@@ -197,33 +198,33 @@ const styles = StyleSheet.create({
   },
   card: {
     backgroundColor: Colors.white,
-    borderRadius: 16,
+    borderRadius: radius['2xl'],
     padding: 24,
     marginBottom: 32,
   },
   pay: {
-    fontSize: 40,
+    fontSize: typeScale.amount.fontSize,
     fontWeight: '700',
     color: Colors.black6,
   },
   title: {
-    fontSize: 22,
+    fontSize: typeScale.h2.fontSize,
     fontWeight: '600',
     color: Colors.black6,
   },
   summary: {
-    fontSize: 20,
+    fontSize: typeScale.h3.fontSize,
     marginTop: 12,
     color: Colors.black1,
   },
   time: {
-    fontSize: 18,
+    fontSize: typeScale.h3.fontSize,
     marginTop: 16,
     color: Colors.gray13,
   },
   button: {
     height: 64,
-    borderRadius: 32,
+    borderRadius: radius.full,
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 16,
@@ -236,7 +237,7 @@ const styles = StyleSheet.create({
   },
   buttonText: {
     color: Colors.white,
-    fontSize: 22,
+    fontSize: typeScale.h2.fontSize,
     fontWeight: '700',
   },
   secondary: {
@@ -246,7 +247,7 @@ const styles = StyleSheet.create({
   },
   secondaryText: {
     color: Colors.white,
-    fontSize: 18,
+    fontSize: typeScale.h3.fontSize,
     textDecorationLine: 'underline',
   },
 });

@@ -1,5 +1,5 @@
 import { Colors } from '@app/styles/colors';
-import { color } from '@app/styles/theme';
+import { color, radius, typeScale } from '@app/styles/theme';
 import { Platform, StyleSheet } from 'react-native';
 
 export const styles = StyleSheet.create({
@@ -23,7 +23,7 @@ export const styles = StyleSheet.create({
     right: 0,
     textAlign: 'center',
     fontWeight: '700',
-    fontSize: 26,
+    fontSize: typeScale.h2.fontSize,
   },
   gridContainer: {
     flex: 1,
@@ -34,12 +34,12 @@ export const styles = StyleSheet.create({
     flexWrap: 'wrap',
   },
   textNote: {
-    fontSize: 16,
+    fontSize: typeScale.body.fontSize,
     marginTop: 39,
     marginBottom: 8,
   },
   buttonAddNote: {
-    borderRadius: 6,
+    borderRadius: radius.sm,
     paddingHorizontal: 5,
     paddingVertical: 4,
     backgroundColor: Colors.gray6,
@@ -48,7 +48,7 @@ export const styles = StyleSheet.create({
     marginBottom: 8,
   },
   textAddNote: {
-    fontSize: 14,
+    fontSize: typeScale['body-sm'].fontSize,
     fontWeight: '500',
     color: color['muted-foreground'],
     marginLeft: 4,
@@ -57,11 +57,11 @@ export const styles = StyleSheet.create({
     marginBottom: 19,
   },
   buttonTextStyle: {
-    fontSize: 16,
+    fontSize: typeScale.body.fontSize,
     fontWeight: '700',
   },
   textShow: {
-    fontSize: 16,
+    fontSize: typeScale.body.fontSize,
     color: Colors.black1,
     marginBottom: 19,
   },
@@ -73,7 +73,7 @@ export const styles = StyleSheet.create({
     paddingTop: 8,
   },
   textNotesHeader: {
-    fontSize: 16,
+    fontSize: typeScale.body.fontSize,
     fontWeight: '400',
     color: Colors.black4,
   },
@@ -88,7 +88,7 @@ export const styles = StyleSheet.create({
     overflow: 'hidden',
   },
   addNote: {
-    borderRadius: 8,
+    borderRadius: radius.md,
     width: 32,
     height: 32,
     backgroundColor: Colors.gray1,
@@ -97,8 +97,8 @@ export const styles = StyleSheet.create({
     marginLeft: 8,
   },
   headerText: {
-    fontSize: 24,
-    lineHeight: 24,
+    fontSize: typeScale.h2.fontSize,
+    lineHeight: typeScale.h2.lineHeight,
     color: Colors.gray21,
   },
   containerHeader: {

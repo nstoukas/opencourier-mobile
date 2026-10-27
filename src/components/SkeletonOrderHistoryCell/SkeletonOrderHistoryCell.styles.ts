@@ -1,12 +1,13 @@
 import { Colors } from '@app/styles/colors';
 import { StyleSheet } from 'react-native';
+import { radius } from '@app/styles/theme';
 
 export const styles = StyleSheet.create({
   container: {
     marginTop: 16,
     marginHorizontal: 16,
     borderWidth: 2,
-    borderRadius: 12,
+    borderRadius: radius.xl,
     borderColor: Colors.gray8,
     padding: 14,
   },
@@ -23,7 +24,7 @@ export const styles = StyleSheet.create({
   timeItem: {
     width: 66,
     height: 16,
-    borderRadius: 6,
+    borderRadius: radius.sm,
   },
   separator: {
     backgroundColor: Colors.gray8,
@@ -33,26 +34,26 @@ export const styles = StyleSheet.create({
   itemArrow: {
     width: 24,
     height: 24,
-    borderRadius: 12,
+    borderRadius: radius.full,
     marginLeft: 8,
   },
   itemPrice: {
     width: 56,
     height: 28,
-    borderRadius: 6,
+    borderRadius: radius.sm,
   },
   itemIcon: {
     width: 16,
     height: 16,
-    borderRadius: 8,
+    borderRadius: radius.full,
     marginRight: 8,
   },
   itemText: {
     height: 16,
-    borderRadius: 4,
+    borderRadius: radius.sm,
   },
   button: {
     height: 32,
-    borderRadius: 8,
+    borderRadius: radius.md,
   },
 });

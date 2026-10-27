@@ -1,5 +1,6 @@
 import { Colors } from '@app/styles/colors';
 import { StyleSheet } from 'react-native';
+import { typeScale } from '@app/styles/theme';
 
 export const styles = StyleSheet.create({
   container: {
@@ -26,10 +27,10 @@ export const styles = StyleSheet.create({
     marginBottom: 10,
   },
   textJoin: {
-    fontSize: 18,
+    fontSize: typeScale.h3.fontSize,
     marginLeft: 12,
     marginBottom: 6,
-    lineHeight: 24,
+    lineHeight: typeScale.h3.lineHeight,
     color: Colors.blue1,
   },
   headerContent: {},
@@ -46,15 +47,15 @@ export const styles = StyleSheet.create({
     marginLeft: 8,
   },
   textName: {
-    fontSize: 16,
+    fontSize: typeScale.body.fontSize,
     fontWeight: '600',
-    lineHeight: 24,
+    lineHeight: typeScale.body.lineHeight,
     color: Colors.black,
   },
   textCount: {
-    fontSize: 12,
+    fontSize: typeScale.caption.fontSize,
     fontWeight: '600',
-    lineHeight: 16,
+    lineHeight: typeScale.caption.lineHeight,
     color: Colors.blackAlpha05,
   },
 });

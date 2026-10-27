@@ -1,5 +1,6 @@
 import { Colors } from '@app/styles/colors';
 import { StyleSheet } from 'react-native';
+import { typeScale } from '@app/styles/theme';
 
 export const styles = StyleSheet.create({
   content: {
@@ -12,8 +13,8 @@ export const styles = StyleSheet.create({
   },
   textTitle: {
     fontWeight: '600',
-    fontSize: 14,
-    lineHeight: 24,
+    fontSize: typeScale['body-sm'].fontSize,
+    lineHeight: typeScale['body-sm'].lineHeight,
     color: Colors.black,
   },
   imageArrowRight: {
@@ -22,8 +23,8 @@ export const styles = StyleSheet.create({
   },
   textSubtitle: {
     fontWeight: '500',
-    fontSize: 12,
-    lineHeight: 16,
+    fontSize: typeScale.caption.fontSize,
+    lineHeight: typeScale.caption.lineHeight,
     color: Colors.blackAlpha05,
   },
   imageRadioButton: {

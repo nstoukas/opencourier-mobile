@@ -1,12 +1,13 @@
 import { Colors } from '@app/styles/colors';
 import { StyleSheet } from 'react-native';
+import { radius, typeScale } from '@app/styles/theme';
 
 export const styles = StyleSheet.create({
   container: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: Colors.white,
-    borderRadius: 12,
+    borderRadius: radius.xl,
     paddingVertical: 14,
     paddingHorizontal: 16,
     marginBottom: 10,
@@ -17,17 +18,17 @@ export const styles = StyleSheet.create({
   },
   textDay: {
     fontWeight: '700',
-    fontSize: 16,
+    fontSize: typeScale.body.fontSize,
     color: Colors.black1,
   },
   // Date and delivery count, quieter than the weekday above it.
   textDetail: {
-    fontSize: 13,
+    fontSize: typeScale['body-sm'].fontSize,
     color: Colors.gray13,
     marginTop: 2,
   },
   textEarned: {
-    fontSize: 18,
+    fontSize: typeScale.h3.fontSize,
     fontWeight: '700',
     color: Colors.black1,
   },

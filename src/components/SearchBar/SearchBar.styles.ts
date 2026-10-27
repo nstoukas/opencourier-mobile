@@ -1,12 +1,13 @@
 import { Colors } from '@app/styles/colors';
 import { StyleSheet } from 'react-native';
+import { radius, typeScale } from '@app/styles/theme';
 
 export const styles = StyleSheet.create({
   container: {
     borderWidth: 2,
     borderColor: Colors.black1,
     marginHorizontal: 16,
-    borderRadius: 12,
+    borderRadius: radius.xl,
     justifyContent: 'center',
     paddingHorizontal: 14,
     backgroundColor: Colors.white,
@@ -25,7 +26,7 @@ export const styles = StyleSheet.create({
   textInput: {
     flex: 1,
     height: 40,
-    fontSize: 14,
+    fontSize: typeScale['body-sm'].fontSize,
     paddingVertical: 0,
     paddingTop: 0,
     paddingBottom: 0,

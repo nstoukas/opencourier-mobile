@@ -1,5 +1,5 @@
 import { Colors } from '@app/styles/colors';
-import { color } from '@app/styles/theme';
+import { color, radius, typeScale } from '@app/styles/theme';
 import { StyleSheet } from 'react-native';
 
 export const styles = StyleSheet.create({
@@ -7,7 +7,7 @@ export const styles = StyleSheet.create({
     borderWidth: 2,
     borderColor: Colors.gray1,
     marginHorizontal: 16,
-    borderRadius: 12,
+    borderRadius: radius.xl,
     marginVertical: 8,
     overflow: 'hidden',
     backgroundColor: Colors.white,
@@ -21,7 +21,7 @@ export const styles = StyleSheet.create({
     width: 32,
     height: 32,
     backgroundColor: Colors.gray7,
-    borderRadius: 8,
+    borderRadius: radius.md,
     justifyContent: 'center',
     alignItems: 'center',
     marginLeft: 8,
@@ -40,12 +40,12 @@ export const styles = StyleSheet.create({
   map: {
     width: 143,
     height: 138,
-    borderRadius: 12,
+    borderRadius: radius.xl,
     backgroundColor: Colors.gray1,
     marginRight: 16,
   },
   textDistance: {
-    fontSize: 16,
+    fontSize: typeScale.body.fontSize,
     marginLeft: 8,
   },
   containerAway: {},
@@ -89,14 +89,14 @@ export const styles = StyleSheet.create({
     marginBottom: 12,
   },
   textAddress: {
-    fontSize: 16,
+    fontSize: typeScale.body.fontSize,
     marginRight: 8,
-    lineHeight: 18,
+    lineHeight: typeScale.body.lineHeight,
     flex: 1,
   },
   textName: {
     fontWeight: '700',
-    fontSize: 16,
+    fontSize: typeScale.body.fontSize,
     flex: 1,
     marginLeft: 8,
   },
@@ -116,7 +116,7 @@ export const styles = StyleSheet.create({
   instruction: {
     borderWidth: 1,
     borderColor: Colors.black1,
-    borderRadius: 4,
+    borderRadius: radius.sm,
     marginVertical: 5,
     paddingVertical: 2,
     paddingHorizontal: 4,
@@ -129,11 +129,11 @@ export const styles = StyleSheet.create({
     overflow: 'hidden',
   },
   textInstruction: {
-    fontSize: 14,
+    fontSize: typeScale['body-sm'].fontSize,
     fontWeight: '500',
   },
   buttonAddNote: {
-    borderRadius: 6,
+    borderRadius: radius.sm,
     paddingHorizontal: 5,
     paddingVertical: 4,
     backgroundColor: Colors.gray6,
@@ -142,7 +142,7 @@ export const styles = StyleSheet.create({
     alignSelf: 'flex-start',
   },
   textAddNote: {
-    fontSize: 14,
+    fontSize: typeScale['body-sm'].fontSize,
     fontWeight: '500',
     color: color['muted-foreground'],
     marginLeft: 4,
@@ -159,12 +159,12 @@ export const styles = StyleSheet.create({
     marginLeft: 8,
   },
   textNotesHeader: {
-    fontSize: 16,
+    fontSize: typeScale.body.fontSize,
     fontWeight: '400',
     color: Colors.black4,
   },
   addNote: {
-    borderRadius: 8,
+    borderRadius: radius.md,
     width: 32,
     height: 32,
     backgroundColor: Colors.gray1,

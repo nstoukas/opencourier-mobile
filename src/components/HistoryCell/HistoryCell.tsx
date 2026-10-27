@@ -17,6 +17,7 @@ import { formatTime, formatServer, formatSpaced } from '@app/utilities/dates';
 import { useTranslation } from 'react-i18next';
 import { Button, ButtonType } from '../Button/Button';
 import { formatCurrencyFromCents } from '@app/utilities/currency';
+import { typeScale } from '@app/styles/theme';
 
 type Props = {
   style?: StyleProp<ViewStyle>;
@@ -103,7 +104,10 @@ export const HistoryCell = ({ style, order, onPress }: Props) => {
             style={{ height: 42 }}
             title={t('translations:report_order')}
             onPress={() => undefined}
-            textStyle={{ fontSize: 12, fontWeight: '700' }}
+            textStyle={{
+              fontSize: typeScale.caption.fontSize,
+              fontWeight: '700',
+            }}
           />
         </View>
       </View>

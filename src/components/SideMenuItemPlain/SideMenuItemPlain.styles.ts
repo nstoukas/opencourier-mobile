@@ -1,5 +1,6 @@
 import { Colors } from '@app/styles/colors';
 import { StyleSheet } from 'react-native';
+import { typeScale } from '@app/styles/theme';
 
 export const styles = StyleSheet.create({
   container: {
@@ -12,7 +13,7 @@ export const styles = StyleSheet.create({
   },
   text: {
     marginHorizontal: 15,
-    fontSize: 14,
+    fontSize: typeScale['body-sm'].fontSize,
     flex: 1,
     color: Colors.black,
   },

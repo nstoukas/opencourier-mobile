@@ -1,5 +1,6 @@
 import { Colors } from '@app/styles/colors';
 import { StyleSheet } from 'react-native';
+import { radius, typeScale } from '@app/styles/theme';
 
 export const styles = StyleSheet.create({
   container: {
@@ -22,37 +23,37 @@ export const styles = StyleSheet.create({
     marginBottom: 22,
   },
   title: {
-    fontSize: 28,
+    fontSize: typeScale.h1.fontSize,
     fontWeight: '700',
     color: Colors.black1,
     marginLeft: 16,
     flexShrink: 1,
   },
   summaryCard: {
-    borderRadius: 20,
+    borderRadius: radius['2xl'],
     backgroundColor: Colors.white,
     paddingVertical: 14,
     paddingHorizontal: 16,
     marginBottom: 22,
   },
   summaryTotal: {
-    fontSize: 32,
+    fontSize: typeScale.h1.fontSize,
     fontWeight: '700',
     color: Colors.black1,
   },
   summaryCount: {
-    fontSize: 16,
+    fontSize: typeScale.body.fontSize,
     color: Colors.black1,
     marginTop: 2,
   },
   summaryBreakdown: {
-    fontSize: 13,
+    fontSize: typeScale['body-sm'].fontSize,
     color: Colors.gray13,
     marginTop: 4,
   },
   cell: {
     backgroundColor: Colors.white,
-    borderRadius: 12,
+    borderRadius: radius.xl,
     padding: 14,
     marginBottom: 10,
     flexDirection: 'row',
@@ -63,27 +64,27 @@ export const styles = StyleSheet.create({
     marginRight: 12,
   },
   cellStore: {
-    fontSize: 16,
+    fontSize: typeScale.body.fontSize,
     fontWeight: '700',
     color: Colors.black1,
   },
   cellAddress: {
-    fontSize: 13,
+    fontSize: typeScale['body-sm'].fontSize,
     color: Colors.gray13,
     marginTop: 2,
   },
   cellTime: {
-    fontSize: 13,
+    fontSize: typeScale['body-sm'].fontSize,
     color: Colors.gray13,
     marginTop: 2,
   },
   cellTotal: {
-    fontSize: 16,
+    fontSize: typeScale.body.fontSize,
     fontWeight: '700',
     color: Colors.black1,
   },
   cellTips: {
-    fontSize: 12,
+    fontSize: typeScale.caption.fontSize,
     color: Colors.gray13,
     marginTop: 2,
     textAlign: 'right',

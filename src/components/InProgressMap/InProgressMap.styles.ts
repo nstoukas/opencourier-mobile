@@ -1,4 +1,5 @@
 import { StyleSheet } from 'react-native';
+import { typeScale } from '@app/styles/theme';
 
 export const styles = StyleSheet.create({
   containerMap: {
@@ -15,7 +16,7 @@ export const styles = StyleSheet.create({
     alignItems: 'center',
   },
   textDistance: {
-    fontSize: 16,
+    fontSize: typeScale.body.fontSize,
     marginLeft: 8,
     flex: 1,
     flexWrap: 'wrap',

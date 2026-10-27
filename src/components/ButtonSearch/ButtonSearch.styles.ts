@@ -1,5 +1,6 @@
 import { Colors } from '@app/styles/colors';
 import { StyleSheet } from 'react-native';
+import { radius } from '@app/styles/theme';
 
 export const styles = StyleSheet.create({
   container: {
@@ -10,7 +11,7 @@ export const styles = StyleSheet.create({
     width: 40,
     height: 40,
     backgroundColor: Colors.white,
-    borderRadius: 12,
+    borderRadius: radius.xl,
     justifyContent: 'center',
     alignItems: 'center',
     borderWidth: 1,

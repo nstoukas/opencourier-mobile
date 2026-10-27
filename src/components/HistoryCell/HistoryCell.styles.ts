@@ -1,11 +1,12 @@
 import { Colors } from '@app/styles/colors';
 import { StyleSheet } from 'react-native';
+import { radius, typeScale } from '@app/styles/theme';
 
 export const styles = StyleSheet.create({
   container: {
     borderWidth: 2,
     borderColor: Colors.gray1,
-    borderRadius: 12,
+    borderRadius: radius.xl,
     justifyContent: 'center',
     paddingHorizontal: 14,
     paddingVertical: 12,
@@ -34,32 +35,32 @@ export const styles = StyleSheet.create({
   },
   textId: {
     fontWeight: '700',
-    fontSize: 16,
-    lineHeight: 18,
+    fontSize: typeScale.body.fontSize,
+    lineHeight: typeScale.body.lineHeight,
     color: Colors.black1,
     flex: 1,
   },
   textStatus: {
     fontWeight: '500',
-    fontSize: 14,
-    lineHeight: 20,
+    fontSize: typeScale['body-sm'].fontSize,
+    lineHeight: typeScale['body-sm'].lineHeight,
     color: Colors.black2,
   },
   textDeliveredTo: {
-    fontSize: 16,
+    fontSize: typeScale.body.fontSize,
     color: Colors.black1,
-    lineHeight: 20,
+    lineHeight: typeScale.body.lineHeight,
   },
   textUserName: {
-    fontSize: 18,
+    fontSize: typeScale.h3.fontSize,
     marginRight: 16,
-    lineHeight: 20,
+    lineHeight: typeScale.h3.lineHeight,
     color: Colors.black1,
   },
   imageUser: {
     width: 32,
     height: 32,
-    borderRadius: 16,
+    borderRadius: radius.full,
     backgroundColor: Colors.gray6,
   },
   iconSmall: {
@@ -68,8 +69,8 @@ export const styles = StyleSheet.create({
     marginRight: 10,
   },
   textInfo: {
-    fontSize: 10,
-    lineHeight: 16,
+    fontSize: typeScale.caption.fontSize,
+    lineHeight: typeScale.caption.lineHeight,
     fontWeight: '600',
     color: Colors.black1,
   },
@@ -77,7 +78,7 @@ export const styles = StyleSheet.create({
     paddingHorizontal: 6,
     paddingVertical: 4,
     borderWidth: 1,
-    borderRadius: 6,
+    borderRadius: radius.sm,
     borderColor: Colors.gray1,
     flexDirection: 'row',
     justifyContent: 'center',
@@ -86,7 +87,7 @@ export const styles = StyleSheet.create({
   statusIndicator: {
     width: 6,
     height: 6,
-    borderRadius: 3,
+    borderRadius: radius.full,
     backgroundColor: Colors.gray2,
     marginRight: 7,
   },
@@ -96,10 +97,10 @@ export const styles = StyleSheet.create({
   containerTime: {
     backgroundColor: Colors.blue5,
     paddingHorizontal: 10,
-    borderRadius: 20,
+    borderRadius: radius['2xl'],
   },
   textTime: {
-    fontSize: 12,
+    fontSize: typeScale.caption.fontSize,
     fontWeight: '500',
     color: Colors.blue6,
   },

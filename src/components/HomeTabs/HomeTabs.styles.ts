@@ -1,6 +1,7 @@
 import { Colors } from '@app/styles/colors';
 import { SCREEN_WIDTH } from '@app/utilities/constants';
 import { StyleSheet } from 'react-native';
+import { radius, typeScale } from '@app/styles/theme';
 
 const TOTAL_HORIZONTAL_SPACING = 144;
 
@@ -17,18 +18,18 @@ export const styles = StyleSheet.create({
     justifyContent: 'space-between',
     height: 40,
     alignItems: 'center',
-    borderRadius: 12,
+    borderRadius: radius.xl,
   },
   textTab: {
     fontWeight: '700',
-    fontSize: 12,
-    lineHeight: 16,
+    fontSize: typeScale.caption.fontSize,
+    lineHeight: typeScale.caption.lineHeight,
     alignSelf: 'center',
   },
   containerTabText: {
     flexDirection: 'row',
     alignSelf: 'center',
-    borderRadius: 8,
+    borderRadius: radius.md,
     paddingVertical: 4,
     paddingHorizontal: 8,
     height: 32,
@@ -36,7 +37,7 @@ export const styles = StyleSheet.create({
   },
   containerCount: {
     height: 16,
-    borderRadius: 4,
+    borderRadius: radius.sm,
     justifyContent: 'center',
     alignItems: 'center',
     backgroundColor: Colors.red1,
@@ -45,7 +46,7 @@ export const styles = StyleSheet.create({
   },
   textCount: {
     fontWeight: '900',
-    fontSize: 11,
+    fontSize: typeScale.caption.fontSize,
     color: Colors.white,
   },
 });

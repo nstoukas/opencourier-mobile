@@ -11,6 +11,7 @@ import { styles } from './DeleteNote.styles';
 import { useTranslation } from 'react-i18next';
 import { Button, ButtonType } from '@app/components/Button/Button';
 import { Images } from '@app/utilities/images';
+import { typeScale } from '@app/styles/theme';
 
 type Props = RootScreenProp<RootScreen.DeleteNoteModal>;
 
@@ -40,7 +41,7 @@ export const DeleteNote = ({ navigation, route }: Props) => {
           <Text style={styles.textInfo}>{t('translations:action_undone')}</Text>
         </View>
         <Button
-          textStyle={{ fontWeight: '800', fontSize: 16 }}
+          textStyle={{ fontWeight: '800', fontSize: typeScale.body.fontSize }}
           icon={Images.Trash}
           type={ButtonType.red}
           title={t('translations:delete')}

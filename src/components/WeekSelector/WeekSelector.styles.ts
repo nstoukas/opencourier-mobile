@@ -1,5 +1,6 @@
 import { Colors } from '@app/styles/colors';
 import { StyleSheet } from 'react-native';
+import { typeScale } from '@app/styles/theme';
 
 export const styles = StyleSheet.create({
   container: {
@@ -10,12 +11,12 @@ export const styles = StyleSheet.create({
     flex: 1,
   },
   textPrice: {
-    fontSize: 20,
+    fontSize: typeScale.h3.fontSize,
     color: Colors.black1,
     textAlign: 'center',
   },
   textDate: {
-    fontSize: 20,
+    fontSize: typeScale.h3.fontSize,
     color: Colors.gray15,
     textAlign: 'center',
     marginTop: 10,

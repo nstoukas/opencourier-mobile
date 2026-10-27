@@ -1,5 +1,6 @@
 import { Colors } from '@app/styles/colors';
 import { StyleSheet } from 'react-native';
+import { radius, typeScale } from '@app/styles/theme';
 
 export const styles = StyleSheet.create({
   container: {
@@ -7,11 +8,11 @@ export const styles = StyleSheet.create({
     alignSelf: 'stretch',
     alignItems: 'center',
     justifyContent: 'center',
-    borderRadius: 12,
+    borderRadius: radius.xl,
     overflow: 'hidden',
   },
   textTitle: {
-    fontSize: 16,
+    fontSize: typeScale.body.fontSize,
     fontWeight: '800',
     color: Colors.white,
     marginTop: 4,
@@ -23,8 +24,8 @@ export const styles = StyleSheet.create({
     left: 0,
     top: 0,
     right: 0,
-    borderTopLeftRadius: 12,
-    borderTopRightRadius: 12,
+    borderTopLeftRadius: radius.xl,
+    borderTopRightRadius: radius.xl,
   },
   progress: {
     backgroundColor: Colors.gray6,
@@ -36,7 +37,7 @@ export const styles = StyleSheet.create({
   containerIcon: {
     width: 40,
     height: 40,
-    borderRadius: 20,
+    borderRadius: radius.full,
     alignItems: 'center',
     justifyContent: 'center',
   },

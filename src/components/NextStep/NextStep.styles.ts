@@ -1,5 +1,6 @@
 import { Colors } from '@app/styles/colors';
 import { StyleSheet } from 'react-native';
+import { typeScale } from '@app/styles/theme';
 
 export const styles = StyleSheet.create({
   blueSeparator: {
@@ -34,11 +35,11 @@ export const styles = StyleSheet.create({
     marginLeft: 8,
   },
   cellName: {
-    fontSize: 12,
+    fontSize: typeScale.caption.fontSize,
     fontWeight: '600',
   },
   cellItems: {
-    fontSize: 10,
+    fontSize: typeScale.caption.fontSize,
     fontWeight: '600',
   },
 });

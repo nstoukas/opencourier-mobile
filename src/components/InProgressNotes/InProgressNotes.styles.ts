@@ -1,5 +1,6 @@
 import { Colors } from '@app/styles/colors';
 import { StyleSheet } from 'react-native';
+import { radius, typeScale } from '@app/styles/theme';
 
 export const styles = StyleSheet.create({
   container: {
@@ -11,7 +12,7 @@ export const styles = StyleSheet.create({
     overflow: 'hidden',
   },
   textNotesHeader: {
-    fontSize: 16,
+    fontSize: typeScale.body.fontSize,
     fontWeight: '400',
     color: Colors.black4,
   },
@@ -26,7 +27,7 @@ export const styles = StyleSheet.create({
     overflow: 'hidden',
   },
   addNote: {
-    borderRadius: 8,
+    borderRadius: radius.md,
     width: 32,
     height: 32,
     backgroundColor: Colors.gray1,

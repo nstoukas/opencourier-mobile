@@ -1,10 +1,11 @@
 import { Colors } from '@app/styles/colors';
 import { StyleSheet } from 'react-native';
+import { radius, typeScale } from '@app/styles/theme';
 
 export const styles = StyleSheet.create({
   container: {
     backgroundColor: Colors.blue5,
-    borderRadius: 12,
+    borderRadius: radius.xl,
     padding: 16,
   },
   containerHeader: {
@@ -13,9 +14,9 @@ export const styles = StyleSheet.create({
   },
   textTitle: {
     fontWeight: '700',
-    fontSize: 16,
+    fontSize: typeScale.body.fontSize,
     color: Colors.black7,
-    lineHeight: 24,
+    lineHeight: typeScale.body.lineHeight,
     marginLeft: 8,
   },
 });

@@ -1,5 +1,6 @@
 import { Colors } from '@app/styles/colors';
 import { StyleSheet } from 'react-native';
+import { radius } from '@app/styles/theme';
 
 export const styles = StyleSheet.create({
   container: {
@@ -14,7 +15,7 @@ export const styles = StyleSheet.create({
   image: {
     width: 93,
     height: 93,
-    borderRadius: 8,
+    borderRadius: radius.md,
     borderWidth: 3,
     borderColor: Colors.gray13,
   },

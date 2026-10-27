@@ -1,5 +1,6 @@
 import { Colors } from '@app/styles/colors';
 import { Platform, StyleSheet } from 'react-native';
+import { typeScale } from '@app/styles/theme';
 
 export const styles = StyleSheet.create({
   container: {
@@ -27,10 +28,10 @@ export const styles = StyleSheet.create({
     right: 0,
     textAlign: 'center',
     fontWeight: '700',
-    fontSize: 32,
+    fontSize: typeScale.h1.fontSize,
   },
   subtitle: {
-    fontSize: 18,
+    fontSize: typeScale.h3.fontSize,
     textAlign: 'center',
     marginVertical: 22,
   },

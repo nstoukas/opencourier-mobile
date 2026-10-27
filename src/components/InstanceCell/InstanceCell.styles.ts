@@ -1,5 +1,6 @@
 import { Colors } from '@app/styles/colors';
 import { StyleSheet } from 'react-native';
+import { typeScale } from '@app/styles/theme';
 
 export const styles = StyleSheet.create({
   container: {
@@ -16,15 +17,15 @@ export const styles = StyleSheet.create({
   },
   textName: {
     fontWeight: '600',
-    fontSize: 12,
+    fontSize: typeScale.caption.fontSize,
     color: Colors.black1,
-    lineHeight: 16,
+    lineHeight: typeScale.caption.lineHeight,
   },
   textLink: {
     fontWeight: '600',
-    fontSize: 10,
+    fontSize: typeScale.caption.fontSize,
     color: Colors.black5,
-    lineHeight: 16,
+    lineHeight: typeScale.caption.lineHeight,
   },
   separator: {
     height: 1,

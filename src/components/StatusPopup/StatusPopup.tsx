@@ -5,6 +5,7 @@ import { UserStatus } from '@app/types/types';
 import { Button, ButtonType } from '../Button/Button';
 import { Images } from '@app/utilities/images';
 import { useTranslation } from 'react-i18next';
+import { typeScale } from '@app/styles/theme';
 
 type Props = {
   style?: StyleProp<ViewStyle>;
@@ -83,14 +84,14 @@ export const StatusPopup = ({ style, type, onAccept, onCancel }: Props) => {
               type={primaryButtonType}
               title={primaryButtonTitle}
               onPress={() => onAccept(type)}
-              textStyle={{ fontSize: 14 }}
+              textStyle={{ fontSize: typeScale['body-sm'].fontSize }}
             />
             <Button
               style={{ height: 40 }}
               type={ButtonType.grayBGBlackText}
               title={t('translations:cancel')}
               onPress={onCancel}
-              textStyle={{ fontSize: 14 }}
+              textStyle={{ fontSize: typeScale['body-sm'].fontSize }}
             />
           </View>
         </View>

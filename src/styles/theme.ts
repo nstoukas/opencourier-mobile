@@ -223,3 +223,7 @@ export function withAlpha(hex: string, alpha: number): string {
   const b = parseInt(value.slice(4, 6), 16);
   return `rgba(${r}, ${g}, ${b}, ${alpha})`;
 }
+
+// The text styles again under a name that never clashes: many components have a `type` prop or
+// variable, and `type` is also a TypeScript keyword. App code reads `typeScale.body.fontSize`.
+export const typeScale = type;

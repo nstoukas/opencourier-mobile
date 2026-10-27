@@ -1,6 +1,7 @@
 import { Colors } from '@app/styles/colors';
 import { SCREEN_WIDTH } from '@app/utilities/constants';
 import { StyleSheet } from 'react-native';
+import { radius, typeScale } from '@app/styles/theme';
 
 export const styles = StyleSheet.create({
   parent: {
@@ -9,7 +10,7 @@ export const styles = StyleSheet.create({
   },
   container: {
     borderWidth: 1,
-    borderRadius: 20,
+    borderRadius: radius['2xl'],
     borderColor: Colors.gray21,
     marginVertical: 8,
     paddingVertical: 5,
@@ -21,7 +22,7 @@ export const styles = StyleSheet.create({
   containerTopRightIcon: {
     width: 16,
     height: 16,
-    borderRadius: 8,
+    borderRadius: radius.full,
     backgroundColor: Colors.gray8,
     borderWidth: 1,
     borderColor: Colors.gray10,
@@ -32,7 +33,7 @@ export const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   textContent: {
-    fontSize: 14,
+    fontSize: typeScale['body-sm'].fontSize,
     fontWeight: '500',
     flexShrink: 1,
     color: Colors.black7,
@@ -45,7 +46,7 @@ export const styles = StyleSheet.create({
     height: 9,
   },
   containerIncrement: {
-    borderRadius: 5,
+    borderRadius: radius.sm,
     paddingHorizontal: 8,
     paddingVertical: 4,
     justifyContent: 'center',
@@ -64,7 +65,7 @@ export const styles = StyleSheet.create({
     width: 60,
     height: 32,
     borderWidth: 1,
-    borderRadius: 8,
+    borderRadius: radius.md,
     flexDirection: 'row',
     marginLeft: 8,
   },
@@ -72,7 +73,7 @@ export const styles = StyleSheet.create({
     width: 32,
     height: 60,
     borderWidth: 1,
-    borderRadius: 8,
+    borderRadius: radius.md,
     marginRight: 8,
   },
   iconDelete: {
@@ -86,7 +87,7 @@ export const styles = StyleSheet.create({
     marginLeft: 8,
   },
   textCount: {
-    fontSize: 10,
+    fontSize: typeScale.caption.fontSize,
     fontWeight: '600',
     color: Colors.gray21,
     marginHorizontal: 10,
@@ -96,7 +97,7 @@ export const styles = StyleSheet.create({
     height: 22,
     alignItems: 'center',
     justifyContent: 'center',
-    borderRadius: 4,
+    borderRadius: radius.sm,
     borderColor: Colors.gray21,
     borderWidth: 1,
   },

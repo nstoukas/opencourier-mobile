@@ -1,23 +1,24 @@
 import { Colors } from '@app/styles/colors';
 import { StyleSheet } from 'react-native';
+import { radius, typeScale } from '@app/styles/theme';
 
 export const styles = StyleSheet.create({
   container: {
     borderWidth: 2,
     borderColor: Colors.gray1,
     marginHorizontal: 16,
-    borderRadius: 12,
+    borderRadius: radius.xl,
     padding: 12,
     marginVertical: 8,
   },
   textPrice: {
-    fontSize: 36,
+    fontSize: typeScale.amount.fontSize,
     fontWeight: '700',
     color: Colors.black3,
     textAlign: 'center',
   },
   textWaiting: {
-    fontSize: 16,
+    fontSize: typeScale.body.fontSize,
     color: Colors.black7,
     textAlign: 'center',
     marginTop: 4,
@@ -53,10 +54,10 @@ export const styles = StyleSheet.create({
   },
   textName: {
     fontWeight: '700',
-    fontSize: 16,
+    fontSize: typeScale.body.fontSize,
   },
   textAddress: {
-    fontSize: 16,
+    fontSize: typeScale.body.fontSize,
   },
   containerText: {
     flex: 1,
@@ -65,7 +66,7 @@ export const styles = StyleSheet.create({
     width: 32,
     height: 32,
     backgroundColor: Colors.white,
-    borderRadius: 16,
+    borderRadius: radius.full,
     justifyContent: 'center',
     alignItems: 'center',
     shadowColor: Colors.black1,
@@ -85,12 +86,12 @@ export const styles = StyleSheet.create({
   map: {
     width: 143,
     height: 138,
-    borderRadius: 12,
+    borderRadius: radius.xl,
     backgroundColor: Colors.gray1,
     marginRight: 16,
   },
   textDistance: {
-    fontSize: 16,
+    fontSize: typeScale.body.fontSize,
     marginLeft: 8,
   },
   containerAway: {},
@@ -105,8 +106,8 @@ export const styles = StyleSheet.create({
     left: 0,
     bottom: 0,
     right: 0,
-    borderBottomLeftRadius: 12,
-    borderBottomRightRadius: 12,
+    borderBottomLeftRadius: radius.xl,
+    borderBottomRightRadius: radius.xl,
   },
   progress: {
     backgroundColor: Colors.gray6,

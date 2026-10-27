@@ -1,5 +1,6 @@
 import { Colors } from '@app/styles/colors';
 import { StyleSheet } from 'react-native';
+import { typeScale } from '@app/styles/theme';
 
 export const styles = StyleSheet.create({
   container: {
@@ -25,15 +26,15 @@ export const styles = StyleSheet.create({
     marginLeft: 8,
   },
   textName: {
-    fontSize: 16,
+    fontSize: typeScale.body.fontSize,
     fontWeight: '600',
-    lineHeight: 24,
+    lineHeight: typeScale.body.lineHeight,
     color: Colors.black,
   },
   textCount: {
-    fontSize: 12,
+    fontSize: typeScale.caption.fontSize,
     fontWeight: '600',
-    lineHeight: 16,
+    lineHeight: typeScale.caption.lineHeight,
     color: Colors.blackAlpha05,
   },
   content: {
@@ -42,17 +43,17 @@ export const styles = StyleSheet.create({
     paddingHorizontal: 12,
   },
   textContent: {
-    fontSize: 12,
-    lineHeight: 20,
+    fontSize: typeScale.caption.fontSize,
+    lineHeight: typeScale.caption.lineHeight,
     color: Colors.black,
   },
   textTitle: {
-    fontSize: 56,
+    fontSize: typeScale.display.fontSize,
     fontWeight: '700',
     marginBottom: 22,
   },
   textSubtitle: {
-    fontSize: 18,
+    fontSize: typeScale.h3.fontSize,
     marginBottom: 22,
   },
   buttonSignup: {

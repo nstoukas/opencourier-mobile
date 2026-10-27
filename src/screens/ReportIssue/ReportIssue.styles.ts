@@ -1,5 +1,6 @@
 import { Colors } from '@app/styles/colors';
 import { Platform, StyleSheet } from 'react-native';
+import { typeScale } from '@app/styles/theme';
 
 export const styles = StyleSheet.create({
   container: {
@@ -27,10 +28,10 @@ export const styles = StyleSheet.create({
     right: 0,
     textAlign: 'center',
     fontWeight: '700',
-    fontSize: 32,
+    fontSize: typeScale.h1.fontSize,
   },
   subtitle: {
-    fontSize: 18,
+    fontSize: typeScale.h3.fontSize,
     textAlign: 'center',
     marginVertical: 22,
   },
@@ -45,7 +46,7 @@ export const styles = StyleSheet.create({
     marginTop: 38,
   },
   cellText: {
-    fontSize: 12,
+    fontSize: typeScale.caption.fontSize,
     fontWeight: '600',
     flex: 1,
   },
@@ -58,12 +59,12 @@ export const styles = StyleSheet.create({
     alignItems: 'center',
   },
   textThanks: {
-    fontSize: 16,
+    fontSize: typeScale.body.fontSize,
     fontWeight: '700',
     textAlign: 'center',
   },
   textErrors: {
-    fontSize: 16,
+    fontSize: typeScale.body.fontSize,
     textAlign: 'center',
     marginVertical: 10,
   },

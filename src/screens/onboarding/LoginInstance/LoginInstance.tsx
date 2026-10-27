@@ -16,6 +16,7 @@ import { generateBoxShadowStyle } from '@app/utilities/styles';
 import { services } from '@app/services/service';
 import { useMutation } from '@tanstack/react-query';
 import useUser from '@app/hooks/useUser';
+import { typeScale } from '@app/styles/theme';
 
 type Props = OnboardingScreenProp<OnboardingScreen.LoginInstance>;
 
@@ -165,9 +166,9 @@ export const LoginInstance = ({ navigation, route }: Props) => {
               <Button
                 icon={Images.Logout}
                 textStyle={{
-                  fontSize: 14,
+                  fontSize: typeScale['body-sm'].fontSize,
                   fontWeight: '700',
-                  lineHeight: 24,
+                  lineHeight: typeScale['body-sm'].lineHeight,
                   color: Colors.black8,
                 }}
                 type={ButtonType.grayBGBlackText}
