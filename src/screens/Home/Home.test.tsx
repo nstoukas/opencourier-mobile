@@ -11,6 +11,19 @@ import { InProgressCell } from '@app/components/InProgressCell/InProgressCell';
 import { DrawerScreens } from '@app/navigation/drawer/types';
 import '@app/localization/i18n';
 
+jest.mock('@react-navigation/native', () => {
+  const actual = jest.requireActual('@react-navigation/native');
+  const mockReact = require('react');
+  return {
+    ...actual,
+    useFocusEffect: (callback: () => void | (() => void)) => {
+      mockReact.useEffect(() => {
+        return callback();
+      }, [callback]);
+    },
+  };
+});
+
 let mockUser: User | undefined = {
   id: 'courier-1',
   status: UserStatus.Online,
@@ -207,6 +220,35 @@ describe('HomeScreen (Row 66, Clauses 1 & 5)', () => {
       } finally {
         errorSpy.mockRestore();
       }
+    });
+  });
+
+  describe('Clause 5: Home no longer refetches on every render (Row 67)', () => {
+    it('uses a stable useCallback for useFocusEffect so re-rendering Home does not refetch in-progress or history orders again', () => {
+      const component = render(
+        <QueryClientProvider client={testQueryClient}>
+          <NavigationContainer>
+            <HomeScreen navigation={mockNav} route={mockRoute} />
+          </NavigationContainer>
+        </QueryClientProvider>,
+      );
+
+      // On initial focus/mount, focus effect runs once
+      expect(mockHomeOrders.refetchInProgress).toHaveBeenCalledTimes(1);
+      expect(mockHomeOrders.refechHistory).toHaveBeenCalledTimes(1);
+
+      // Re-render HomeScreen with the same props
+      component.rerender(
+        <QueryClientProvider client={testQueryClient}>
+          <NavigationContainer>
+            <HomeScreen navigation={mockNav} route={mockRoute} />
+          </NavigationContainer>
+        </QueryClientProvider>,
+      );
+
+      // Callback identity remained stable via useCallback, so no second refetch storm
+      expect(mockHomeOrders.refetchInProgress).toHaveBeenCalledTimes(1);
+      expect(mockHomeOrders.refechHistory).toHaveBeenCalledTimes(1);
     });
   });
 });

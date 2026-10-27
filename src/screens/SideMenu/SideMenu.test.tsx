@@ -1,8 +1,9 @@
 import React from 'react';
 import renderer, { act } from 'react-test-renderer';
-import { Alert } from 'react-native';
+import { Alert, Linking } from 'react-native';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import Geolocation from 'react-native-geolocation-service';
 import { SideMenuItem, UserStatus } from '@app/types/types';
 import { LOGOUT_OFFLINE_TIMEOUT_MS } from '@app/utilities/constants';
 import '@app/localization/i18n';
@@ -51,10 +52,11 @@ jest.mock('@app/hooks/useUser', () => () => ({
   updateUserLocation: jest.fn(),
 }));
 
+const mockRequestLocationPermission = jest.fn();
 jest.mock('@app/hooks/useLocationPermission', () => ({
   useLocationPermission: () => ({
     locationPermission: false,
-    requestLocationPermission: jest.fn(),
+    requestLocationPermission: () => mockRequestLocationPermission(),
   }),
 }));
 
@@ -65,6 +67,7 @@ jest.mock('@app/hooks/useInstance', () => () => ({
 
 import { SideMenu } from './SideMenu';
 import { SideMenuItemPlain } from '@app/components/SideMenuItemPlain/SideMenuItemPlain';
+import { SideMenuItemSwitch } from '@app/components/SideMenuItemSwitch/SideMenuItemSwitch';
 
 describe('SideMenu logout (spec 0002, AC-6)', () => {
   let queryClient: QueryClient;
@@ -226,5 +229,74 @@ describe('SideMenu logout (spec 0002, AC-6)', () => {
     ]);
     expect(mockLogout).toHaveBeenCalledTimes(1);
     expect(resetQueriesSpy).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('SideMenu Location switch (Row 67, Clause 3)', () => {
+  let queryClient: QueryClient;
+  let openSettingsSpy: jest.SpyInstance;
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+    queryClient = new QueryClient({
+      defaultOptions: {
+        queries: { retry: false, gcTime: Infinity },
+      },
+    });
+    openSettingsSpy = jest
+      .spyOn(Linking, 'openSettings')
+      .mockImplementation(() => Promise.resolve() as any);
+  });
+
+  afterEach(() => {
+    openSettingsSpy.mockRestore();
+    queryClient.clear();
+  });
+
+  const renderSideMenu = () => {
+    const mockNavigation: any = {
+      navigate: jest.fn(),
+      closeDrawer: jest.fn(),
+    };
+
+    return renderer.create(
+      <QueryClientProvider client={queryClient}>
+        <SideMenu {...({ navigation: mockNavigation } as any)} />
+      </QueryClientProvider>,
+    );
+  };
+
+  it('switching Location switch on calls requestLocationPermission and never calls watchPosition', () => {
+    const component = renderSideMenu();
+    const switches = component.root.findAllByType(SideMenuItemSwitch);
+    const locationSwitch = switches.find(
+      s => s.props.item === SideMenuItem.Location,
+    );
+    expect(locationSwitch).toBeDefined();
+
+    act(() => {
+      locationSwitch!.props.onValueChange(true);
+    });
+
+    expect(mockRequestLocationPermission).toHaveBeenCalledTimes(1);
+    expect(Geolocation.watchPosition).not.toHaveBeenCalled();
+    expect(openSettingsSpy).not.toHaveBeenCalled();
+  });
+
+  it('switching Location switch off calls Linking.openSettings and never calls watchPosition', () => {
+    const component = renderSideMenu();
+    const switches = component.root.findAllByType(SideMenuItemSwitch);
+    const locationSwitch = switches.find(
+      s => s.props.item === SideMenuItem.Location,
+    );
+    expect(locationSwitch).toBeDefined();
+
+    act(() => {
+      locationSwitch!.props.onValueChange(false);
+    });
+
+    expect(openSettingsSpy).toHaveBeenCalledTimes(1);
+    expect(Geolocation.watchPosition).not.toHaveBeenCalled();
+    expect(mockRequestLocationPermission).not.toHaveBeenCalled();
   });
 });

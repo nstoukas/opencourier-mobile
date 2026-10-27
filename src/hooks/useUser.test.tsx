@@ -36,8 +36,8 @@ describe('useUser (M5)', () => {
     mockSetUserStatus.mockResolvedValue({});
     queryClient = new QueryClient({
       defaultOptions: {
-        queries: { retry: false },
-        mutations: { retry: false },
+        queries: { retry: false, gcTime: Infinity },
+        mutations: { retry: false, gcTime: Infinity },
       },
     });
   });
@@ -49,7 +49,7 @@ describe('useUser (M5)', () => {
   it('updateStatus calls setUserStatus with only the status, preventing react-query context from leaking into options (M5)', async () => {
     let hookResult: ReturnType<typeof useUser> | undefined;
 
-    renderer.create(
+    const root = renderer.create(
       <QueryClientProvider client={queryClient}>
         <UserHookHost
           onRender={h => {
@@ -68,5 +68,27 @@ describe('useUser (M5)', () => {
     // Explicitly verify only 1 argument was passed: status string, no options or react-query context
     expect(mockSetUserStatus.mock.calls[0]).toHaveLength(1);
     expect(mockSetUserStatus.mock.calls[0][0]).toBe('OFFLINE');
+    root.unmount();
+  });
+
+  it('no longer returns updateUserLocation (Row 67, Clause 4)', () => {
+    let hookResult: ReturnType<typeof useUser> | undefined;
+
+    function DisabledUserHookHost() {
+      const hook = useUser(false);
+      hookResult = hook;
+      return null;
+    }
+
+    const testRenderer = renderer.create(
+      <QueryClientProvider client={queryClient}>
+        <DisabledUserHookHost />
+      </QueryClientProvider>,
+    );
+
+    // Location updates now happen directly via services.userService.setUserLocation
+    // without invalidating user queries or returning a mutation from useUser
+    expect((hookResult as any)?.updateUserLocation).toBeUndefined();
+    testRenderer.unmount();
   });
 });
