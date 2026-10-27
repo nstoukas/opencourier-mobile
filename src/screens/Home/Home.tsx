@@ -83,10 +83,15 @@ export const HomeScreen = ({ navigation }: Props) => {
     isLoading: isLoadingOrders,
   } = useHomeOrders();
 
-  useFocusEffect(() => {
-    refetchInProgress();
-    refechHistory();
-  });
+  // `useCallback` keeps the same function between renders, so this runs each
+  // time Home comes into view, not on every render (row 67: it fetched about
+  // twice a second and hit the server's limit).
+  useFocusEffect(
+    useCallback(() => {
+      refetchInProgress();
+      refechHistory();
+    }, [refetchInProgress, refechHistory]),
+  );
 
   // AC-12: while this list is in front, an offer it shows needs no system
   // alert as well. An alert posted while the phone was locked, or while

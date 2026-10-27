@@ -1,5 +1,5 @@
-import React, { useContext, useEffect, useState } from 'react';
-import { View, Text, Alert } from 'react-native';
+import React, { useEffect, useState } from 'react';
+import { View, Text, Alert, Linking } from 'react-native';
 import { RootScreen } from '@app/navigation/types';
 import { styles } from './SideMenu.styles';
 import {
@@ -21,10 +21,6 @@ import { useTranslation } from 'react-i18next';
 import RNRestart from 'react-native-restart';
 import { OrderSetting } from '@app/types/enums';
 import { useLocationPermission } from '@app/hooks/useLocationPermission';
-import { track } from '@app/utilities/geo';
-import { Point } from 'geojson';
-import UserContext from '@app/context/userContext';
-import Geolocation from 'react-native-geolocation-service';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import useUser from '@app/hooks/useUser';
 import { useQueryClient } from '@tanstack/react-query';
@@ -54,8 +50,6 @@ export const SideMenu = ({ navigation }: Props) => {
   const { user } = useUser();
   const { requestLocationPermission, locationPermission } =
     useLocationPermission();
-  const [realTimeLocation, setRealTimeLocation] =
-    useState<boolean>(locationPermission);
 
   const queryClient = useQueryClient();
 
@@ -66,10 +60,8 @@ export const SideMenu = ({ navigation }: Props) => {
     undefined,
   );
   const [status, setStatus] = useState<string | undefined>(user?.status);
-  const { watchId, setWatchId } = useContext(UserContext);
 
-  const { updateStatus, updateDeliverySettings, updateUserLocation } =
-    useUser();
+  const { updateStatus, updateDeliverySettings } = useUser();
 
   // Fetch user instances
   const { userInstances, isLoadingInstances } = useInstance();
@@ -79,7 +71,9 @@ export const SideMenu = ({ navigation }: Props) => {
       case SideMenuItem.AutoOrders:
         return autoAcceptOrders;
       case SideMenuItem.Location:
-        return realTimeLocation;
+        // On when the app may use location. It never starts a watch itself:
+        // the app tracks only while Online or on a job (row 67).
+        return locationPermission;
     }
     return false;
   };
@@ -94,21 +88,11 @@ export const SideMenu = ({ navigation }: Props) => {
         break;
       case SideMenuItem.Location:
         if (value) {
-          !locationPermission && requestLocationPermission();
-          console.log('Location Tracking Enabled');
-          const newWatchId = track((currentLocation: Point) => {
-            updateUserLocation({
-              latitude: currentLocation.coordinates[1],
-              longitude: currentLocation.coordinates[0],
-            });
-          });
-          setWatchId!(newWatchId);
-          setRealTimeLocation(value);
+          requestLocationPermission();
         } else {
-          console.log('Location Tracking Disabled');
-          watchId && Geolocation.clearWatch(watchId);
-          setWatchId!(undefined);
-          setRealTimeLocation(value);
+          // An app cannot take back its own permission; the phone's settings
+          // for this app are where the rider switches location off.
+          Linking.openSettings();
         }
         break;
     }
@@ -151,10 +135,6 @@ export const SideMenu = ({ navigation }: Props) => {
   useEffect(() => {
     setStatus(user?.status);
   }, [user]);
-
-  useEffect(() => {
-    setRealTimeLocation(locationPermission);
-  }, [locationPermission]);
 
   const onLogoutHandle = async () => {
     // Take this phone off the rider's push list first, while the session

@@ -19,7 +19,6 @@ if (__DEV__) {
 }
 
 const App = () => {
-  const [watchId, setWatchId] = useState<number | undefined>(undefined);
   const [locationPermission, setLocationPermission] = useState<boolean>(false);
   const [userLatitude, setUserLatitude] = useState<number | null>(null);
   const [userLongitude, setUserLongitude] = useState<number | null>(null);
@@ -27,8 +26,6 @@ const App = () => {
   return (
     <UserContext.Provider
       value={{
-        watchId,
-        setWatchId,
         locationPermission,
         setLocationPermission,
         userLatitude,

@@ -36,22 +36,12 @@ const useUser = (enabled: boolean = true) => {
     },
   });
 
-  const { mutate: updateUserLocation } = useMutation({
-    mutationFn: services.userService.setUserLocation,
-    onError: error => Alert.alert('Ooops', error.toString()),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: [QueryKeys.user] });
-      refetch();
-    },
-  });
-
   return {
     user,
     isLoading,
     refetchUser: refetch,
     updateStatus,
     updateDeliverySettings,
-    updateUserLocation,
   };
 };
 

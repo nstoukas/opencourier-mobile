@@ -1,35 +1,33 @@
 import { APP_LOCALE } from './locale';
 import { Point } from 'geojson';
 import Geolocation from 'react-native-geolocation-service';
-export function track(onUpdate: (point: Point) => void) {
+import { WatchOptions } from './locationTracking';
+
+// Starts one location watch with these options and returns its id (stop it
+// with Geolocation.clearWatch). The first fix is asked for at once, so the
+// server has a position before the phone has moved.
+export function track(
+  onUpdate: (point: Point) => void,
+  options: WatchOptions,
+): number {
+  const toPoint = (latitude: number, longitude: number): Point => ({
+    type: 'Point',
+    coordinates: [longitude, latitude],
+  });
   Geolocation.getCurrentPosition(
-    position => {
-      const currentLocation: Point = {
-        type: 'Point',
-        coordinates: [position.coords.longitude, position.coords.latitude],
-      };
-      onUpdate(currentLocation);
-    },
-    error => {
-      console.error('Location error: ', error);
-    },
+    position =>
+      onUpdate(toPoint(position.coords.latitude, position.coords.longitude)),
+    error => console.error('Location error: ', error),
     // See https://developer.mozilla.org/en-US/docs/Web/API/Geolocation/getCurrentPosition for
     // details on options
     { enableHighAccuracy: true, timeout: 15000, maximumAge: 10000 },
   );
-  const newWatchId = Geolocation.watchPosition(
-    position => {
-      const currentLocation: Point = {
-        type: 'Point',
-        coordinates: [position.coords.longitude, position.coords.latitude],
-      };
-      onUpdate(currentLocation);
-    },
-    error => {
-      console.error('Location error: ', error);
-    },
+  return Geolocation.watchPosition(
+    position =>
+      onUpdate(toPoint(position.coords.latitude, position.coords.longitude)),
+    error => console.error('Location error: ', error),
+    { enableHighAccuracy: true, ...options },
   );
-  return newWatchId;
 }
 
 // TODO: Add functionality to configure mode of transporation for getDistance

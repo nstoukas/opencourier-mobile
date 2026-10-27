@@ -1,8 +1,6 @@
 import { createContext } from 'react';
 
 interface Props {
-  watchId: number | undefined;
-  setWatchId: (watchId: number | undefined) => void;
   locationPermission: boolean;
   setLocationPermission: (locationPermission: boolean) => void;
   userLatitude: number | null;
@@ -12,8 +10,6 @@ interface Props {
 }
 
 const defaultAuthProps: Props = {
-  watchId: undefined,
-  setWatchId: () => {},
   locationPermission: false,
   setLocationPermission: () => {},
   userLatitude: null,

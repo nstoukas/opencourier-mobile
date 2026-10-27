@@ -1,4 +1,4 @@
-import React, { useContext, useEffect } from 'react';
+import React from 'react';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { RootScreen, RootStackParamList } from '@app/navigation/types';
 import { LoadingScreen } from '@app/screens/Loading/Loading';
@@ -10,20 +10,16 @@ import { useOfferPushRegistration } from '@app/services/offerPush/registration';
 import { AddNote } from '@app/screens/AddNote/AddNote';
 import { DeleteNote } from '@app/screens/DeleteNote/DeleteNote';
 import { DatePickerScreen } from '@app/screens/DatePicker/DatePicker';
-import { track } from '@app/utilities/geo';
-import { Point } from 'geojson';
-import Geolocation from 'react-native-geolocation-service';
 import { useLocationPermission } from '@app/hooks/useLocationPermission';
-import UserContext from '@app/context/userContext';
 import useUser from '@app/hooks/useUser';
+import { useLocationTracking } from '@app/hooks/useLocationTracking';
 
 const RootStack = createNativeStackNavigator<RootStackParamList>();
 
 const DEFAULT_OPTIONS = { headerShown: false };
 
 export const Router = () => {
-  const { user, updateUserLocation } = useUser();
-  const { setWatchId, watchId } = useContext(UserContext);
+  const { user } = useUser();
   const { locationPermission } = useLocationPermission();
 
   // Register this phone for offer alerts while a rider is logged in (row 58).
@@ -36,22 +32,8 @@ export const Router = () => {
   //   />
   // }
 
-  useEffect(() => {
-    if (!user || !locationPermission) {
-      console.log('Location Tracking Disabled');
-      watchId && Geolocation.clearWatch(watchId);
-      setWatchId(undefined);
-    } else if (!watchId) {
-      console.log('Location Tracking Enabled');
-      const newWatchId = track((currentLocation: Point) =>
-        updateUserLocation({
-          latitude: currentLocation.coordinates[1],
-          longitude: currentLocation.coordinates[0],
-        }),
-      );
-      setWatchId(newWatchId);
-    }
-  }, [locationPermission, user?.id]);
+  // The one location watch: only while Online or on a job (row 67).
+  useLocationTracking(user, locationPermission);
 
   return (
     <RootStack.Navigator>
