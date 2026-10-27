@@ -1,3 +1,4 @@
+import { DeliveryIssueReason } from '@app/types/enums';
 import axios from 'axios';
 import { UClient } from './Client';
 import { OrderServiceReponse } from './types';
@@ -44,6 +45,11 @@ export interface OrderService {
   markAsDelivered: (params: {
     id: string;
     note: string;
+  }) => Promise<OrderServiceReponse>;
+  // Sends a rider's report about a delivery to the admin (decision 66.11).
+  reportIssue: (params: {
+    id: string;
+    reason: DeliveryIssueReason;
   }) => Promise<OrderServiceReponse>;
 }
 
@@ -101,11 +107,15 @@ const orderService = (client: UClient): OrderService => {
     return client.post(`deliveries/${id}/arrived-at-pickup`, {});
   };
 
-  const arrivedAtDropoff = async (
-    id: string,
-  ): Promise<OrderServiceReponse> => {
+  const arrivedAtDropoff = async (id: string): Promise<OrderServiceReponse> => {
     return client.post(`deliveries/${id}/arrived-at-dropoff`, {});
   };
+
+  const reportIssue = async (params: {
+    id: string;
+    reason: DeliveryIssueReason;
+  }): Promise<OrderServiceReponse> =>
+    client.post(`deliveries/${params.id}/issues`, { reason: params.reason });
 
   const markAsDelivered = async (params: {
     id: string;
@@ -128,6 +138,7 @@ const orderService = (client: UClient): OrderService => {
     arrivedAtPickup,
     arrivedAtDropoff,
     markAsDelivered,
+    reportIssue,
     declineOrder,
   };
 };

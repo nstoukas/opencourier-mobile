@@ -80,3 +80,12 @@ export enum UserStatus {
   offline = 'offline',
   last_call = 'last_call',
 }
+
+// What a rider can report about a delivery (decision 66.11). The backend stores each
+// report for the admin; OTHER is for a report with a written note.
+export enum DeliveryIssueReason {
+  WrongAddress = 'WRONG_ADDRESS',
+  NoSignal = 'NO_SIGNAL',
+  OrderHanded = 'ORDER_HANDED',
+  Other = 'OTHER',
+}

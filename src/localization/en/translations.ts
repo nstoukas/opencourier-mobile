@@ -413,6 +413,10 @@ export default {
   errors_prevent_couriers:
     'Some errors prevent couriers to deliver their assigned orders',
   report_and_finalize: 'Report Issue and Finalize Delivery',
+  report_sent_back: 'Back to the delivery',
+  report_failed_title: 'Report not sent',
+  report_failed_body:
+    'The report could not reach the co-op. Check your signal and try again.',
   handed_to_customer: 'Handed Over Directly To Customer',
   slide_to_start: 'Slide to start accepting deliveries',
   // Offers with no deadline (spec 0002, AC-4) and offers that ended (AC-5).
