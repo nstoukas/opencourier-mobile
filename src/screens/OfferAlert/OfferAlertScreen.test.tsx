@@ -1,4 +1,5 @@
 import React from 'react';
+import { StyleSheet } from 'react-native';
 import renderer, { act } from 'react-test-renderer';
 import notifee from '@notifee/react-native';
 import '@app/localization/i18n';
@@ -585,6 +586,51 @@ describe('OfferAlertScreen (spec 0003, AC-4, AC-5, Decision 58.14, Commit 50f9d9
     expect(texts).toContain('This offer has ended');
     expect(texts).not.toContain('€8.50');
     expect(texts).not.toContain('Accept');
+
+    tree.unmount();
+  });
+
+  it('renders Accept and Decline buttons with height 100 (control.offer, spec 0007 AC-5)', async () => {
+    (notifee.getInitialNotification as jest.Mock).mockResolvedValue({
+      notification: {
+        id: 'del-screen-1',
+        data: validOfferData,
+      },
+    });
+    (displayedOfferAlerts as jest.Mock).mockResolvedValue([
+      {
+        notificationId: 'del-screen-1',
+        data: validOfferData,
+      },
+    ]);
+
+    let tree!: renderer.ReactTestRenderer;
+    await act(async () => {
+      tree = renderer.create(<OfferAlertScreen />);
+      await Promise.resolve();
+    });
+
+    const root = tree.root;
+    const acceptBtn = root.findAll(
+      node =>
+        typeof node.props?.onPress === 'function' &&
+        node
+          .findAllByType('Text' as any)
+          .some(t => t.props?.children === 'Accept'),
+    )[0];
+    const declineBtn = root.findAll(
+      node =>
+        typeof node.props?.onPress === 'function' &&
+        node
+          .findAllByType('Text' as any)
+          .some(t => t.props?.children === 'Decline'),
+    )[0];
+
+    const acceptStyle = StyleSheet.flatten(acceptBtn.props.style);
+    expect(acceptStyle.height).toBe(100);
+
+    const declineStyle = StyleSheet.flatten(declineBtn.props.style);
+    expect(declineStyle.height).toBe(100);
 
     tree.unmount();
   });
