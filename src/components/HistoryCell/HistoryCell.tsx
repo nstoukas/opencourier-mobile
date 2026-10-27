@@ -1,15 +1,13 @@
 import React, { useState } from 'react';
 import {
-  Image,
   StyleProp,
   ViewStyle,
   View,
   Text,
   TouchableOpacity,
 } from 'react-native';
-import { Images } from '@app/utilities/images';
 import { Icon } from '@app/components/Icon/Icon';
-import { CaretDown } from 'phosphor-react-native/src/icons/CaretDown';
+import { CaretDownIcon } from 'phosphor-react-native/src/icons/CaretDown';
 import { styles } from './HistoryCell.styles';
 import { Order } from '@app/types/types';
 import moment from 'moment';
@@ -18,6 +16,9 @@ import { useTranslation } from 'react-i18next';
 import { Button, ButtonType } from '../Button/Button';
 import { formatCurrencyFromCents } from '@app/utilities/currency';
 import { typeScale } from '@app/styles/theme';
+import { CalendarIcon } from 'phosphor-react-native/src/icons/Calendar';
+import { HandHeartIcon } from 'phosphor-react-native/src/icons/HandHeart';
+import { StorefrontIcon } from 'phosphor-react-native/src/icons/Storefront';
 
 type Props = {
   style?: StyleProp<ViewStyle>;
@@ -59,7 +60,7 @@ export const HistoryCell = ({ style, order, onPress }: Props) => {
               </Text>
             </View>
             <Icon
-              icon={CaretDown}
+              icon={CaretDownIcon}
               weight="bold"
               style={[
                 styles.imageCarret,
@@ -72,17 +73,33 @@ export const HistoryCell = ({ style, order, onPress }: Props) => {
         <View style={colapsed && { height: 0, overflow: 'hidden' }}>
           <View style={styles.separator} />
           <View style={styles.containerInfo}>
-            <Image source={Images.CalendarThin} style={styles.iconSmall} />
+            <Icon
+              icon={CalendarIcon}
+              weight="light"
+              size={16}
+              tone="muted-foreground"
+              style={styles.iconSmall}
+            />
             <Text style={styles.textInfo}>{date.format(formatSpaced)}</Text>
           </View>
           <View style={[styles.containerInfo]}>
-            <Image source={Images.Storefront} style={styles.iconSmall} />
+            <Icon
+              icon={StorefrontIcon}
+              size={16}
+              tone="muted-foreground"
+              style={styles.iconSmall}
+            />
             <Text style={styles.textInfo}>
               {order.pickupBusinessName ?? 'N/A'}
             </Text>
           </View>
           <View style={[styles.containerInfo]}>
-            <Image source={Images.Storefront} style={styles.iconSmall} />
+            <Icon
+              icon={StorefrontIcon}
+              size={16}
+              tone="muted-foreground"
+              style={styles.iconSmall}
+            />
             <Text style={styles.textInfo}>
               {order.dropoffLocationFormattedAddress ?? 'N/A'}
             </Text>
@@ -94,7 +111,12 @@ export const HistoryCell = ({ style, order, onPress }: Props) => {
             </Text>
           </View> */}
           <View style={styles.containerInfo}>
-            <Image source={Images.HandHeart} style={styles.iconSmall} />
+            <Icon
+              icon={HandHeartIcon}
+              size={20}
+              tone="muted-foreground"
+              style={styles.iconSmall}
+            />
             <Text style={styles.textInfo}>
               {formatCurrencyFromCents(order.tips ?? 0, order.currencyCode)}
             </Text>

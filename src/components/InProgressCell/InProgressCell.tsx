@@ -2,7 +2,6 @@ import React, { useEffect, useState } from 'react';
 import { StyleProp, ViewStyle, View } from 'react-native';
 import { styles } from './InProgressCell.styles';
 import { Note, Order } from '@app/types/types';
-import { Images } from '@app/utilities/images';
 import { useTranslation } from 'react-i18next';
 import { InProgressCellHeader } from '../InProgressCellHeader/InProgressCellHeader';
 import { InProgressAdress } from '../InProgressAddress/InProgressAddress';
@@ -12,6 +11,8 @@ import { NextStep } from '../NextStep/NextStep';
 import { getDistance } from '@app/utilities/geo';
 import { OrderStatus } from '@app/types/enums';
 import useUser from '@app/hooks/useUser';
+import { StorefrontIcon } from 'phosphor-react-native/src/icons/Storefront';
+import { HouseLineIcon } from 'phosphor-react-native/src/icons/HouseLine';
 
 type Props = {
   style?: StyleProp<ViewStyle>;
@@ -68,7 +69,7 @@ export const InProgressCell = ({
       <View style={{ paddingHorizontal: 12, paddingTop: 12 }}>
         <InProgressCellHeader
           title={order.dropoffName ?? 'N/A'}
-          icon={Images.Storefront}
+          icon={StorefrontIcon}
           expanded={topExpanded}
           onExpandedPress={() => setTopExpanded(!topExpanded)}
           finished={order.status === OrderStatus.picked_up}
@@ -117,7 +118,7 @@ export const InProgressCell = ({
         </View>
         <InProgressCellHeader
           title={order.dropoffBusinessName ?? 'N/A'}
-          icon={Images.HouseGray}
+          icon={HouseLineIcon}
           expanded={bottomExpanded}
           onExpandedPress={() => setBottomExpanded(!bottomExpanded)}
           finished={order.status === OrderStatus.dropped_off}

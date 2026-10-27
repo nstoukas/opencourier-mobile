@@ -1,9 +1,11 @@
 import React, { useMemo } from 'react';
-import { Image, StyleProp, ViewStyle, View, Text, Switch } from 'react-native';
-import { Images } from '@app/utilities/images';
+import { StyleProp, ViewStyle, View, Text, Switch } from 'react-native';
 import { styles } from './SideMenuItemSwitch.styles';
 import { SideMenuItem } from '@app/types/types';
 import { useTranslation } from 'react-i18next';
+import { Icon } from '@app/components/Icon/Icon';
+import { ArrowsClockwiseIcon } from 'phosphor-react-native/src/icons/ArrowsClockwise';
+import { MapPinIcon } from 'phosphor-react-native/src/icons/MapPin';
 
 type Props = {
   style?: StyleProp<ViewStyle>;
@@ -22,15 +24,15 @@ export const SideMenuItemSwitch = ({
   const icon = useMemo(() => {
     switch (item) {
       case SideMenuItem.Location:
-        return Images.MapPin;
+        return { glyph: MapPinIcon, weight: 'fill' as const };
       case SideMenuItem.AutoOrders:
-        return Images.Recycle;
+        return { glyph: ArrowsClockwiseIcon, weight: 'regular' as const };
     }
   }, [item]);
 
   return (
     <View style={[styles.container, style]}>
-      <Image source={icon} style={styles.icon} />
+      {icon && <Icon icon={icon.glyph} weight={icon.weight} size={32} />}
       <Text style={styles.text}>{t(`translations:${item}`)}</Text>
       <Switch value={isOn} onValueChange={onValueChange} />
     </View>

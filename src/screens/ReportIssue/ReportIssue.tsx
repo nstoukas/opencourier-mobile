@@ -17,6 +17,9 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Colors } from '@app/styles/colors';
 import { Button, ButtonType } from '@app/components/Button/Button';
 import { touchRow } from '@app/utilities/touch';
+import { Icon } from '@app/components/Icon/Icon';
+import { CaretRightIcon } from 'phosphor-react-native/src/icons/CaretRight';
+import { FlagIcon } from 'phosphor-react-native/src/icons/Flag';
 
 type Props = MainScreenProp<MainScreens.ReportIssue>;
 
@@ -39,7 +42,7 @@ export const ReportIssue = ({ navigation, route }: Props) => {
         onPress={() => setDidSelectIssue(true)}>
         <View style={styles.cellHorizonal}>
           <Text style={styles.cellText}>{item}</Text>
-          <Image source={Images.ArrowRightBlack} style={styles.arrow} />
+          <Icon icon={CaretRightIcon} size={14} />
         </View>
         <View style={styles.separator} />
       </TouchableOpacity>
@@ -82,7 +85,8 @@ export const ReportIssue = ({ navigation, route }: Props) => {
               title={t('translations:report_and_finalize')}
               onPress={() => navigation.goBack()}
               iconPosition="left"
-              icon={Images.Flag}
+              icon={FlagIcon}
+              iconWeight="fill"
             />
           </View>
         )}

@@ -1,17 +1,11 @@
 import React from 'react';
-import {
-  StyleProp,
-  ViewStyle,
-  View,
-  Image,
-  Text,
-  FlatList,
-} from 'react-native';
+import { StyleProp, ViewStyle, View, Text, FlatList } from 'react-native';
 import { styles } from './PopularNearbyInstances.styles';
 import { Instance } from '@app/types/types';
-import { Images } from '@app/utilities/images';
 import { useTranslation } from 'react-i18next';
 import { InstanceCell } from '../InstanceCell/InstanceCell';
+import { Icon } from '@app/components/Icon/Icon';
+import { SparkleIcon } from 'phosphor-react-native/src/icons/Sparkle';
 
 type Props = {
   style?: StyleProp<ViewStyle>;
@@ -29,7 +23,7 @@ export const PopularNearbyInstances = ({
   return (
     <View style={[styles.container, { flex: 1 }]}>
       <View style={[styles.containerHeader, style]}>
-        <Image source={Images.Sparkle} />
+        <Icon icon={SparkleIcon} size={20} />
         <Text style={styles.textTitle}>{t('translations:popular_nearby')}</Text>
       </View>
       <FlatList

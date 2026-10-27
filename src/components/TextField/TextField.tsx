@@ -1,6 +1,5 @@
 import React, { forwardRef, useEffect, useMemo, useState } from 'react';
 import { Colors } from '@app/styles/colors';
-import { Images } from '@app/utilities/images';
 import {
   StyleProp,
   Text,
@@ -8,11 +7,14 @@ import {
   View,
   ViewStyle,
   TouchableOpacity,
-  Image,
   TextInputProps,
 } from 'react-native';
 import { styles } from './TextField.styles';
 import { hitSlopFor } from '@app/utilities/touch';
+import { Icon } from '@app/components/Icon/Icon';
+import { InfoIcon } from 'phosphor-react-native/src/icons/Info';
+import { EyeIcon } from 'phosphor-react-native/src/icons/Eye';
+import { EyeClosedIcon } from 'phosphor-react-native/src/icons/EyeClosed';
 
 type Props = {
   error?: string;
@@ -96,13 +98,17 @@ export const TextField = forwardRef<TextInput, TextFieldProps>((props, ref) => {
             hitSlop={hitSlopFor(18, 18, 4)}
             activeOpacity={0.9}
             onPress={() => setInputTextHidden(!inputTextHidden)}>
-            <Image source={!inputTextHidden ? Images.Eye : Images.EyeClosed} />
+            <Icon
+              icon={!inputTextHidden ? EyeIcon : EyeClosedIcon}
+              weight={!inputTextHidden ? 'fill' : 'bold'}
+              size={22}
+            />
           </TouchableOpacity>
         )}
       </View>
       {error !== undefined && !isFocused && (
         <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-          <Image source={Images.RedInfo} />
+          <Icon icon={InfoIcon} weight="fill" size={14} tone="destructive" />
           <Text style={styles.labelError}>{error}</Text>
         </View>
       )}

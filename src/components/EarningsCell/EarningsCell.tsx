@@ -1,6 +1,5 @@
 import React, { useMemo } from 'react';
 import {
-  Image,
   StyleProp,
   Text,
   TouchableOpacity,
@@ -12,7 +11,8 @@ import moment, { Moment } from 'moment';
 import { nameOfDay, shortDate } from '@app/utilities/dates';
 import { useTranslation } from 'react-i18next';
 import { formatCurrencyFromCents } from '@app/utilities/currency';
-import { Images } from '@app/utilities/images';
+import { Icon } from '@app/components/Icon/Icon';
+import { CaretRightIcon } from 'phosphor-react-native/src/icons/CaretRight';
 
 type Props = {
   style?: StyleProp<ViewStyle>;
@@ -64,9 +64,7 @@ export const EarningsCell = ({
       <Text style={styles.textEarned}>
         {formatCurrencyFromCents(earned, currency)}
       </Text>
-      {onPress && (
-        <Image source={Images.ArrowRightBlack} style={styles.iconArrow} />
-      )}
+      {onPress && <Icon icon={CaretRightIcon} style={styles.iconArrow} />}
     </>
   );
 

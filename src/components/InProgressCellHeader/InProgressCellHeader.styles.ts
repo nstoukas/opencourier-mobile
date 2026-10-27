@@ -19,5 +19,4 @@ export const styles = StyleSheet.create({
   buttonCarret: {
     alignItems: 'flex-end',
   },
-  iconCaret: {},
 });

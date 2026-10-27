@@ -1,8 +1,13 @@
 import React, { useMemo } from 'react';
-import { Image, StyleProp, Text, View, ViewStyle } from 'react-native';
+import { StyleProp, Text, View, ViewStyle } from 'react-native';
 import { styles } from './DeliveryInstructionsCell.styles';
 import { DeliveryType } from '@app/types/types';
-import { Images } from '@app/utilities/images';
+import { Icon } from '@app/components/Icon/Icon';
+import { BuildingsIcon } from 'phosphor-react-native/src/icons/Buildings';
+import { DoorIcon } from 'phosphor-react-native/src/icons/Door';
+import { HandWavingIcon } from 'phosphor-react-native/src/icons/HandWaving';
+import { ParkIcon } from 'phosphor-react-native/src/icons/Park';
+import { PhoneCallIcon } from 'phosphor-react-native/src/icons/PhoneCall';
 
 type Props = {
   style?: StyleProp<ViewStyle>;
@@ -13,15 +18,15 @@ export const DeliveryInstructionsCell = ({ style, type }: Props) => {
   const icon = useMemo(() => {
     switch (type) {
       case DeliveryType.CallOnArrival:
-        return Images.PhoneCall;
+        return PhoneCallIcon;
       case DeliveryType.LeaveAtDoor:
-        return Images.Door;
+        return DoorIcon;
       case DeliveryType.MeetAtDoor:
-        return Images.HandWave;
+        return HandWavingIcon;
       case DeliveryType.MeetInside:
-        return Images.Buildings;
+        return BuildingsIcon;
       case DeliveryType.MeetOutside:
-        return Images.Park;
+        return ParkIcon;
       default:
         return undefined;
     }
@@ -29,7 +34,7 @@ export const DeliveryInstructionsCell = ({ style, type }: Props) => {
 
   return (
     <View style={[styles.container, style]}>
-      {icon && <Image source={icon} style={styles.icon} />}
+      {icon && <Icon icon={icon} weight="fill" size={16} />}
       <Text style={styles.text}>{type}</Text>
     </View>
   );

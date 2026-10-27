@@ -6,7 +6,7 @@ import { color, ColorName } from '@app/styles/theme';
 
 type Props = {
   // The Phosphor glyph itself, imported one module per icon so Metro does not load all of them:
-  // import { CaretDown } from 'phosphor-react-native/src/icons/CaretDown'
+  // import { CaretDownIcon } from 'phosphor-react-native/src/icons/CaretDown'
   icon: PhosphorIcon;
   size?: number;
   weight?: IconWeight;

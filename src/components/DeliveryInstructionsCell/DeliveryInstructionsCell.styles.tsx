@@ -13,10 +13,6 @@ export const styles = StyleSheet.create({
     flexDirection: 'row',
     alignSelf: 'flex-start',
   },
-  icon: {
-    width: 16,
-    height: 16,
-  },
   text: {
     fontWeight: '500',
     fontSize: typeScale['body-sm'].fontSize,

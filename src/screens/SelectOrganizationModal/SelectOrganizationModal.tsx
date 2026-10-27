@@ -1,13 +1,11 @@
 import React, { useEffect, useState } from 'react';
 import {
   View,
-  Image,
   TouchableOpacity,
   Text,
   FlatList,
   ActivityIndicator,
 } from 'react-native';
-import { Images } from '@app/utilities/images';
 import { styles } from './SelectOrganizationModal.styles';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Organization } from '@app/types/types';
@@ -15,6 +13,8 @@ import { OrganizationCell } from '@app/components/OrganizationCell/OrganizationC
 import { RootScreen, RootScreenProp } from '@app/navigation/types';
 import { useTranslation } from 'react-i18next';
 import useInstance from '@app/hooks/useInstance';
+import { Icon } from '@app/components/Icon/Icon';
+import { PlusCircleIcon } from 'phosphor-react-native/src/icons/PlusCircle';
 
 type Props = RootScreenProp<RootScreen.SelectOrganizationModal>;
 
@@ -76,7 +76,7 @@ export const SelectOrganizationModal = ({ navigation, route }: Props) => {
         )}
         {/* <View style={[styles.contentButton, { paddingBottom: bottom }]}>
           <TouchableOpacity style={styles.buttonAdd} onPress={() => {}}>
-            <Image source={Images.Plus} style={styles.plus} />
+            <Icon icon={PlusCircleIcon} weight="fill" size={16} tone="muted-foreground" style={styles.plus} />
             <Text style={styles.textAdd}>{t('translations:add_instance')}</Text>
           </TouchableOpacity>
         </View> */}

@@ -29,11 +29,6 @@ export const styles = StyleSheet.create({
     color: Colors.black1,
     marginLeft: 8,
   },
-  arrow: {
-    width: 16,
-    height: 16,
-    tintColor: Colors.black1,
-  },
   containerRight: {
     paddingLeft: 30,
     justifyContent: 'center',

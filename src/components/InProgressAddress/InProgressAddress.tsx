@@ -3,14 +3,15 @@ import {
   StyleProp,
   ViewStyle,
   View,
-  Image,
   Text,
   TouchableOpacity,
 } from 'react-native';
 import { styles } from './InProgressAdress.styles';
-import { Images } from '@app/utilities/images';
 import { Order } from '@app/types/types';
 import { hitSlopFor } from '@app/utilities/touch';
+import { Icon } from '@app/components/Icon/Icon';
+import { CopyIcon } from 'phosphor-react-native/src/icons/Copy';
+import { PhoneOutgoingIcon } from 'phosphor-react-native/src/icons/PhoneOutgoing';
 
 type Props = {
   style?: StyleProp<ViewStyle>;
@@ -61,13 +62,13 @@ export const InProgressAdress = ({
         hitSlop={hitSlopFor(32, 32, 4)}
         style={styles.buttonAddress}
         onPress={() => onCopyAddress(order)}>
-        <Image source={Images.Chats} style={styles.iconAddressButton} />
+        <Icon icon={CopyIcon} weight="fill" size={14} />
       </TouchableOpacity>
       <TouchableOpacity
         hitSlop={hitSlopFor(32, 32, 4)}
         style={styles.buttonAddress}
         onPress={() => onCall(order)}>
-        <Image source={Images.PhoneSmall} style={styles.iconAddressButton} />
+        <Icon icon={PhoneOutgoingIcon} weight="fill" size={14} />
       </TouchableOpacity>
     </View>
   );

@@ -7,8 +7,9 @@ import { useTranslation } from 'react-i18next';
 import { TextField } from '@app/components/TextField/TextField';
 import { validateEmail } from '@app/utilities/text';
 import { Button, ButtonType } from '@app/components/Button/Button';
-import { Images } from '@app/utilities/images';
-import { Image } from 'react-native';
+import { Icon } from '@app/components/Icon/Icon';
+import { InfoIcon } from 'phosphor-react-native/src/icons/Info';
+import { FloppyDiskBackIcon } from 'phosphor-react-native/src/icons/FloppyDiskBack';
 
 type Props = MainScreenProp<MainScreens.EmergencyContact>;
 
@@ -88,7 +89,7 @@ export const EmergencyContact = ({ navigation }: Props) => {
             style={[styles.textField, { marginBottom: 2 }]}
           />
           <View style={styles.containerHorizontal}>
-            <Image source={Images.Info} />
+            <Icon icon={InfoIcon} weight="fill" size={14} />
             <Text style={styles.textInfo}>
               {t('translations:include_code')}
             </Text>
@@ -113,7 +114,8 @@ export const EmergencyContact = ({ navigation }: Props) => {
             type={ButtonType.green}
             title={t('translations:save')}
             onPress={() => undefined}
-            icon={Images.FloppyDiskBack}
+            icon={FloppyDiskBackIcon}
+            iconWeight="fill"
           />
         </ScrollView>
       </SafeAreaView>

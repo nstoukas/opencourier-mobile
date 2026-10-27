@@ -4,7 +4,6 @@ import {
   SafeAreaView,
   Text,
   FlatList,
-  Image,
   TouchableOpacity,
 } from 'react-native';
 import { styles } from './ShiftAvailabilityScreen.styles';
@@ -18,13 +17,14 @@ import {
   ShiftAvailability,
 } from '@app/types/types';
 import { ShiftCell } from '@app/components/ShiftCell/ShiftCell';
-import { Images } from '@app/utilities/images';
 import { RootScreen } from '@app/navigation/types';
 import DatePicker from 'react-native-date-picker';
 import useUserSettings from '@app/hooks/useUserSetttings';
 import useInstance from '@app/hooks/useInstance';
 import { RemoteImage } from '@app/components/RemoteImage/RemoteImage';
 import { touchRow } from '@app/utilities/touch';
+import { Icon } from '@app/components/Icon/Icon';
+import { CaretDownIcon } from 'phosphor-react-native/src/icons/CaretDown';
 
 type Props = MainScreenProp<MainScreens.ShiftAvailabilityScreen>;
 function capitalizeFirstLetter(string: string) {
@@ -405,7 +405,7 @@ export const ShiftAvailabilityScreen = ({ navigation }: Props) => {
             style={[touchRow, styles.org]}>
             <RemoteImage uri={selectedOrg.imageUrl} style={styles.iconOrg} />
             <Text style={styles.textOrg}>{selectedOrg.name}</Text>
-            <Image source={Images.Dropdown} />
+            <Icon icon={CaretDownIcon} weight="fill" size={16} />
           </TouchableOpacity>
         )}
         <FlatList

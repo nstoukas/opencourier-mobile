@@ -1,14 +1,16 @@
 import React from 'react';
-import { Image, StyleProp, Text, View, ViewStyle } from 'react-native';
+import { StyleProp, Text, View, ViewStyle } from 'react-native';
 import { styles } from './ReportAnIncident.styles';
 import { generateBoxShadowStyle } from '@app/utilities/styles';
 import { Colors } from '@app/styles/colors';
 import { TouchableOpacity } from 'react-native';
 import { Button, ButtonType } from '../Button/Button';
-import { Images } from '@app/utilities/images';
 import { useTranslation } from 'react-i18next';
 import { typeScale } from '@app/styles/theme';
 import { hitSlopFor } from '@app/utilities/touch';
+import { Icon } from '@app/components/Icon/Icon';
+import { InfoIcon } from 'phosphor-react-native/src/icons/Info';
+import { XIcon } from 'phosphor-react-native/src/icons/X';
 
 type Props = {
   style?: StyleProp<ViewStyle>;
@@ -25,14 +27,14 @@ export const ReportAnIncident = ({ style, onDismiss }: Props) => {
         style,
       ]}>
       <View style={styles.containerRight}>
-        <Image source={Images.Info} style={styles.iconInfo} />
+        <Icon icon={InfoIcon} weight="fill" style={styles.iconInfo} />
         <View style={styles.contentRight}>
           <View style={styles.containerHorizontal}>
             <Text style={styles.textReport}>
               {t('translations:report_incident')}
             </Text>
             <TouchableOpacity hitSlop={hitSlopFor(20)} onPress={onDismiss}>
-              <Image source={Images.X} style={styles.imageX} />
+              <Icon icon={XIcon} size={20} />
             </TouchableOpacity>
           </View>
           <Text style={styles.textReportDetails}>

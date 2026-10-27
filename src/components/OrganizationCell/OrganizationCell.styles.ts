@@ -35,8 +35,4 @@ export const styles = StyleSheet.create({
     marginLeft: 20,
     marginRight: 8,
   },
-  checkmark: {
-    width: 32,
-    height: 32,
-  },
 });

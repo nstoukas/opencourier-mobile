@@ -31,11 +31,6 @@ export const styles = StyleSheet.create({
     backgroundColor: Colors.black,
     borderRadius: radius.full,
   },
-  checkmark: {
-    width: 14,
-    height: 14,
-    tintColor: Colors.white,
-  },
   containerRetake: {
     width: 60,
     height: 60,

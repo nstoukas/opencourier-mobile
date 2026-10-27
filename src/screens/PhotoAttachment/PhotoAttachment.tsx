@@ -9,7 +9,6 @@ import {
   Platform,
   Alert,
 } from 'react-native';
-import { Images } from '@app/utilities/images';
 import { styles } from './PhotoAttachment.styles';
 import { MainScreenProp, MainScreens } from '@app/navigation/main/types';
 import {
@@ -17,9 +16,13 @@ import {
   BackNavButton,
 } from '@app/components/BackNavButton/BackNavButton';
 import { Button, ButtonType } from '@app/components/Button/Button';
-import { Colors } from '@app/styles/colors';
 import { RNCamera } from 'react-native-camera';
 import { check, PERMISSIONS, request } from 'react-native-permissions';
+import { Icon } from '@app/components/Icon/Icon';
+import { ArrowCounterClockwiseIcon } from 'phosphor-react-native/src/icons/ArrowCounterClockwise';
+import { CameraIcon } from 'phosphor-react-native/src/icons/Camera';
+import { CheckIcon } from 'phosphor-react-native/src/icons/Check';
+import { FlashlightIcon } from 'phosphor-react-native/src/icons/Flashlight';
 
 enum ScreenState {
   requestingPermission,
@@ -51,7 +54,7 @@ export const PhotoAttachment = ({ navigation, route }: Props) => {
         data: data,
         name: filename!,
         type: metadata,
-      }
+      };
       onAttach(file);
       navigation.goBack();
     }
@@ -164,7 +167,12 @@ export const PhotoAttachment = ({ navigation, route }: Props) => {
                 style={styles.containerButtonOk}
                 onPress={handleAttach}>
                 <View style={styles.containerCheckmark}>
-                  <Image source={Images.Checkmark} style={styles.checkmark} />
+                  <Icon
+                    icon={CheckIcon}
+                    weight="bold"
+                    size={14}
+                    tone="background"
+                  />
                 </View>
               </TouchableOpacity>
               <TouchableOpacity
@@ -174,7 +182,11 @@ export const PhotoAttachment = ({ navigation, route }: Props) => {
                   setCameraReady(false);
                   setScreenState(ScreenState.takingPhoto);
                 }}>
-                <Image source={Images.ArrowCounterClockwise} />
+                <Icon
+                  icon={ArrowCounterClockwiseIcon}
+                  size={32}
+                  tone="background"
+                />
               </TouchableOpacity>
             </View>
           </>
@@ -211,15 +223,21 @@ export const PhotoAttachment = ({ navigation, route }: Props) => {
                 onPress={takePhoto}
                 disabled={!cameraReady}>
                 <View style={styles.containerCheckmark}>
-                  <Image source={Images.CameraBlack} style={styles.checkmark} />
+                  <Icon
+                    icon={CameraIcon}
+                    weight="fill"
+                    size={14}
+                    tone="background"
+                  />
                 </View>
               </TouchableOpacity>
               <TouchableOpacity
                 style={styles.containerRetake}
                 onPress={() => setFlashOn(!flashOn)}>
-                <Image
-                  source={Images.Flashlight}
-                  style={{ tintColor: flashOn ? 'yellow' : Colors.white }}
+                <Icon
+                  icon={FlashlightIcon}
+                  weight="fill"
+                  tone={flashOn ? 'warning' : 'background'}
                 />
               </TouchableOpacity>
             </View>

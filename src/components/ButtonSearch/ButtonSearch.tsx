@@ -1,14 +1,9 @@
 import React from 'react';
-import {
-  Image,
-  StyleProp,
-  ViewStyle,
-  TouchableOpacity,
-  View,
-} from 'react-native';
-import { Images } from '@app/utilities/images';
+import { StyleProp, ViewStyle, TouchableOpacity, View } from 'react-native';
 import { styles } from './ButtonSearch.styles';
 import { hitSlopFor } from '@app/utilities/touch';
+import { Icon } from '@app/components/Icon/Icon';
+import { MagnifyingGlassIcon } from 'phosphor-react-native/src/icons/MagnifyingGlass';
 
 type Props = {
   style?: StyleProp<ViewStyle>;
@@ -27,7 +22,7 @@ export const ButtonSearch = ({ style, onPress, isSearching }: Props) => {
       style={[styles.container, style]}
       onPress={onToggle}>
       <View style={styles.containerOutUntoggled}>
-        <Image source={Images.Search} />
+        <Icon icon={MagnifyingGlassIcon} weight="bold" size={20} />
       </View>
     </TouchableOpacity>
   );

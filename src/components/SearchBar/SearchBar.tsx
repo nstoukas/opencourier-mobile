@@ -1,8 +1,9 @@
 import React, { useMemo, useState } from 'react';
-import { Image, StyleProp, ViewStyle, View, TextInput } from 'react-native';
-import { Images } from '@app/utilities/images';
+import { StyleProp, ViewStyle, View, TextInput } from 'react-native';
 import { styles } from './SearchBar.styles';
 import { Colors } from '@app/styles/colors';
+import { Icon } from '@app/components/Icon/Icon';
+import { MagnifyingGlassIcon } from 'phosphor-react-native/src/icons/MagnifyingGlass';
 
 type Props = {
   style?: StyleProp<ViewStyle>;
@@ -30,7 +31,7 @@ export const SearchBar = ({
   return (
     <View style={[styles.container, style, { borderColor: borderColor }]}>
       <View style={styles.content}>
-        <Image source={Images.Search} style={styles.search} />
+        <Icon icon={MagnifyingGlassIcon} size={20} style={styles.search} />
         <TextInput
           placeholderTextColor={Colors.gray21}
           placeholder={placeholder ? placeholder : 'Search'}

@@ -2,7 +2,6 @@ import { Colors } from '@app/styles/colors';
 import React, { FunctionComponent, useEffect } from 'react';
 import {
   ActivityIndicator,
-  Image,
   StyleProp,
   StyleSheet,
   View,
@@ -19,9 +18,10 @@ import Animated, {
   withTiming,
 } from 'react-native-reanimated';
 import { SCREEN_WIDTH } from '@app/utilities/constants';
-import { Images } from '@app/utilities/images';
 import LinearGradient from 'react-native-linear-gradient';
 import { radius, typeScale } from '@app/styles/theme';
+import { Icon } from '@app/components/Icon/Icon';
+import { CheckFatIcon } from 'phosphor-react-native/src/icons/CheckFat';
 
 const BUTTON_WIDTH = SCREEN_WIDTH / 1.2;
 const BUTTON_HEIGHT = 48;
@@ -127,9 +127,11 @@ const ButtonSwipe: FunctionComponent<Props> = ({
                 style={[styles.containerGradient]}
                 colors={Colors.swipeButtonGradientArray}>
                 <View style={styles.containerCheckmark}>
-                  <Image
-                    source={Images.CheckFat}
-                    style={{ width: 7, height: 7, tintColor: Colors.white }}
+                  <Icon
+                    icon={CheckFatIcon}
+                    weight="fill"
+                    size={7}
+                    tone="background"
                   />
                 </View>
               </LinearGradient>

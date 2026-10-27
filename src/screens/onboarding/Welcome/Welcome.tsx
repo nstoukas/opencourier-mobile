@@ -18,6 +18,7 @@ import { useTranslation } from 'react-i18next';
 import { TextField } from '@app/components/TextField/TextField';
 import { Button, ButtonType } from '@app/components/Button/Button';
 import { Colors } from '@app/styles/colors';
+import { ArrowRightIcon } from 'phosphor-react-native/src/icons/ArrowRight';
 
 type Props = OnboardingScreenProp<OnboardingScreen.Welcome>;
 
@@ -146,7 +147,7 @@ export const WelcomeScreen = ({ navigation }: Props) => {
               }
               iconPosition="right"
               type={ButtonType.grayBGBlackText}
-              icon={Images.ArrowRightThin}
+              icon={ArrowRightIcon}
               title={t('translations:continue')}
               onPress={() => nextStep(registryLink, instanceLink)}
             />

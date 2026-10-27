@@ -18,8 +18,4 @@ export const styles = StyleSheet.create({
     color: Colors.black1,
     fontWeight: '600',
   },
-  icon: {
-    width: 16,
-    height: 16,
-  },
 });

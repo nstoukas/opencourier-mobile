@@ -1,7 +1,8 @@
 import React from 'react';
-import { Image, StyleProp, ViewStyle, TouchableOpacity } from 'react-native';
-import { Images } from '@app/utilities/images';
+import { StyleProp, ViewStyle, TouchableOpacity } from 'react-native';
 import { styles } from './BackNavButton.styles';
+import { Icon } from '@app/components/Icon/Icon';
+import { ArrowLeftIcon } from 'phosphor-react-native/src/icons/ArrowLeft';
 import { hitSlopFor } from '@app/utilities/touch';
 
 export enum BackButtonType {
@@ -30,11 +31,10 @@ export const BackNavButton = ({
         style,
       ]}
       onPress={onPress}>
-      <Image
-        source={Images.ArrowLeft}
-        style={
-          type === BackButtonType.white ? styles.iconBlack : styles.iconWhite
-        }
+      <Icon
+        icon={ArrowLeftIcon}
+        size={20}
+        tone={type === BackButtonType.white ? 'foreground' : 'background'}
       />
     </TouchableOpacity>
   );

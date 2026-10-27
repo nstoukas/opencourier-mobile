@@ -19,10 +19,6 @@ export const styles = StyleSheet.create({
     lineHeight: typeScale['body-sm'].lineHeight,
     color: Colors.black,
   },
-  imageArrowRight: {
-    width: 24,
-    height: 24,
-  },
   textSubtitle: {
     fontWeight: '500',
     fontSize: typeScale.caption.fontSize,
@@ -30,8 +26,6 @@ export const styles = StyleSheet.create({
     color: Colors.blackAlpha05,
   },
   imageRadioButton: {
-    width: 20,
-    height: 20,
     marginTop: 3,
   },
   separator: {

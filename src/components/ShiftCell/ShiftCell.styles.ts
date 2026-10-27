@@ -23,8 +23,6 @@ export const styles = StyleSheet.create({
     color: Colors.blackAlpha05,
   },
   imageRadioButton: {
-    width: 20,
-    height: 20,
     marginTop: 3,
   },
   separator: {
@@ -62,10 +60,5 @@ export const styles = StyleSheet.create({
     borderRadius: radius.md,
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  iconTrash: {
-    width: 14,
-    height: 14,
-    tintColor: Colors.black1,
   },
 });

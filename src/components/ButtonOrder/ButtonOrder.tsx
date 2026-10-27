@@ -8,15 +8,16 @@ import {
   TextStyle,
   View,
   Animated,
-  Image,
 } from 'react-native';
 import { styles } from './ButtonOrder.styles';
 import { Paralelogram } from '../Paralelogram/Paralelogram';
 import { SCREEN_WIDTH } from '@app/utilities/constants';
 import { useTranslation } from 'react-i18next';
-import { Images } from '@app/utilities/images';
 import { useCountdownBar } from '@app/hooks/useCountdownBar';
 import { control } from '@app/styles/theme';
+import { Icon } from '@app/components/Icon/Icon';
+import { CheckCircleIcon } from 'phosphor-react-native/src/icons/CheckCircle';
+import { XCircleIcon } from 'phosphor-react-native/src/icons/XCircle';
 
 export enum ButtonOrderType {
   accept = 'accept',
@@ -113,12 +114,11 @@ export const ButtonOrder = ({
       ]}>
       {(type === ButtonOrderType.accept ||
         type === ButtonOrderType.decline) && (
-        <Image
-          source={
-            type === ButtonOrderType.accept
-              ? Images.CheckHollow
-              : Images.XHollow
-          }
+        <Icon
+          icon={type === ButtonOrderType.accept ? CheckCircleIcon : XCircleIcon}
+          weight="fill"
+          size={48}
+          tone={type === ButtonOrderType.accept ? 'background' : 'foreground'}
         />
       )}
       <Text style={[styles.textTitle, textStyle, { color: textColor }]}>

@@ -1,17 +1,17 @@
 import React from 'react';
 import {
-  Image,
   StyleProp,
   ViewStyle,
   View,
   Text,
   TouchableOpacity,
 } from 'react-native';
-import { Images } from '@app/utilities/images';
 import { styles } from './OrganizationCell.styles';
 import { Organization } from '@app/types/types';
 import { Colors } from '@app/styles/colors';
 import { RemoteImage } from '@app/components/RemoteImage/RemoteImage';
+import { Icon } from '@app/components/Icon/Icon';
+import { CheckCircleIcon } from 'phosphor-react-native/src/icons/CheckCircle';
 
 type Props = {
   style?: StyleProp<ViewStyle>;
@@ -43,7 +43,7 @@ export const OrganizationCell = ({
           </Text>
         </View>
         {selected && (
-          <Image style={styles.checkmark} source={Images.CheckmarkGreen} />
+          <Icon icon={CheckCircleIcon} weight="fill" size={32} tone="success" />
         )}
       </View>
       <View style={styles.separator} />

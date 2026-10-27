@@ -31,6 +31,8 @@ import { useLocationPermission } from '@app/hooks/useLocationPermission';
 import usePushNotifications from '@app/services/notifications';
 import UserContext from '@app/context/userContext';
 import Geolocation from 'react-native-geolocation-service';
+import { CheckCircleIcon } from 'phosphor-react-native/src/icons/CheckCircle';
+import { ArrowRightIcon } from 'phosphor-react-native/src/icons/ArrowRight';
 
 type Props = OnboardingScreenProp<OnboardingScreen.Landing>;
 
@@ -266,7 +268,8 @@ export const LandingScreen = ({ navigation }: Props) => {
               style={[styles.buttonContinue, styles.buttonContinueSpacing]}
               iconPosition="right"
               type={ButtonType.green}
-              icon={Images.CheckWhite}
+              icon={CheckCircleIcon}
+              iconWeight="fill"
               title={permissionButtonTitle}
               onPress={onAskForPermission}
               disabled={permissionButtonState}
@@ -276,7 +279,7 @@ export const LandingScreen = ({ navigation }: Props) => {
             style={styles.buttonContinue}
             iconPosition="right"
             type={ButtonType.grayBGBlackText}
-            icon={Images.ArrowRightThin}
+            icon={ArrowRightIcon}
             title={
               page < 3 ? t('translations:continue') : t('translations:skip')
             }

@@ -4,7 +4,6 @@ import {
   Text,
   SafeAreaView,
   TouchableOpacity,
-  Image,
   SectionListData,
   SectionList,
   Alert,
@@ -14,7 +13,6 @@ import { MainScreenProp, MainScreens } from '@app/navigation/main/types';
 import { BackNavButton } from '@app/components/BackNavButton/BackNavButton';
 import { QuickNote } from '@app/components/QuickNote/QuickNote';
 import { CustomerNotes, Photo } from '@app/types/types';
-import { Images } from '@app/utilities/images';
 import { Button, ButtonType } from '@app/components/Button/Button';
 import { PhotoCell } from '@app/components/PhotoCell/PhotoCell';
 import { services } from '@app/services/service';
@@ -24,6 +22,10 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { QueryKeys } from '@app/utilities/queryKeys';
 import { hideInProgressOrderAfterDelivery } from '@app/utilities/inProgressListFilter';
 import { hitSlopFor } from '@app/utilities/touch';
+import { Icon } from '@app/components/Icon/Icon';
+import { PlusIcon } from 'phosphor-react-native/src/icons/Plus';
+import { CameraIcon } from 'phosphor-react-native/src/icons/Camera';
+import { CheckCircleIcon } from 'phosphor-react-native/src/icons/CheckCircle';
 
 type Props = MainScreenProp<MainScreens.MarkAsDelivered>;
 
@@ -154,7 +156,7 @@ export const MarkAsDelivered = ({ navigation, route }: Props) => {
           hitSlop={hitSlopFor(32)}
           style={styles.addNote}
           onPress={() => onAddNote()}>
-          <Image source={Images.PlusBlack} />
+          <Icon icon={PlusIcon} size={14} />
         </TouchableOpacity>
       </View>
     );
@@ -211,7 +213,8 @@ export const MarkAsDelivered = ({ navigation, route }: Props) => {
           <Button
             textStyle={styles.buttonTextStyle}
             style={styles.buttonConfirm}
-            icon={Images.Camera}
+            icon={CameraIcon}
+            iconWeight="fill"
             type={ButtonType.black}
             title={t('translations:take_a_photo')}
             onPress={() =>
@@ -226,7 +229,8 @@ export const MarkAsDelivered = ({ navigation, route }: Props) => {
           isLoading={isPending}
           style={styles.buttonConfirm}
           textStyle={styles.buttonTextStyle}
-          icon={Images.CheckWhite}
+          icon={CheckCircleIcon}
+          iconWeight="fill"
           type={ButtonType.green}
           title={t('translations:confirm_mark_as_delivered')}
           onPress={handleConfirm}

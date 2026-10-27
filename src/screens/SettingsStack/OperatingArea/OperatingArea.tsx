@@ -5,7 +5,6 @@ import {
   Text,
   FlatList,
   TouchableOpacity,
-  Image,
 } from 'react-native';
 import { styles } from './OperatingArea.styles';
 import { MainScreenProp, MainScreens } from '@app/navigation/main/types';
@@ -15,9 +14,10 @@ import {
   SettingsCell,
   SettingsCellType,
 } from '@app/components/SettingsCell/SettingsCell';
-import { Images } from '@app/utilities/images';
 import useUserSettings from '@app/hooks/useUserSetttings';
 import { hitSlopFor } from '@app/utilities/touch';
+import { Icon } from '@app/components/Icon/Icon';
+import { PlusIcon } from 'phosphor-react-native/src/icons/Plus';
 
 type Props = MainScreenProp<MainScreens.OperatingArea>;
 
@@ -50,7 +50,7 @@ export const OperatingArea = ({ navigation }: Props) => {
             hitSlop={hitSlopFor(24)}
             onPress={() => undefined}
             style={styles.buttonAdd}>
-            <Image source={Images.PlusBlack} />
+            <Icon icon={PlusIcon} size={14} />
           </TouchableOpacity>
         </View>
         <FlatList

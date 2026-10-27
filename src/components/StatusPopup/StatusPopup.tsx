@@ -1,11 +1,14 @@
 import React, { useMemo } from 'react';
-import { Image, StyleProp, Text, View, ViewStyle } from 'react-native';
+import { StyleProp, Text, View, ViewStyle } from 'react-native';
 import { styles } from './StatusPopup.styles';
 import { UserStatus } from '@app/types/types';
 import { Button, ButtonType } from '../Button/Button';
-import { Images } from '@app/utilities/images';
 import { useTranslation } from 'react-i18next';
 import { typeScale } from '@app/styles/theme';
+import { Icon } from '@app/components/Icon/Icon';
+import { FlagCheckeredIcon } from 'phosphor-react-native/src/icons/FlagCheckered';
+import { PowerIcon } from 'phosphor-react-native/src/icons/Power';
+import { SteeringWheelIcon } from 'phosphor-react-native/src/icons/SteeringWheel';
 
 type Props = {
   style?: StyleProp<ViewStyle>;
@@ -63,11 +66,11 @@ export const StatusPopup = ({ style, type, onAccept, onCancel }: Props) => {
   const image = useMemo(() => {
     switch (type) {
       case UserStatus.Online:
-        return Images.SteeringWheel;
+        return SteeringWheelIcon;
       case UserStatus.Offline:
-        return Images.Power;
+        return PowerIcon;
       case UserStatus.LastCall:
-        return Images.FlagCheckered;
+        return FlagCheckeredIcon;
     }
   }, [type]);
 
@@ -75,7 +78,7 @@ export const StatusPopup = ({ style, type, onAccept, onCancel }: Props) => {
     <View style={styles.content}>
       <View style={[styles.container, style]}>
         <View style={styles.containerHorizontal}>
-          <Image source={image} style={styles.image} />
+          {image && <Icon icon={image} style={styles.image} />}
           <View>
             <Text style={styles.title}>{title}</Text>
             <Text style={styles.subtitle}>{subtitle}</Text>

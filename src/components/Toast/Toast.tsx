@@ -1,6 +1,5 @@
 import React, { useMemo } from 'react';
 import {
-  Image,
   StyleProp,
   Text,
   TouchableOpacity,
@@ -8,12 +7,15 @@ import {
   ViewStyle,
 } from 'react-native';
 import { styles } from './Toast.styles';
-import { Images } from '@app/utilities/images';
 import { ToastMessage } from '@app/types/types';
 import { useTranslation } from 'react-i18next';
 import { Colors } from '@app/styles/colors';
 import { generateBoxShadowStyle } from '@app/utilities/styles';
 import { hitSlopFor } from '@app/utilities/touch';
+import { Icon } from '@app/components/Icon/Icon';
+import { XIcon } from 'phosphor-react-native/src/icons/X';
+import { InfoIcon } from 'phosphor-react-native/src/icons/Info';
+import { color, ColorName } from '@app/styles/theme';
 
 type Props = {
   style?: StyleProp<ViewStyle>;
@@ -53,26 +55,28 @@ export const Toast = ({
     }
   }, [toast]);
 
-  const tintColor = useMemo(() => {
+  // The toast's accent as a token name: its border and its icon take it (spec 0007).
+  const tintTone = useMemo((): ColorName | undefined => {
     switch (toast) {
       case ToastMessage.enableNotifications:
-        return Colors.gray9;
+        return 'input';
       case ToastMessage.itemsBagged:
-        return Colors.yellow1;
+        return 'warning';
       case ToastMessage.enableLocationServices:
-        return Colors.red1;
+        return 'destructive';
       case ToastMessage.pickupBeforeContinuing:
-        return Colors.red1;
+        return 'destructive';
       case ToastMessage.waitingForNewOrders:
-        return Colors.green1;
+        return 'success';
       case ToastMessage.addressCopied:
-        return Colors.green1;
+        return 'success';
       case ToastMessage.get_closer:
-        return Colors.red1;
+        return 'destructive';
       case ToastMessage.item_may_be_bagged:
-        return Colors.blue7;
+        return 'info';
     }
   }, [toast]);
+  const tintColor = tintTone ? color[tintTone] : undefined;
 
   return (
     <View
@@ -82,9 +86,12 @@ export const Toast = ({
         generateBoxShadowStyle(0, 10, 0.08, 12, 20, Colors.black8),
         style,
       ]}>
-      <Image
-        source={Images.Info}
-        style={{ tintColor: tintColor, marginRight: 8, width: 20, height: 20 }}
+      <Icon
+        icon={InfoIcon}
+        weight="fill"
+        size={20}
+        tone={tintTone}
+        style={styles.iconInfo}
       />
       <Text style={styles.text}>{t(`translations:${toast}`)}</Text>
       {(toast === ToastMessage.enableNotifications ||
@@ -104,7 +111,7 @@ export const Toast = ({
             style={styles.buttonClose}
             onPress={() => onClose && onClose()}>
             <View style={styles.separator} />
-            <Image source={Images.X} />
+            <Icon icon={XIcon} size={10} />
           </TouchableOpacity>
         )}
     </View>

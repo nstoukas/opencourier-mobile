@@ -51,10 +51,6 @@ export const styles = StyleSheet.create({
     flex: 1,
     fontSize: typeScale.body.fontSize,
   },
-  iconX: {
-    width: 20,
-    height: 20,
-  },
   cardText: {
     fontSize: typeScale['body-sm'].fontSize,
     fontWeight: '600',

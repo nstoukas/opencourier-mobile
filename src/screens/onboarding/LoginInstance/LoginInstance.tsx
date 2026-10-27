@@ -18,6 +18,13 @@ import { useMutation } from '@tanstack/react-query';
 import useUser from '@app/hooks/useUser';
 import { typeScale } from '@app/styles/theme';
 import { hitSlopFor } from '@app/utilities/touch';
+import { Icon } from '@app/components/Icon/Icon';
+import { MagnifyingGlassIcon } from 'phosphor-react-native/src/icons/MagnifyingGlass';
+import { PasswordIcon } from 'phosphor-react-native/src/icons/Password';
+import { XIcon } from 'phosphor-react-native/src/icons/X';
+import { PlusCircleIcon } from 'phosphor-react-native/src/icons/PlusCircle';
+import { SignOutIcon } from 'phosphor-react-native/src/icons/SignOut';
+import { PaperPlaneTiltIcon } from 'phosphor-react-native/src/icons/PaperPlaneTilt';
 
 type Props = OnboardingScreenProp<OnboardingScreen.LoginInstance>;
 
@@ -116,7 +123,7 @@ export const LoginInstance = ({ navigation, route }: Props) => {
               style={styles.textField}
             />
             <Button
-              icon={Images.Logout}
+              icon={SignOutIcon}
               type={ButtonType.green}
               title={t('translations:log_in')}
               onPress={onLoginHandle}
@@ -137,7 +144,8 @@ export const LoginInstance = ({ navigation, route }: Props) => {
               style={styles.textField}
             />
             <Button
-              icon={Images.PaperPlaneTilt}
+              icon={PaperPlaneTiltIcon}
+              iconWeight="fill"
               type={ButtonType.green}
               title={t('translations:send_reset')}
               onPress={() =>
@@ -159,14 +167,14 @@ export const LoginInstance = ({ navigation, route }: Props) => {
                 <TouchableOpacity
                   hitSlop={hitSlopFor(20)}
                   onPress={() => setScreenState(ScreenState.login)}>
-                  <Image source={Images.X} style={styles.imageX} />
+                  <Icon icon={XIcon} size={20} />
                 </TouchableOpacity>
               </View>
               <Text style={styles.textEmailSent}>
                 {t('translations:email_sent')}
               </Text>
               <Button
-                icon={Images.Logout}
+                icon={SignOutIcon}
                 textStyle={{
                   fontSize: typeScale['body-sm'].fontSize,
                   fontWeight: '700',
@@ -196,7 +204,13 @@ export const LoginInstance = ({ navigation, route }: Props) => {
                   {t('translations:reset_password')}
                 </Text>
               </Text>
-              <Image source={Images.Reset} style={styles.imageLogin} />
+              <Icon
+                icon={PasswordIcon}
+                weight="fill"
+                size={20}
+                tone="muted-foreground"
+                style={styles.imageLogin}
+              />
             </TouchableOpacity>
             <TouchableOpacity
               style={styles.containerBottom}
@@ -212,9 +226,12 @@ export const LoginInstance = ({ navigation, route }: Props) => {
                   {t('translations:join_instance')}
                 </Text>
               </Text>
-              <Image
-                source={Images.PlusCircle}
-                style={[styles.imageLogin, { tintColor: Colors.gray23 }]}
+              <Icon
+                icon={PlusCircleIcon}
+                weight="fill"
+                size={20}
+                tone="muted-foreground"
+                style={styles.imageLogin}
               />
             </TouchableOpacity>
             <TouchableOpacity
@@ -227,7 +244,12 @@ export const LoginInstance = ({ navigation, route }: Props) => {
                   {t('translations:search_here')}
                 </Text>
               </Text>
-              <Image source={Images.SearchSmall} style={styles.imageLogin} />
+              <Icon
+                icon={MagnifyingGlassIcon}
+                size={20}
+                tone="muted-foreground"
+                style={styles.imageLogin}
+              />
             </TouchableOpacity>
           </>
         )}
@@ -248,9 +270,12 @@ export const LoginInstance = ({ navigation, route }: Props) => {
                   {t('translations:join_instance')}
                 </Text>
               </Text>
-              <Image
-                source={Images.PlusCircle}
-                style={[styles.imageLogin, { tintColor: Colors.gray23 }]}
+              <Icon
+                icon={PlusCircleIcon}
+                weight="fill"
+                size={20}
+                tone="muted-foreground"
+                style={styles.imageLogin}
               />
             </TouchableOpacity>
             <TouchableOpacity
@@ -263,7 +288,12 @@ export const LoginInstance = ({ navigation, route }: Props) => {
                   {t('translations:search_here')}
                 </Text>
               </Text>
-              <Image source={Images.SearchSmall} style={styles.imageLogin} />
+              <Icon
+                icon={MagnifyingGlassIcon}
+                size={20}
+                tone="muted-foreground"
+                style={styles.imageLogin}
+              />
             </TouchableOpacity>
           </>
         )}

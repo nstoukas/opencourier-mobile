@@ -45,7 +45,6 @@ export const styles = StyleSheet.create({
   },
   iconinfo: {
     marginRight: 2,
-    tintColor: Colors.red1,
   },
   backButton: {
     width: 40,

@@ -19,8 +19,10 @@ export const styles = StyleSheet.create({
   disabled: {
     opacity: 0.5,
   },
-  icon: {
-    width: 20,
-    height: 20,
+  iconLeft: {
+    marginRight: 10,
+  },
+  iconRight: {
+    marginLeft: 10,
   },
 });

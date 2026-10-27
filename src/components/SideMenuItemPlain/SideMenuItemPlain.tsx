@@ -1,15 +1,16 @@
 import React, { useMemo } from 'react';
-import {
-  Image,
-  StyleProp,
-  ViewStyle,
-  Text,
-  TouchableOpacity,
-} from 'react-native';
-import { Images } from '@app/utilities/images';
+import { StyleProp, ViewStyle, Text, TouchableOpacity } from 'react-native';
 import { styles } from './SideMenuItemPlain.styles';
 import { SideMenuItem } from '@app/types/types';
 import { useTranslation } from 'react-i18next';
+import { Icon } from '@app/components/Icon/Icon';
+import { CaretRightIcon } from 'phosphor-react-native/src/icons/CaretRight';
+import { CardholderIcon } from 'phosphor-react-native/src/icons/Cardholder';
+import { GearSixIcon } from 'phosphor-react-native/src/icons/GearSix';
+import { NoteIcon } from 'phosphor-react-native/src/icons/Note';
+import { PiggyBankIcon } from 'phosphor-react-native/src/icons/PiggyBank';
+import { QuestionIcon } from 'phosphor-react-native/src/icons/Question';
+import { SignOutIcon } from 'phosphor-react-native/src/icons/SignOut';
 
 type Props = {
   style?: StyleProp<ViewStyle>;
@@ -28,17 +29,17 @@ export const SideMenuItemPlain = ({
   const icon = useMemo(() => {
     switch (item) {
       case SideMenuItem.Orders:
-        return Images.Orders;
+        return { glyph: NoteIcon, weight: 'fill' as const };
       case SideMenuItem.Earnings:
-        return Images.Earnings;
+        return { glyph: PiggyBankIcon, weight: 'fill' as const };
       case SideMenuItem.Payout:
-        return Images.Payout;
+        return { glyph: CardholderIcon, weight: 'fill' as const };
       case SideMenuItem.Support:
-        return Images.Support;
+        return { glyph: QuestionIcon, weight: 'fill' as const };
       case SideMenuItem.Settings:
-        return Images.Settings;
+        return { glyph: GearSixIcon, weight: 'fill' as const };
       case SideMenuItem.Logout:
-        return Images.Logout;
+        return { glyph: SignOutIcon, weight: 'regular' as const };
     }
   }, [item]);
 
@@ -46,11 +47,9 @@ export const SideMenuItemPlain = ({
     <TouchableOpacity
       style={[styles.container, style]}
       onPress={() => onPress(item)}>
-      <Image source={icon} style={styles.icon} />
+      {icon && <Icon icon={icon.glyph} weight={icon.weight} size={32} />}
       <Text style={styles.text}>{t(`translations:${item}`)}</Text>
-      {!hideArrow && (
-        <Image source={Images.ArrowRightBlack} style={styles.iconArrow} />
-      )}
+      {!hideArrow && <Icon icon={CaretRightIcon} />}
     </TouchableOpacity>
   );
 };

@@ -23,7 +23,6 @@ import { Instance } from '@app/types/types';
 import { client } from '@app/services/Client';
 import { TextField } from '@app/components/TextField/TextField';
 import { Button, ButtonType } from '@app/components/Button/Button';
-import { Colors } from '@app/styles/colors';
 import { BackNavButton } from '@app/components/BackNavButton/BackNavButton';
 import UserContext from '@app/context/userContext';
 import { useContext } from 'react';

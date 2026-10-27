@@ -1,17 +1,15 @@
 import React, { useMemo } from 'react';
-import {
-  Image,
-  StyleProp,
-  Text,
-  TouchableOpacity,
-  ViewStyle,
-} from 'react-native';
+import { StyleProp, Text, TouchableOpacity, ViewStyle } from 'react-native';
 import { styles } from './QuickNote.styles';
 import { Colors } from '@app/styles/colors';
 import { CustomerNotes } from '@app/types/types';
-import { Images } from '@app/utilities/images';
 import { useTranslation } from 'react-i18next';
 import { touchRow } from '@app/utilities/touch';
+import { Icon } from '@app/components/Icon/Icon';
+import { BellSlashIcon } from 'phosphor-react-native/src/icons/BellSlash';
+import { DoorOpenIcon } from 'phosphor-react-native/src/icons/DoorOpen';
+import { DropIcon } from 'phosphor-react-native/src/icons/Drop';
+import { FireIcon } from 'phosphor-react-native/src/icons/Fire';
 
 type Props = {
   style?: StyleProp<ViewStyle>;
@@ -32,13 +30,13 @@ export const QuickNote = ({
   const icon = useMemo(() => {
     switch (text) {
       case CustomerNotes.BellnotRung:
-        return Images.BellSlash;
+        return { glyph: BellSlashIcon, weight: 'fill' as const };
       case CustomerNotes.DontBlockDoor:
-        return Images.DoorOpen;
+        return { glyph: DoorOpenIcon, weight: 'regular' as const };
       case CustomerNotes.HandleWithCare:
-        return Images.Fire;
+        return { glyph: FireIcon, weight: 'fill' as const };
       case CustomerNotes.PreventLeaks:
-        return Images.Drop;
+        return { glyph: DropIcon, weight: 'fill' as const };
       default:
         return null;
     }
@@ -60,12 +58,11 @@ export const QuickNote = ({
         },
       ]}>
       {icon && (
-        <Image
-          source={icon}
-          style={[
-            styles.icon,
-            { tintColor: selected ? Colors.green5 : Colors.black1 },
-          ]}
+        <Icon
+          icon={icon.glyph}
+          weight={icon.weight}
+          size={16}
+          tone={selected ? 'success-soft' : 'foreground'}
         />
       )}
       <Text

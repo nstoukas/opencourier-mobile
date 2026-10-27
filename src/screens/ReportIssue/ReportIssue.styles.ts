@@ -50,10 +50,6 @@ export const styles = StyleSheet.create({
     fontWeight: '600',
     flex: 1,
   },
-  arrow: {
-    width: 14,
-    height: 14,
-  },
   contentReported: {
     flex: 1,
     alignItems: 'center',

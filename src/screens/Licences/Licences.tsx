@@ -5,14 +5,14 @@ import {
   Text,
   TouchableOpacity,
   FlatList,
-  Image,
   Linking,
 } from 'react-native';
 import { styles } from './Licences.styles';
 import { BackNavButton } from '@app/components/BackNavButton/BackNavButton';
 import { MainScreenProp, MainScreens } from '@app/navigation/main/types';
-import { Images } from '@app/utilities/images';
 import { useTranslation } from 'react-i18next';
+import { Icon } from '@app/components/Icon/Icon';
+import { CaretRightIcon } from 'phosphor-react-native/src/icons/CaretRight';
 
 type Props = MainScreenProp<MainScreens.Licences>;
 
@@ -65,7 +65,7 @@ export const LicencesScreen = ({ navigation }: Props) => {
             {`${t('translations:license')}: ` + item.licenseSpecs.licenses}
           </Text>
         </View>
-        <Image source={Images.ArrowRightBlack} />
+        <Icon icon={CaretRightIcon} />
       </TouchableOpacity>
     );
   };

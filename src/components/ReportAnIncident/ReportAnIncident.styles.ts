@@ -26,10 +26,6 @@ export const styles = StyleSheet.create({
     color: Colors.black1,
     flex: 1,
   },
-  imageX: {
-    width: 20,
-    height: 20,
-  },
   textReportDetails: {
     fontSize: typeScale['body-sm'].fontSize,
     fontWeight: '600',

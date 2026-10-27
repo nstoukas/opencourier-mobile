@@ -1,6 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import {
-  Image,
   StyleProp,
   Text,
   TouchableOpacity,
@@ -8,13 +7,15 @@ import {
   ViewStyle,
 } from 'react-native';
 import { styles } from './WeekSelector.styles';
-import { Images } from '@app/utilities/images';
 import { EarningsTabItem } from '@app/types/types';
 import moment, { Moment } from 'moment';
 import { endOfWeek, formatEarnings, startOfWeek } from '@app/utilities/dates';
 import { useTranslation } from 'react-i18next';
 import { formatCurrencyFromCents } from '@app/utilities/currency';
 import { hitSlopFor } from '@app/utilities/touch';
+import { Icon } from '@app/components/Icon/Icon';
+import { CaretCircleLeftIcon } from 'phosphor-react-native/src/icons/CaretCircleLeft';
+import { CaretCircleRightIcon } from 'phosphor-react-native/src/icons/CaretCircleRight';
 
 type Props = {
   style?: StyleProp<ViewStyle>;
@@ -65,7 +66,7 @@ export const WeekSelector = ({
         <TouchableOpacity
           hitSlop={hitSlopFor(32, 32, 8)}
           onPress={() => setSubstractor(substractor + 1)}>
-          <Image source={Images.CaretCircleLeft} />
+          <Icon icon={CaretCircleLeftIcon} weight="fill" size={32} />
         </TouchableOpacity>
       )}
       <View style={styles.containerText}>
@@ -79,7 +80,7 @@ export const WeekSelector = ({
         <TouchableOpacity
           hitSlop={hitSlopFor(32, 32, 8)}
           onPress={() => setSubstractor(Math.max(0, substractor - 1))}>
-          <Image source={Images.CaretCircleRight} />
+          <Icon icon={CaretCircleRightIcon} weight="fill" size={32} />
         </TouchableOpacity>
       )}
     </View>

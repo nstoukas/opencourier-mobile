@@ -5,19 +5,21 @@ import {
   TextInput,
   KeyboardAvoidingView,
   TouchableOpacity,
-  Image,
   Platform,
 } from 'react-native';
 import { RootScreen, RootScreenProp } from '@app/navigation/types';
 import { styles } from './AddNote.styles';
 import { useTranslation } from 'react-i18next';
 import { Button, ButtonType } from '@app/components/Button/Button';
-import { Images } from '@app/utilities/images';
 import { Colors } from '@app/styles/colors';
 import { Comment } from '@app/types/types';
 import { ScrollView } from 'react-native-gesture-handler';
 import { typeScale } from '@app/styles/theme';
 import { hitSlopFor } from '@app/utilities/touch';
+import { Icon } from '@app/components/Icon/Icon';
+import { ArrowLeftIcon } from 'phosphor-react-native/src/icons/ArrowLeft';
+import { InfoIcon } from 'phosphor-react-native/src/icons/Info';
+import { CheckCircleIcon } from 'phosphor-react-native/src/icons/CheckCircle';
 
 type Props = RootScreenProp<RootScreen.AddNoteModal>;
 
@@ -58,7 +60,7 @@ export const AddNote = ({ navigation, route }: Props) => {
                 hitSlop={hitSlopFor(40)}
                 style={styles.backButton}
                 onPress={() => navigation.goBack()}>
-                <Image source={Images.ArrowLeft} />
+                <Icon icon={ArrowLeftIcon} size={20} />
               </TouchableOpacity>
             </View>
             <View style={styles.separator} />
@@ -71,19 +73,32 @@ export const AddNote = ({ navigation, route }: Props) => {
               maxLength={150}
             />
             <View style={styles.containerInfo}>
-              <Image source={Images.Info} style={styles.iconinfo} />
+              <Icon
+                icon={InfoIcon}
+                weight="fill"
+                size={14}
+                style={styles.iconinfo}
+              />
               <Text style={styles.textInfo}>{`${note.length}/150`}</Text>
             </View>
             <View style={styles.containerInfo}>
-              <Image source={Images.Info} style={styles.iconinfo} />
+              <Icon
+                icon={InfoIcon}
+                weight="fill"
+                size={14}
+                style={styles.iconinfo}
+              />
               <Text style={styles.textInfo}>
                 {t('translations:avoid_mentioning')}
               </Text>
             </View>
             <View style={styles.containerInfo}>
-              <Image
-                source={Images.Info}
-                style={[styles.iconinfo, { tintColor: Colors.red1 }]}
+              <Icon
+                icon={InfoIcon}
+                weight="fill"
+                size={14}
+                tone="destructive"
+                style={styles.iconinfo}
               />
               <Text style={[styles.textInfo, { color: Colors.red1 }]}>
                 {t('translations:avoid_mentioning_consumer')}
@@ -95,7 +110,8 @@ export const AddNote = ({ navigation, route }: Props) => {
                 fontWeight: '800',
                 fontSize: typeScale.body.fontSize,
               }}
-              icon={Images.CheckWhite}
+              icon={CheckCircleIcon}
+              iconWeight="fill"
               type={ButtonType.green}
               title={t('translations:save')}
               onPress={onSave}

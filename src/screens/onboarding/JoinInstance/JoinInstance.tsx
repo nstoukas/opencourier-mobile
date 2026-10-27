@@ -14,6 +14,10 @@ import { validateEmail } from '@app/utilities/text';
 import { useMutation } from '@tanstack/react-query';
 import { services } from '@app/services/service';
 import useUser from '@app/hooks/useUser';
+import { Icon } from '@app/components/Icon/Icon';
+import { MagnifyingGlassIcon } from 'phosphor-react-native/src/icons/MagnifyingGlass';
+import { SignOutIcon } from 'phosphor-react-native/src/icons/SignOut';
+import { PlusCircleIcon } from 'phosphor-react-native/src/icons/PlusCircle';
 
 type Props = OnboardingScreenProp<OnboardingScreen.JoinInstance>;
 
@@ -165,7 +169,8 @@ export const JoinInstance = ({ navigation, route }: Props) => {
         />
 
         <Button
-          icon={Images.PlusCircle}
+          icon={PlusCircleIcon}
+          iconWeight="fill"
           type={ButtonType.green}
           title={t('translations:join_instance')}
           onPress={onSignupHandle}
@@ -189,7 +194,7 @@ export const JoinInstance = ({ navigation, route }: Props) => {
               {t('translations:log_in')}
             </Text>
           </Text>
-          <Image source={Images.Logout} style={styles.imageLogin} />
+          <Icon icon={SignOutIcon} size={20} style={styles.imageLogin} />
         </TouchableOpacity>
         <TouchableOpacity
           style={styles.containerBottom}
@@ -201,7 +206,12 @@ export const JoinInstance = ({ navigation, route }: Props) => {
               {t('translations:search_here')}
             </Text>
           </Text>
-          <Image source={Images.SearchSmall} style={styles.imageLogin} />
+          <Icon
+            icon={MagnifyingGlassIcon}
+            size={20}
+            tone="muted-foreground"
+            style={styles.imageLogin}
+          />
         </TouchableOpacity>
       </ScrollView>
     </View>

@@ -23,10 +23,4 @@ export const styles = StyleSheet.create({
     height: 40,
     borderRadius: radius.full,
   },
-  iconBlack: {
-    tintColor: Colors.black,
-  },
-  iconWhite: {
-    tintColor: Colors.white,
-  },
 });

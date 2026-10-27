@@ -1,7 +1,8 @@
 import React from 'react';
-import { Image, StyleProp, Text, View, ViewStyle } from 'react-native';
+import { StyleProp, Text, View, ViewStyle } from 'react-native';
 import { styles } from './NoteCell.styles';
-import { Images } from '@app/utilities/images';
+import { Icon } from '@app/components/Icon/Icon';
+import { ChatsIcon } from 'phosphor-react-native/src/icons/Chats';
 
 type Props = {
   style?: StyleProp<ViewStyle>;
@@ -11,7 +12,7 @@ type Props = {
 export const NoteCell = ({ style, text }: Props) => {
   return (
     <View style={[styles.container, style]}>
-      <Image source={Images.ChatBubble} />
+      <Icon icon={ChatsIcon} size={26} />
       <Text style={styles.text}>{text}</Text>
     </View>
   );

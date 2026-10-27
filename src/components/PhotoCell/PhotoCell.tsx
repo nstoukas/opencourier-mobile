@@ -8,9 +8,11 @@ import {
   ViewStyle,
 } from 'react-native';
 import { styles } from './PhotoCell.styles';
-import { Images } from '@app/utilities/images';
 import { Photo } from '@app/types/types';
 import { hitSlopFor } from '@app/utilities/touch';
+import { Icon } from '@app/components/Icon/Icon';
+import { ArrowCounterClockwiseIcon } from 'phosphor-react-native/src/icons/ArrowCounterClockwise';
+import { XCircleIcon } from 'phosphor-react-native/src/icons/XCircle';
 
 type Props = {
   style?: StyleProp<ViewStyle>;
@@ -28,14 +30,14 @@ export const PhotoCell = ({ style, image, onDelete, onRetake }: Props) => {
           hitSlop={hitSlopFor(35, 35, 4)}
           style={styles.containerHorizontal}
           onPress={onRetake}>
-          <Image source={Images.ArrowCounterClockwise} style={styles.arrow} />
+          <Icon icon={ArrowCounterClockwiseIcon} size={16} />
           <Text style={styles.text}>Retake photo</Text>
         </TouchableOpacity>
         <TouchableOpacity
           hitSlop={hitSlopFor(35, 35, 4)}
           style={styles.containerHorizontal}
           onPress={onDelete}>
-          <Image source={Images.XCircle} style={styles.arrow} />
+          <Icon icon={XCircleIcon} size={16} />
           <Text style={styles.text}>Delete photo</Text>
         </TouchableOpacity>
       </View>

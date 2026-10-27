@@ -4,14 +4,12 @@ import {
   ViewStyle,
   View,
   Text,
-  Image,
   TouchableOpacity,
   Animated,
 } from 'react-native';
 import { styles } from './NewOrderCell.styles';
 import { Order } from '@app/types/types';
 import { ButtonOrder, ButtonOrderType } from '../ButtonOrder/ButtonOrder';
-import { Images } from '@app/utilities/images';
 import Map from '../Map/Map';
 import { useTranslation } from 'react-i18next';
 import { metersToMiles } from '@app/utilities/geo';
@@ -24,6 +22,12 @@ import { Colors } from '@app/styles/colors';
 import useUser from '@app/hooks/useUser';
 import { useCountdownBar } from '@app/hooks/useCountdownBar';
 import { hitSlopFor } from '@app/utilities/touch';
+import { Icon } from '@app/components/Icon/Icon';
+import { ClockAfternoonIcon } from 'phosphor-react-native/src/icons/ClockAfternoon';
+import { CopyIcon } from 'phosphor-react-native/src/icons/Copy';
+import { HouseLineIcon } from 'phosphor-react-native/src/icons/HouseLine';
+import { PathIcon } from 'phosphor-react-native/src/icons/Path';
+import { StorefrontIcon } from 'phosphor-react-native/src/icons/Storefront';
 
 const PARALELOGRAM_WIDTH = 16;
 const PARALELOGRAM_HEIGHT = 8;
@@ -122,9 +126,9 @@ export const NewOrderCell = ({
       <View style={styles.separator} />
       <View style={styles.content}>
         <View style={styles.containerLeft}>
-          <Image source={Images.RestaurantGray} />
+          <Icon icon={StorefrontIcon} weight="fill" size={30} tone="input" />
           <View style={styles.verticalLine} />
-          <Image source={Images.HouseGray} />
+          <Icon icon={HouseLineIcon} size={32} tone="muted-foreground" />
         </View>
         <View style={styles.containerRight}>
           <View style={styles.containerAddressButton}>
@@ -140,7 +144,7 @@ export const NewOrderCell = ({
               hitSlop={hitSlopFor(32)}
               onPress={() => onCopyRestaurant(order)}>
               <View style={styles.containerChats}>
-                <Image source={Images.Chats} />
+                <Icon icon={CopyIcon} weight="fill" size={16} />
               </View>
             </TouchableOpacity>
           </View>
@@ -148,14 +152,19 @@ export const NewOrderCell = ({
             {user && <Map order={order} user={user} />}
             <View style={styles.containerAway}>
               <View style={styles.containerTextAway}>
-                <Image source={Images.Distance} />
+                <Icon icon={PathIcon} size={26} tone="muted-foreground" />
                 <Text style={styles.textDistance}>
                   {' '}
                   {`${metersToMiles(distance)} mi ${t('translations:away')}`}
                 </Text>
               </View>
               <View style={styles.containerTextAway}>
-                <Image source={Images.Clock} />
+                <Icon
+                  icon={ClockAfternoonIcon}
+                  weight="fill"
+                  size={26}
+                  tone="muted-foreground"
+                />
                 <Text style={styles.textDistance}>{`${secondsToMinutes(
                   duration,
                 )} min ${t('translations:away')}`}</Text>
@@ -175,7 +184,7 @@ export const NewOrderCell = ({
               hitSlop={hitSlopFor(32)}
               onPress={() => onCopyCustomer(order)}>
               <View style={styles.containerChats}>
-                <Image source={Images.Chats} />
+                <Icon icon={CopyIcon} weight="fill" size={16} />
               </View>
             </TouchableOpacity>
           </View>

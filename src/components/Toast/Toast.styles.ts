@@ -3,6 +3,9 @@ import { StyleSheet } from 'react-native';
 import { control, radius, typeScale } from '@app/styles/theme';
 
 export const styles = StyleSheet.create({
+  iconInfo: {
+    marginRight: 8,
+  },
   container: {
     borderWidth: 1,
     marginHorizontal: 16,

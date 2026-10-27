@@ -3,21 +3,24 @@ import {
   StyleProp,
   ViewStyle,
   View,
-  Image,
   Text,
   TouchableOpacity,
-  ImageSourcePropType,
 } from 'react-native';
 import { styles } from './InProgressCellHeader.styles';
-import { Images } from '@app/utilities/images';
 import { Colors } from '@app/styles/colors';
 import { hitSlopFor } from '@app/utilities/touch';
+import { Icon } from '@app/components/Icon/Icon';
+import { CheckCircleIcon } from 'phosphor-react-native/src/icons/CheckCircle';
+import { CaretDownIcon } from 'phosphor-react-native/src/icons/CaretDown';
+// `import type`: a TypeScript type only, removed when the app is built.
+import type { Icon as PhosphorIcon } from 'phosphor-react-native';
 
 type Props = {
   style?: StyleProp<ViewStyle>;
   expanded: boolean;
   onExpandedPress: () => void;
-  icon: ImageSourcePropType;
+  // The place's Phosphor icon (a storefront for the pickup, a house for the drop off).
+  icon: PhosphorIcon;
   title: string;
   finished: boolean;
 };
@@ -32,12 +35,11 @@ export const InProgressCellHeader = ({
 }: Props) => {
   return (
     <View style={[styles.containerHeader, style]}>
-      <Image
-        source={icon}
-        style={[
-          styles.iconGrayRestaurant,
-          finished && { tintColor: Colors.green1 },
-        ]}
+      <Icon
+        icon={icon}
+        size={32}
+        tone={finished ? 'success' : 'muted-foreground'}
+        style={styles.iconGrayRestaurant}
       />
       <Text style={[styles.textName, finished && { color: Colors.green1 }]}>
         {title}
@@ -47,14 +49,13 @@ export const InProgressCellHeader = ({
         disabled={finished}
         style={styles.buttonCarret}
         onPress={() => !finished && onExpandedPress()}>
-        {finished && <Image source={Images.CheckmarkHollow} />}
+        {finished && <Icon icon={CheckCircleIcon} tone="success" />}
         {!finished && (
-          <Image
-            source={Images.CaretDown}
-            style={[
-              styles.iconCaret,
-              expanded && { transform: [{ rotate: '180deg' }] },
-            ]}
+          <Icon
+            icon={CaretDownIcon}
+            weight="bold"
+            size={32}
+            style={expanded && { transform: [{ rotate: '180deg' }] }}
           />
         )}
       </TouchableOpacity>

@@ -82,10 +82,6 @@ export const styles = StyleSheet.create({
     color: Colors.black6,
     marginBottom: 16,
   },
-  imageX: {
-    width: 20,
-    height: 20,
-  },
   background: {
     position: 'absolute',
     top: 0,

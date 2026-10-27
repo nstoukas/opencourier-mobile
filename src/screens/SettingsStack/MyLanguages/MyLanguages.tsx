@@ -4,7 +4,6 @@ import {
   SafeAreaView,
   Text,
   FlatList,
-  Image,
   TouchableOpacity,
 } from 'react-native';
 import { styles } from './MyLanguages.styles';
@@ -19,10 +18,12 @@ import {
 } from '@app/components/SettingsCell/SettingsCell';
 import { generateBoxShadowStyle } from '@app/utilities/styles';
 import { Colors } from '@app/styles/colors';
-import { Images } from '@app/utilities/images';
 import { Button, ButtonType } from '@app/components/Button/Button';
 import { typeScale } from '@app/styles/theme';
 import { hitSlopFor } from '@app/utilities/touch';
+import { Icon } from '@app/components/Icon/Icon';
+import { InfoIcon } from 'phosphor-react-native/src/icons/Info';
+import { XIcon } from 'phosphor-react-native/src/icons/X';
 
 type Props = MainScreenProp<MainScreens.MyLanguages>;
 
@@ -74,14 +75,14 @@ export const MyLanguages = ({ navigation }: Props) => {
               generateBoxShadowStyle(0, 10, 0.08, 12, 20, Colors.black8),
             ]}>
             <View style={styles.cardHeader}>
-              <Image style={styles.image} source={Images.Info} />
+              <Icon icon={InfoIcon} weight="fill" style={styles.image} />
               <Text style={styles.cardTitle}>
                 {t('translations:languages_i_know')}
               </Text>
               <TouchableOpacity
                 hitSlop={hitSlopFor(20)}
                 onPress={() => setInfoShown(false)}>
-                <Image source={Images.X} style={styles.iconX} />
+                <Icon icon={XIcon} size={20} />
               </TouchableOpacity>
             </View>
             <Text style={styles.cardText}>

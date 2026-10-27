@@ -76,11 +76,6 @@ export const styles = StyleSheet.create({
     borderRadius: radius.md,
     marginRight: 8,
   },
-  iconDelete: {
-    width: 14,
-    height: 14,
-    tintColor: Colors.black1,
-  },
   containerVoteButtons: {
     flexDirection: 'row',
     alignItems: 'center',

@@ -6,7 +6,6 @@ import {
   Text,
   TouchableOpacity,
 } from 'react-native';
-import { Images } from '@app/utilities/images';
 import { styles } from './OrganizationSelect.styles';
 import { Organization } from '@app/types/types';
 import { RemoteImage } from '@app/components/RemoteImage/RemoteImage';

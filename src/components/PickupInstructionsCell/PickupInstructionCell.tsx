@@ -1,6 +1,5 @@
 import React, { useMemo, useState } from 'react';
 import {
-  Image,
   StyleProp,
   Text,
   TouchableOpacity,
@@ -9,7 +8,6 @@ import {
 } from 'react-native';
 import { styles } from './PickupInstructionCell.styles';
 import { Note } from '@app/types/types';
-import { Images } from '@app/utilities/images';
 import { Colors } from '@app/styles/colors';
 import { SCREEN_WIDTH } from '@app/utilities/constants';
 import useComment from '@app/hooks/useComment';
@@ -17,6 +15,11 @@ import { useNavigation } from '@react-navigation/native';
 import { RootScreen, RootNavigationProp } from '@app/navigation/types';
 import useUser from '@app/hooks/useUser';
 import { hitSlopFor } from '@app/utilities/touch';
+import { Icon } from '@app/components/Icon/Icon';
+import { PencilSimpleLineIcon } from 'phosphor-react-native/src/icons/PencilSimpleLine';
+import { TrashIcon } from 'phosphor-react-native/src/icons/Trash';
+import { CaretUpIcon } from 'phosphor-react-native/src/icons/CaretUp';
+import { CaretDownIcon } from 'phosphor-react-native/src/icons/CaretDown';
 
 type Props = {
   style?: StyleProp<ViewStyle>;
@@ -130,9 +133,11 @@ export const PickupInstructionCell = ({ style, note }: Props) => {
               hitSlop={hitSlopFor(22, 22, 4)}
               style={styles.containerVoteButton}
               onPress={onUpvote}>
-              <Image
-                source={Images.ArrowUpGray}
-                style={upvoted && { tintColor: Colors.green8 }}
+              <Icon
+                icon={CaretUpIcon}
+                weight="fill"
+                size={14}
+                tone={upvoted ? 'success' : 'muted-foreground'}
               />
             </TouchableOpacity>
             <Text
@@ -147,9 +152,11 @@ export const PickupInstructionCell = ({ style, note }: Props) => {
               hitSlop={hitSlopFor(22, 22, 4)}
               style={styles.containerVoteButton}
               onPress={onDownvote}>
-              <Image
-                source={Images.ArrowDownGray}
-                style={downvoted && { tintColor: Colors.red7 }}
+              <Icon
+                icon={CaretDownIcon}
+                weight="fill"
+                size={14}
+                tone={downvoted ? 'destructive' : 'muted-foreground'}
               />
             </TouchableOpacity>
           </View>
@@ -169,7 +176,7 @@ export const PickupInstructionCell = ({ style, note }: Props) => {
             hitSlop={hitSlopFor(28, 28, 4)}
             style={styles.buttonEdit}
             onPress={onDelete}>
-            <Image source={Images.Trash} style={styles.iconDelete} />
+            <Icon icon={TrashIcon} weight="fill" size={14} />
           </TouchableOpacity>
           <View
             style={
@@ -188,7 +195,7 @@ export const PickupInstructionCell = ({ style, note }: Props) => {
             hitSlop={hitSlopFor(28, 28, 4)}
             style={styles.buttonEdit}
             onPress={onEdit}>
-            <Image source={Images.Edit} />
+            <Icon icon={PencilSimpleLineIcon} weight="fill" size={14} />
           </TouchableOpacity>
         </View>
       )}

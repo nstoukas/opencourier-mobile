@@ -1,6 +1,5 @@
 import React from 'react';
 import {
-  Image,
   StyleProp,
   Switch,
   Text,
@@ -9,13 +8,15 @@ import {
   ViewStyle,
 } from 'react-native';
 import { styles } from './ShiftCell.styles';
-import { Images } from '@app/utilities/images';
 import { useTranslation } from 'react-i18next';
 import { Shift, ShiftRange } from '@app/types/types';
-import { Colors } from '@app/styles/colors';
 import moment from 'moment';
 import { formatShift } from '@app/utilities/dates';
 import { hitSlopFor } from '@app/utilities/touch';
+import { Icon } from '@app/components/Icon/Icon';
+import { TrashIcon } from 'phosphor-react-native/src/icons/Trash';
+import { RadioButtonIcon } from 'phosphor-react-native/src/icons/RadioButton';
+import { CircleIcon } from 'phosphor-react-native/src/icons/Circle';
 
 type Props = {
   style?: StyleProp<ViewStyle>;
@@ -41,8 +42,11 @@ export const ShiftCell = ({
       <TouchableOpacity
         style={styles.content}
         onPress={() => onSelect && onSelect(item)}>
-        <Image
-          source={isSelected ? Images.RadioSelected : Images.RadioUnselected}
+        <Icon
+          icon={isSelected ? RadioButtonIcon : CircleIcon}
+          weight={isSelected ? 'fill' : 'bold'}
+          size={20}
+          tone={isSelected ? 'success' : 'foreground'}
           style={styles.imageRadioButton}
         />
         <Text style={styles.textTitle}>{t(`translations:${item.day}`)}</Text>
@@ -72,7 +76,7 @@ export const ShiftCell = ({
                 hitSlop={hitSlopFor(30, 24)}
                 onPress={() => onDelete(item, obj)}
                 style={styles.buttonDeleteAdd}>
-                <Image source={Images.Trash} style={styles.iconTrash} />
+                <Icon icon={TrashIcon} weight="fill" size={14} />
               </TouchableOpacity>
             </View>
           ))}

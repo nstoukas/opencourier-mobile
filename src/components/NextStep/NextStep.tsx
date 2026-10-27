@@ -4,11 +4,9 @@ import {
   ViewStyle,
   View,
   Text,
-  Image,
   TouchableOpacity,
 } from 'react-native';
 import { styles } from './NextStep.styles';
-import { Images } from '@app/utilities/images';
 import { useTranslation } from 'react-i18next';
 import { Order, ToastMessage, User } from '@app/types/types';
 import { Button, ButtonType } from '../Button/Button';
@@ -17,6 +15,11 @@ import { OrderStatus } from '@app/types/enums';
 import useOrder from '@app/hooks/useOrder';
 import { MainNavigationProp, MainScreens } from '@app/navigation/main/types';
 import { useNavigation } from '@react-navigation/native';
+import { Icon } from '@app/components/Icon/Icon';
+import { CaretCircleDoubleRightIcon } from 'phosphor-react-native/src/icons/CaretCircleDoubleRight';
+import { CaretRightIcon } from 'phosphor-react-native/src/icons/CaretRight';
+import { CheckCircleIcon } from 'phosphor-react-native/src/icons/CheckCircle';
+import { HamburgerIcon } from 'phosphor-react-native/src/icons/Hamburger';
 
 type Props = {
   style?: StyleProp<ViewStyle>;
@@ -57,10 +60,7 @@ export const NextStep = ({
       <TouchableOpacity
         style={styles.cell}
         onPress={() => onOrderItemsListForCustomer()}>
-        <Image
-          source={Images.CheckmarkGreen}
-          style={{ width: 20, height: 20 }}
-        />
+        <Icon icon={CheckCircleIcon} weight="fill" size={20} tone="success" />
         <View style={styles.cellText}>
           <Text style={styles.cellName}>{order.dropoffName}</Text>
           <Text style={styles.cellItems}>
@@ -68,7 +68,7 @@ export const NextStep = ({
               (order.orderItems.length > 1 ? 'items' : 'item')}
           </Text>
         </View>
-        <Image source={Images.ArrowRightBlack} />
+        <Icon icon={CaretRightIcon} />
       </TouchableOpacity>
     );
   };
@@ -94,8 +94,7 @@ export const NextStep = ({
     order.status === OrderStatus.courier_arrived_at_pickup_location;
 
   const showConfirmOrderItems =
-    showPrePickupActions &&
-    (isCourierArrivedAtPickup || confirmItemsUnlocked);
+    showPrePickupActions && (isCourierArrivedAtPickup || confirmItemsUnlocked);
 
   const showArrivedAtPickupButton =
     showPrePickupActions && !isCourierArrivedAtPickup && !confirmItemsUnlocked;
@@ -104,7 +103,7 @@ export const NextStep = ({
     <View style={styles.nextStep}>
       <View style={styles.blueSeparator} />
       <View style={styles.flexRow}>
-        <Image source={Images.ArrowsForward} />
+        <Icon icon={CaretCircleDoubleRightIcon} size={32} tone="info" />
         <Text style={styles.textNextStep}>Next Step</Text>
       </View>
       {/* {showPrePickupActions && (
@@ -132,7 +131,8 @@ export const NextStep = ({
         <Button
           style={{ marginHorizontal: 12, marginTop: 10 }}
           type={ButtonType.green}
-          icon={Images.Hamburger}
+          icon={HamburgerIcon}
+          iconWeight="fill"
           title={t('translations:confirm_items')}
           onPress={() => {
             confirmOrderItems({
@@ -147,7 +147,8 @@ export const NextStep = ({
           <Button
             style={{ marginHorizontal: 12, marginTop: 10 }}
             type={ButtonType.green}
-            icon={Images.CheckWhite}
+            icon={CheckCircleIcon}
+            iconWeight="fill"
             title={t('translations:mark_as_delivered')}
             onPress={onMarkAsDelivered}
             isLoading={isArrivedAtDropoffPending}

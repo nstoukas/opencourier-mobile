@@ -1,13 +1,14 @@
 import React from 'react';
-import { color } from '@app/styles/theme';
+import { color, ColorName } from '@app/styles/theme';
+// `import type`: TypeScript types only, removed when the app is built.
+import type { Icon as PhosphorIcon, IconWeight } from 'phosphor-react-native';
+import { Icon } from '@app/components/Icon/Icon';
 import {
   StyleProp,
   Text,
   TouchableOpacity,
   ViewStyle,
   TextStyle,
-  ImageSourcePropType,
-  Image,
   ActivityIndicator,
 } from 'react-native';
 import { styles } from './Button.styles';
@@ -26,7 +27,8 @@ export enum ButtonType {
 
 type ButtonLook = {
   background: string;
-  text: string;
+  // A token name, so the icon (which takes token names) and the text share it.
+  text: ColorName;
   border: string;
   borderWidth: number;
 };
@@ -36,55 +38,55 @@ type ButtonLook = {
 const BUTTON_LOOKS: Record<ButtonType, ButtonLook> = {
   [ButtonType.black]: {
     background: color.primary,
-    text: color['primary-foreground'],
+    text: 'primary-foreground',
     border: color.input,
     borderWidth: 0,
   },
   [ButtonType.green]: {
     background: color.success,
-    text: color['success-foreground'],
+    text: 'success-foreground',
     border: color.input,
     borderWidth: 0,
   },
   [ButtonType.red]: {
     background: color.destructive,
-    text: color['destructive-foreground'],
+    text: 'destructive-foreground',
     border: color.input,
     borderWidth: 0,
   },
   [ButtonType.yellow]: {
     background: color.warning,
-    text: color['warning-foreground'],
+    text: 'warning-foreground',
     border: color.warning,
     borderWidth: 2,
   },
   [ButtonType.white]: {
     background: color.background,
-    text: color.foreground,
+    text: 'foreground',
     border: color.input,
     borderWidth: 2,
   },
   [ButtonType.gray]: {
     background: color.secondary,
-    text: color['secondary-foreground'],
+    text: 'secondary-foreground',
     border: color.input,
     borderWidth: 0,
   },
   [ButtonType.grayBGBlackText]: {
     background: color.secondary,
-    text: color['secondary-foreground'],
+    text: 'secondary-foreground',
     border: color.secondary,
     borderWidth: 0,
   },
   [ButtonType.grayBGRedText]: {
     background: color.secondary,
-    text: color.destructive,
+    text: 'destructive',
     border: color['destructive-soft'],
     borderWidth: 2,
   },
   [ButtonType.redBGRedText]: {
     background: color['destructive-soft'],
-    text: color.destructive,
+    text: 'destructive',
     border: color.destructive,
     borderWidth: 0,
   },
@@ -97,7 +99,9 @@ type Props = {
   textStyle?: StyleProp<TextStyle>;
   type?: ButtonType;
   onPress: () => void;
-  icon?: ImageSourcePropType;
+  // A Phosphor icon drawn in the button's text color, e.g. icon={CheckCircleIcon} iconWeight="fill".
+  icon?: PhosphorIcon;
+  iconWeight?: IconWeight;
   isLoading?: boolean;
   iconPosition?: 'left' | 'right';
 };
@@ -110,6 +114,7 @@ export const Button = ({
   type = ButtonType.black,
   onPress,
   icon,
+  iconWeight = 'regular',
   isLoading,
   iconPosition = 'left',
 }: Props) => {
@@ -133,22 +138,29 @@ export const Button = ({
         style,
       ]}>
       {/* The spinner takes the button's text color, so it shows on every type. */}
-      {isLoading && <ActivityIndicator color={look.text} />}
+      {isLoading && <ActivityIndicator color={color[look.text]} />}
       {!isLoading && icon && iconPosition === 'left' && (
-        <Image
-          source={icon}
-          style={[styles.icon, { tintColor: look.text, marginRight: 10 }]}
+        <Icon
+          icon={icon}
+          weight={iconWeight}
+          size={20}
+          tone={look.text}
+          style={styles.iconLeft}
         />
       )}
       {!isLoading && (
-        <Text style={[styles.textTitle, { color: look.text }, textStyle]}>
+        <Text
+          style={[styles.textTitle, { color: color[look.text] }, textStyle]}>
           {title}
         </Text>
       )}
       {!isLoading && icon && iconPosition === 'right' && (
-        <Image
-          source={icon}
-          style={[styles.icon, { tintColor: look.text, marginLeft: 10 }]}
+        <Icon
+          icon={icon}
+          weight={iconWeight}
+          size={20}
+          tone={look.text}
+          style={styles.iconRight}
         />
       )}
     </TouchableOpacity>

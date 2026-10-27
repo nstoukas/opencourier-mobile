@@ -25,6 +25,8 @@ import { Instance } from '@app/types/types';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { color } from '@app/styles/theme';
 import { touchRow } from '@app/utilities/touch';
+import { PlusCircleIcon } from 'phosphor-react-native/src/icons/PlusCircle';
+import { SignInIcon } from 'phosphor-react-native/src/icons/SignIn';
 
 type Props = OnboardingScreenProp<OnboardingScreen.InstanceDetails>;
 
@@ -203,7 +205,8 @@ export const InstanceDetails = ({ navigation, route }: Props) => {
               </TouchableOpacity>
             </View>
             <Button
-              icon={Images.PlusCircle}
+              icon={PlusCircleIcon}
+              iconWeight="fill"
               type={ButtonType.green}
               title={t('translations:join_instance')}
               onPress={() => {
@@ -217,7 +220,7 @@ export const InstanceDetails = ({ navigation, route }: Props) => {
             />
             <Button
               style={{ marginBottom: 16 }}
-              icon={Images.SignIn}
+              icon={SignInIcon}
               type={ButtonType.grayBGBlackText}
               title={t('translations:login_to_instance')}
               onPress={() => {

@@ -1,6 +1,5 @@
 import React from 'react';
 import {
-  Image,
   StyleProp,
   Switch,
   Text,
@@ -9,9 +8,13 @@ import {
   ViewStyle,
 } from 'react-native';
 import { styles } from './SettingsCell.styles';
-import { Images } from '@app/utilities/images';
 import { useTranslation } from 'react-i18next';
 import { hitSlopFor } from '@app/utilities/touch';
+import { Icon } from '@app/components/Icon/Icon';
+import { CaretRightIcon } from 'phosphor-react-native/src/icons/CaretRight';
+import { TrashIcon } from 'phosphor-react-native/src/icons/Trash';
+import { RadioButtonIcon } from 'phosphor-react-native/src/icons/RadioButton';
+import { CircleIcon } from 'phosphor-react-native/src/icons/Circle';
 
 export enum SettingsCellType {
   plain,
@@ -68,10 +71,7 @@ export const SettingsCell = ({
               </Text>
             )}
           </View>
-          <Image
-            source={Images.ArrowRightBlack}
-            style={styles.imageArrowRight}
-          />
+          <Icon icon={CaretRightIcon} />
         </TouchableOpacity>
       )}
       {cellType === SettingsCellType.switch && (
@@ -90,10 +90,11 @@ export const SettingsCell = ({
           <TouchableOpacity
             style={[styles.content, { alignItems: 'flex-start' }]}
             onPress={() => onSelect && onSelect(title)}>
-            <Image
-              source={
-                isSelected ? Images.RadioSelected : Images.RadioUnselected
-              }
+            <Icon
+              icon={isSelected ? RadioButtonIcon : CircleIcon}
+              weight={isSelected ? 'fill' : 'bold'}
+              size={20}
+              tone={isSelected ? 'success' : 'foreground'}
               style={styles.imageRadioButton}
             />
             <View style={[styles.containerVerticalText, { marginLeft: 10 }]}>
@@ -123,7 +124,7 @@ export const SettingsCell = ({
             <TouchableOpacity
               hitSlop={hitSlopFor(20)}
               onPress={() => onDelete && onDelete(title)}>
-              <Image source={Images.Trash} style={{ tintColor: 'black' }} />
+              <Icon icon={TrashIcon} weight="fill" size={20} />
             </TouchableOpacity>
           </View>
           <View style={styles.separator} />

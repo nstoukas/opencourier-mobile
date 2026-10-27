@@ -5,16 +5,16 @@ import {
   View,
   Text,
   TouchableOpacity,
-  Image,
 } from 'react-native';
 import { styles } from './InProgressNotes.styles';
 import { CourierTip, Note, Order } from '@app/types/types';
 import { PickupInstructionCell } from '../PickupInstructionsCell/PickupInstructionCell';
-import { Images } from '@app/utilities/images';
 import { useNavigation } from '@react-navigation/native';
 import { RootNavigationProp, RootScreen } from '@app/navigation/types';
 import useComment from '@app/hooks/useComment';
 import { hitSlopFor } from '@app/utilities/touch';
+import { Icon } from '@app/components/Icon/Icon';
+import { PlusIcon } from 'phosphor-react-native/src/icons/Plus';
 
 type Props = {
   style?: StyleProp<ViewStyle>;
@@ -77,7 +77,7 @@ export const InProgressNotes = ({
             hitSlop={hitSlopFor(32)}
             style={styles.addNote}
             onPress={onNoteAdd}>
-            <Image source={Images.PlusBlack} />
+            <Icon icon={PlusIcon} size={14} />
           </TouchableOpacity>
         )}
       </View>

@@ -1,6 +1,5 @@
 import React from 'react';
 import {
-  Image,
   StyleProp,
   Text,
   TouchableOpacity,
@@ -8,8 +7,10 @@ import {
   ViewStyle,
 } from 'react-native';
 import { styles } from './OrderDelivered.styles';
-import { Images } from '@app/utilities/images';
 import { hitSlopFor } from '@app/utilities/touch';
+import { Icon } from '@app/components/Icon/Icon';
+import { CheckIcon } from 'phosphor-react-native/src/icons/Check';
+import { XIcon } from 'phosphor-react-native/src/icons/X';
 
 type Props = {
   style?: StyleProp<ViewStyle>;
@@ -21,7 +22,7 @@ export const OrderDelivered = ({ style, onClose }: Props) => {
     <View style={[styles.container, style]}>
       <View style={styles.content}>
         <View style={styles.containerLoader}>
-          <Image source={Images.Checkmark} style={styles.checkmark} />
+          <Icon icon={CheckIcon} weight="bold" size={13} tone="success" />
         </View>
         <Text style={styles.text}>Order delivered. Thanks!</Text>
       </View>
@@ -29,7 +30,7 @@ export const OrderDelivered = ({ style, onClose }: Props) => {
         hitSlop={hitSlopFor(40)}
         style={styles.buttonClose}
         onPress={onClose}>
-        <Image source={Images.X} />
+        <Icon icon={XIcon} size={10} />
       </TouchableOpacity>
     </View>
   );

@@ -39,8 +39,4 @@ export const styles = StyleSheet.create({
     alignItems: 'center',
     width: 40,
   },
-  checkmark: {
-    width: 13,
-    height: 13,
-  },
 });
