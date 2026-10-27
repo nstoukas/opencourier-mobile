@@ -1,6 +1,6 @@
 import { Colors } from '@app/styles/colors';
 import { Platform, StyleSheet } from 'react-native';
-import { typeScale } from '@app/styles/theme';
+import { radius, typeScale } from '@app/styles/theme';
 
 export const styles = StyleSheet.create({
   container: {
@@ -49,6 +49,23 @@ export const styles = StyleSheet.create({
     fontSize: typeScale.caption.fontSize,
     fontWeight: '600',
     flex: 1,
+  },
+  noteBox: {
+    marginTop: 16,
+  },
+  noteInput: {
+    backgroundColor: Colors.gray1,
+    minHeight: 100,
+    borderRadius: radius.xl,
+    padding: 10,
+    fontSize: typeScale.body.fontSize,
+    textAlignVertical: 'top',
+  },
+  noteCount: {
+    fontSize: typeScale.caption.fontSize,
+    color: Colors.gray12,
+    textAlign: 'right',
+    marginVertical: 6,
   },
   contentReported: {
     flex: 1,

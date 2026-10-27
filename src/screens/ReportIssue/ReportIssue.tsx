@@ -7,6 +7,7 @@ import {
   FlatList,
   TouchableOpacity,
   Alert,
+  TextInput,
 } from 'react-native';
 import { Images } from '@app/utilities/images';
 import { styles } from './ReportIssue.styles';
@@ -26,6 +27,9 @@ import { DeliveryIssueReason } from '@app/types/enums';
 
 type Props = MainScreenProp<MainScreens.ReportIssue>;
 
+// The backend stores a note of 500 characters at most (decision 66.11).
+const NOTE_MAX_LENGTH = 500;
+
 export const ReportIssue = ({ navigation, route }: Props) => {
   const { t } = useTranslation();
   const { top } = useSafeAreaInsets();
@@ -33,6 +37,9 @@ export const ReportIssue = ({ navigation, route }: Props) => {
   const [didSelectIssue, setDidSelectIssue] = useState<boolean>(false);
   // True while a report is on its way, so a second tap cannot send it twice.
   const [sending, setSending] = useState<boolean>(false);
+  // Other opens a note field instead of sending at once (decision 66.16).
+  const [writingNote, setWritingNote] = useState<boolean>(false);
+  const [note, setNote] = useState<string>('');
 
   const items = [
     {
@@ -47,17 +54,25 @@ export const ReportIssue = ({ navigation, route }: Props) => {
       reason: DeliveryIssueReason.OrderHanded,
       label: t('translations:order_handed'),
     },
+    {
+      reason: DeliveryIssueReason.Other,
+      label: t('translations:other'),
+    },
   ];
 
   // Sends the report to the server, where the admin reads it (decision 66.11),
   // and thanks the rider only once it has arrived.
-  const sendReport = async (reason: DeliveryIssueReason) => {
+  const sendReport = async (reason: DeliveryIssueReason, withNote?: string) => {
     if (sending) {
       return;
     }
     setSending(true);
     try {
-      await services.orderService.reportIssue({ id: order.id, reason });
+      await services.orderService.reportIssue({
+        id: order.id,
+        reason,
+        note: withNote,
+      });
       setDidSelectIssue(true);
     } catch (error) {
       console.log('Could not send the report', error);
@@ -75,7 +90,11 @@ export const ReportIssue = ({ navigation, route }: Props) => {
       <TouchableOpacity
         style={touchRow}
         disabled={sending}
-        onPress={() => sendReport(item.reason)}>
+        onPress={() =>
+          item.reason === DeliveryIssueReason.Other
+            ? setWritingNote(true)
+            : sendReport(item.reason)
+        }>
         <View style={styles.cellHorizonal}>
           <Text style={styles.cellText}>{item.label}</Text>
           <Icon icon={CaretRightIcon} size={14} />
@@ -104,6 +123,33 @@ export const ReportIssue = ({ navigation, route }: Props) => {
               data={items}
               renderItem={renderItem}
             />
+
+            {/* A bare "Other" tells the admin nothing, so Send waits for a note. */}
+            {writingNote && (
+              <View style={styles.noteBox}>
+                <TextInput
+                  style={styles.noteInput}
+                  value={note}
+                  onChangeText={setNote}
+                  placeholder={t('translations:report_note_placeholder')}
+                  multiline
+                  autoFocus
+                  maxLength={NOTE_MAX_LENGTH}
+                />
+                <Text style={styles.noteCount}>
+                  {`${note.length}/${NOTE_MAX_LENGTH}`}
+                </Text>
+                <Button
+                  type={ButtonType.redBGRedText}
+                  title={t('translations:report_send')}
+                  disabled={sending || !note.trim()}
+                  isLoading={sending}
+                  onPress={() =>
+                    sendReport(DeliveryIssueReason.Other, note.trim())
+                  }
+                />
+              </View>
+            )}
           </>
         )}
 

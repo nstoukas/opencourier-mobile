@@ -417,6 +417,8 @@ export default {
   report_failed_title: 'Report not sent',
   report_failed_body:
     'The report could not reach the co-op. Check your signal and try again.',
+  report_note_placeholder: 'What happened? The co-op reads this.',
+  report_send: 'Send report',
   handed_to_customer: 'Handed Over Directly To Customer',
   slide_to_start: 'Slide to start accepting deliveries',
   // Offers with no deadline (spec 0002, AC-4) and offers that ended (AC-5).

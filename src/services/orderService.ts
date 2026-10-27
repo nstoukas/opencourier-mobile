@@ -47,9 +47,11 @@ export interface OrderService {
     note: string;
   }) => Promise<OrderServiceReponse>;
   // Sends a rider's report about a delivery to the admin (decision 66.11).
+  // `note` goes with OTHER (decision 66.16); the other reasons send none.
   reportIssue: (params: {
     id: string;
     reason: DeliveryIssueReason;
+    note?: string;
   }) => Promise<OrderServiceReponse>;
 }
 
@@ -114,8 +116,14 @@ const orderService = (client: UClient): OrderService => {
   const reportIssue = async (params: {
     id: string;
     reason: DeliveryIssueReason;
+    note?: string;
   }): Promise<OrderServiceReponse> =>
-    client.post(`deliveries/${params.id}/issues`, { reason: params.reason });
+    client.post(
+      `deliveries/${params.id}/issues`,
+      params.note
+        ? { reason: params.reason, note: params.note }
+        : { reason: params.reason },
+    );
 
   const markAsDelivered = async (params: {
     id: string;
