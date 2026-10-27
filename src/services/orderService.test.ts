@@ -4,6 +4,7 @@ import orderService, {
   OFFER_HAS_ENDED_CODE,
 } from './orderService';
 import { UClient } from './Client';
+import { DeliveryIssueReason } from '@app/types/enums';
 
 describe('orderService & isOfferEndedError (spec 0002, AC-5)', () => {
   describe('isOfferEndedError', () => {
@@ -130,6 +131,32 @@ describe('orderService & isOfferEndedError (spec 0002, AC-5)', () => {
       } finally {
         dateNowSpy.mockRestore();
       }
+    });
+  });
+
+  describe('reportIssue (decision 66.11, Clause 1)', () => {
+    it('posts to deliveries/<id>/issues with the body { reason } exactly', async () => {
+      const mockPost = jest.fn().mockResolvedValue({ data: { result: 'ok' } });
+      const client = {
+        post: mockPost,
+      } as unknown as UClient;
+
+      const service = orderService(client);
+      const response = await service.reportIssue({
+        id: 'delivery-abc-123',
+        reason: DeliveryIssueReason.WrongAddress,
+      });
+
+      expect(mockPost).toHaveBeenCalledTimes(1);
+      expect(mockPost).toHaveBeenCalledWith(
+        'deliveries/delivery-abc-123/issues',
+        { reason: DeliveryIssueReason.WrongAddress },
+      );
+      // Ensure the request body contains only reason and nothing else
+      expect(mockPost.mock.calls[0][1]).toEqual({
+        reason: DeliveryIssueReason.WrongAddress,
+      });
+      expect(response).toEqual({ data: { result: 'ok' } });
     });
   });
 });
