@@ -159,4 +159,73 @@ describe('orderService & isOfferEndedError (spec 0002, AC-5)', () => {
       expect(response).toEqual({ data: { result: 'ok' } });
     });
   });
+
+  describe('reportIssue with note (decision 66.16, Clauses 5 and 6)', () => {
+    it('Clause 5: posts { reason: OTHER, note } when a note is provided', async () => {
+      const mockPost = jest.fn().mockResolvedValue({ data: { result: 'ok' } });
+      const client = {
+        post: mockPost,
+      } as unknown as UClient;
+
+      const service = orderService(client);
+      const response = await service.reportIssue({
+        id: 'delivery-other-456',
+        reason: DeliveryIssueReason.Other,
+        note: 'Customer asked to leave at back door',
+      });
+
+      expect(mockPost).toHaveBeenCalledTimes(1);
+      expect(mockPost).toHaveBeenCalledWith(
+        'deliveries/delivery-other-456/issues',
+        {
+          reason: DeliveryIssueReason.Other,
+          note: 'Customer asked to leave at back door',
+        },
+      );
+      expect(response).toEqual({ data: { result: 'ok' } });
+    });
+
+    it('Clause 6: posts { reason } alone without a note key when note is undefined or empty', async () => {
+      const mockPost = jest.fn().mockResolvedValue({ data: { result: 'ok' } });
+      const client = {
+        post: mockPost,
+      } as unknown as UClient;
+
+      const service = orderService(client);
+
+      // Call with note: undefined
+      await service.reportIssue({
+        id: 'delivery-789',
+        reason: DeliveryIssueReason.NoSignal,
+        note: undefined,
+      });
+
+      expect(mockPost).toHaveBeenCalledTimes(1);
+      expect(mockPost).toHaveBeenLastCalledWith(
+        'deliveries/delivery-789/issues',
+        {
+          reason: DeliveryIssueReason.NoSignal,
+        },
+      );
+      expect('note' in mockPost.mock.calls[0][1]).toBe(false);
+      expect(Object.keys(mockPost.mock.calls[0][1])).toEqual(['reason']);
+
+      // Call with note: '' (empty string)
+      await service.reportIssue({
+        id: 'delivery-789',
+        reason: DeliveryIssueReason.OrderHanded,
+        note: '',
+      });
+
+      expect(mockPost).toHaveBeenCalledTimes(2);
+      expect(mockPost).toHaveBeenLastCalledWith(
+        'deliveries/delivery-789/issues',
+        {
+          reason: DeliveryIssueReason.OrderHanded,
+        },
+      );
+      expect('note' in mockPost.mock.calls[1][1]).toBe(false);
+      expect(Object.keys(mockPost.mock.calls[1][1])).toEqual(['reason']);
+    });
+  });
 });
