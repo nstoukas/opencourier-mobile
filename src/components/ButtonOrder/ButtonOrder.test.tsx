@@ -59,4 +59,27 @@ describe('AC-5: ButtonOrder heights and variants', () => {
     const flatStyle = StyleSheet.flatten(touchable.props.style);
     expect(flatStyle.height).toBe(56);
   });
+
+  it('renders progress bar Paralelograms with React keys and logs no key warning (Row 66, Clause 6)', () => {
+    const errorSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
+
+    render(
+      <ButtonOrder
+        type={ButtonOrderType.accept}
+        onPress={() => {}}
+        autoAcceptOrders={true}
+        millisRemaining={5000}
+        totalMillis={10000}
+      />,
+    );
+
+    const keyWarnings = errorSpy.mock.calls.filter(call =>
+      call.some(
+        arg => typeof arg === 'string' && arg.includes('unique "key" prop'),
+      ),
+    );
+    expect(keyWarnings).toHaveLength(0);
+
+    errorSpy.mockRestore();
+  });
 });

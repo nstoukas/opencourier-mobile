@@ -168,9 +168,10 @@ describe('SideMenu logout (spec 0002, AC-6)', () => {
       timeoutMs: LOGOUT_OFFLINE_TIMEOUT_MS,
     });
 
-    // 3. Clears storage, logs out, and resets queries
+    // 3. Clears storage (including refreshToken, row 66), logs out, and resets queries
     expect(multiRemoveSpy).toHaveBeenCalledWith([
       'token',
+      'refreshToken',
       'BASE_URL',
       'SOCKET_BASE_URL',
     ]);
@@ -181,7 +182,7 @@ describe('SideMenu logout (spec 0002, AC-6)', () => {
     expect(executionOrder).toEqual([
       'unregisterThisPhone',
       'setUserStatus:OFFLINE',
-      'multiRemove:token,BASE_URL,SOCKET_BASE_URL',
+      'multiRemove:token,refreshToken,BASE_URL,SOCKET_BASE_URL',
       'logout',
       'resetQueries',
     ]);
@@ -219,6 +220,7 @@ describe('SideMenu logout (spec 0002, AC-6)', () => {
     // AsyncStorage, logout and query reset MUST still happen so user is not stuck logged in
     expect(multiRemoveSpy).toHaveBeenCalledWith([
       'token',
+      'refreshToken',
       'BASE_URL',
       'SOCKET_BASE_URL',
     ]);

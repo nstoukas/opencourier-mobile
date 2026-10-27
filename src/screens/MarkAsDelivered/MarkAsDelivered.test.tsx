@@ -22,6 +22,27 @@ jest.mock('@tanstack/react-query', () => {
 });
 
 describe('MarkAsDelivered (Row 18, no photos)', () => {
+  let consoleErrorSpy: jest.SpyInstance;
+  const keyWarnings: unknown[][] = [];
+
+  beforeAll(() => {
+    consoleErrorSpy = jest
+      .spyOn(console, 'error')
+      .mockImplementation((...args) => {
+        if (
+          args.some(
+            arg => typeof arg === 'string' && arg.includes('unique "key" prop'),
+          )
+        ) {
+          keyWarnings.push(args);
+        }
+      });
+  });
+
+  afterAll(() => {
+    consoleErrorSpy.mockRestore();
+  });
+
   const mockOrder = {
     id: 'test-order-789',
     number: 'ORD-789',
@@ -108,5 +129,11 @@ describe('MarkAsDelivered (Row 18, no photos)', () => {
     expect(payload).not.toHaveProperty('photo');
     expect(payload).not.toHaveProperty('photoUrl');
     expect(payload).not.toHaveProperty('image');
+  });
+
+  it('renders quick notes with React keys and logs no key warning (Row 66, Clause 6)', () => {
+    render(<MarkAsDelivered {...defaultProps} />);
+
+    expect(keyWarnings).toHaveLength(0);
   });
 });

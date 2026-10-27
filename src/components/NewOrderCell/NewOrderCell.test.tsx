@@ -10,7 +10,7 @@ jest.mock('../Map/Map', () => {
 
 jest.mock('@app/utilities/geo', () => ({
   ...jest.requireActual('@app/utilities/geo'),
-  getDistance: jest.fn().mockResolvedValue({ distance: 1000, duration: 60 }),
+  getDistance: jest.fn().mockResolvedValue({ distance: 3100, duration: 60 }),
 }));
 
 jest.mock('@app/hooks/useUser', () => () => ({
@@ -23,7 +23,37 @@ jest.mock('@app/hooks/useUser', () => () => ({
 import { NewOrderCell } from './NewOrderCell';
 import { Paralelogram } from '../Paralelogram/Paralelogram';
 
-describe('NewOrderCell (spec 0002, AC-4 & AC-9 UI presentation)', () => {
+describe('NewOrderCell (spec 0002 & Row 66 Clauses 4 & 6)', () => {
+  let consoleErrorSpy: jest.SpyInstance;
+  const keyWarnings: unknown[][] = [];
+
+  beforeAll(() => {
+    consoleErrorSpy = jest
+      .spyOn(console, 'error')
+      .mockImplementation((...args) => {
+        if (
+          args.some(
+            arg => typeof arg === 'string' && arg.includes('unique "key" prop'),
+          )
+        ) {
+          keyWarnings.push(args);
+        }
+      });
+  });
+
+  afterAll(() => {
+    consoleErrorSpy.mockRestore();
+  });
+
+  beforeEach(() => {
+    jest.useFakeTimers();
+  });
+
+  afterEach(() => {
+    jest.clearAllTimers();
+    jest.useRealTimers();
+  });
+
   const dummyOrder: Order = {
     id: 'order-1',
     currencyCode: 'EUR',
@@ -125,6 +155,59 @@ describe('NewOrderCell (spec 0002, AC-4 & AC-9 UI presentation)', () => {
       testID: 'offer-waiting',
     });
     expect(waitingNodes).toHaveLength(0);
+
+    act(() => {
+      component.unmount();
+    });
+  });
+
+  it('renders distance in "km" and never "mi" (Row 66, Clause 4)', async () => {
+    let component: renderer.ReactTestRenderer;
+    await act(async () => {
+      component = renderer.create(
+        <NewOrderCell
+          order={dummyOrder}
+          autoAcceptOrders={false}
+          onAccept={jest.fn()}
+          onDecline={jest.fn()}
+          onCopyCustomer={jest.fn()}
+          onCopyRestaurant={jest.fn()}
+          millisRemaining={null}
+          totalMillis={null}
+          millisWaited={1000}
+        />,
+      );
+    });
+
+    const rootString = JSON.stringify(component!.toJSON());
+    expect(rootString).toContain('3.1 km');
+    expect(rootString).not.toMatch(/\bmi\b/);
+    expect(rootString).not.toContain('miles');
+
+    act(() => {
+      component.unmount();
+    });
+  });
+
+  it('countdown bar Paralelograms carry React keys and do not log key warning (Row 66, Clause 6)', () => {
+    let component: renderer.ReactTestRenderer;
+    act(() => {
+      component = renderer.create(
+        <NewOrderCell
+          order={dummyOrder}
+          autoAcceptOrders={false}
+          onAccept={jest.fn()}
+          onDecline={jest.fn()}
+          onCopyCustomer={jest.fn()}
+          onCopyRestaurant={jest.fn()}
+          millisRemaining={30000}
+          totalMillis={60000}
+          millisWaited={30000}
+        />,
+      );
+    });
+
+    expect(keyWarnings).toHaveLength(0);
 
     act(() => {
       component.unmount();
