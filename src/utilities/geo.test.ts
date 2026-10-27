@@ -18,9 +18,10 @@ describe('geo track (Row 67, Clause 2)', () => {
     interval: 10000,
     fastestInterval: 10000,
     distanceFilter: 30,
+    enableHighAccuracy: true,
   };
 
-  it('passes options merged with enableHighAccuracy: true to watchPosition and returns watch id', () => {
+  it('passes options spread plus showsBackgroundLocationIndicator: true to watchPosition and returns watch id', () => {
     (Geolocation.watchPosition as jest.Mock).mockReturnValue(42);
 
     const onUpdate = jest.fn();
@@ -36,6 +37,33 @@ describe('geo track (Row 67, Clause 2)', () => {
         interval: 10000,
         fastestInterval: 10000,
         distanceFilter: 30,
+        showsBackgroundLocationIndicator: true,
+      },
+    );
+  });
+
+  it('spreads options without overriding enableHighAccuracy: false', () => {
+    (Geolocation.watchPosition as jest.Mock).mockReturnValue(43);
+
+    const waitingOptions: WatchOptions = {
+      interval: 60000,
+      fastestInterval: 30000,
+      distanceFilter: 100,
+      enableHighAccuracy: false,
+    };
+
+    const onUpdate = jest.fn();
+    track(onUpdate, waitingOptions);
+
+    expect(Geolocation.watchPosition).toHaveBeenCalledWith(
+      expect.any(Function),
+      expect.any(Function),
+      {
+        enableHighAccuracy: false,
+        interval: 60000,
+        fastestInterval: 30000,
+        distanceFilter: 100,
+        showsBackgroundLocationIndicator: true,
       },
     );
   });

@@ -13,9 +13,14 @@ import {
 import { answerOffer } from './answerOffer';
 import { markOfferAnswered, offerKeyOf } from './answeredOffers';
 import { onNotificationEvent, onRemoteMessage } from './pushHandlers';
+import { onOnlineSignDismissed } from '@app/services/onlineService';
 
 jest.mock('@app/navigation/navigationRef', () => ({
   isHomeInFront: jest.fn(),
+}));
+
+jest.mock('@app/services/onlineService', () => ({
+  onOnlineSignDismissed: jest.fn(),
 }));
 
 jest.mock('./offerAlert', () => ({
@@ -234,14 +239,20 @@ describe('pushHandlers (spec 0003, AC-6, AC-12)', () => {
       );
     });
 
-    it('ignores non-action press events and unknown action ids', async () => {
-      // Tap on notification body (DISMISSED, PRESS, etc.)
+    it('routes EventType.DISMISSED to onOnlineSignDismissed with notification id (spec 0008, AC-3)', async () => {
       await onNotificationEvent({
         type: EventType.DISMISSED,
-        detail: {},
+        detail: {
+          notification: { id: 'online-status' },
+        },
       } as any);
-      expect(answerOffer).not.toHaveBeenCalled();
 
+      expect(onOnlineSignDismissed).toHaveBeenCalledTimes(1);
+      expect(onOnlineSignDismissed).toHaveBeenCalledWith('online-status');
+      expect(answerOffer).not.toHaveBeenCalled();
+    });
+
+    it('ignores unknown action ids on ACTION_PRESS', async () => {
       // Unknown action id
       await onNotificationEvent({
         type: EventType.ACTION_PRESS,

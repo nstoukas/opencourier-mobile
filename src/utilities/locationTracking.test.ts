@@ -56,20 +56,22 @@ describe('locationTracking (Row 67, Clauses 1 & 2)', () => {
     });
   });
 
-  describe('WATCH_OPTIONS (Clause 2, decision 67.2)', () => {
-    it('pins job watch options to 10s interval, 10s fastestInterval, 30m distanceFilter', () => {
+  describe('WATCH_OPTIONS (Row 67 Clause 2, Row 68 decision 68.5)', () => {
+    it('pins job watch options to 10s interval, 10s fastestInterval, 30m distanceFilter, enableHighAccuracy true', () => {
       expect(WATCH_OPTIONS[TrackingMode.Job]).toEqual({
         interval: 10000,
         fastestInterval: 10000,
         distanceFilter: 30,
+        enableHighAccuracy: true,
       });
     });
 
-    it('pins waiting watch options to 60s interval, 30s fastestInterval, 100m distanceFilter', () => {
+    it('pins waiting watch options to 60s interval, 30s fastestInterval, 100m distanceFilter, enableHighAccuracy false', () => {
       expect(WATCH_OPTIONS[TrackingMode.Waiting]).toEqual({
         interval: 60000,
         fastestInterval: 30000,
         distanceFilter: 100,
+        enableHighAccuracy: false,
       });
     });
   });

@@ -214,7 +214,7 @@ describe('SocketProvider and useConnectionStatus', () => {
       });
     });
 
-    it('refetches offers, in progress jobs and history on DELIVERY_STATUS_UPDATED', async () => {
+    it('refetches offers, in progress jobs, history, and user on DELIVERY_STATUS_UPDATED (spec 0008, AC-9)', async () => {
       let tree!: renderer.ReactTestRenderer;
       await act(async () => {
         tree = renderer.create(renderTree(queryClient));
@@ -231,7 +231,7 @@ describe('SocketProvider and useConnectionStatus', () => {
         });
       });
 
-      expect(invalidateQueriesSpy).toHaveBeenCalledTimes(3);
+      expect(invalidateQueriesSpy).toHaveBeenCalledTimes(4);
       expect(invalidateQueriesSpy).toHaveBeenCalledWith({
         queryKey: [QueryKeys.newOrders],
       });
@@ -240,6 +240,9 @@ describe('SocketProvider and useConnectionStatus', () => {
       });
       expect(invalidateQueriesSpy).toHaveBeenCalledWith({
         queryKey: [QueryKeys.orderHistory],
+      });
+      expect(invalidateQueriesSpy).toHaveBeenCalledWith({
+        queryKey: [QueryKeys.user],
       });
 
       act(() => {
@@ -364,6 +367,31 @@ describe('SocketProvider and useConnectionStatus', () => {
       });
 
       expect(latestSocket!.connectCalls).toBe(1);
+
+      act(() => {
+        tree.unmount();
+      });
+    });
+
+    it('invalidates user query on active AppState to sync server status changes (spec 0008, AC-9)', async () => {
+      let tree!: renderer.ReactTestRenderer;
+      await act(async () => {
+        tree = renderer.create(renderTree(queryClient));
+      });
+
+      expect(latestSocket).not.toBeNull();
+      expect(appStateListener).toBeDefined();
+
+      invalidateQueriesSpy.mockClear();
+
+      // App comes back to active foreground
+      act(() => {
+        appStateListener?.('active');
+      });
+
+      expect(invalidateQueriesSpy).toHaveBeenCalledWith({
+        queryKey: [QueryKeys.user],
+      });
 
       act(() => {
         tree.unmount();

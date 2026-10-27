@@ -1,5 +1,6 @@
 import { Alert, AppState, PermissionsAndroid, Platform } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import notifee from '@notifee/react-native';
 import '@app/localization/i18n';
 import { ONLINE_CHECKS_LIMIT_MS, prepareToGoOnline } from './goOnlineChecks';
 import * as phone from './phone';
@@ -13,7 +14,7 @@ jest.mock('./phone', () => ({
 }));
 
 const flushMicrotasks = async () => {
-  for (let i = 0; i < 10; i++) {
+  for (let i = 0; i < 50; i++) {
     await Promise.resolve();
   }
 };
@@ -55,6 +56,9 @@ describe('goOnlineChecks (spec 0003, AC-8, AC-9, Decisions 58.22, 58.23)', () =>
       doNotDisturb: false,
     });
     (phone.canUseFullScreenAlert as jest.Mock).mockResolvedValue(true);
+    (notifee.openNotificationSettings as jest.Mock).mockResolvedValue(
+      undefined,
+    );
 
     jest.spyOn(PermissionsAndroid, 'check').mockResolvedValue(true);
     jest
@@ -200,7 +204,9 @@ describe('goOnlineChecks (spec 0003, AC-8, AC-9, Decisions 58.22, 58.23)', () =>
   describe('AC-9: First-time alert permissions flow', () => {
     it('asks notification permission on Android 33+ and full screen explanation on first time', async () => {
       (phone.canUseFullScreenAlert as jest.Mock).mockResolvedValue(false);
-      (PermissionsAndroid.check as jest.Mock).mockResolvedValue(false);
+      (PermissionsAndroid.check as jest.Mock)
+        .mockResolvedValueOnce(false)
+        .mockResolvedValue(true);
 
       const promise = prepareToGoOnline();
       await flushMicrotasks();
@@ -232,10 +238,10 @@ describe('goOnlineChecks (spec 0003, AC-8, AC-9, Decisions 58.22, 58.23)', () =>
       );
     });
 
-    it('second Online asks nothing', async () => {
+    it('second Online asks nothing when permissions are granted', async () => {
       await AsyncStorage.setItem('offer_alert_permissions_asked', 'yes');
       (phone.canUseFullScreenAlert as jest.Mock).mockResolvedValue(false);
-      (PermissionsAndroid.check as jest.Mock).mockResolvedValue(false);
+      (PermissionsAndroid.check as jest.Mock).mockResolvedValue(true);
 
       await prepareToGoOnline();
 
@@ -253,11 +259,23 @@ describe('goOnlineChecks (spec 0003, AC-8, AC-9, Decisions 58.22, 58.23)', () =>
       const promise = prepareToGoOnline();
       await flushMicrotasks();
 
+      // First question: full-screen alerts explanation
       expect(alertSpy).toHaveBeenCalledTimes(1);
-      const buttons = alertSpy.mock.calls[0][2];
-      const notNowBtn = buttons.find((b: any) => b.text === 'Not now');
-
+      const buttons1 = alertSpy.mock.calls[0][2];
+      const notNowBtn = buttons1.find((b: any) => b.text === 'Not now');
       notNowBtn.onPress();
+
+      await flushMicrotasks();
+
+      // Second question: online_sign_hidden alert because notifications are denied
+      expect(alertSpy).toHaveBeenCalledTimes(2);
+      expect(alertSpy.mock.calls[1][0]).toBe('Notifications are off');
+      const buttons2 = alertSpy.mock.calls[1][2];
+      const goAnywayBtn = buttons2.find(
+        (b: any) => b.text === 'Go Online anyway',
+      );
+      goAnywayBtn.onPress();
+
       await expect(promise).resolves.toBeUndefined();
     });
 
@@ -408,6 +426,126 @@ describe('goOnlineChecks (spec 0003, AC-8, AC-9, Decisions 58.22, 58.23)', () =>
       await flushMicrotasks();
       expect(settled).toBe(true);
       await expect(promise).resolves.toBeUndefined();
+    });
+  });
+
+  describe('spec 0008, AC-8: In-app notice when notifications are disabled (row 68)', () => {
+    beforeEach(async () => {
+      // Mark first-time alert permissions as already asked so AC-8 is tested on its own
+      await AsyncStorage.setItem('offer_alert_permissions_asked', 'yes');
+    });
+
+    it('shows online_sign_hidden alert with "Go Online anyway" and "Turn on notifications" when POST_NOTIFICATIONS is denied on Android 33+', async () => {
+      (PermissionsAndroid.check as jest.Mock).mockResolvedValue(false);
+
+      const promise = prepareToGoOnline();
+      await flushMicrotasks();
+
+      expect(alertSpy).toHaveBeenCalledTimes(1);
+      const [title, message, buttons] = alertSpy.mock.calls[0];
+
+      expect(title).toBe('Notifications are off');
+      expect(message).toBe(
+        'While you are Online your location is shared to get offers. Android will not show the "OpenCourier is online" sign while notifications are off for this app.',
+      );
+
+      const buttonTexts = buttons.map((b: any) => b.text);
+      expect(buttonTexts).toContain('Go Online anyway');
+      expect(buttonTexts).toContain('Turn on notifications');
+
+      // Dismiss dialog
+      buttons[0].onPress();
+      await promise;
+    });
+
+    it('pressing "Turn on notifications" calls notifee.openNotificationSettings and resolves after AppState return', async () => {
+      (PermissionsAndroid.check as jest.Mock).mockResolvedValue(false);
+
+      let settled = false;
+      const promise = prepareToGoOnline().then(() => {
+        settled = true;
+      });
+      await flushMicrotasks();
+
+      const buttons = alertSpy.mock.calls[0][2];
+      const turnOnBtn = buttons.find(
+        (b: any) => b.text === 'Turn on notifications',
+      );
+
+      turnOnBtn.onPress();
+      expect(notifee.openNotificationSettings).toHaveBeenCalledTimes(1);
+
+      expect(settled).toBe(false);
+
+      triggerAppState('background');
+      triggerAppState('active');
+      await flushMicrotasks();
+
+      expect(settled).toBe(true);
+      await expect(promise).resolves.toBeUndefined();
+    });
+
+    it('pressing "Go Online anyway" resolves prepareToGoOnline immediately', async () => {
+      (PermissionsAndroid.check as jest.Mock).mockResolvedValue(false);
+
+      const promise = prepareToGoOnline();
+      await flushMicrotasks();
+
+      const buttons = alertSpy.mock.calls[0][2];
+      const goAnywayBtn = buttons.find(
+        (b: any) => b.text === 'Go Online anyway',
+      );
+
+      goAnywayBtn.onPress();
+      await expect(promise).resolves.toBeUndefined();
+    });
+
+    it('shows nothing when POST_NOTIFICATIONS is granted on Android 33+', async () => {
+      (PermissionsAndroid.check as jest.Mock).mockResolvedValue(true);
+
+      await prepareToGoOnline();
+      expect(alertSpy).not.toHaveBeenCalled();
+    });
+
+    it('shows nothing on Android below 33 (e.g. Version 32) even when POST_NOTIFICATIONS is not granted', async () => {
+      Object.defineProperty(Platform, 'Version', {
+        value: 32,
+        configurable: true,
+        writable: true,
+      });
+      (PermissionsAndroid.check as jest.Mock).mockResolvedValue(false);
+
+      await prepareToGoOnline();
+      expect(alertSpy).not.toHaveBeenCalled();
+    });
+
+    it('asks the online_sign_hidden question before the silent check when both apply', async () => {
+      (PermissionsAndroid.check as jest.Mock).mockResolvedValue(false);
+      (phone.getRingerState as jest.Mock).mockResolvedValue({
+        ringerMode: 'silent',
+        doNotDisturb: false,
+      });
+
+      const promise = prepareToGoOnline();
+      await flushMicrotasks();
+
+      // First question is online_sign_hidden
+      expect(alertSpy).toHaveBeenCalledTimes(1);
+      expect(alertSpy.mock.calls[0][0]).toBe('Notifications are off');
+
+      // Rider answers first question
+      alertSpy.mock.calls[0][2][0].onPress();
+      await flushMicrotasks();
+
+      // Second question is phone silent warning
+      expect(alertSpy).toHaveBeenCalledTimes(2);
+      expect(alertSpy.mock.calls[1][1]).toBe(
+        'Your phone is on silent. You may miss offers.',
+      );
+
+      // Rider answers second question
+      alertSpy.mock.calls[1][2][0].onPress();
+      await promise;
     });
   });
 });

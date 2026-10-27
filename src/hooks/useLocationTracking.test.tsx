@@ -6,6 +6,9 @@ import {
   cleanup,
   waitFor,
 } from '@testing-library/react-native';
+import { AppState, AppStateStatus, Platform } from 'react-native';
+import notifee from '@notifee/react-native';
+import '@app/localization/i18n';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import Geolocation from 'react-native-geolocation-service';
 import { Polyline } from 'react-native-maps';
@@ -13,6 +16,7 @@ import { Order, User, UserStatus } from '@app/types/types';
 import { OrderStatus } from '@app/types/enums';
 import { TrackingMode, WATCH_OPTIONS } from '@app/utilities/locationTracking';
 import { QueryKeys } from '@app/utilities/queryKeys';
+import { stopOnlineService } from '@app/services/onlineService';
 import useUser from '@app/hooks/useUser';
 import Map from '@app/components/Map/Map';
 import { useLocationTracking } from './useLocationTracking';
@@ -38,9 +42,40 @@ describe('useLocationTracking (Row 67, Clauses 1, 2, 3, 4)', () => {
   let watchIdCounter = 100;
   let watchCallback: ((pos: any) => void) | undefined;
   let getCurrentPositionCallback: ((pos: any) => void) | undefined;
+  const originalOS = Platform.OS;
+  let appStateListeners: Array<(state: AppStateStatus) => void> = [];
+
+  const flushMicrotasks = async () => {
+    for (let i = 0; i < 20; i++) {
+      await Promise.resolve();
+    }
+  };
+
+  const triggerAppState = (state: AppStateStatus) => {
+    AppState.currentState = state;
+    act(() => {
+      appStateListeners.forEach(listener => listener(state));
+    });
+  };
 
   beforeEach(() => {
     jest.clearAllMocks();
+    Platform.OS = 'android';
+    AppState.currentState = 'active';
+    appStateListeners = [];
+    jest
+      .spyOn(AppState, 'addEventListener')
+      .mockImplementation((event: string, listener: any) => {
+        if (event === 'change') {
+          appStateListeners.push(listener);
+        }
+        return {
+          remove: () => {
+            appStateListeners = appStateListeners.filter(l => l !== listener);
+          },
+        } as any;
+      });
+
     watchIdCounter = 100;
     watchCallback = undefined;
     getCurrentPositionCallback = undefined;
@@ -69,9 +104,11 @@ describe('useLocationTracking (Row 67, Clauses 1, 2, 3, 4)', () => {
     mockGetInProgressOrders.mockResolvedValue([]);
   });
 
-  afterEach(() => {
+  afterEach(async () => {
+    await stopOnlineService().catch(() => {});
     cleanup();
     queryClient.clear();
+    Platform.OS = originalOS;
   });
 
   const createWrapper = () => {
@@ -156,8 +193,8 @@ describe('useLocationTracking (Row 67, Clauses 1, 2, 3, 4)', () => {
         expect.any(Function),
         expect.any(Function),
         {
-          enableHighAccuracy: true,
           ...WATCH_OPTIONS[TrackingMode.Waiting],
+          showsBackgroundLocationIndicator: true,
         },
       );
     });
@@ -176,8 +213,8 @@ describe('useLocationTracking (Row 67, Clauses 1, 2, 3, 4)', () => {
         expect.any(Function),
         expect.any(Function),
         {
-          enableHighAccuracy: true,
           ...WATCH_OPTIONS[TrackingMode.Job],
+          showsBackgroundLocationIndicator: true,
         },
       );
     });
@@ -438,6 +475,202 @@ describe('useLocationTracking (Row 67, Clauses 1, 2, 3, 4)', () => {
 
       expect(result.current).toBe(TrackingMode.Off);
       expect(mockGetInProgressOrders).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('Row 68 (spec 0008): Foreground service notification lifecycle (AC-3, AC-4, AC-6)', () => {
+    it('shows waiting notification on start, updates to job text on mode change, and NEVER calls stopForegroundService (AC-3, decision 68.8)', async () => {
+      const { result } = renderHook(
+        () => useLocationTracking(onlineUser, true),
+        { wrapper: createWrapper() },
+      );
+
+      await waitFor(() => {
+        expect(result.current).toBe(TrackingMode.Waiting);
+        expect(notifee.displayNotification).toHaveBeenCalledWith(
+          expect.objectContaining({
+            id: 'online-status',
+            title: 'OpenCourier is online',
+            body: 'Your location is shared to get offers. Go offline to stop.',
+            android: expect.objectContaining({
+              asForegroundService: true,
+              ongoing: true,
+              pressAction: { id: 'default' },
+            }),
+          }),
+        );
+      });
+
+      // Transition to having an in-progress job
+      await act(async () => {
+        mockGetInProgressOrders.mockResolvedValue([activeJob]);
+        await queryClient.refetchQueries({
+          queryKey: [QueryKeys.inProgressOrders],
+        });
+      });
+
+      await waitFor(() => {
+        expect(result.current).toBe(TrackingMode.Job);
+        expect(notifee.displayNotification).toHaveBeenCalledWith(
+          expect.objectContaining({
+            id: 'online-status',
+            title: 'OpenCourier: delivery in progress',
+            body: 'Your location is shared until this delivery ends.',
+          }),
+        );
+      });
+
+      // Crucial: decision 68.8 says service is NEVER stopped when changing between waiting and job
+      expect(notifee.stopForegroundService).not.toHaveBeenCalled();
+    });
+
+    it('stops the foreground service when rider goes Offline with no job (AC-4)', async () => {
+      const { result, rerender } = renderHook(
+        ({ user, hasPermission }) => useLocationTracking(user, hasPermission),
+        {
+          initialProps: { user: onlineUser, hasPermission: true },
+          wrapper: createWrapper(),
+        },
+      );
+
+      await waitFor(() => {
+        expect(result.current).toBe(TrackingMode.Waiting);
+        expect(notifee.displayNotification).toHaveBeenCalled();
+      });
+
+      // Rider goes Offline
+      rerender({ user: offlineUser, hasPermission: true });
+
+      await waitFor(() => {
+        expect(result.current).toBe(TrackingMode.Off);
+        expect(notifee.stopForegroundService).toHaveBeenCalledTimes(1);
+      });
+    });
+
+    it('stops the foreground service when user logs out (user becomes undefined) (AC-4)', async () => {
+      const { result, rerender } = renderHook(
+        ({ user, hasPermission }) => useLocationTracking(user, hasPermission),
+        {
+          initialProps: {
+            user: onlineUser as User | undefined,
+            hasPermission: true,
+          },
+          wrapper: createWrapper(),
+        },
+      );
+
+      await waitFor(() => {
+        expect(result.current).toBe(TrackingMode.Waiting);
+        expect(notifee.displayNotification).toHaveBeenCalled();
+      });
+
+      // Rider logs out: user becomes undefined
+      rerender({ user: undefined, hasPermission: true });
+
+      await waitFor(() => {
+        expect(result.current).toBe(TrackingMode.Off);
+        expect(notifee.stopForegroundService).toHaveBeenCalledTimes(1);
+      });
+    });
+
+    it('a show that resolves after tracking already turned off stops the service at once (AC-4)', async () => {
+      let resolveDisplay!: () => void;
+      (notifee.displayNotification as jest.Mock).mockImplementation(
+        () =>
+          new Promise(resolve => {
+            resolveDisplay = () => resolve('online-status');
+          }),
+      );
+
+      const { rerender } = renderHook(
+        ({ user, hasPermission }) => useLocationTracking(user, hasPermission),
+        {
+          initialProps: { user: onlineUser, hasPermission: true },
+          wrapper: createWrapper(),
+        },
+      );
+
+      // Wait for displayNotification to be called so resolveDisplay is populated
+      await waitFor(() => {
+        expect(notifee.displayNotification).toHaveBeenCalled();
+      });
+
+      // Tracking turns off while show is still in flight
+      rerender({ user: offlineUser, hasPermission: true });
+
+      // Now the delayed show resolves
+      await act(async () => {
+        resolveDisplay();
+      });
+
+      await waitFor(() => {
+        expect(notifee.stopForegroundService).toHaveBeenCalled();
+      });
+    });
+
+    it('with AppState not active when tracking turns on, displayNotification is not called (AC-6)', async () => {
+      AppState.currentState = 'background';
+
+      renderHook(() => useLocationTracking(onlineUser, true), {
+        wrapper: createWrapper(),
+      });
+
+      await flushMicrotasks();
+      expect(notifee.displayNotification).not.toHaveBeenCalled();
+    });
+
+    it('when AppState changes to active, service starts with the mode current at that moment (AC-6)', async () => {
+      AppState.currentState = 'background';
+      // Pre-seed an active job so current mode is Job
+      queryClient.setQueryData([QueryKeys.inProgressOrders], [activeJob]);
+
+      renderHook(() => useLocationTracking(onlineUser, true), {
+        wrapper: createWrapper(),
+      });
+
+      expect(notifee.displayNotification).not.toHaveBeenCalled();
+
+      // App comes to the front (active)
+      triggerAppState('active');
+
+      await waitFor(() => {
+        expect(notifee.displayNotification).toHaveBeenCalledWith(
+          expect.objectContaining({
+            id: 'online-status',
+            title: 'OpenCourier: delivery in progress',
+          }),
+        );
+      });
+    });
+
+    it('when displayNotification rejects once, nothing throws and the next active tries again (AC-6)', async () => {
+      const consoleLogSpy = jest
+        .spyOn(console, 'log')
+        .mockImplementation(() => {});
+      (notifee.displayNotification as jest.Mock)
+        .mockRejectedValueOnce(new Error('Android refused start'))
+        .mockResolvedValue('online-status');
+
+      renderHook(() => useLocationTracking(onlineUser, true), {
+        wrapper: createWrapper(),
+      });
+
+      await waitFor(() => {
+        expect(consoleLogSpy).toHaveBeenCalledWith(
+          'Could not start the online service',
+          expect.any(Error),
+        );
+      });
+
+      // Leaving and returning to active triggers retry
+      triggerAppState('background');
+      triggerAppState('active');
+
+      await waitFor(() => {
+        expect(notifee.displayNotification).toHaveBeenCalledTimes(2);
+      });
+
+      consoleLogSpy.mockRestore();
     });
   });
 });
