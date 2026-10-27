@@ -13,6 +13,12 @@
     <uses-permission android:name="android.permission.USE_FULL_SCREEN_INTENT" />
     <uses-permission android:name="android.permission.VIBRATE" />
 
+    <!-- Background location while Online (row 68, spec 0008): a foreground service of
+         type location, started while the app is in front, keeps "while in use" location
+         working with the screen locked. Never ACCESS_BACKGROUND_LOCATION (value 5). -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_LOCATION" />
+
     <!-- The map apps a rider can navigate with (row 66). Since Android 11 an app can only
          see the apps it names here, so without this the map picker found none. -->
     <queries>
@@ -34,6 +40,12 @@
       android:roundIcon="@mipmap/ic_launcher"
       android:allowBackup="false"
       android:theme="@style/AppTheme">
+      <!-- notifee's foreground service, given the location type Android 14 and later need
+           (row 68). notifee 7.9 starts it without naming a type, so Android uses this one. -->
+      <service
+        android:name="app.notifee.core.ForegroundService"
+        android:exported="false"
+        android:foregroundServiceType="location" />
       <activity
         android:name=".MainActivity"
         android:label="@string/app_name"

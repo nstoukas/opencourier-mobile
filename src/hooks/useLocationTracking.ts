@@ -1,4 +1,5 @@
-import { useEffect } from 'react';
+import { useEffect, useRef, useState } from 'react';
+import { AppState } from 'react-native';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import Geolocation from 'react-native-geolocation-service';
 import { services } from '@app/services/service';
@@ -11,6 +12,11 @@ import {
   trackingModeFor,
 } from '@app/utilities/locationTracking';
 import { User } from '@app/types/types';
+import {
+  showOnlineService,
+  stopOnlineService,
+  TrackingOnMode,
+} from '@app/services/onlineService';
 
 // The app's one location watch (row 67). It runs only while the rider is
 // Online or carrying a job, and stops the moment neither is true. Each fix is
@@ -70,5 +76,75 @@ export const useLocationTracking = (
     };
   }, [mode, queryClient]);
 
+  // The foreground service that keeps this watch alive in the background, with
+  // its "online" sign (row 68, spec 0008). Android starts it only while the app
+  // is in front, so "in front" is part of when to try.
+  const appActive = useAppActive();
+  const tracking = mode !== TrackingMode.Off;
+  // `useRef` holds a value across renders without causing one: whether the
+  // service runs, and the latest mode and tracking state for async callbacks.
+  const serviceRunning = useRef(false);
+  const latest = useRef({ mode, tracking });
+  latest.current = { mode, tracking };
+
+  // On and off. Keyed on tracking and on the app being in front, never on the
+  // mode itself, so a change between waiting and a job never stops the service
+  // (decision 68.8). A refused start is tried again on the next return to the
+  // front, for the mode current then (AC-6).
+  useEffect(() => {
+    if (!tracking) {
+      if (serviceRunning.current) {
+        serviceRunning.current = false;
+        stopOnlineService().catch(error =>
+          console.log('Could not stop the online service', error),
+        );
+      }
+      return;
+    }
+    if (serviceRunning.current || !appActive) {
+      return;
+    }
+    showOnlineService(latest.current.mode as TrackingOnMode)
+      .then(() => {
+        serviceRunning.current = true;
+        // Tracking may have ended while Android was starting the service.
+        if (!latest.current.tracking) {
+          serviceRunning.current = false;
+          return stopOnlineService();
+        }
+      })
+      .catch(error => console.log('Could not start the online service', error));
+  }, [tracking, appActive]);
+
+  // The text: waiting or on a job. Updates the running service in place.
+  useEffect(() => {
+    if (!serviceRunning.current || mode === TrackingMode.Off) {
+      return;
+    }
+    showOnlineService(mode).catch(error =>
+      console.log('Could not update the online service', error),
+    );
+  }, [mode]);
+
+  // The sign never outlives the app's screens.
+  useEffect(
+    () => () => {
+      stopOnlineService().catch(() => undefined);
+    },
+    [],
+  );
+
   return mode;
+};
+
+// True while the app is in front. Re-renders when that changes.
+const useAppActive = (): boolean => {
+  const [active, setActive] = useState(AppState.currentState === 'active');
+  useEffect(() => {
+    const subscription = AppState.addEventListener('change', state =>
+      setActive(state === 'active'),
+    );
+    return () => subscription.remove();
+  }, []);
+  return active;
 };

@@ -176,6 +176,12 @@ export default {
   account_number: 'Account Number',
   card_number: 'Card Number',
   zip_code: 'ZIP CODE',
+  online_service_channel: 'Online status',
+  online_service_title_waiting: 'OpenCourier is online',
+  online_service_body_waiting:
+    'Your location is shared to get offers. Go offline to stop.',
+  online_service_title_job: 'OpenCourier: delivery in progress',
+  online_service_body_job: 'Your location is shared until this delivery ends.',
   session_ended_title: 'Please log in again',
   session_ended_body:
     'Your login has expired, so the app logged you out. Log in again to get orders.',
