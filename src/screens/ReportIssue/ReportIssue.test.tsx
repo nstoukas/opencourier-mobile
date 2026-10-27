@@ -1001,7 +1001,9 @@ describe('ReportIssue screen (decision 66.11)', () => {
 
     describe('Failure log does not print the whole error object (Nit & review ruling)', () => {
       it('prints only the error message and never the whole error object', async () => {
-        const sensitiveError = new Error('Sensitive socket error with auth key');
+        const sensitiveError = new Error(
+          'Sensitive socket error with auth key',
+        );
         (services.orderService.reportIssue as jest.Mock).mockRejectedValue(
           sensitiveError,
         );
