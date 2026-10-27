@@ -1,4 +1,5 @@
 import { io } from 'socket.io-client';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { UserStatus } from '@app/types/types';
 import {
   COURIER_NAMESPACE,
@@ -89,13 +90,44 @@ describe('liveConnection', () => {
   });
 
   describe('createCourierSocket', () => {
-    it('opens socket with courierSocketUrl, websocket transport and bearer token', () => {
+    beforeEach(async () => {
+      await AsyncStorage.clear();
+      jest.clearAllMocks();
+    });
+
+    it('opens socket with courierSocketUrl, websocket transport and auth callback', () => {
       createCourierSocket('http://localhost:3000', 'jwt-token-xyz');
 
       expect(io).toHaveBeenCalledWith('http://localhost:3000/couriers', {
         transports: ['websocket'],
-        auth: { authorization: 'Bearer jwt-token-xyz' },
+        auth: expect.any(Function),
       });
+    });
+
+    it('auth callback reads AsyncStorage token at call time, so after saved token changes the NEXT call returns Bearer <new token> (and falls back to initial token)', async () => {
+      createCourierSocket('http://localhost:3000', 'initial-token');
+      const authFn = (io as jest.Mock).mock.calls[0][1].auth;
+
+      // 1. Initial call with no token saved in storage -> falls back to initial token
+      const auth1 = await new Promise(resolve => authFn(resolve));
+      expect(auth1).toEqual({ authorization: 'Bearer initial-token' });
+
+      // 2. Token saved in storage -> next call uses the saved token
+      await AsyncStorage.setItem('token', 'saved-token-123');
+      const auth2 = await new Promise(resolve => authFn(resolve));
+      expect(auth2).toEqual({ authorization: 'Bearer saved-token-123' });
+
+      // 3. Saved token changes -> NEXT call returns Bearer <new token>
+      await AsyncStorage.setItem('token', 'renewed-token-456');
+      const auth3 = await new Promise(resolve => authFn(resolve));
+      expect(auth3).toEqual({ authorization: 'Bearer renewed-token-456' });
+
+      // 4. Storage fails (getItem rejects) -> falls back to initial token
+      jest
+        .spyOn(AsyncStorage, 'getItem')
+        .mockRejectedValueOnce(new Error('Storage failure'));
+      const auth4 = await new Promise(resolve => authFn(resolve));
+      expect(auth4).toEqual({ authorization: 'Bearer initial-token' });
     });
   });
 

@@ -23,9 +23,71 @@ describe('answerOffer (spec 0003, AC-5)', () => {
     mockedAxios.isAxiosError.mockImplementation(
       (payload: any): payload is any => true,
     );
-    mockedAxios.create.mockReturnValue({
-      post: mockPost,
-    } as any);
+
+    let responseErrorHandler: ((error: any) => Promise<any>) | undefined;
+
+    const fakeClient: any = jest.fn(async (config: any) => {
+      // Retrying a request calls http(config)
+      return mockPost(config.url, config.data, config);
+    });
+
+    fakeClient.defaults = {
+      baseURL: 'https://coop.example.com/api/courier/v1',
+      headers: {
+        common: {
+          Accept: 'application/json',
+          Authorization: 'Bearer courier-auth-token-xyz',
+        },
+      },
+    };
+
+    fakeClient.interceptors = {
+      response: {
+        use: jest.fn((_onFulfilled, onRejected) => {
+          responseErrorHandler = onRejected;
+        }),
+      },
+    };
+
+    fakeClient.post = jest.fn(async (url: string, data: any, config?: any) => {
+      const mergedConfig = {
+        url,
+        data,
+        headers: {
+          Authorization:
+            fakeClient.defaults.headers.common.Authorization ??
+            'Bearer courier-auth-token-xyz',
+          ...config?.headers,
+        },
+        ...config,
+      };
+      try {
+        return config !== undefined
+          ? await mockPost(url, data, config)
+          : await mockPost(url, data);
+      } catch (err: any) {
+        if (responseErrorHandler) {
+          if (!err.config) {
+            err.config = mergedConfig;
+          }
+          return await responseErrorHandler(err);
+        }
+        throw err;
+      }
+    });
+
+    mockedAxios.create.mockImplementation((opts?: any) => {
+      if (opts?.baseURL) {
+        fakeClient.defaults.baseURL = opts.baseURL;
+      }
+      if (opts?.headers) {
+        fakeClient.defaults.headers.common = {
+          ...fakeClient.defaults.headers.common,
+          ...opts.headers,
+        };
+      }
+      return fakeClient;
+    });
 
     mockPost.mockResolvedValue({ status: 200, data: {} });
     invalidateSpy = jest.spyOn(queryClient, 'invalidateQueries');
@@ -80,6 +142,81 @@ describe('answerOffer (spec 0003, AC-5)', () => {
     expect(invalidateSpy).toHaveBeenCalledWith({
       queryKey: [QueryKeys.inProgressOrders],
     });
+  });
+
+  it('when accept answers 401 and refresh token is saved, renews through auth/refresh-tokens and sends accept again with new bearer, outcome sent', async () => {
+    await AsyncStorage.setItem('refreshToken', 'courier-refresh-token-123');
+
+    // 1. Initial accept call gets 401 Unauthorized
+    const unauthError: any = new Error('Request failed with status code 401');
+    unauthError.response = { status: 401, data: {} };
+    mockPost.mockRejectedValueOnce(unauthError);
+
+    // 2. Refresh tokens endpoint succeeds
+    mockedAxios.post.mockResolvedValueOnce({
+      data: {
+        result: {
+          session: {
+            accessToken: 'renewed-courier-token-abc',
+            refreshToken: 'renewed-refresh-token-def',
+          },
+        },
+      },
+    });
+
+    // 3. Retried accept call and subsequent mark-as-dispatched call succeed
+    mockPost.mockResolvedValueOnce({ status: 200, data: {} });
+    mockPost.mockResolvedValueOnce({ status: 200, data: {} });
+
+    const offer = {
+      deliveryId: 'del-headless-401-refresh',
+      offeredAt: '2026-10-26T10:30:00.000Z',
+    };
+
+    const outcome = await answerOffer(offer, 'accept');
+
+    expect(outcome).toBe('sent');
+
+    // axios.post was called to renew token
+    expect(mockedAxios.post).toHaveBeenCalledWith(
+      'https://coop.example.com/api/courier/v1/auth/refresh-tokens',
+      undefined,
+      {
+        headers: { 'x-refresh-token': 'courier-refresh-token-123' },
+        timeout: 10000,
+      },
+    );
+
+    // mockPost was called 3 times: failed accept, retried accept, mark-as-dispatched
+    expect(mockPost).toHaveBeenCalledTimes(3);
+    expect(mockPost).toHaveBeenNthCalledWith(
+      1,
+      'deliveries/del-headless-401-refresh/accept',
+      {},
+    );
+    expect(mockPost).toHaveBeenNthCalledWith(
+      2,
+      'deliveries/del-headless-401-refresh/accept',
+      {},
+      expect.objectContaining({
+        headers: expect.objectContaining({
+          Authorization: 'Bearer renewed-courier-token-abc',
+        }),
+      }),
+    );
+    expect(mockPost).toHaveBeenNthCalledWith(
+      3,
+      'deliveries/del-headless-401-refresh/mark-as-dispatched',
+      {},
+    );
+
+    // Tokens were renewed and saved to AsyncStorage
+    expect(await AsyncStorage.getItem('token')).toBe(
+      'renewed-courier-token-abc',
+    );
+    expect(await AsyncStorage.getItem('refreshToken')).toBe(
+      'renewed-refresh-token-def',
+    );
   });
 
   it('headless decline sends reject and cancels the alert', async () => {

@@ -38,4 +38,33 @@ describe('AC-8: HistoryCell renders StatusBadge for order.status', () => {
     expect(badge.props.status).toBe('CANCELED');
     expect(getByText('Canceled')).toBeDefined();
   });
+
+  describe('createdAt timezone handling (row 66 review fix)', () => {
+    const originalTZ = process.env.TZ;
+
+    beforeAll(() => {
+      process.env.TZ = 'Europe/Athens';
+    });
+
+    afterAll(() => {
+      process.env.TZ = originalTZ;
+    });
+
+    it('shows the date of the UTC instant in Europe/Athens time zone (28 Oct 2026 instead of 27 Oct 2026)', () => {
+      const order = {
+        ...baseOrder,
+        createdAt: '2026-10-27T22:30:00.000Z',
+        status: 'DROPPED_OFF',
+      } as Order;
+
+      const { getByText, queryByText } = render(
+        <HistoryCell order={order} onPress={() => {}} />,
+      );
+
+      // In Europe/Athens (UTC+2 in late October), 22:30 UTC is 00:30 on 28 Oct 2026.
+      // The old format 'YYYY-MM-DDThh:mm:ss[Z]' parsed it as local time 27 Oct 2026.
+      expect(getByText(/28 Oct 2026/)).toBeDefined();
+      expect(queryByText(/27 Oct 2026/)).toBeNull();
+    });
+  });
 });

@@ -267,7 +267,7 @@ describe('session service (Row 66, Clause 3)', () => {
       expect(retriedConfig.sessionRetried).toBe(true);
     });
 
-    it('does NOT refresh and rejects immediately when request url is auth/login, auth/register, or auth/refresh-tokens', async () => {
+    it('does NOT refresh and rejects immediately when request url ends with auth/login, auth/register, or auth/refresh-tokens (even with query params)', async () => {
       await AsyncStorage.setItem('refreshToken', 'existing-refresh-token');
       (axios.post as jest.Mock).mockResolvedValue({
         data: {
@@ -284,6 +284,7 @@ describe('session service (Row 66, Clause 3)', () => {
 
       for (const path of [
         'auth/login',
+        'auth/login?x=1',
         'auth/register',
         'auth/refresh-tokens',
       ]) {
@@ -292,6 +293,32 @@ describe('session service (Row 66, Clause 3)', () => {
       }
       expect(axios.post).not.toHaveBeenCalled();
       expect(alertSpy).not.toHaveBeenCalled();
+    });
+
+    it('refreshes and retries when url contains auth/login as prefix but ends with something else (e.g. auth/login-history)', async () => {
+      await AsyncStorage.setItem('refreshToken', 'valid-refresh-token');
+      (axios.post as jest.Mock).mockResolvedValueOnce({
+        data: {
+          result: {
+            session: {
+              accessToken: 'renewed-token',
+              refreshToken: 'renewed-refresh',
+            },
+          },
+        },
+      });
+      mockHttp.mockResolvedValueOnce({ data: { history: [] } });
+
+      const err = makeError(401, 'auth/login-history');
+      const errorHandler = onResponseError(mockHttp);
+
+      const response = await errorHandler(err);
+      expect(response).toEqual({ data: { history: [] } });
+      expect(axios.post).toHaveBeenCalledTimes(1);
+      expect(mockHttp).toHaveBeenCalledTimes(1);
+      expect(mockHttp.mock.calls[0][0].headers.Authorization).toBe(
+        'Bearer renewed-token',
+      );
     });
 
     it('does NOT refresh and rejects immediately when request had no Authorization header', async () => {
@@ -312,63 +339,140 @@ describe('session service (Row 66, Clause 3)', () => {
       expect(axios.post).not.toHaveBeenCalled();
     });
 
-    it('ends session when refresh token is missing or refused with 401 or 403', async () => {
+    it('ends session when refresh token is missing or refused with 400, 401, 403, or 404', async () => {
       // Case A: No refresh token saved
       const errA = makeError(401, 'courier/orders');
-      const errorHandlerA = onResponseError(mockHttp);
-      await expect(errorHandlerA(errA)).rejects.toBe(errA);
+      const errorHandler = onResponseError(mockHttp);
+      await expect(errorHandler(errA)).rejects.toBe(errA);
       expect(alertSpy).toHaveBeenCalledWith(
         i18n.t('translations:session_ended_title'),
         i18n.t('translations:session_ended_body'),
       );
 
-      jest.clearAllMocks();
+      for (const status of [400, 401, 403, 404]) {
+        jest.clearAllMocks();
+        await AsyncStorage.setItem('refreshToken', `bad-refresh-${status}`);
+        await AsyncStorage.setItem('token', `stale-token-${status}`);
 
-      // Case B: Refresh token answered 401 (refused)
-      await AsyncStorage.setItem('refreshToken', 'bad-refresh');
-      const refresh401 = new Error('Refresh 401') as AxiosError;
-      refresh401.response = { status: 401 } as any;
-      (axios.post as jest.Mock).mockRejectedValueOnce(refresh401);
+        const refreshErr = new Error(`Refresh ${status}`) as AxiosError;
+        refreshErr.response = { status } as any;
+        (axios.post as jest.Mock).mockRejectedValueOnce(refreshErr);
 
-      const errB = makeError(401, 'courier/orders');
-      await expect(errorHandlerA(errB)).rejects.toBe(errB);
-      expect(alertSpy).toHaveBeenCalledWith(
-        i18n.t('translations:session_ended_title'),
-        i18n.t('translations:session_ended_body'),
-      );
-
-      jest.clearAllMocks();
-
-      // Case C: Refresh token answered 403 (refused)
-      await AsyncStorage.setItem('refreshToken', 'forbidden-refresh');
-      const refresh403 = new Error('Refresh 403') as AxiosError;
-      refresh403.response = { status: 403 } as any;
-      (axios.post as jest.Mock).mockRejectedValueOnce(refresh403);
-
-      const errC = makeError(401, 'courier/orders');
-      await expect(errorHandlerA(errC)).rejects.toBe(errC);
-      expect(alertSpy).toHaveBeenCalledWith(
-        i18n.t('translations:session_ended_title'),
-        i18n.t('translations:session_ended_body'),
-      );
+        const err = makeError(401, 'courier/orders');
+        await expect(errorHandler(err)).rejects.toBe(err);
+        expect(alertSpy).toHaveBeenCalledWith(
+          i18n.t('translations:session_ended_title'),
+          i18n.t('translations:session_ended_body'),
+        );
+        expect(await AsyncStorage.getItem('token')).toBeNull();
+        expect(await AsyncStorage.getItem('refreshToken')).toBeNull();
+      }
     });
 
-    it('does NOT end session when refresh fails due to network error (no answer from server)', async () => {
-      await AsyncStorage.setItem('refreshToken', 'valid-refresh');
+    it('does NOT end session when refresh answers 500, 408, 429, or fails with no response', async () => {
+      const errorHandler = onResponseError(mockHttp);
 
-      // Network error has no response / no status 401/403
+      for (const status of [500, 408, 429]) {
+        jest.clearAllMocks();
+        await AsyncStorage.setItem('refreshToken', `valid-refresh-${status}`);
+        await AsyncStorage.setItem('token', `valid-token-${status}`);
+
+        const refreshErr = new Error(`Refresh ${status}`) as AxiosError;
+        refreshErr.response = { status } as any;
+        (axios.post as jest.Mock).mockRejectedValueOnce(refreshErr);
+
+        const err = makeError(401, 'courier/orders');
+        await expect(errorHandler(err)).rejects.toBe(err);
+
+        // Rider stays logged in; session is NOT ended
+        expect(alertSpy).not.toHaveBeenCalled();
+        expect(resetQueriesSpy).not.toHaveBeenCalled();
+        expect(await AsyncStorage.getItem('refreshToken')).toBe(
+          `valid-refresh-${status}`,
+        );
+        expect(await AsyncStorage.getItem('token')).toBe(
+          `valid-token-${status}`,
+        );
+      }
+
+      // No response (e.g. network error / timeout without response object)
+      jest.clearAllMocks();
+      await AsyncStorage.setItem('refreshToken', 'valid-refresh-no-response');
+      await AsyncStorage.setItem('token', 'valid-token-no-response');
+
       const networkError = new Error('Network Error');
       (axios.post as jest.Mock).mockRejectedValueOnce(networkError);
 
-      const err = makeError(401, 'courier/orders');
-      const errorHandler = onResponseError(mockHttp);
-
-      await expect(errorHandler(err)).rejects.toBe(err);
+      const errNet = makeError(401, 'courier/orders');
+      await expect(errorHandler(errNet)).rejects.toBe(errNet);
 
       // Rider stays logged in; session is NOT ended
       expect(alertSpy).not.toHaveBeenCalled();
       expect(resetQueriesSpy).not.toHaveBeenCalled();
-      expect(await AsyncStorage.getItem('refreshToken')).toBe('valid-refresh');
+      expect(await AsyncStorage.getItem('refreshToken')).toBe(
+        'valid-refresh-no-response',
+      );
+      expect(await AsyncStorage.getItem('token')).toBe(
+        'valid-token-no-response',
+      );
+    });
+
+    it('retries once only through real axios when custom adapter answers 401 every time', async () => {
+      await AsyncStorage.setItem('refreshToken', 'valid-refresh-token');
+
+      (axios.post as jest.Mock).mockResolvedValue({
+        data: {
+          result: {
+            session: {
+              accessToken: 'refreshed-token',
+              refreshToken: 'next-refresh-token',
+            },
+          },
+        },
+      });
+
+      const calledTokens: string[] = [];
+      const adapterMock = jest.fn((config: InternalAxiosRequestConfig) => {
+        calledTokens.push(String(config.headers?.Authorization));
+        const error = new AxiosError(
+          'Request failed with status code 401',
+          'ERR_BAD_RESPONSE',
+          config,
+          null,
+          {
+            status: 401,
+            statusText: 'Unauthorized',
+            headers: {},
+            config,
+            data: {},
+          } as any,
+        );
+        return Promise.reject(error);
+      });
+
+      const realClient = axios.create({
+        baseURL: 'http://localhost:3000/api/courier/v1/',
+        adapter: adapterMock,
+      });
+
+      installSessionRefresh(realClient);
+
+      await expect(
+        realClient.get('courier/profile', {
+          headers: { Authorization: 'Bearer initial-token' },
+        }),
+      ).rejects.toThrow('Request failed with status code 401');
+
+      // Adapter must be called exactly twice: initial request plus one retry
+      expect(adapterMock).toHaveBeenCalledTimes(2);
+      expect(axios.post).toHaveBeenCalledTimes(1);
+
+      // Verify Authorization headers for original and retry
+      expect(calledTokens).toEqual([
+        'Bearer initial-token',
+        'Bearer refreshed-token',
+      ]);
+      expect((adapterMock.mock.calls[1][0] as any).sessionRetried).toBe(true);
     });
   });
 
