@@ -32,7 +32,7 @@ const NOTE_MAX_LENGTH = 500;
 
 export const ReportIssue = ({ navigation, route }: Props) => {
   const { t } = useTranslation();
-  const { top } = useSafeAreaInsets();
+  const { top, bottom } = useSafeAreaInsets();
   const { order } = route.params;
   const [didSelectIssue, setDidSelectIssue] = useState<boolean>(false);
   // True while a report is on its way, so a second tap cannot send it twice.
@@ -126,7 +126,9 @@ export const ReportIssue = ({ navigation, route }: Props) => {
 
             {/* A bare "Other" tells the admin nothing, so Send waits for a note. */}
             {writingNote && (
-              <View style={styles.noteBox}>
+              // React Native's SafeAreaView pads only on iOS, so the bottom inset keeps
+              // Send report clear of Android's gesture bar (as on Home and Landing).
+              <View style={[styles.noteBox, { paddingBottom: bottom }]}>
                 <TextInput
                   style={styles.noteInput}
                   value={note}
