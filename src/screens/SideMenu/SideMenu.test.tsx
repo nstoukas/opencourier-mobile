@@ -49,7 +49,6 @@ jest.mock('@app/hooks/useUser', () => () => ({
   user: mockUserData,
   updateStatus: jest.fn(),
   updateDeliverySettings: jest.fn(),
-  updateUserLocation: jest.fn(),
 }));
 
 const mockRequestLocationPermission = jest.fn();

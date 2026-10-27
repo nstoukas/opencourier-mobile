@@ -2,13 +2,17 @@ import React from 'react';
 import { AppState, PermissionsAndroid, Platform } from 'react-native';
 import { renderHook, act, cleanup } from '@testing-library/react-native';
 import UserContext from '@app/context/userContext';
-import { useLocationPermission } from './useLocationPermission';
+import {
+  useLocationPermission,
+  useGrantedLocationPermission,
+} from './useLocationPermission';
 
 describe('useLocationPermission (Row 67, Clause 6, Decision 67.5)', () => {
   const originalOS = Platform.OS;
   const mockSetLocationPermission = jest.fn();
   let checkSpy: jest.SpyInstance;
   let requestSpy: jest.SpyInstance;
+  let appStateSpy: jest.SpyInstance;
   let appStateListener: ((state: string) => void) | undefined;
   const mockSubscriptionRemove = jest.fn();
 
@@ -22,7 +26,7 @@ describe('useLocationPermission (Row 67, Clause 6, Decision 67.5)', () => {
       .spyOn(PermissionsAndroid, 'request')
       .mockResolvedValue(PermissionsAndroid.RESULTS.GRANTED);
 
-    jest
+    appStateSpy = jest
       .spyOn(AppState, 'addEventListener')
       .mockImplementation((event: any, listener: any) => {
         if (event === 'change') {
@@ -37,6 +41,7 @@ describe('useLocationPermission (Row 67, Clause 6, Decision 67.5)', () => {
     Platform.OS = originalOS;
     checkSpy.mockRestore();
     requestSpy.mockRestore();
+    appStateSpy.mockRestore();
   });
 
   const wrapper = ({ children }: { children: React.ReactNode }) => (
@@ -56,7 +61,7 @@ describe('useLocationPermission (Row 67, Clause 6, Decision 67.5)', () => {
   it('reads PermissionsAndroid.check(ACCESS_FINE_LOCATION) on mount without requesting and sets context to true', async () => {
     checkSpy.mockResolvedValue(true);
 
-    renderHook(() => useLocationPermission(), { wrapper });
+    renderHook(() => useGrantedLocationPermission(), { wrapper });
 
     await act(async () => {
       await Promise.resolve();
@@ -72,7 +77,7 @@ describe('useLocationPermission (Row 67, Clause 6, Decision 67.5)', () => {
   it('sets context locationPermission to false when check returns false on mount', async () => {
     checkSpy.mockResolvedValue(false);
 
-    renderHook(() => useLocationPermission(), { wrapper });
+    renderHook(() => useGrantedLocationPermission(), { wrapper });
 
     await act(async () => {
       await Promise.resolve();
@@ -88,7 +93,7 @@ describe('useLocationPermission (Row 67, Clause 6, Decision 67.5)', () => {
   it('reads permission again when AppState becomes active (decision 67.5)', async () => {
     checkSpy.mockResolvedValue(true);
 
-    renderHook(() => useLocationPermission(), { wrapper });
+    renderHook(() => useGrantedLocationPermission(), { wrapper });
 
     await act(async () => {
       await Promise.resolve();
@@ -112,7 +117,7 @@ describe('useLocationPermission (Row 67, Clause 6, Decision 67.5)', () => {
   });
 
   it('does not re-read permission when AppState transitions to background or inactive', async () => {
-    renderHook(() => useLocationPermission(), { wrapper });
+    renderHook(() => useGrantedLocationPermission(), { wrapper });
 
     await act(async () => {
       await Promise.resolve();
@@ -130,9 +135,22 @@ describe('useLocationPermission (Row 67, Clause 6, Decision 67.5)', () => {
   });
 
   it('removes AppState event listener subscription on unmount', () => {
-    const { unmount } = renderHook(() => useLocationPermission(), { wrapper });
+    const { unmount } = renderHook(() => useGrantedLocationPermission(), {
+      wrapper,
+    });
     unmount();
 
     expect(mockSubscriptionRemove).toHaveBeenCalledTimes(1);
+  });
+
+  it('useLocationPermission() itself does not call PermissionsAndroid.check or AppState.addEventListener', async () => {
+    renderHook(() => useLocationPermission(), { wrapper });
+
+    await act(async () => {
+      await Promise.resolve();
+    });
+
+    expect(checkSpy).not.toHaveBeenCalled();
+    expect(appStateSpy).not.toHaveBeenCalled();
   });
 });
