@@ -5,7 +5,6 @@ import { Images } from './images';
 describe('AC-7: images.ts kept entries and icons asset directory', () => {
   const keptImageKeys = [
     'WelcomePin',
-    'WelcomeCam',
     'WelcomeBell',
     'NoiseBG',
     'Avatar',
@@ -21,18 +20,18 @@ describe('AC-7: images.ts kept entries and icons asset directory', () => {
     'Buildings',
   ];
 
-  it('images.ts exports only the 15 kept entries', () => {
+  it('images.ts exports only the 14 kept entries', () => {
     const exportedKeys = Object.keys(Images);
     expect(exportedKeys.sort()).toEqual(keptImageKeys.sort());
-    expect(exportedKeys.length).toBe(15);
+    expect(exportedKeys.length).toBe(14);
   });
 
-  it('src/assets/icons holds exactly the 45 PNG files for the kept entries', () => {
+  it('src/assets/icons holds exactly the 42 PNG files for the kept entries', () => {
     const iconsDir = path.resolve(__dirname, '../assets/icons');
     const files = fs.readdirSync(iconsDir);
 
     // Each kept image has 3 density files (base .png, @2x.png, @3x.png)
-    expect(files.length).toBe(45);
+    expect(files.length).toBe(42);
 
     const expectedFiles = [
       'avatar.png',
@@ -53,9 +52,6 @@ describe('AC-7: images.ts kept entries and icons asset directory', () => {
       'illustration-bell-order.png',
       'illustration-bell-order@2x.png',
       'illustration-bell-order@3x.png',
-      'illustration-cam-order.png',
-      'illustration-cam-order@2x.png',
-      'illustration-cam-order@3x.png',
       'illustration-car.png',
       'illustration-car@2x.png',
       'illustration-car@3x.png',
