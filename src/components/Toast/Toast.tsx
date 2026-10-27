@@ -59,7 +59,7 @@ export const Toast = ({
   const tintTone = useMemo((): ColorName | undefined => {
     switch (toast) {
       case ToastMessage.enableNotifications:
-        return 'input';
+        return 'muted-foreground';
       case ToastMessage.itemsBagged:
         return 'warning';
       case ToastMessage.enableLocationServices:
@@ -107,7 +107,7 @@ export const Toast = ({
         toast !== ToastMessage.pickupBeforeContinuing &&
         !disableClose && (
           <TouchableOpacity
-            hitSlop={hitSlopFor(40)}
+            hitSlop={hitSlopFor(40, 24)}
             style={styles.buttonClose}
             onPress={() => onClose && onClose()}>
             <View style={styles.separator} />

@@ -115,7 +115,7 @@ export const HistoryCell = ({ style, order, onPress }: Props) => {
           <View style={styles.containerInfo}>
             <Icon
               icon={HandHeartIcon}
-              size={20}
+              size={16}
               tone="muted-foreground"
               style={styles.iconSmall}
             />

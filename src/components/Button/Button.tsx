@@ -58,7 +58,7 @@ const BUTTON_LOOKS: Record<ButtonType, ButtonLook> = {
     background: color.warning,
     text: 'warning-foreground',
     border: color.warning,
-    borderWidth: 2,
+    borderWidth: 0,
   },
   [ButtonType.white]: {
     background: color.background,

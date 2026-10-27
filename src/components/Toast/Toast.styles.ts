@@ -7,6 +7,8 @@ export const styles = StyleSheet.create({
     marginRight: 8,
   },
   container: {
+    // The close button's touch area needs the room: 48 px, or Android cuts its hitSlop.
+    minHeight: control.xl,
     borderWidth: 1,
     marginHorizontal: 16,
     borderRadius: radius['2xl'],

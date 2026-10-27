@@ -26,11 +26,6 @@ export const styles = StyleSheet.create({
     alignItems: 'center',
     marginLeft: 8,
   },
-  iconAddressButton: {
-    width: 14,
-    height: 14,
-    tintColor: Colors.black1,
-  },
   containerMap: {
     flexDirection: 'row',
     alignItems: 'center',

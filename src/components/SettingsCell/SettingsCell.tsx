@@ -75,7 +75,13 @@ export const SettingsCell = ({
         </TouchableOpacity>
       )}
       {cellType === SettingsCellType.switch && (
-        <View style={styles.content}>
+        // The whole row is the control: a press anywhere flips the switch (spec 0007).
+        <TouchableOpacity
+          activeOpacity={0.7}
+          style={styles.content}
+          onPress={() =>
+            onSwitchValueChange && onSwitchValueChange(!switchValue)
+          }>
           <View style={styles.containerVerticalText}>
             <Text style={styles.textTitle}>{t(`translations:${title}`)}</Text>
             <Text style={styles.textSubtitle}>
@@ -83,7 +89,7 @@ export const SettingsCell = ({
             </Text>
           </View>
           <Switch value={switchValue} onValueChange={onSwitchValueChange} />
-        </View>
+        </TouchableOpacity>
       )}
       {cellType === SettingsCellType.radioButton && (
         <>

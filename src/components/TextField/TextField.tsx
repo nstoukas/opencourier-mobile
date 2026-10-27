@@ -95,7 +95,7 @@ export const TextField = forwardRef<TextInput, TextFieldProps>((props, ref) => {
         </View>
         {secureTextEntry && (
           <TouchableOpacity
-            hitSlop={hitSlopFor(18, 18, 4)}
+            hitSlop={hitSlopFor(22, 22, 4)}
             activeOpacity={0.9}
             onPress={() => setInputTextHidden(!inputTextHidden)}>
             <Icon

@@ -4,7 +4,7 @@ import { radius, typeScale } from '@app/styles/theme';
 
 export const styles = StyleSheet.create({
   container: {
-    borderRadius: radius['2xl'],
+    borderRadius: radius.full,
     padding: 8,
     borderWidth: 1,
     borderColor: Colors.gray4,

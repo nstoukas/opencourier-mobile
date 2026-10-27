@@ -39,6 +39,7 @@ import { useConnectionStatus } from '@app/services/socket';
 import { prepareToGoOnline } from '@app/services/offerPush/goOnlineChecks';
 import { cancelOfferAlert } from '@app/services/offerPush/offerAlert';
 import { isHomeInFront } from '@app/navigation/navigationRef';
+import { color } from '@app/styles/theme';
 
 type Props = DrawerScreenProp<DrawerScreens.Home>;
 
@@ -303,8 +304,8 @@ export const HomeScreen = ({ navigation }: Props) => {
       {
         options: availableMapApps,
         cancelButtonIndex: Math.max(0, availableMapApps.length - 1),
-        tintColor: 'blue',
-        cancelButtonTintColor: 'red',
+        tintColor: color.route,
+        cancelButtonTintColor: color.destructive,
       },
       onSelect,
     );
