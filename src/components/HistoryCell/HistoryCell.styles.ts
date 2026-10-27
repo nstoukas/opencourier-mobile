@@ -111,5 +111,8 @@ export const styles = StyleSheet.create({
     height: 24,
     marginLeft: 8,
   },
+  statusBadge: {
+    marginRight: 8,
+  },
   containerCarret: { flexDirection: 'row', alignItems: 'center' },
 });

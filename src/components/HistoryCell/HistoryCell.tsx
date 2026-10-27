@@ -19,6 +19,7 @@ import { typeScale } from '@app/styles/theme';
 import { CalendarIcon } from 'phosphor-react-native/src/icons/Calendar';
 import { HandHeartIcon } from 'phosphor-react-native/src/icons/HandHeart';
 import { StorefrontIcon } from 'phosphor-react-native/src/icons/Storefront';
+import { StatusBadge } from '@app/components/StatusBadge/StatusBadge';
 
 type Props = {
   style?: StyleProp<ViewStyle>;
@@ -51,6 +52,7 @@ export const HistoryCell = ({ style, order, onPress }: Props) => {
             </View>
           </View>
           <View style={styles.containerCarret}>
+            <StatusBadge status={order.status} style={styles.statusBadge} />
             <View style={styles.containerStatus}>
               <Text style={styles.textStatus}>
                 {formatCurrencyFromCents(
