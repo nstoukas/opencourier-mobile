@@ -104,13 +104,26 @@ export const useLocationTracking = (
     if (serviceRunning.current || !appActive) {
       return;
     }
-    showOnlineService(latest.current.mode as TrackingOnMode)
-      .then(() => {
+    const shownMode = latest.current.mode as TrackingOnMode;
+    showOnlineService(shownMode)
+      .then(shown => {
+        if (!shown) {
+          return;
+        }
         serviceRunning.current = true;
         // Tracking may have ended while Android was starting the service.
         if (!latest.current.tracking) {
           serviceRunning.current = false;
-          return stopOnlineService();
+          return stopOnlineService().catch(error =>
+            console.log('Could not stop the online service', error),
+          );
+        }
+        // The mode may have changed meanwhile (a job arriving at start up),
+        // and the text effect skipped it because the service was not running.
+        if (latest.current.mode !== shownMode) {
+          showOnlineService(latest.current.mode as TrackingOnMode).catch(
+            error => console.log('Could not update the online service', error),
+          );
         }
       })
       .catch(error => console.log('Could not start the online service', error));
@@ -126,9 +139,11 @@ export const useLocationTracking = (
     );
   }, [mode]);
 
-  // The sign never outlives the app's screens.
+  // The sign never outlives the app's screens. Resetting the mark lets the
+  // effect above start it again if the hook runs again (Fast Refresh in dev).
   useEffect(
     () => () => {
+      serviceRunning.current = false;
       stopOnlineService().catch(() => undefined);
     },
     [],

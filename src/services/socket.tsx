@@ -79,13 +79,17 @@ const SocketProvider = ({ children }: Props) => {
       // The rider too: the server may change their status with a delivery
       // (a Last Call rider is set Offline on accepting), and no other message
       // says so. Tracking and the "online" sign follow it (row 68, AC-9).
-      onDeliveryStatusUpdated: () =>
-        refetch([
-          QueryKeys.newOrders,
-          QueryKeys.inProgressOrders,
-          QueryKeys.orderHistory,
-          QueryKeys.user,
-        ]),
+      // The jobs come first and the rider after: in the other order, an Offline
+      // rider whose new job had not arrived yet would stop tracking for a
+      // moment, and Android may refuse the restart in the background.
+      onDeliveryStatusUpdated: () => {
+        refetch([QueryKeys.newOrders, QueryKeys.orderHistory]);
+        queryClient
+          .invalidateQueries({ queryKey: [QueryKeys.inProgressOrders] })
+          .then(() =>
+            queryClient.invalidateQueries({ queryKey: [QueryKeys.user] }),
+          );
+      },
       // After any (re)connect, fetch what may have been sent while away.
       onConnected: () =>
         refetch([QueryKeys.newOrders, QueryKeys.inProgressOrders]),

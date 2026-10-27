@@ -24,16 +24,22 @@ export type TrackingOnMode = TrackingMode.Waiting | TrackingMode.Job;
 // The mode the sign shows now, or null while it is stopped. Kept here so the
 // notification event handler, which has no screen state, can put the sign back.
 let shownMode: TrackingOnMode | null = null;
+// Counts the stops. A show that sees the count change while it waits on
+// Android gives up instead of displaying: displaying would start the service
+// again after it was stopped, and the sign would stay with tracking off.
+let stops = 0;
 
 // Shows the sign and starts the service, or updates the text if it already
-// runs. Rejects when Android refuses to start it (the app is not in front);
-// the caller tries again when the app returns.
+// runs. Resolves true when shown, false when a stop came first (nothing shown).
+// Rejects when Android refuses to start it (the app is not in front); the
+// caller tries again when the app returns.
 export const showOnlineService = async (
   mode: TrackingOnMode,
-): Promise<void> => {
+): Promise<boolean> => {
   if (Platform.OS !== 'android') {
-    return;
+    return true;
   }
+  const stopsAtStart = stops;
   // Creating a channel that exists already changes nothing, so this is safe
   // every time. LOW: no sound and no pop up, it is a standing sign.
   await notifee.createChannel({
@@ -41,6 +47,9 @@ export const showOnlineService = async (
     name: i18next.t('translations:online_service_channel'),
     importance: AndroidImportance.LOW,
   });
+  if (stops !== stopsAtStart) {
+    return false;
+  }
   const onJob = mode === TrackingMode.Job;
   await notifee.displayNotification({
     id: ONLINE_NOTIFICATION_ID,
@@ -62,7 +71,13 @@ export const showOnlineService = async (
       pressAction: { id: 'default' },
     },
   });
+  // A stop that arrived while Android was displaying: undo the start at once.
+  if (stops !== stopsAtStart) {
+    await notifee.stopForegroundService();
+    return false;
+  }
   shownMode = mode;
+  return true;
 };
 
 // Stops the service, which also removes the sign. Safe when nothing runs.
@@ -71,6 +86,7 @@ export const stopOnlineService = async (): Promise<void> => {
     return;
   }
   shownMode = null;
+  stops += 1;
   await notifee.stopForegroundService();
 };
 
@@ -85,5 +101,11 @@ export const onOnlineSignDismissed = async (
     return;
   }
   console.log('The online sign was swiped away; showing it again');
-  await showOnlineService(shownMode);
+  try {
+    await showOnlineService(shownMode);
+  } catch (error) {
+    // Android refused (the app is not in front); the sign returns with the
+    // next start, when the app comes back.
+    console.log('Could not show the online sign again', error);
+  }
 };

@@ -21,6 +21,8 @@ notifee.onBackgroundEvent(onNotificationEvent);
 notifee.onForegroundEvent(onNotificationEvent);
 // The "online" foreground service (row 68). Its task never finishes, so the
 // service lives until the app stops it (stopForegroundService) when tracking ends.
+// Do not make it resolve: notifee would then stop the service, and the location
+// sharing with it, while the rider is still Online.
 notifee.registerForegroundService(() => new Promise(() => {}));
 
 AppRegistry.registerComponent(appName, () => App);
