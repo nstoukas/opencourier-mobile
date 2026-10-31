@@ -4,7 +4,8 @@ import orderService, {
   OFFER_HAS_ENDED_CODE,
 } from './orderService';
 import { UClient } from './Client';
-import { DeliveryIssueReason } from '@app/types/enums';
+import { DeliveryIssueReason, OrderStatus } from '@app/types/enums';
+import { JobStep } from '@app/utilities/jobSteps';
 
 describe('orderService & isOfferEndedError (spec 0002, AC-5)', () => {
   describe('isOfferEndedError', () => {
@@ -229,6 +230,218 @@ describe('orderService & isOfferEndedError (spec 0002, AC-5)', () => {
       );
       expect('note' in mockPost.mock.calls[1][1]).toBe(false);
       expect(Object.keys(mockPost.mock.calls[1][1])).toEqual(['reason']);
+    });
+  });
+
+  describe('sendJobStep (spec 0009, AC-2, AC-4, AC-6)', () => {
+    const makeAxiosError = (status: number, data: unknown): AxiosError => {
+      const err = new AxiosError('Request failed');
+      err.response = {
+        status,
+        statusText: 'Error',
+        headers: {},
+        config: {} as any,
+        data,
+      };
+      return err;
+    };
+
+    it('posts to deliveries/<id>/<route> for each of the five job steps', async () => {
+      const stepsAndRoutes: [JobStep, string][] = [
+        ['dispatched', 'mark-as-dispatched'],
+        ['arrived_at_pickup', 'arrived-at-pickup'],
+        ['picked_up', 'mark-as-picked-up'],
+        ['arrived_at_dropoff', 'arrived-at-dropoff'],
+        ['delivered', 'mark-as-delivered'],
+      ];
+
+      for (const [step, route] of stepsAndRoutes) {
+        const mockPost = jest
+          .fn()
+          .mockResolvedValue({ data: { result: { status: 'ANY' } } });
+        const client = { post: mockPost } as unknown as UClient;
+        const service = orderService(client);
+
+        await service.sendJobStep({ deliveryId: `del-${step}`, step }, 500);
+
+        expect(mockPost).toHaveBeenCalledTimes(1);
+        expect(mockPost).toHaveBeenCalledWith(
+          `deliveries/del-${step}/${route}`,
+          { tapAgeMs: 500 },
+        );
+      }
+    });
+
+    it('sends { tapAgeMs } alone when note is not provided or empty', async () => {
+      const mockPost = jest
+        .fn()
+        .mockResolvedValue({
+          data: { result: { status: OrderStatus.dispatched } },
+        });
+      const client = { post: mockPost } as unknown as UClient;
+      const service = orderService(client);
+
+      await service.sendJobStep(
+        { deliveryId: 'del-123', step: 'dispatched' },
+        350,
+      );
+
+      expect(mockPost).toHaveBeenCalledTimes(1);
+      const payload = mockPost.mock.calls[0][1];
+      expect(payload).toEqual({ tapAgeMs: 350 });
+      expect('note' in payload).toBe(false);
+      expect(Object.keys(payload)).toEqual(['tapAgeMs']);
+    });
+
+    it('sends { tapAgeMs, note } only when note is given', async () => {
+      const mockPost = jest
+        .fn()
+        .mockResolvedValue({
+          data: { result: { status: OrderStatus.dropped_off } },
+        });
+      const client = { post: mockPost } as unknown as UClient;
+      const service = orderService(client);
+
+      await service.sendJobStep(
+        {
+          deliveryId: 'del-123',
+          step: 'delivered',
+          note: 'Left package at side door',
+        },
+        1250,
+      );
+
+      expect(mockPost).toHaveBeenCalledTimes(1);
+      const payload = mockPost.mock.calls[0][1];
+      expect(payload).toEqual({
+        tapAgeMs: 1250,
+        note: 'Left package at side door',
+      });
+      expect(payload.note).toBe('Left package at side door');
+    });
+
+    it('returns { kind: "delivery", status: data.result.status } on 2xx answer', async () => {
+      const mockPost = jest.fn().mockResolvedValue({
+        data: {
+          result: {
+            id: 'del-123',
+            status: OrderStatus.picked_up,
+          },
+        },
+      });
+      const client = { post: mockPost } as unknown as UClient;
+      const service = orderService(client);
+
+      const answer = await service.sendJobStep(
+        { deliveryId: 'del-123', step: 'picked_up' },
+        800,
+      );
+
+      expect(answer).toEqual({
+        kind: 'delivery',
+        status: OrderStatus.picked_up,
+      });
+    });
+
+    it('returns { kind: "error", httpStatus, code } for an axios error with a response', async () => {
+      const axiosError409 = makeAxiosError(409, {
+        error: true,
+        result: [{ code: 'CANT_UPDATE_DELIVERY_STATUS', message: 'Conflict' }],
+      });
+      const mockPost409 = jest.fn().mockRejectedValue(axiosError409);
+      const service409 = orderService({
+        post: mockPost409,
+      } as unknown as UClient);
+
+      const answer409 = await service409.sendJobStep(
+        { deliveryId: 'del-123', step: 'arrived_at_pickup' },
+        400,
+      );
+
+      expect(answer409).toEqual({
+        kind: 'error',
+        httpStatus: 409,
+        code: 'CANT_UPDATE_DELIVERY_STATUS',
+      });
+
+      const axiosError404 = makeAxiosError(404, {
+        error: true,
+        result: [],
+      });
+      const mockPost404 = jest.fn().mockRejectedValue(axiosError404);
+      const service404 = orderService({
+        post: mockPost404,
+      } as unknown as UClient);
+
+      const answer404 = await service404.sendJobStep(
+        { deliveryId: 'del-123', step: 'arrived_at_pickup' },
+        400,
+      );
+
+      expect(answer404).toEqual({
+        kind: 'error',
+        httpStatus: 404,
+        code: undefined,
+      });
+    });
+
+    it('returns { kind: "none" } for an error with no response (network, timeout)', async () => {
+      // Axios error without response (e.g. network down, offline)
+      const networkError = new AxiosError('Network Error');
+      networkError.response = undefined;
+      const mockPostNet = jest.fn().mockRejectedValue(networkError);
+      const serviceNet = orderService({
+        post: mockPostNet,
+      } as unknown as UClient);
+
+      const answerNet = await serviceNet.sendJobStep(
+        { deliveryId: 'del-123', step: 'dispatched' },
+        100,
+      );
+      expect(answerNet).toEqual({ kind: 'none' });
+
+      // Timeout error (e.g. 10s request timeout)
+      const timeoutError = new AxiosError(
+        'timeout of 10000ms exceeded',
+        'ECONNABORTED',
+      );
+      timeoutError.response = undefined;
+      const mockPostTimeout = jest.fn().mockRejectedValue(timeoutError);
+      const serviceTimeout = orderService({
+        post: mockPostTimeout,
+      } as unknown as UClient);
+
+      const answerTimeout = await serviceTimeout.sendJobStep(
+        { deliveryId: 'del-123', step: 'dispatched' },
+        100,
+      );
+      expect(answerTimeout).toEqual({ kind: 'none' });
+
+      // Generic non-Axios error
+      const genericError = new Error('Unexpected client exception');
+      const mockPostGeneric = jest.fn().mockRejectedValue(genericError);
+      const serviceGeneric = orderService({
+        post: mockPostGeneric,
+      } as unknown as UClient);
+
+      const answerGeneric = await serviceGeneric.sendJobStep(
+        { deliveryId: 'del-123', step: 'dispatched' },
+        100,
+      );
+      expect(answerGeneric).toEqual({ kind: 'none' });
+    });
+
+    it('never throws even when client.post throws or rejects', async () => {
+      const throwingClient = {
+        post: jest.fn().mockImplementation(() => {
+          throw new Error('Immediate synchronous throw');
+        }),
+      } as unknown as UClient;
+      const service = orderService(throwingClient);
+
+      await expect(
+        service.sendJobStep({ deliveryId: 'del-123', step: 'dispatched' }, 100),
+      ).resolves.toEqual({ kind: 'none' });
     });
   });
 });

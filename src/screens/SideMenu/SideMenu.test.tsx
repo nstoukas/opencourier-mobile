@@ -141,6 +141,39 @@ describe('SideMenu logout (spec 0002, AC-6; spec 0009, AC-8, AC-11)', () => {
     expect(multiRemoveSpy).not.toHaveBeenCalled();
   });
 
+  it('fails closed when waitingCount rejects: shows alert that phone could not check, logout is not called, and no confirmation is offered (AC-8)', async () => {
+    jest
+      .spyOn(jobStepOutbox, 'waitingCount')
+      .mockRejectedValue(new Error('Storage failure'));
+
+    const component = renderSideMenu();
+
+    const plainItems = component.root.findAllByType(SideMenuItemPlain);
+    const logoutItem = plainItems.find(
+      item => item.props.item === SideMenuItem.Logout,
+    );
+    expect(logoutItem).toBeDefined();
+
+    act(() => {
+      logoutItem!.props.onPress(SideMenuItem.Logout);
+    });
+
+    await waitFor(() => {
+      expect(alertSpy).toHaveBeenCalledTimes(1);
+    });
+    expect(alertSpy).toHaveBeenCalledWith(
+      i18n.t('translations:logout_waiting_title'),
+      i18n.t('translations:logout_outbox_unreadable'),
+    );
+    // No confirmation buttons offered (alert called with title and message only)
+    expect(alertSpy.mock.calls[0][2]).toBeUndefined();
+
+    expect(mockUnregisterThisPhone).not.toHaveBeenCalled();
+    expect(mockSetUserStatus).not.toHaveBeenCalled();
+    expect(mockLogout).not.toHaveBeenCalled();
+    expect(multiRemoveSpy).not.toHaveBeenCalled();
+  });
+
   it('sets rider Offline before clearing session on logout and calls clearSavedQueries when no steps wait (AC-8, AC-11)', async () => {
     jest.spyOn(jobStepOutbox, 'waitingCount').mockResolvedValue(0);
     const clearSavedQueriesSpy = jest.spyOn(

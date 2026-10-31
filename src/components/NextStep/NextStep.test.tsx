@@ -201,7 +201,7 @@ describe('NextStep component (spec 0009, AC-2)', () => {
       ]);
     });
 
-    it('tapping Confirm items on an ACCEPTED order adds two steps: dispatched and picked_up', async () => {
+    it('tapping Confirm items on a COURIER_ARRIVED_AT_PICKUP_LOCATION order adds picked_up', async () => {
       // If order is ACCEPTED, showPrePickupActions is true, but isCourierArrivedAtPickup is false
       // If we render with courier_arrived_at_pickup_location, Confirm items shows.
       // But if an ACCEPTED order somehow triggered confirmOrderItems (e.g. from useOrder directly),
