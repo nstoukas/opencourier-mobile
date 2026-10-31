@@ -39,7 +39,6 @@ the error count is above `typecheck-baseline.json`, and lowers the file when the
 - Push is off on dev and the app still ships upstream's Firebase project, so no real FCM message
   reaches the emulator. To check push handling live, feed messages with the backend's keys to the
   app's own `onRemoteMessage` (decision 58.27).
-
 - Cutting the app off from the backend on the emulator: `adb reverse --remove tcp:3000` (switching wifi off does nothing, the app reaches the backend through adb); `adb reverse tcp:3000 tcp:3000` restores. An already open connection survives the removal, so wait for "No connection" before tapping (spec 0009).
 - A React Query refetch that fails keeps the data but sets `status: 'error'`: anything that filters on `status === 'success'` drops data that is still there (row 20 review).
 
