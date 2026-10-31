@@ -19,14 +19,15 @@ describe('queryPersistence (spec 0009, AC-1, AC-11)', () => {
   describe('shouldKeepQuery', () => {
     const makeQuery = (
       key: string,
-      status: 'success' | 'error' | 'pending',
+      data?: unknown,
+      status: 'success' | 'error' | 'pending' = 'success',
     ): Query =>
       ({
         queryKey: [key],
-        state: { status },
+        state: { status, data },
       } as unknown as Query);
 
-    it('keeps only successful user, inProgressOrders, and the three earnings queries', () => {
+    it('keeps a user, inProgressOrders or earnings query when data is defined, whatever its status (AC-1)', () => {
       const allowedKeys = [
         QueryKeys.user,
         QueryKeys.inProgressOrders,
@@ -36,27 +37,66 @@ describe('queryPersistence (spec 0009, AC-1, AC-11)', () => {
       ];
 
       for (const key of allowedKeys) {
-        expect(shouldKeepQuery(makeQuery(key, 'success'))).toBe(true);
+        // Keeps with status 'success' and data
+        expect(
+          shouldKeepQuery(makeQuery(key, { sample: 'data' }, 'success')),
+        ).toBe(true);
+        // Keeps with status 'error' and data (AC-1 offline refetch failure)
+        expect(
+          shouldKeepQuery(makeQuery(key, { sample: 'data' }, 'error')),
+        ).toBe(true);
+        // Keeps with status 'pending' and data
+        expect(
+          shouldKeepQuery(makeQuery(key, { sample: 'data' }, 'pending')),
+        ).toBe(true);
       }
     });
 
-    it('never keeps newOrders or orderHistory even if successful', () => {
-      expect(shouldKeepQuery(makeQuery(QueryKeys.newOrders, 'success'))).toBe(
-        false,
-      );
-      expect(
-        shouldKeepQuery(makeQuery(QueryKeys.orderHistory, 'success')),
-      ).toBe(false);
-      expect(shouldKeepQuery(makeQuery('randomQuery', 'success'))).toBe(false);
+    it('drops queries with no data (data === undefined) even with success status (AC-1)', () => {
+      const allowedKeys = [
+        QueryKeys.user,
+        QueryKeys.inProgressOrders,
+        QueryKeys.earningsSummary,
+        QueryKeys.earningsDay,
+        QueryKeys.earningsDelivery,
+      ];
+
+      for (const key of allowedKeys) {
+        expect(shouldKeepQuery(makeQuery(key, undefined, 'success'))).toBe(
+          false,
+        );
+        expect(shouldKeepQuery(makeQuery(key, undefined, 'error'))).toBe(false);
+        expect(shouldKeepQuery(makeQuery(key, undefined, 'pending'))).toBe(
+          false,
+        );
+      }
     });
 
-    it('returns false for allowed queries when status is not success (e.g. error or pending)', () => {
-      expect(shouldKeepQuery(makeQuery(QueryKeys.user, 'error'))).toBe(false);
+    it('never keeps newOrders or orderHistory even with data (AC-1)', () => {
       expect(
-        shouldKeepQuery(makeQuery(QueryKeys.inProgressOrders, 'pending')),
+        shouldKeepQuery(
+          makeQuery(QueryKeys.newOrders, { id: 'order-1' }, 'success'),
+        ),
       ).toBe(false);
       expect(
-        shouldKeepQuery(makeQuery(QueryKeys.earningsSummary, 'error')),
+        shouldKeepQuery(
+          makeQuery(QueryKeys.newOrders, { id: 'order-1' }, 'error'),
+        ),
+      ).toBe(false);
+      expect(
+        shouldKeepQuery(
+          makeQuery(QueryKeys.orderHistory, [{ id: 'hist-1' }], 'success'),
+        ),
+      ).toBe(false);
+      expect(
+        shouldKeepQuery(
+          makeQuery(QueryKeys.orderHistory, [{ id: 'hist-1' }], 'error'),
+        ),
+      ).toBe(false);
+      expect(
+        shouldKeepQuery(
+          makeQuery('randomQuery', { some: 'payload' }, 'success'),
+        ),
       ).toBe(false);
     });
   });
@@ -87,11 +127,16 @@ describe('queryPersistence (spec 0009, AC-1, AC-11)', () => {
       expect(await AsyncStorage.getItem('queryCache')).toBeNull();
     });
 
-    it('endExpiredSession calls clearSavedQueries (AC-11)', async () => {
+    it('endExpiredSession calls clearSavedQueries and keeps the outbox (AC-8, AC-11)', async () => {
+      const initialOutbox = JSON.stringify([
+        { id: 'step-1', courierId: 'rider-1', state: 'waiting' },
+      ]);
       await AsyncStorage.setItem(
         'queryCache',
         JSON.stringify({ test: 'cached' }),
       );
+      await AsyncStorage.setItem('jobStepOutbox', initialOutbox);
+
       const mockHttp = {
         defaults: { headers: { common: {} } },
       } as any;
@@ -100,6 +145,8 @@ describe('queryPersistence (spec 0009, AC-1, AC-11)', () => {
 
       // Cache is cleared after session expires
       expect(await AsyncStorage.getItem('queryCache')).toBeNull();
+      // Outbox is kept intact (no change to AsyncStorage key jobStepOutbox)
+      expect(await AsyncStorage.getItem('jobStepOutbox')).toBe(initialOutbox);
     });
   });
 });

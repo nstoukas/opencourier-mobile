@@ -16,7 +16,7 @@ describe('jobStepOutbox (spec 0009, AC-3, AC-6, AC-8)', () => {
   beforeEach(async () => {
     resetOutboxForTests();
     await AsyncStorage.clear();
-    jest.restoreAllMocks();
+    jest.clearAllMocks();
   });
 
   describe('AC-6 classification (classifyAnswer)', () => {
@@ -170,6 +170,27 @@ describe('jobStepOutbox (spec 0009, AC-3, AC-6, AC-8)', () => {
         classifyAnswer('picked_up', { kind: 'error', httpStatus: 404 }),
       ).toBe('refused');
     });
+
+    it('returns retry for a delivery answer with no status (undefined or empty) (AC-6)', () => {
+      expect(
+        classifyAnswer('arrived_at_pickup', {
+          kind: 'delivery',
+          status: undefined,
+        }),
+      ).toBe('retry');
+      expect(
+        classifyAnswer('arrived_at_pickup', {
+          kind: 'delivery',
+          status: '',
+        }),
+      ).toBe('retry');
+      expect(
+        classifyAnswer('delivered', {
+          kind: 'delivery',
+          status: undefined,
+        }),
+      ).toBe('retry');
+    });
   });
 
   describe('Outbox store and persistence (AC-3, AC-8)', () => {
@@ -277,18 +298,45 @@ describe('jobStepOutbox (spec 0009, AC-3, AC-6, AC-8)', () => {
         },
       ]);
 
-      expect(waitingCount('rider-1')).toBe(2);
-      expect(waitingCount('rider-2')).toBe(1);
-      expect(waitingCount('rider-3')).toBe(0);
+      expect(await waitingCount('rider-1')).toBe(2);
+      expect(await waitingCount('rider-2')).toBe(1);
+      expect(await waitingCount('rider-3')).toBe(0);
     });
 
-    it('dismissRefused removes only that delivery refused items', async () => {
+    it('waitingCount is async and waits for the stored list (spec 0009, AC-8)', async () => {
+      resetOutboxForTests();
+      await AsyncStorage.setItem(
+        'jobStepOutbox',
+        JSON.stringify([
+          {
+            id: 'stored-1',
+            courierId: 'rider-1',
+            deliveryId: 'del-1',
+            step: 'dispatched',
+            tappedAt: 1000,
+            state: 'waiting',
+          },
+        ]),
+      );
+
+      // Memory is not yet loaded, but awaiting waitingCount reads storage
+      expect(await waitingCount('rider-1')).toBe(1);
+    });
+
+    it('dismissRefused(courierId, deliveryId) removes only that rider refused items of that delivery', async () => {
       await addJobSteps([
         {
           courierId: 'rider-1',
           deliveryId: 'del-1',
           step: 'dispatched',
           tappedAt: 1000,
+          restaurantName: 'R1',
+        },
+        {
+          courierId: 'rider-2',
+          deliveryId: 'del-1',
+          step: 'dispatched',
+          tappedAt: 1005,
           restaurantName: 'R1',
         },
         {
@@ -300,22 +348,269 @@ describe('jobStepOutbox (spec 0009, AC-3, AC-6, AC-8)', () => {
         },
       ]);
 
-      // Refuse both deliveries
+      // Refuse all
       await flushOutbox('rider-1', async () => ({
         kind: 'error',
         httpStatus: 400,
       }));
+      await flushOutbox('rider-2', async () => ({
+        kind: 'error',
+        httpStatus: 400,
+      }));
 
-      expect(getOutboxItems()).toHaveLength(2);
+      expect(getOutboxItems()).toHaveLength(3);
       expect(getOutboxItems().every(i => i.state === 'refused')).toBe(true);
 
-      // Dismiss del-1 only
+      // Dismiss rider-1's del-1 only
       await dismissRefused('rider-1', 'del-1');
 
       const remaining = getOutboxItems();
-      expect(remaining).toHaveLength(1);
-      expect(remaining[0].deliveryId).toBe('del-2');
-      expect(remaining[0].state).toBe('refused');
+      expect(remaining).toHaveLength(2);
+      // rider-2's del-1 refused item is still present
+      expect(
+        remaining.some(
+          i =>
+            i.courierId === 'rider-2' &&
+            i.deliveryId === 'del-1' &&
+            i.state === 'refused',
+        ),
+      ).toBe(true);
+      // rider-1's del-2 refused item is still present
+      expect(
+        remaining.some(
+          i =>
+            i.courierId === 'rider-1' &&
+            i.deliveryId === 'del-2' &&
+            i.state === 'refused',
+        ),
+      ).toBe(true);
+      // rider-1's del-1 item was removed
+      expect(
+        remaining.some(
+          i => i.courierId === 'rider-1' && i.deliveryId === 'del-1',
+        ),
+      ).toBe(false);
+    });
+
+    it('does not add a step already waiting for the same rider, delivery and step, but adds for another rider or delivery, and again once earlier one was sent or refused (double tap)', async () => {
+      await addJobSteps([
+        {
+          courierId: 'rider-1',
+          deliveryId: 'del-1',
+          step: 'arrived_at_pickup',
+          tappedAt: 1000,
+          restaurantName: 'R1',
+        },
+      ]);
+      expect(getOutboxItems()).toHaveLength(1);
+
+      // Double tap: same rider, delivery, and step -> not added
+      await addJobSteps([
+        {
+          courierId: 'rider-1',
+          deliveryId: 'del-1',
+          step: 'arrived_at_pickup',
+          tappedAt: 1005,
+          restaurantName: 'R1',
+        },
+      ]);
+      expect(getOutboxItems()).toHaveLength(1);
+
+      // Duplicate within the same addJobSteps call -> only one added
+      await addJobSteps([
+        {
+          courierId: 'rider-1',
+          deliveryId: 'del-1',
+          step: 'picked_up',
+          tappedAt: 1010,
+          restaurantName: 'R1',
+        },
+        {
+          courierId: 'rider-1',
+          deliveryId: 'del-1',
+          step: 'picked_up',
+          tappedAt: 1011,
+          restaurantName: 'R1',
+        },
+      ]);
+      expect(getOutboxItems()).toHaveLength(2); // arrived_at_pickup and one picked_up
+
+      // Adds for another rider
+      await addJobSteps([
+        {
+          courierId: 'rider-2',
+          deliveryId: 'del-1',
+          step: 'arrived_at_pickup',
+          tappedAt: 1020,
+          restaurantName: 'R1',
+        },
+      ]);
+      expect(getOutboxItems()).toHaveLength(3);
+
+      // Adds for another delivery
+      await addJobSteps([
+        {
+          courierId: 'rider-1',
+          deliveryId: 'del-2',
+          step: 'arrived_at_pickup',
+          tappedAt: 1030,
+          restaurantName: 'R2',
+        },
+      ]);
+      expect(getOutboxItems()).toHaveLength(4);
+
+      // Once earlier step is sent and removed, it can be added again
+      await flushOutbox('rider-1', async () => ({
+        kind: 'delivery',
+        status: OrderStatus.picked_up,
+      }));
+      expect(
+        getOutboxItems().filter(
+          i => i.courierId === 'rider-1' && i.deliveryId === 'del-1',
+        ),
+      ).toHaveLength(0);
+
+      await addJobSteps([
+        {
+          courierId: 'rider-1',
+          deliveryId: 'del-1',
+          step: 'arrived_at_pickup',
+          tappedAt: 2000,
+          restaurantName: 'R1',
+        },
+      ]);
+      expect(
+        getOutboxItems().filter(
+          i => i.courierId === 'rider-1' && i.deliveryId === 'del-1',
+        ),
+      ).toHaveLength(1);
+
+      // Once earlier step is refused, it can be added again
+      await flushOutbox('rider-1', async () => ({
+        kind: 'error',
+        httpStatus: 400,
+      }));
+      expect(
+        getOutboxItems().find(
+          i =>
+            i.courierId === 'rider-1' &&
+            i.deliveryId === 'del-1' &&
+            i.step === 'arrived_at_pickup',
+        )?.state,
+      ).toBe('refused');
+
+      await addJobSteps([
+        {
+          courierId: 'rider-1',
+          deliveryId: 'del-1',
+          step: 'arrived_at_pickup',
+          tappedAt: 3000,
+          restaurantName: 'R1',
+        },
+      ]);
+      const rider1Del1 = getOutboxItems().filter(
+        i =>
+          i.courierId === 'rider-1' &&
+          i.deliveryId === 'del-1' &&
+          i.step === 'arrived_at_pickup',
+      );
+      expect(rider1Del1).toHaveLength(2);
+      expect(rider1Del1.some(i => i.state === 'refused')).toBe(true);
+      expect(rider1Del1.some(i => i.state === 'waiting')).toBe(true);
+    });
+
+    it('when AsyncStorage.getItem rejects: getOutboxItems does not throw, addJobSteps rejects, setItem is NOT called; later call reads storage again and works (no lost queue)', async () => {
+      const existingItem: OutboxItem = {
+        id: 'pre-existing-1',
+        courierId: 'rider-1',
+        deliveryId: 'del-1',
+        step: 'dispatched',
+        tappedAt: 1000,
+        state: 'waiting',
+        restaurantName: 'R1',
+      };
+      await AsyncStorage.setItem(
+        'jobStepOutbox',
+        JSON.stringify([existingItem]),
+      );
+
+      resetOutboxForTests();
+
+      const origGetItem = (
+        AsyncStorage.getItem as jest.Mock
+      ).getMockImplementation();
+      const origSetItem = (
+        AsyncStorage.setItem as jest.Mock
+      ).getMockImplementation();
+
+      (AsyncStorage.getItem as jest.Mock).mockRejectedValue(
+        new Error('Storage read failure'),
+      );
+      (AsyncStorage.setItem as jest.Mock).mockClear();
+
+      // 1. getOutboxItems does not throw
+      expect(() => getOutboxItems()).not.toThrow();
+
+      // 2. addJobSteps rejects
+      await expect(
+        addJobSteps([
+          {
+            courierId: 'rider-1',
+            deliveryId: 'del-2',
+            step: 'dispatched',
+            tappedAt: 2000,
+            restaurantName: 'R2',
+          },
+        ]),
+      ).rejects.toThrow('Storage read failure');
+
+      // 3. AsyncStorage.setItem is NOT called (stored queue is not overwritten with empty or new list)
+      expect(AsyncStorage.setItem).not.toHaveBeenCalled();
+
+      // 4. A later call reads storage again and works
+      (AsyncStorage.getItem as jest.Mock).mockImplementation(origGetItem);
+
+      await addJobSteps([
+        {
+          courierId: 'rider-1',
+          deliveryId: 'del-2',
+          step: 'dispatched',
+          tappedAt: 2000,
+          restaurantName: 'R2',
+        },
+      ]);
+
+      const items = getOutboxItems();
+      expect(items).toHaveLength(2);
+      expect(items[0].id).toBe('pre-existing-1');
+      expect(items[1].deliveryId).toBe('del-2');
+    });
+
+    it('when AsyncStorage.setItem rejects: item is not in getOutboxItems afterwards', async () => {
+      const origSetItem = (
+        AsyncStorage.setItem as jest.Mock
+      ).getMockImplementation();
+      (AsyncStorage.setItem as jest.Mock).mockRejectedValueOnce(
+        new Error('Disk write failure'),
+      );
+
+      await expect(
+        addJobSteps([
+          {
+            courierId: 'rider-1',
+            deliveryId: 'del-write-fail',
+            step: 'dispatched',
+            tappedAt: 3000,
+            restaurantName: 'R3',
+          },
+        ]),
+      ).rejects.toThrow('Disk write failure');
+
+      // Item was NOT assigned to memory because setItem failed
+      const items = getOutboxItems();
+      expect(items.some(i => i.deliveryId === 'del-write-fail')).toBe(false);
+
+      (AsyncStorage.setItem as jest.Mock).mockImplementation(origSetItem);
     });
   });
 
@@ -512,6 +807,49 @@ describe('jobStepOutbox (spec 0009, AC-3, AC-6, AC-8)', () => {
       // del-2 item was sent and removed
       const del2Items = items.filter(i => i.deliveryId === 'del-2');
       expect(del2Items).toHaveLength(0);
+    });
+
+    it('stops before the next item when currentCourierId() no longer returns the item rider (AC-8)', async () => {
+      await addJobSteps([
+        {
+          courierId: 'rider-1',
+          deliveryId: 'del-1',
+          step: 'dispatched',
+          tappedAt: 1000,
+          restaurantName: 'R1',
+        },
+        {
+          courierId: 'rider-1',
+          deliveryId: 'del-1',
+          step: 'arrived_at_pickup',
+          tappedAt: 1010,
+          restaurantName: 'R1',
+        },
+      ]);
+
+      let activeRider: string | undefined = 'rider-1';
+      const sentSteps: string[] = [];
+
+      await flushOutbox(
+        'rider-1',
+        async item => {
+          sentSteps.push(item.step);
+          // Simulate rider logout or switch to a different courier before next step
+          activeRider = 'rider-2';
+          return { kind: 'delivery', status: OrderStatus.dispatched };
+        },
+        undefined,
+        () => activeRider,
+      );
+
+      // Only the first step was sent
+      expect(sentSteps).toEqual(['dispatched']);
+
+      // The later item stays waiting and was not sent
+      const remaining = getOutboxItems();
+      expect(remaining).toHaveLength(1);
+      expect(remaining[0].step).toBe('arrived_at_pickup');
+      expect(remaining[0].state).toBe('waiting');
     });
   });
 });

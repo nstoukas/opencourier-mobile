@@ -95,7 +95,10 @@ describe('useJobStepOutbox hook (spec 0009, AC-3)', () => {
       'courier-1',
       expect.any(Function),
       expect.any(Function),
+      expect.any(Function),
     );
+    const getRiderNow = flushOutboxSpy.mock.calls[0][3];
+    expect(getRiderNow()).toBe('courier-1');
   });
 
   it('flushes when live connection becomes "connected"', async () => {
@@ -116,6 +119,7 @@ describe('useJobStepOutbox hook (spec 0009, AC-3)', () => {
       'courier-1',
       expect.any(Function),
       expect.any(Function),
+      expect.any(Function),
     );
   });
 
@@ -131,6 +135,7 @@ describe('useJobStepOutbox hook (spec 0009, AC-3)', () => {
 
     expect(flushOutboxSpy).toHaveBeenCalledWith(
       'courier-1',
+      expect.any(Function),
       expect.any(Function),
       expect.any(Function),
     );

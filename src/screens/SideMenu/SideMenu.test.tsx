@@ -1,5 +1,6 @@
 import React from 'react';
 import renderer, { act } from 'react-test-renderer';
+import { waitFor } from '@testing-library/react-native';
 import { Alert, Linking } from 'react-native';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -126,7 +127,9 @@ describe('SideMenu logout (spec 0002, AC-6; spec 0009, AC-8, AC-11)', () => {
       logoutItem!.props.onPress(SideMenuItem.Logout);
     });
 
-    expect(alertSpy).toHaveBeenCalledTimes(1);
+    await waitFor(() => {
+      expect(alertSpy).toHaveBeenCalledTimes(1);
+    });
     expect(alertSpy).toHaveBeenCalledWith(
       i18n.t('translations:logout_waiting_title'),
       i18n.t('translations:logout_waiting_body', { count: 3 }),
@@ -183,7 +186,9 @@ describe('SideMenu logout (spec 0002, AC-6; spec 0009, AC-8, AC-11)', () => {
     });
 
     // Confirmation Alert shown
-    expect(alertSpy).toHaveBeenCalledTimes(1);
+    await waitFor(() => {
+      expect(alertSpy).toHaveBeenCalledTimes(1);
+    });
     const alertButtons = alertSpy.mock.calls[0][2];
     const yesButton = alertButtons.find((btn: any) => btn.text === 'Yes');
     expect(yesButton).toBeDefined();
@@ -247,6 +252,10 @@ describe('SideMenu logout (spec 0002, AC-6; spec 0009, AC-8, AC-11)', () => {
 
     act(() => {
       logoutItem!.props.onPress(SideMenuItem.Logout);
+    });
+
+    await waitFor(() => {
+      expect(alertSpy).toHaveBeenCalledTimes(1);
     });
 
     const alertButtons = alertSpy.mock.calls[0][2];
