@@ -6,7 +6,7 @@ import { OrderStatus } from '@app/types/enums';
 import * as jobStepOutbox from '@app/services/jobStepOutbox';
 import useOrder from './useOrder';
 
-let mockUser: any = undefined;
+let mockUser: any;
 
 jest.mock('./useUser', () => () => ({
   user: mockUser,

@@ -539,9 +539,6 @@ describe('jobStepOutbox (spec 0009, AC-3, AC-6, AC-8)', () => {
       const origGetItem = (
         AsyncStorage.getItem as jest.Mock
       ).getMockImplementation();
-      const origSetItem = (
-        AsyncStorage.setItem as jest.Mock
-      ).getMockImplementation();
 
       (AsyncStorage.getItem as jest.Mock).mockRejectedValue(
         new Error('Storage read failure'),
