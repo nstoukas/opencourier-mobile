@@ -273,11 +273,9 @@ describe('orderService & isOfferEndedError (spec 0002, AC-5)', () => {
     });
 
     it('sends { tapAgeMs } alone when note is not provided or empty', async () => {
-      const mockPost = jest
-        .fn()
-        .mockResolvedValue({
-          data: { result: { status: OrderStatus.dispatched } },
-        });
+      const mockPost = jest.fn().mockResolvedValue({
+        data: { result: { status: OrderStatus.dispatched } },
+      });
       const client = { post: mockPost } as unknown as UClient;
       const service = orderService(client);
 
@@ -294,11 +292,9 @@ describe('orderService & isOfferEndedError (spec 0002, AC-5)', () => {
     });
 
     it('sends { tapAgeMs, note } only when note is given', async () => {
-      const mockPost = jest
-        .fn()
-        .mockResolvedValue({
-          data: { result: { status: OrderStatus.dropped_off } },
-        });
+      const mockPost = jest.fn().mockResolvedValue({
+        data: { result: { status: OrderStatus.dropped_off } },
+      });
       const client = { post: mockPost } as unknown as UClient;
       const service = orderService(client);
 
