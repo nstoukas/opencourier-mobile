@@ -1,5 +1,6 @@
 import axios, { AxiosError, InternalAxiosRequestConfig } from 'axios';
 import { Alert } from 'react-native';
+import { clearSavedQueries } from './queryPersistence';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import i18n from '@app/localization/i18n';
 // `import type` brings in only the type, never the module itself, so this file
@@ -112,6 +113,9 @@ export const endExpiredSession = (http: UClient): Promise<void> => {
       await cancelAllOfferAlerts().catch(() => undefined);
       // With no user the app shows its logged out screens again.
       queryClient.resetQueries();
+      // No other rider may see these deliveries (spec 0009, AC-11). The rider's
+      // waiting job steps stay: they are sent at their next login (AC-8).
+      await clearSavedQueries();
       // Opening the app with an expired session leaves it on the splash screen,
       // which only looks for a token when it first appears: move on from it.
       if (

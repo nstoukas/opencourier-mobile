@@ -19,6 +19,11 @@ const TONES: Record<StatusMember, Tone> = {
   dispatched: { background: 'info-soft', text: 'info' },
   courier_arrived_at_pickup_location: { background: 'info-soft', text: 'info' },
   picked_up: { background: 'info-soft', text: 'info' },
+  on_the_way: { background: 'info-soft', text: 'info' },
+  courier_arrived_at_dropoff_location: {
+    background: 'info-soft',
+    text: 'info',
+  },
 };
 
 // The member whose value the API sent (it sends values, such as 'DROPPED_OFF'). Looking the label up

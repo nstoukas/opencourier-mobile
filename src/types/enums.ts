@@ -71,6 +71,9 @@ export enum OrderStatus {
   dispatched = 'DISPATCHED',
   courier_arrived_at_pickup_location = 'COURIER_ARRIVED_AT_PICKUP_LOCATION',
   picked_up = 'PICKED_UP',
+  // The server has both; the app shows them since a step can wait for signal (spec 0009).
+  on_the_way = 'ON_THE_WAY',
+  courier_arrived_at_dropoff_location = 'COURIER_ARRIVED_AT_DROPOFF_LOCATION',
   dropped_off = 'DROPPED_OFF',
   canceled = 'CANCELED',
 }

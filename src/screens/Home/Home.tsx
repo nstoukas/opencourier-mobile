@@ -8,6 +8,7 @@ import {
 } from 'react-native';
 import { styles } from './Home.styles';
 import { HomeHeader } from '@app/components/HomeHeader/HomeHeader';
+import { RefusedSteps } from '@app/components/RefusedSteps/RefusedSteps';
 import {
   Comment,
   CourierTip,
@@ -373,6 +374,8 @@ export const HomeScreen = ({ navigation }: Props) => {
         loadingNewOrders={selectedTab === HomeTabItem.New && isLoadingOrders}
         connectionStatus={connectionStatus}
       />
+      {/* Steps the co-op refused after they waited for signal (spec 0009). */}
+      <RefusedSteps courierId={user?.id} />
       {selectedTab === HomeTabItem.History && !reportIncidentDismissed && (
         <ReportAnIncident onDismiss={() => setReportIncidentDismissed(true)} />
       )}

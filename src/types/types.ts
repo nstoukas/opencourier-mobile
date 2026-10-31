@@ -300,6 +300,9 @@ export type Order = {
   orderTotalValue: number;
   orderItems: OrderItem[];
   status: string;
+  // Set by the app, never by the server: a step of this delivery waits in the
+  // outbox for signal, and `status` above already shows it (spec 0009).
+  waitingToSend?: boolean;
   customerNotes: string[];
   currencyCode: string;
   totalCost: number;

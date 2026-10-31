@@ -2,9 +2,10 @@ import React, { useState } from 'react';
 import { Router } from '@app/navigation/router';
 import { NavigationContainer } from '@react-navigation/native';
 import UserContext from '@app/context/userContext';
-import { QueryClientProvider } from '@tanstack/react-query';
+import { PersistQueryClientProvider } from '@tanstack/react-query-persist-client';
 import SocketProvider from '@app/services/socket';
 import { queryClient } from '@app/services/queryClient';
+import { persistOptions } from '@app/services/queryPersistence';
 import { navigationRef } from '@app/navigation/navigationRef';
 import { installSessionRefresh } from '@app/services/session';
 import { client } from '@app/services/Client';
@@ -33,7 +34,11 @@ const App = () => {
         userLongitude,
         setUserLongitude,
       }}>
-      <QueryClientProvider client={queryClient}>
+      {/* Like QueryClientProvider, and it also keeps the rider's deliveries
+          and earnings on the phone for 24 h, readable with no signal (spec 0009). */}
+      <PersistQueryClientProvider
+        client={queryClient}
+        persistOptions={persistOptions}>
         {/* The ref lets code outside the screens ask which screen is in front
             (the offer alert's foreground rule, row 58). */}
         <NavigationContainer ref={navigationRef}>
@@ -42,7 +47,7 @@ const App = () => {
             <Router />
           </SocketProvider>
         </NavigationContainer>
-      </QueryClientProvider>
+      </PersistQueryClientProvider>
     </UserContext.Provider>
   );
 };

@@ -6,7 +6,6 @@ import {
   TouchableOpacity,
   SectionListData,
   SectionList,
-  Alert,
 } from 'react-native';
 import { styles } from './MarkAsDelivered.styles';
 import { MainScreenProp, MainScreens } from '@app/navigation/main/types';
@@ -14,12 +13,9 @@ import { BackNavButton } from '@app/components/BackNavButton/BackNavButton';
 import { QuickNote } from '@app/components/QuickNote/QuickNote';
 import { CustomerNotes } from '@app/types/types';
 import { Button, ButtonType } from '@app/components/Button/Button';
-import { services } from '@app/services/service';
 import { useTranslation } from 'react-i18next';
 import { RootScreen } from '@app/navigation/types';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { QueryKeys } from '@app/utilities/queryKeys';
-import { hideInProgressOrderAfterDelivery } from '@app/utilities/inProgressListFilter';
+import useOrder from '@app/hooks/useOrder';
 import { hitSlopFor } from '@app/utilities/touch';
 import { Icon } from '@app/components/Icon/Icon';
 import { PlusIcon } from 'phosphor-react-native/src/icons/Plus';
@@ -33,7 +29,6 @@ type SectionListItem = {
 
 export const MarkAsDelivered = ({ navigation, route }: Props) => {
   const { t } = useTranslation();
-  const queryClient = useQueryClient();
 
   const { order } = route.params;
   const [data, setData] = useState<SectionListData<SectionListItem>[]>([
@@ -54,22 +49,9 @@ export const MarkAsDelivered = ({ navigation, route }: Props) => {
   ]);
   const [selectedNotes, setSelectedNotes] = useState<string[]>([]);
 
-  const { mutate: markAsDelivered, isPending } = useMutation({
-    mutationFn: services.orderService.markAsDelivered,
-    onSuccess: async () => {
-      hideInProgressOrderAfterDelivery(order.id);
-      await Promise.all([
-        queryClient.invalidateQueries({
-          queryKey: [QueryKeys.inProgressOrders],
-        }),
-        queryClient.invalidateQueries({
-          queryKey: [QueryKeys.orderHistory],
-        }),
-      ]);
-      navigation.goBack();
-    },
-    onError: error => Alert.alert('Error marking as delivered', error.message),
-  });
+  // The tap is written to the outbox and sent when there is signal (spec
+  // 0009); the rider goes straight back to their deliveries.
+  const { markAsDelivered } = useOrder();
 
   const handleNotePress = (note: string) => {
     const found = selectedNotes.filter(obj => obj === note);
@@ -155,11 +137,11 @@ export const MarkAsDelivered = ({ navigation, route }: Props) => {
     );
   };
 
-  const handleConfirm = () => {
-    markAsDelivered({
-      id: order.id,
-      note: selectedNotes.length > 0 ? selectedNotes[0] : '',
-    });
+  const handleConfirm = async () => {
+    const note = selectedNotes.length > 0 ? selectedNotes[0] : '';
+    if (await markAsDelivered(order, note)) {
+      navigation.goBack();
+    }
   };
 
   return (
@@ -183,7 +165,6 @@ export const MarkAsDelivered = ({ navigation, route }: Props) => {
         />
 
         <Button
-          isLoading={isPending}
           style={styles.buttonConfirm}
           textStyle={styles.buttonTextStyle}
           icon={CheckCircleIcon}

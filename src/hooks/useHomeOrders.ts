@@ -2,7 +2,8 @@ import { Order, UserStatus } from '@app/types/types';
 import { services } from '@app/services/service';
 import { useEffect, useRef, useState } from 'react';
 import { OrderSetting } from '@app/types/enums';
-import { filterInProgressOrdersForDisplay } from '@app/utilities/inProgressListFilter';
+import { inProgressOrdersAsShown } from '@app/utilities/inProgressListFilter';
+import { useOutboxItems } from './useJobStepOutbox';
 import { Alert } from 'react-native';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { QueryKeys } from '@app/utilities/queryKeys';
@@ -60,7 +61,6 @@ export const useHomeOrders = () => {
   } = useQuery({
     queryFn: services.orderService.getInProgressOrders,
     queryKey: [QueryKeys.inProgressOrders],
-    select: filterInProgressOrdersForDisplay,
   });
 
   const {
@@ -187,6 +187,8 @@ export const useHomeOrders = () => {
   ]);
 
   const { user } = useUser();
+  // The job steps tapped but not yet sent (spec 0009).
+  const outboxItems = useOutboxItems();
 
   // An Offline rider holds no offers: the server ends every offer the moment
   // the rider goes Offline (AC-6), and the live connection that would say so
@@ -315,8 +317,12 @@ export const useHomeOrders = () => {
   useEffect(() => () => countdowns.stopAll(), []);
 
   useEffect(() => {
-    setDataSourceInProgress(inProgressOrders ?? []);
-  }, [inProgressOrders]);
+    // Each order as the screen shows it: moved on by the steps still waiting
+    // in the outbox, and kept while one does (spec 0009, AC-2).
+    setDataSourceInProgress(
+      inProgressOrdersAsShown(inProgressOrders, outboxItems, user?.id),
+    );
+  }, [inProgressOrders, outboxItems, user?.id]);
 
   useEffect(() => {
     if (historyOrders) {

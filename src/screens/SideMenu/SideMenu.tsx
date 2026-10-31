@@ -21,6 +21,8 @@ import { useTranslation } from 'react-i18next';
 import RNRestart from 'react-native-restart';
 import { OrderSetting } from '@app/types/enums';
 import { useLocationPermission } from '@app/hooks/useLocationPermission';
+import { waitingCount } from '@app/services/jobStepOutbox';
+import { clearSavedQueries } from '@app/services/queryPersistence';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import useUser from '@app/hooks/useUser';
 import { useQueryClient } from '@tanstack/react-query';
@@ -166,6 +168,9 @@ export const SideMenu = ({ navigation }: Props) => {
     await cancelAllOfferAlerts();
     services.logout();
     queryClient.resetQueries();
+    // The deliveries and earnings kept on the phone for reading offline go
+    // too, so the next rider here never sees them (spec 0009, AC-11).
+    await clearSavedQueries();
   };
 
   const handlePress = (item: SideMenuItem) => {
@@ -184,13 +189,25 @@ export const SideMenu = ({ navigation }: Props) => {
       case SideMenuItem.Settings:
         navigation.navigate(DrawerScreens.Settings);
         break;
-      case SideMenuItem.Logout:
+      case SideMenuItem.Logout: {
+        // A step tapped with no signal is part of the rider's pay record: it
+        // can only be sent with this rider's login, so logging out waits for
+        // it (spec 0009, AC-8).
+        const waiting = user?.id ? waitingCount(user.id) : 0;
+        if (waiting > 0) {
+          Alert.alert(
+            t('translations:logout_waiting_title'),
+            t('translations:logout_waiting_body', { count: waiting }),
+          );
+          break;
+        }
         Alert.alert('Notice', 'Are you sure you want to log out?', [
           { text: 'Yes', onPress: onLogoutHandle },
           { text: 'Cancel', style: 'cancel' },
         ]);
 
         break;
+      }
     }
   };
 

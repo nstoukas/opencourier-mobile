@@ -125,6 +125,8 @@ export default {
   status_dispatched: 'On the way to pickup',
   status_courier_arrived_at_pickup_location: 'At pickup',
   status_picked_up: 'Picked up',
+  status_on_the_way: 'On the way',
+  status_courier_arrived_at_dropoff_location: 'At the customer',
   status_dropped_off: 'Delivered',
   status_canceled: 'Canceled',
   dropping_off: 'dropping_off',
@@ -450,4 +452,17 @@ export default {
     'To show a new offer over the lock screen, allow full screen alerts for this app on the next screen. Without it, offers still come as a normal alert.',
   full_screen_open_settings: 'Open settings',
   not_now: 'Not now',
+  // Job steps that wait for signal (spec 0009).
+  waiting_to_send: 'Waiting to send. It goes by itself when there is signal.',
+  delivered_waiting_to_send:
+    'Delivered, waiting to send. It goes by itself when there is signal.',
+  step_dispatched: 'On the way to pickup',
+  step_arrived_at_dropoff: 'Arrived at the customer',
+  step_not_saved_title: 'This step could not be saved on the phone',
+  step_refused_body:
+    '{{restaurant}}: "{{step}}" was not accepted by the co-op. Call the co-op.',
+  step_refused_close: 'Close',
+  logout_waiting_title: 'Steps waiting to send',
+  logout_waiting_body:
+    '{{count}} step(s) of your deliveries are still waiting to be sent. Connect to the internet first, then log out.',
 };

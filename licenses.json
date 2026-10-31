@@ -47,6 +47,18 @@
         "licenseUrl": "https://github.com/react-navigation/react-navigation/raw/master/LICENSE",
         "parents": "opencourier"
     },
+    "@tanstack/query-async-storage-persister@5.100.9": {
+        "licenses": "MIT",
+        "repository": "https://github.com/TanStack/query",
+        "licenseUrl": "https://github.com/TanStack/query/raw/master/LICENSE",
+        "parents": "opencourier"
+    },
+    "@tanstack/react-query-persist-client@5.100.9": {
+        "licenses": "MIT",
+        "repository": "https://github.com/TanStack/query",
+        "licenseUrl": "https://github.com/TanStack/query/raw/master/LICENSE",
+        "parents": "opencourier"
+    },
     "@tanstack/react-query@5.100.9": {
         "licenses": "MIT",
         "repository": "https://github.com/TanStack/query",

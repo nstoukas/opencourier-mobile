@@ -1,6 +1,6 @@
 import { Colors } from '@app/styles/colors';
 import { StyleSheet } from 'react-native';
-import { control, typeScale } from '@app/styles/theme';
+import { color, control, radius, typeScale } from '@app/styles/theme';
 
 export const styles = StyleSheet.create({
   blueSeparator: {
@@ -43,5 +43,22 @@ export const styles = StyleSheet.create({
   cellItems: {
     fontSize: typeScale.caption.fontSize,
     fontWeight: '600',
+  },
+  // "Waiting to send": a step tapped with no signal (spec 0009).
+  waiting: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginHorizontal: 12,
+    marginBottom: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: radius.md,
+    backgroundColor: color['warning-soft'],
+  },
+  waitingText: {
+    marginLeft: 8,
+    fontSize: typeScale.caption.fontSize,
+    fontWeight: '600',
+    color: color.foreground,
   },
 });

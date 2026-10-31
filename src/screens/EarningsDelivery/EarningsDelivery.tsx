@@ -50,7 +50,7 @@ export const EarningsDelivery = ({ navigation, route }: Props) => {
   const { top } = useSafeAreaInsets();
   const { deliveryId } = route.params;
 
-  const { delivery, isLoading, isError, isRefetching, refetch } =
+  const { delivery, isLoading, isRefetching, refetch } =
     useEarningsDelivery(deliveryId);
 
   const body = () => {
@@ -60,7 +60,9 @@ export const EarningsDelivery = ({ navigation, route }: Props) => {
 
     // A 404 here means the delivery is not this courier's or never completed — the
     // backend deliberately does not distinguish the two, so neither do we.
-    if (isError || !delivery) {
+    // A failed refetch over data already loaded keeps showing it: with no
+    // signal the last loaded earnings stay readable (spec 0009, AC-1).
+    if (!delivery) {
       return (
         <View style={styles.empty}>
           <Text style={styles.emptyTitle}>

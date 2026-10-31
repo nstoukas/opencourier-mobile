@@ -4,6 +4,8 @@ import { UClient } from './Client';
 import { OrderServiceReponse } from './types';
 import { Order } from '@app/types/types';
 import { offerTimesOnPhone } from '@app/utilities/offerClock';
+import { JOB_STEP_ROUTE, JobStep } from '@app/utilities/jobSteps';
+import { StepAnswer } from './jobStepOutbox';
 
 // The error code the server sends (with a 409) when an accept or decline
 // arrives after the offer already ended on the server (spec 0002, AC-5).
@@ -36,16 +38,12 @@ export interface OrderService {
   getOrdersHistory: () => Promise<Order[]>;
   acceptOrder: (id: string) => Promise<OrderServiceReponse>;
   declineOrder: (id: string) => Promise<OrderServiceReponse>;
-  confirmItems: (params: {
-    id: string;
-    isDispatched: boolean;
-  }) => Promise<OrderServiceReponse>;
-  arrivedAtPickup: (id: string) => Promise<OrderServiceReponse>;
-  arrivedAtDropoff: (id: string) => Promise<OrderServiceReponse>;
-  markAsDelivered: (params: {
-    id: string;
-    note: string;
-  }) => Promise<OrderServiceReponse>;
+  // Sends one job step from the outbox (spec 0009) and reports the answer;
+  // it never throws. `tapAgeMs` is how long ago the rider tapped.
+  sendJobStep: (
+    item: { deliveryId: string; step: JobStep; note?: string },
+    tapAgeMs: number,
+  ) => Promise<StepAnswer>;
   // Sends a rider's report about a delivery to the admin (decision 66.11).
   // `note` goes with OTHER (decision 66.16); the other reasons send none.
   reportIssue: (params: {
@@ -94,23 +92,31 @@ const orderService = (client: UClient): OrderService => {
     return client.post(`deliveries/${id}/reject`, {});
   };
 
-  const confirmItems = async (params: {
-    id: string;
-    isDispatched: boolean;
-  }): Promise<OrderServiceReponse> => {
-    const { id, isDispatched } = params;
-    if (!isDispatched) {
-      await client.post(`deliveries/${id}/mark-as-dispatched`, {});
+  const sendJobStep = async (
+    item: { deliveryId: string; step: JobStep; note?: string },
+    tapAgeMs: number,
+  ): Promise<StepAnswer> => {
+    const body: Record<string, unknown> = { tapAgeMs };
+    if (item.note) {
+      body.note = item.note;
     }
-    return client.post(`deliveries/${id}/mark-as-picked-up`);
-  };
-
-  const arrivedAtPickup = async (id: string): Promise<OrderServiceReponse> => {
-    return client.post(`deliveries/${id}/arrived-at-pickup`, {});
-  };
-
-  const arrivedAtDropoff = async (id: string): Promise<OrderServiceReponse> => {
-    return client.post(`deliveries/${id}/arrived-at-dropoff`, {});
+    try {
+      const { data } = await client.post(
+        `deliveries/${item.deliveryId}/${JOB_STEP_ROUTE[item.step]}`,
+        body,
+      );
+      // The server answers the delivery as it is after the step.
+      return { kind: 'delivery', status: data?.result?.status };
+    } catch (error) {
+      // `axios.isAxiosError` tells TypeScript that `error` has `response`.
+      if (axios.isAxiosError(error) && error.response) {
+        const result = error.response.data?.result;
+        const code = Array.isArray(result) ? result[0]?.code : undefined;
+        return { kind: 'error', httpStatus: error.response.status, code };
+      }
+      // No answer: no signal, or the 10 s timeout.
+      return { kind: 'none' };
+    }
   };
 
   const reportIssue = async (params: {
@@ -125,27 +131,12 @@ const orderService = (client: UClient): OrderService => {
         : { reason: params.reason },
     );
 
-  const markAsDelivered = async (params: {
-    id: string;
-    note: string;
-  }): Promise<OrderServiceReponse> => {
-    const { id, note } = params;
-    return client.post(`deliveries/${id}/mark-as-delivered`, {
-      note: note,
-      imageName: 'imageName',
-      imageType: 'JPEG',
-    });
-  };
-
   return {
     getNewOrders,
     getOrdersHistory,
     getInProgressOrders,
     acceptOrder,
-    confirmItems,
-    arrivedAtPickup,
-    arrivedAtDropoff,
-    markAsDelivered,
+    sendJobStep,
     reportIssue,
     declineOrder,
   };

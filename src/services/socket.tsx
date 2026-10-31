@@ -1,7 +1,8 @@
 import useUser from '@app/hooks/useUser';
 import { services } from '@app/services/service';
 import { QueryKeys } from '@app/utilities/queryKeys';
-import { filterInProgressOrdersForDisplay } from '@app/utilities/inProgressListFilter';
+import { inProgressOrdersAsShown } from '@app/utilities/inProgressListFilter';
+import { useJobStepOutbox, useOutboxItems } from '@app/hooks/useJobStepOutbox';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import React, {
@@ -43,13 +44,22 @@ const SocketProvider = ({ children }: Props) => {
 
   // Jobs the rider still carries. Same query (and cache) as the home screen's
   // In Progress tab, so this adds no extra request while Home is open.
-  const { data: inProgressOrders } = useQuery({
+  const { data: inProgressData } = useQuery({
     queryFn: services.orderService.getInProgressOrders,
     queryKey: [QueryKeys.inProgressOrders],
     enabled: !!user,
-    // Same filter as the In Progress tab: delivered or canceled jobs do not count.
-    select: data => filterInProgressOrdersForDisplay(data),
   });
+  // Same list as the In Progress tab: delivered or canceled jobs do not count,
+  // unless a step of theirs still waits to be sent (spec 0009).
+  const outboxItems = useOutboxItems();
+  const inProgressOrders = inProgressOrdersAsShown(
+    inProgressData,
+    outboxItems,
+    user?.id,
+  );
+
+  // Sends the steps the rider tapped with no signal (spec 0009).
+  useJobStepOutbox(user?.id, status);
 
   const refetch = (keys: string[]) =>
     keys.forEach(key => queryClient.invalidateQueries({ queryKey: [key] }));
