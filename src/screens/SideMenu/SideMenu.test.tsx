@@ -6,7 +6,9 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import Geolocation from 'react-native-geolocation-service';
 import { SideMenuItem, UserStatus } from '@app/types/types';
 import { LOGOUT_OFFLINE_TIMEOUT_MS } from '@app/utilities/constants';
-import '@app/localization/i18n';
+import * as jobStepOutbox from '@app/services/jobStepOutbox';
+import * as queryPersistence from '@app/services/queryPersistence';
+import i18n from '@app/localization/i18n';
 
 // Mock dependencies of SideMenu
 jest.mock('@react-native-async-storage/async-storage', () =>
@@ -68,7 +70,7 @@ import { SideMenu } from './SideMenu';
 import { SideMenuItemPlain } from '@app/components/SideMenuItemPlain/SideMenuItemPlain';
 import { SideMenuItemSwitch } from '@app/components/SideMenuItemSwitch/SideMenuItemSwitch';
 
-describe('SideMenu logout (spec 0002, AC-6)', () => {
+describe('SideMenu logout (spec 0002, AC-6; spec 0009, AC-8, AC-11)', () => {
   let queryClient: QueryClient;
   let alertSpy: jest.SpyInstance;
   let resetQueriesSpy: jest.SpyInstance;
@@ -109,7 +111,40 @@ describe('SideMenu logout (spec 0002, AC-6)', () => {
     );
   };
 
-  it('sets rider Offline before clearing session on logout', async () => {
+  it('refuses logout with an alert naming the count when rider has waiting steps, and does not call logout (AC-8)', async () => {
+    jest.spyOn(jobStepOutbox, 'waitingCount').mockReturnValue(3);
+
+    const component = renderSideMenu();
+
+    const plainItems = component.root.findAllByType(SideMenuItemPlain);
+    const logoutItem = plainItems.find(
+      item => item.props.item === SideMenuItem.Logout,
+    );
+    expect(logoutItem).toBeDefined();
+
+    act(() => {
+      logoutItem!.props.onPress(SideMenuItem.Logout);
+    });
+
+    expect(alertSpy).toHaveBeenCalledTimes(1);
+    expect(alertSpy).toHaveBeenCalledWith(
+      i18n.t('translations:logout_waiting_title'),
+      i18n.t('translations:logout_waiting_body', { count: 3 }),
+    );
+
+    expect(mockUnregisterThisPhone).not.toHaveBeenCalled();
+    expect(mockSetUserStatus).not.toHaveBeenCalled();
+    expect(mockLogout).not.toHaveBeenCalled();
+    expect(multiRemoveSpy).not.toHaveBeenCalled();
+  });
+
+  it('sets rider Offline before clearing session on logout and calls clearSavedQueries when no steps wait (AC-8, AC-11)', async () => {
+    jest.spyOn(jobStepOutbox, 'waitingCount').mockReturnValue(0);
+    const clearSavedQueriesSpy = jest.spyOn(
+      queryPersistence,
+      'clearSavedQueries',
+    );
+
     const executionOrder: string[] = [];
 
     mockUnregisterThisPhone.mockImplementation(async () => {
@@ -179,18 +214,25 @@ describe('SideMenu logout (spec 0002, AC-6)', () => {
     ]);
     expect(mockLogout).toHaveBeenCalledTimes(1);
     expect(resetQueriesSpy).toHaveBeenCalledTimes(1);
+    expect(clearSavedQueriesSpy).toHaveBeenCalledTimes(1);
 
-    // Verify strict order: unregister and Offline occur BEFORE storage clearance and logout (AC-1)
+    // Verify strict order: unregister and Offline occur BEFORE storage clearance, logout and query cache clearance
     expect(executionOrder).toEqual([
       'unregisterThisPhone',
       'setUserStatus:OFFLINE',
       'multiRemove:token,refreshToken,BASE_URL,SOCKET_BASE_URL',
       'logout',
       'resetQueries',
+      'multiRemove:queryCache',
     ]);
   });
 
   it('still logs out and clears session when setUserStatus fails (e.g. no network)', async () => {
+    jest.spyOn(jobStepOutbox, 'waitingCount').mockReturnValue(0);
+    const clearSavedQueriesSpy = jest.spyOn(
+      queryPersistence,
+      'clearSavedQueries',
+    );
     // Network error when attempting to go Offline
     mockSetUserStatus.mockRejectedValueOnce(
       new Error('Network request failed'),
@@ -219,7 +261,7 @@ describe('SideMenu logout (spec 0002, AC-6)', () => {
       timeoutMs: LOGOUT_OFFLINE_TIMEOUT_MS,
     });
 
-    // AsyncStorage, logout and query reset MUST still happen so user is not stuck logged in
+    // AsyncStorage, logout, query reset and queryCache clear MUST still happen so user is not stuck logged in
     expect(multiRemoveSpy).toHaveBeenCalledWith([
       'token',
       'refreshToken',
@@ -228,6 +270,7 @@ describe('SideMenu logout (spec 0002, AC-6)', () => {
     ]);
     expect(mockLogout).toHaveBeenCalledTimes(1);
     expect(resetQueriesSpy).toHaveBeenCalledTimes(1);
+    expect(clearSavedQueriesSpy).toHaveBeenCalledTimes(1);
   });
 });
 

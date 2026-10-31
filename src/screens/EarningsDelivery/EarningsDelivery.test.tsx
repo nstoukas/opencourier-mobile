@@ -1,0 +1,71 @@
+import React from 'react';
+import { render, screen } from '@testing-library/react-native';
+import { EarningsDelivery } from './EarningsDelivery';
+import { useEarningsDelivery } from '@app/hooks/useEarningsDelivery';
+import { EarningsDeliveryDetail } from '@app/types/types';
+import i18n from '@app/localization/i18n';
+
+jest.mock('@app/hooks/useEarningsDelivery');
+
+describe('EarningsDelivery (spec 0009, AC-1)', () => {
+  const mockDeliveryDetail: EarningsDeliveryDetail = {
+    deliveryId: 'del-123',
+    pickupBusinessName: 'Souvlaki Express',
+    dropoffAddress: 'Dimitriadis 25, Volos',
+    droppedOffAt: '2026-10-31T20:00:00Z',
+    compensation: 350,
+    tips: 100,
+    total: 450,
+    currency: 'EUR',
+  };
+
+  const defaultProps: any = {
+    navigation: { goBack: jest.fn() },
+    route: { params: { deliveryId: 'del-123' } },
+  };
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
+
+  it('keeps showing a loaded delivery when a refetch fails (AC-1)', () => {
+    // Delivery is in cache, but a background refetch failed (e.g. no signal)
+    (useEarningsDelivery as jest.Mock).mockReturnValue({
+      delivery: mockDeliveryDetail,
+      isLoading: false,
+      isError: true,
+      isRefetching: false,
+      refetch: jest.fn().mockRejectedValue(new Error('Network request failed')),
+    });
+
+    render(<EarningsDelivery {...defaultProps} />);
+
+    // Screen keeps displaying the cached delivery details
+    expect(screen.getByText('Souvlaki Express')).toBeTruthy();
+    expect(screen.getByText('Dimitriadis 25, Volos')).toBeTruthy();
+    expect(screen.getByText('del-123')).toBeTruthy();
+    expect(screen.getByText('€4.50')).toBeTruthy();
+
+    // Does NOT show the empty "delivery not found" error
+    expect(
+      screen.queryByText(i18n.t('translations:delivery_not_found')),
+    ).toBeNull();
+  });
+
+  it('shows delivery_not_found when there is no cached delivery data and loading has finished', () => {
+    (useEarningsDelivery as jest.Mock).mockReturnValue({
+      delivery: undefined,
+      isLoading: false,
+      isError: true,
+      isRefetching: false,
+      refetch: jest.fn(),
+    });
+
+    render(<EarningsDelivery {...defaultProps} />);
+
+    expect(
+      screen.getByText(i18n.t('translations:delivery_not_found')),
+    ).toBeTruthy();
+    expect(screen.queryByText('Souvlaki Express')).toBeNull();
+  });
+});

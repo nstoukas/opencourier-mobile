@@ -1,30 +1,23 @@
 import React from 'react';
-import { render, screen, fireEvent } from '@testing-library/react-native';
+import { render, screen, fireEvent, act } from '@testing-library/react-native';
 import { MarkAsDelivered } from './MarkAsDelivered';
 import { CustomerNotes } from '@app/types/types';
+import * as jobStepOutbox from '@app/services/jobStepOutbox';
+import { services } from '@app/services/service';
 import i18n from '@app/localization/i18n';
 
-const mockMutate = jest.fn();
-const mockInvalidateQueries = jest.fn();
+jest.mock('@app/hooks/useUser', () => () => ({
+  user: { id: 'test-courier-789' },
+}));
 
-jest.mock('@tanstack/react-query', () => {
-  const actual = jest.requireActual('@tanstack/react-query');
-  return {
-    ...actual,
-    useQueryClient: () => ({
-      invalidateQueries: mockInvalidateQueries,
-    }),
-    useMutation: jest.fn(() => ({
-      mutate: mockMutate,
-      isPending: false,
-    })),
-  };
-});
-
-describe('MarkAsDelivered (Row 18, no photos)', () => {
+describe('MarkAsDelivered (Row 18, no photos; Row 20, bad signal outbox)', () => {
   let consoleErrorSpy: jest.SpyInstance;
   const keyWarnings: unknown[][] = [];
+  let addJobStepsSpy: jest.SpyInstance;
+  let sendJobStepSpy: jest.SpyInstance;
 
+  // React logs a missing key warning once per component per test file,
+  // so the spy is set up before the file's first render.
   beforeAll(() => {
     consoleErrorSpy = jest
       .spyOn(console, 'error')
@@ -46,6 +39,8 @@ describe('MarkAsDelivered (Row 18, no photos)', () => {
   const mockOrder = {
     id: 'test-order-789',
     number: 'ORD-789',
+    pickupBusinessName: 'Acropolis Grill',
+    pickupName: 'Acropolis Grill',
   } as any;
 
   const mockNavigation: any = {
@@ -64,12 +59,21 @@ describe('MarkAsDelivered (Row 18, no photos)', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
+    jobStepOutbox.resetOutboxForTests();
+    addJobStepsSpy = jest
+      .spyOn(jobStepOutbox, 'addJobSteps')
+      .mockResolvedValue(undefined);
+    sendJobStepSpy = jest.spyOn(services.orderService, 'sendJobStep');
+  });
+
+  afterEach(() => {
+    addJobStepsSpy.mockRestore();
+    sendJobStepSpy.mockRestore();
   });
 
   it('renders no "Take a photo" button and no "show the customer" photo line', () => {
     render(<MarkAsDelivered {...defaultProps} />);
 
-    // No photo button or photo line
     expect(screen.queryByText(/take a photo/i)).toBeNull();
     expect(screen.queryByText(i18n.t('translations:take_a_photo'))).toBeNull();
     expect(screen.queryByText(/show the customer/i)).toBeNull();
@@ -91,44 +95,64 @@ describe('MarkAsDelivered (Row 18, no photos)', () => {
     expect(screen.getByText(i18n.t('translations:report_issue'))).toBeTruthy();
   });
 
-  it('pressing Confirm calls the mark as delivered mutation with the order id and empty note when none selected, and nothing about a photo', () => {
+  it('pressing Confirm adds a "delivered" step with empty note and goes back, with no network call', async () => {
     render(<MarkAsDelivered {...defaultProps} />);
 
-    fireEvent.press(
-      screen.getByText(i18n.t('translations:confirm_mark_as_delivered')),
-    );
-
-    expect(mockMutate).toHaveBeenCalledTimes(1);
-    const payload = mockMutate.mock.calls[0][0];
-    expect(payload).toEqual({
-      id: 'test-order-789',
-      note: '',
+    await act(async () => {
+      fireEvent.press(
+        screen.getByText(i18n.t('translations:confirm_mark_as_delivered')),
+      );
     });
-    expect(payload).not.toHaveProperty('photo');
-    expect(payload).not.toHaveProperty('photoUrl');
-    expect(payload).not.toHaveProperty('image');
+
+    // 1. Adds 'delivered' step to the outbox
+    expect(addJobStepsSpy).toHaveBeenCalledTimes(1);
+    const queuedItems = addJobStepsSpy.mock.calls[0][0];
+    expect(queuedItems).toHaveLength(1);
+    expect(queuedItems[0]).toEqual(
+      expect.objectContaining({
+        courierId: 'test-courier-789',
+        deliveryId: 'test-order-789',
+        step: 'delivered',
+        restaurantName: 'Acropolis Grill',
+      }),
+    );
+    expect(queuedItems[0].note).toBeUndefined();
+
+    // 2. Navigates back immediately
+    expect(mockNavigation.goBack).toHaveBeenCalledTimes(1);
+
+    // 3. No network call made
+    expect(sendJobStepSpy).not.toHaveBeenCalled();
   });
 
-  it('pressing Confirm calls the mutation with the selected note and nothing about a photo', () => {
+  it('pressing Confirm adds a "delivered" step with the selected note and goes back, with no network call', async () => {
     render(<MarkAsDelivered {...defaultProps} />);
 
-    // Select the first quick note: CustomerNotes.BellnotRung
+    // Select the quick note: CustomerNotes.BellnotRung
     const bellNoteText = i18n.t(`translations:${CustomerNotes.BellnotRung}`);
     fireEvent.press(screen.getByText(bellNoteText));
 
-    fireEvent.press(
-      screen.getByText(i18n.t('translations:confirm_mark_as_delivered')),
+    await act(async () => {
+      fireEvent.press(
+        screen.getByText(i18n.t('translations:confirm_mark_as_delivered')),
+      );
+    });
+
+    expect(addJobStepsSpy).toHaveBeenCalledTimes(1);
+    const queuedItems = addJobStepsSpy.mock.calls[0][0];
+    expect(queuedItems).toHaveLength(1);
+    expect(queuedItems[0]).toEqual(
+      expect.objectContaining({
+        courierId: 'test-courier-789',
+        deliveryId: 'test-order-789',
+        step: 'delivered',
+        note: CustomerNotes.BellnotRung,
+        restaurantName: 'Acropolis Grill',
+      }),
     );
 
-    expect(mockMutate).toHaveBeenCalledTimes(1);
-    const payload = mockMutate.mock.calls[0][0];
-    expect(payload).toEqual({
-      id: 'test-order-789',
-      note: CustomerNotes.BellnotRung,
-    });
-    expect(payload).not.toHaveProperty('photo');
-    expect(payload).not.toHaveProperty('photoUrl');
-    expect(payload).not.toHaveProperty('image');
+    expect(mockNavigation.goBack).toHaveBeenCalledTimes(1);
+    expect(sendJobStepSpy).not.toHaveBeenCalled();
   });
 
   it('renders quick notes with React keys and logs no key warning (Row 66, Clause 6)', () => {
