@@ -112,7 +112,7 @@ describe('SideMenu logout (spec 0002, AC-6; spec 0009, AC-8, AC-11)', () => {
   };
 
   it('refuses logout with an alert naming the count when rider has waiting steps, and does not call logout (AC-8)', async () => {
-    jest.spyOn(jobStepOutbox, 'waitingCount').mockReturnValue(3);
+    jest.spyOn(jobStepOutbox, 'waitingCount').mockResolvedValue(3);
 
     const component = renderSideMenu();
 
@@ -139,7 +139,7 @@ describe('SideMenu logout (spec 0002, AC-6; spec 0009, AC-8, AC-11)', () => {
   });
 
   it('sets rider Offline before clearing session on logout and calls clearSavedQueries when no steps wait (AC-8, AC-11)', async () => {
-    jest.spyOn(jobStepOutbox, 'waitingCount').mockReturnValue(0);
+    jest.spyOn(jobStepOutbox, 'waitingCount').mockResolvedValue(0);
     const clearSavedQueriesSpy = jest.spyOn(
       queryPersistence,
       'clearSavedQueries',
@@ -228,7 +228,7 @@ describe('SideMenu logout (spec 0002, AC-6; spec 0009, AC-8, AC-11)', () => {
   });
 
   it('still logs out and clears session when setUserStatus fails (e.g. no network)', async () => {
-    jest.spyOn(jobStepOutbox, 'waitingCount').mockReturnValue(0);
+    jest.spyOn(jobStepOutbox, 'waitingCount').mockResolvedValue(0);
     const clearSavedQueriesSpy = jest.spyOn(
       queryPersistence,
       'clearSavedQueries',

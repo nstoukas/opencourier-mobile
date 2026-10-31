@@ -18,9 +18,11 @@ const KEPT_QUERIES = new Set<string>([
   QueryKeys.earningsDelivery,
 ]);
 
+// Kept whenever it holds data. Not "status is success": a refetch that fails
+// with no signal sets the status to error but keeps the data, and that data is
+// exactly what must survive the next restart (row 20 review).
 export const shouldKeepQuery = (query: Query): boolean =>
-  KEPT_QUERIES.has(String(query.queryKey[0])) &&
-  query.state.status === 'success';
+  KEPT_QUERIES.has(String(query.queryKey[0])) && query.state.data !== undefined;
 
 // Saves the query cache in AsyncStorage (at most once a second) and reads it
 // back when the app starts.

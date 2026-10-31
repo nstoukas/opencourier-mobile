@@ -19,6 +19,11 @@ const useOrder = () => {
     note?: string,
   ): Promise<boolean> => {
     if (!user?.id || steps.length === 0) {
+      if (!user?.id) {
+        console.log(
+          'A job step was tapped with no rider loaded; nothing queued',
+        );
+      }
       return false;
     }
     const tappedAt = Date.now();

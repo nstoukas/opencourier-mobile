@@ -173,6 +173,24 @@ export const SideMenu = ({ navigation }: Props) => {
     await clearSavedQueries();
   };
 
+  // A step tapped with no signal is part of the rider's pay record: it can
+  // only be sent with this rider's login, so logging out waits for it
+  // (spec 0009, AC-8). Reading the count waits for the stored list.
+  const onLogoutPress = async () => {
+    const waiting = user?.id ? await waitingCount(user.id).catch(() => 0) : 0;
+    if (waiting > 0) {
+      Alert.alert(
+        t('translations:logout_waiting_title'),
+        t('translations:logout_waiting_body', { count: waiting }),
+      );
+      return;
+    }
+    Alert.alert('Notice', 'Are you sure you want to log out?', [
+      { text: 'Yes', onPress: onLogoutHandle },
+      { text: 'Cancel', style: 'cancel' },
+    ]);
+  };
+
   const handlePress = (item: SideMenuItem) => {
     switch (item) {
       case SideMenuItem.Orders:
@@ -189,25 +207,9 @@ export const SideMenu = ({ navigation }: Props) => {
       case SideMenuItem.Settings:
         navigation.navigate(DrawerScreens.Settings);
         break;
-      case SideMenuItem.Logout: {
-        // A step tapped with no signal is part of the rider's pay record: it
-        // can only be sent with this rider's login, so logging out waits for
-        // it (spec 0009, AC-8).
-        const waiting = user?.id ? waitingCount(user.id) : 0;
-        if (waiting > 0) {
-          Alert.alert(
-            t('translations:logout_waiting_title'),
-            t('translations:logout_waiting_body', { count: waiting }),
-          );
-          break;
-        }
-        Alert.alert('Notice', 'Are you sure you want to log out?', [
-          { text: 'Yes', onPress: onLogoutHandle },
-          { text: 'Cancel', style: 'cancel' },
-        ]);
-
+      case SideMenuItem.Logout:
+        onLogoutPress();
         break;
-      }
     }
   };
 

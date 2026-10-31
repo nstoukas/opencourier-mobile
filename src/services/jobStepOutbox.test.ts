@@ -310,7 +310,7 @@ describe('jobStepOutbox (spec 0009, AC-3, AC-6, AC-8)', () => {
       expect(getOutboxItems().every(i => i.state === 'refused')).toBe(true);
 
       // Dismiss del-1 only
-      await dismissRefused('del-1');
+      await dismissRefused('rider-1', 'del-1');
 
       const remaining = getOutboxItems();
       expect(remaining).toHaveLength(1);

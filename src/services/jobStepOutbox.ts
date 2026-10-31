@@ -31,8 +31,9 @@ export type NewOutboxItem = Omit<OutboxItem, 'id' | 'state'>;
 
 // What came back from one attempt to send a step.
 export type StepAnswer =
-  // The server answered with the delivery: its status after the step.
-  | { kind: 'delivery'; status: string }
+  // The server answered with the delivery: its status after the step
+  // (missing if the answer had none).
+  | { kind: 'delivery'; status?: string }
   // The server answered with an error status (and its error code, if any).
   | { kind: 'error'; httpStatus: number; code?: string }
   // No answer at all: no signal, a timeout.
@@ -49,6 +50,10 @@ export const classifyAnswer = (
     return 'retry';
   }
   if (answer.kind === 'delivery') {
+    // An answer without a status says nothing about the step: try again.
+    if (!answer.status) {
+      return 'retry';
+    }
     // At the step or past it: it took effect (perhaps a repeat after a lost
     // answer). Anything else, such as CANCELED, means the server dropped it.
     return hasReachedStep(answer.status, step) ? 'sent' : 'refused';
@@ -88,30 +93,36 @@ const listeners = new Set<() => void>();
 let writing: Promise<unknown> = Promise.resolve();
 let counter = 0;
 
+// Reads the stored list once. A failed read is never taken as an empty list
+// (the next save would then wipe the waiting steps): it is tried again on the
+// next use, and no change can be saved until a read has worked.
 const load = (): Promise<void> => {
   if (!loading) {
     loading = AsyncStorage.getItem(STORAGE_KEY)
       .then(raw => {
         items = raw ? (JSON.parse(raw) as OutboxItem[]) : [];
+        listeners.forEach(listener => listener());
       })
       .catch(error => {
-        console.log('Could not read the job step outbox', error);
-        items = [];
-      })
-      .then(() => listeners.forEach(listener => listener()));
+        loading = null;
+        throw error;
+      });
   }
   return loading;
 };
 
-// Applies one change to the list, saves it, then tells the screens.
+// Applies one change to the list, saves it, then tells the screens. The list
+// in memory changes only once the save has worked, so it never holds a step
+// the phone's storage does not.
 const change = (
   update: (current: OutboxItem[]) => OutboxItem[],
 ): Promise<void> => {
   const next = writing.then(async () => {
     await load();
     // A new array each time, so React sees the change.
-    items = update(items);
-    await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(items));
+    const updated = update(items);
+    await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
+    items = updated;
     listeners.forEach(listener => listener());
   });
   // A failed save must not block every later change.
@@ -121,7 +132,9 @@ const change = (
 
 // The items as they are now. Starts reading storage on first use.
 export const getOutboxItems = (): OutboxItem[] => {
-  load();
+  load().catch(error =>
+    console.log('Could not read the job step outbox', error),
+  );
   return items;
 };
 
@@ -134,29 +147,54 @@ export const subscribeOutbox = (listener: () => void): (() => void) => {
   };
 };
 
-// Adds steps, in the order given, as waiting.
+// Adds steps, in the order given, as waiting. A step already waiting for the
+// same rider and delivery is not added again (a double tap).
 export const addJobSteps = (newItems: NewOutboxItem[]): Promise<void> =>
-  change(current => [
-    ...current,
-    ...newItems.map(item => ({
-      ...item,
-      id: `${item.tappedAt}-${counter++}`,
-      state: 'waiting' as const,
-    })),
-  ]);
+  change(current => {
+    const added: OutboxItem[] = [];
+    for (const item of newItems) {
+      const alreadyWaiting = [...current, ...added].some(
+        i =>
+          i.state === 'waiting' &&
+          i.courierId === item.courierId &&
+          i.deliveryId === item.deliveryId &&
+          i.step === item.step,
+      );
+      if (!alreadyWaiting) {
+        added.push({
+          ...item,
+          id: `${item.tappedAt}-${counter++}`,
+          state: 'waiting',
+        });
+      }
+    }
+    return [...current, ...added];
+  });
 
-// Removes the refused items of a delivery (the rider closed its card).
-export const dismissRefused = (deliveryId: string): Promise<void> =>
+// Removes this rider's refused items of a delivery (they closed its card).
+export const dismissRefused = (
+  courierId: string,
+  deliveryId: string,
+): Promise<void> =>
   change(current =>
     current.filter(
-      item => !(item.deliveryId === deliveryId && item.state === 'refused'),
+      item =>
+        !(
+          item.courierId === courierId &&
+          item.deliveryId === deliveryId &&
+          item.state === 'refused'
+        ),
     ),
   );
 
-// How many steps of this rider wait to be sent.
-export const waitingCount = (courierId: string): number =>
-  items.filter(item => item.courierId === courierId && item.state === 'waiting')
-    .length;
+// How many steps of this rider wait to be sent, once the stored list is read
+// (asked right after the app starts, memory alone could still say 0).
+export const waitingCount = async (courierId: string): Promise<number> => {
+  await load();
+  return items.filter(
+    item => item.courierId === courierId && item.state === 'waiting',
+  ).length;
+};
 
 // ---- Sending ----
 
@@ -166,10 +204,14 @@ let flushing: Promise<void> | null = null;
 // wait or one gets no answer (then the rest wait for the next try).
 // `send` posts one step and reports the answer; `onSettled` hears each step
 // that left the waiting state. A call while a flush runs joins that flush.
+// `currentCourierId` is asked before each step: if another rider (or nobody)
+// is logged in by then, the flush stops, so a step never goes out with
+// someone else's login.
 export const flushOutbox = (
   courierId: string,
   send: (item: OutboxItem, tapAgeMs: number) => Promise<StepAnswer>,
   onSettled?: (item: OutboxItem, outcome: 'sent' | 'refused') => void,
+  currentCourierId: () => string | undefined = () => courierId,
 ): Promise<void> => {
   if (!flushing) {
     flushing = (async () => {
@@ -179,7 +221,7 @@ export const flushOutbox = (
           candidate =>
             candidate.courierId === courierId && candidate.state === 'waiting',
         );
-        if (!item) {
+        if (!item || currentCourierId() !== courierId) {
           return;
         }
         // How long ago the rider tapped, measured now; never below 0 (the

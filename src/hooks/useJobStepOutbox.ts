@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useSyncExternalStore } from 'react';
+import { useCallback, useEffect, useRef, useSyncExternalStore } from 'react';
 import { AppState } from 'react-native';
 import { useQueryClient } from '@tanstack/react-query';
 import { services } from '@app/services/service';
@@ -32,6 +32,10 @@ export const useJobStepOutbox = (
 ): void => {
   const queryClient = useQueryClient();
   const items = useOutboxItems();
+  // The rider logged in right now, read by a flush already under way before
+  // each step (`useRef` holds a value that survives redraws without causing one).
+  const riderNow = useRef(courierId);
+  riderNow.current = courierId;
   const waiting =
     courierId !== undefined &&
     items.some(
@@ -61,6 +65,7 @@ export const useJobStepOutbox = (
           queryKey: [QueryKeys.inProgressOrders],
         });
       },
+      () => riderNow.current,
     ).catch(error => console.log('Job step outbox: send failed', error));
   }, [courierId, queryClient]);
 

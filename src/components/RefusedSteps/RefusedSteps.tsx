@@ -51,7 +51,13 @@ export const RefusedSteps = ({ courierId }: Props) => {
           <TouchableOpacity
             accessibilityRole="button"
             style={[touchRow, styles.closeButton]}
-            onPress={() => dismissRefused(item.deliveryId)}>
+            onPress={() => {
+              if (courierId) {
+                dismissRefused(courierId, item.deliveryId).catch(error =>
+                  console.log('Could not close the refusal card', error),
+                );
+              }
+            }}>
             <Text style={styles.close}>
               {t('translations:step_refused_close')}
             </Text>
