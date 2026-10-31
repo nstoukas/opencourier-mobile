@@ -16,6 +16,8 @@ react-native-maps. It uses the backend's `courier` API.
 | `src/utilities/config.ts` | Reads `API_URL` from `.env` via `@env` |
 | `src/services/offerPush/`, `android/.../OfferAlertActivity.kt`, `OfferAlertModule.kt` | Offer pushes on Android: token registration, the ringing full screen alert (its own activity, the only screen over the lock screen), answers sent from the alert, the Online checks for silent mode and permissions (spec 0003) |
 | `src/utilities/offerCountdowns.ts`, `src/utilities/offerClock.ts` | Offer timing: counts down to the server's `offerExpiresAt`, corrected by `serverNow`; the phone never answers for the rider at zero (spec 0002) |
+| `src/services/jobStepOutbox.ts`, `src/hooks/useJobStepOutbox.ts`, `src/utilities/jobSteps.ts` | Job steps go through an outbox in AsyncStorage, online or not, and are sent oldest first with `tapAgeMs`; the screen shows the later of the server's status and the waiting steps' (`inProgressOrdersAsShown`), never edits the cache (spec 0009) |
+| `src/services/queryPersistence.ts` | The user, in progress deliveries and earnings are saved for 24 h (`PersistQueryClientProvider` in `App.tsx`); offers never; cleared at logout and session end (spec 0009) |
 
 ## Commands
 
@@ -37,5 +39,8 @@ the error count is above `typecheck-baseline.json`, and lowers the file when the
 - Push is off on dev and the app still ships upstream's Firebase project, so no real FCM message
   reaches the emulator. To check push handling live, feed messages with the backend's keys to the
   app's own `onRemoteMessage` (decision 58.27).
+
+- Cutting the app off from the backend on the emulator: `adb reverse --remove tcp:3000` (switching wifi off does nothing, the app reaches the backend through adb); `adb reverse tcp:3000 tcp:3000` restores. An already open connection survives the removal, so wait for "No connection" before tapping (spec 0009).
+- A React Query refetch that fails keeps the data but sets `status: 'error'`: anything that filters on `status === 'success'` drops data that is still there (row 20 review).
 
 _Drafted by /audit from the repo, worth a quick human pass. Edit freely: once a line stops matching this draft, later runs treat it as curated and will flag rather than overwrite it._
