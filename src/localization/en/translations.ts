@@ -463,6 +463,8 @@ export default {
     '{{restaurant}}: "{{step}}" was not accepted by the co-op. Call the co-op.',
   step_refused_close: 'Close',
   logout_waiting_title: 'Steps waiting to send',
+  logout_outbox_unreadable:
+    'The phone could not check for steps waiting to send. Try again in a moment; if it keeps happening, call the co-op before logging out.',
   logout_waiting_body:
     '{{count}} step(s) of your deliveries are still waiting to be sent. Connect to the internet first, then log out.',
 };

@@ -176,8 +176,20 @@ export const SideMenu = ({ navigation }: Props) => {
   // A step tapped with no signal is part of the rider's pay record: it can
   // only be sent with this rider's login, so logging out waits for it
   // (spec 0009, AC-8). Reading the count waits for the stored list.
+  // If the stored list cannot be read, logout waits too (it fails closed):
+  // a step that cannot be counted may still be waiting (row 20 review).
   const onLogoutPress = async () => {
-    const waiting = user?.id ? await waitingCount(user.id).catch(() => 0) : 0;
+    let waiting = 0;
+    try {
+      waiting = user?.id ? await waitingCount(user.id) : 0;
+    } catch (error) {
+      console.log('Could not read the job step outbox before logout', error);
+      Alert.alert(
+        t('translations:logout_waiting_title'),
+        t('translations:logout_outbox_unreadable'),
+      );
+      return;
+    }
     if (waiting > 0) {
       Alert.alert(
         t('translations:logout_waiting_title'),
