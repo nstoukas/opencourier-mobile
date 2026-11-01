@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { AppState } from 'react-native';
 import { useQuery } from '@tanstack/react-query';
 import { client } from '@app/services/Client';
@@ -19,9 +19,12 @@ export type DispatchState = {
 
 const EVERY_MINUTE = 60_000;
 
-// Read when Home opens, every 60 s while it is shown, and when the app comes back to the
-// foreground (AC-7). The phone cannot hear of a stop any other way: there is no push for it yet.
-export const useDispatchState = () => {
+// Read when Home opens, every 60 s while Home is in front and the app is in the foreground, and when
+// the app comes back to the foreground (AC-7). The phone cannot hear of a stop any other way: there
+// is no push for it yet. `inFront` is Home's own useIsFocused, passed in so the hook needs no
+// navigator (row 29 review: it polled behind other screens and in the background).
+export const useDispatchState = (inFront: boolean = true) => {
+  const [appActive, setAppActive] = useState(AppState.currentState === 'active');
   const query = useQuery({
     queryKey: [QueryKeys.dispatchState],
     queryFn: async (): Promise<DispatchState> => {
@@ -29,12 +32,14 @@ export const useDispatchState = () => {
       // Every response is wrapped by the backend as { error, result }.
       return data.result;
     },
-    refetchInterval: EVERY_MINUTE,
+    // false stops the timer; it starts again when both come back.
+    refetchInterval: inFront && appActive ? EVERY_MINUTE : false,
   });
 
   const { refetch } = query;
   useEffect(() => {
     const subscription = AppState.addEventListener('change', state => {
+      setAppActive(state === 'active');
       if (state === 'active') {
         void refetch();
       }

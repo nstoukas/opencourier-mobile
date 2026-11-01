@@ -376,7 +376,7 @@ export const HomeScreen = ({ navigation }: Props) => {
         connectionStatus={connectionStatus}
       />
       {/* Dispatch stopped for heat or a storm, or about to be (spec 0014). */}
-      <DispatchStopBanner />
+      <DispatchStopBanner inFront={isFocused} />
       {/* Steps the co-op refused after they waited for signal (spec 0009). */}
       <RefusedSteps courierId={user?.id} />
       {selectedTab === HomeTabItem.History && !reportIncidentDismissed && (

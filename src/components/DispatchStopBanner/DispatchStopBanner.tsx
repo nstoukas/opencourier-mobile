@@ -9,9 +9,14 @@ import { styles } from './DispatchStopBanner.styles';
 
 // Spec 0014, AC-7: tells the rider that dispatch is stopped (heat, a storm) and until when, or that a
 // stop starts soon, so a quiet Home has a reason. The sentence is the backend's.
-export const DispatchStopBanner = () => {
+type Props = {
+  // Whether Home is the screen in front (its useIsFocused): the banner polls only then.
+  inFront?: boolean;
+};
+
+export const DispatchStopBanner = ({ inFront = true }: Props) => {
   const { t } = useTranslation();
-  const { data } = useDispatchState();
+  const { data } = useDispatchState(inFront);
   const stop = data?.current ?? data?.next;
   if (!stop) {
     return null;
