@@ -6,10 +6,7 @@ export enum OnboardingScreen {
   Welcome = 'Welcome',
   ChooseInstance = 'ChooseInstance',
   Login = 'Login',
-  Signup = 'Signup',
-  ForgotPassword = 'ForgotPassword',
   InstanceDetails = 'InstanceDetails',
-  JoinInstance = 'JoinInstance',
   LoginInstance = 'LoginInstance',
 }
 
@@ -20,14 +17,9 @@ export type OnboardingStackParamList = {
     registryLink: string;
   };
   Login: undefined;
-  Signup: undefined;
-  ForgotPassword: undefined;
   InstanceDetails: {
     instanceLink: string;
     registryLink?: string;
-  };
-  JoinInstance: {
-    instance: Instance;
   };
   LoginInstance: {
     instance: Instance;

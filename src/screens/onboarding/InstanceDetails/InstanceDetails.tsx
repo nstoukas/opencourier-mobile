@@ -25,7 +25,6 @@ import { Instance } from '@app/types/types';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { color } from '@app/styles/theme';
 import { touchRow } from '@app/utilities/touch';
-import { PlusCircleIcon } from 'phosphor-react-native/src/icons/PlusCircle';
 import { SignInIcon } from 'phosphor-react-native/src/icons/SignIn';
 
 type Props = OnboardingScreenProp<OnboardingScreen.InstanceDetails>;
@@ -204,24 +203,11 @@ export const InstanceDetails = ({ navigation, route }: Props) => {
                 </Text>
               </TouchableOpacity>
             </View>
-            <Button
-              icon={PlusCircleIcon}
-              iconWeight="fill"
-              type={ButtonType.green}
-              title={t('translations:join_instance')}
-              onPress={() => {
-                if (instance) {
-                  navigation.navigate(OnboardingScreen.JoinInstance, {
-                    instance: instance,
-                  });
-                }
-              }}
-              style={{ marginBottom: 22 }}
-            />
+            {/* No Join button: the co-op issues every rider's login (spec 0013, AC-7). */}
             <Button
               style={{ marginBottom: 16 }}
               icon={SignInIcon}
-              type={ButtonType.grayBGBlackText}
+              type={ButtonType.green}
               title={t('translations:login_to_instance')}
               onPress={() => {
                 if (instance) {

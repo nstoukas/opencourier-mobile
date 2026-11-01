@@ -19,7 +19,7 @@ import { RootScreen } from '@app/navigation/types';
 
 // The requests the session itself is made of. A 401 from these means a wrong
 // password or a refused refresh token, never an access token to renew.
-const SESSION_PATHS = ['auth/login', 'auth/register', 'auth/refresh-tokens'];
+const SESSION_PATHS = ['auth/login', 'auth/refresh-tokens'];
 
 // True for a request to one of those paths. The end of the path must match, so
 // a later `auth/login-history` would not count as `auth/login`.

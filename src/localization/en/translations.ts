@@ -35,6 +35,9 @@ export default {
   password_reset: 'Password Reset',
   email_sent:
     'An email with a reset link has been sent to your registered email address.',
+  // Spec 0013: the co-op issues and resets every rider's login.
+  ask_coop_for_password:
+    'Ask the co-op to set a new password for you. Your login email stays the same.',
   forgot_password: 'Forgot password?',
   reset_password: 'Reset Your Password',
   account_information: 'Account information',

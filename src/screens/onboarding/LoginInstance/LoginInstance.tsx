@@ -22,9 +22,7 @@ import { Icon } from '@app/components/Icon/Icon';
 import { MagnifyingGlassIcon } from 'phosphor-react-native/src/icons/MagnifyingGlass';
 import { PasswordIcon } from 'phosphor-react-native/src/icons/Password';
 import { XIcon } from 'phosphor-react-native/src/icons/X';
-import { PlusCircleIcon } from 'phosphor-react-native/src/icons/PlusCircle';
 import { SignOutIcon } from 'phosphor-react-native/src/icons/SignOut';
-import { PaperPlaneTiltIcon } from 'phosphor-react-native/src/icons/PaperPlaneTilt';
 
 type Props = OnboardingScreenProp<OnboardingScreen.LoginInstance>;
 
@@ -133,28 +131,9 @@ export const LoginInstance = ({ navigation, route }: Props) => {
           </>
         )}
 
+        {/* No reset link: the co-op sets a rider's password (spec 0013, AC-7). */}
         {screenState === ScreenState.passwordReset && (
           <>
-            <TextField
-              error={errors.email}
-              value={email}
-              placeholder={t('translations:email')}
-              onChangeText={setEmail}
-              onBlur={validateFields}
-              style={styles.textField}
-            />
-            <Button
-              icon={PaperPlaneTiltIcon}
-              iconWeight="fill"
-              type={ButtonType.green}
-              title={t('translations:send_reset')}
-              onPress={() =>
-                navigation.navigate(OnboardingScreen.JoinInstance, {
-                  instance: instance,
-                })
-              }
-              style={{ marginBottom: 22 }}
-            />
             <View
               style={[
                 styles.resetCard,
@@ -171,7 +150,7 @@ export const LoginInstance = ({ navigation, route }: Props) => {
                 </TouchableOpacity>
               </View>
               <Text style={styles.textEmailSent}>
-                {t('translations:email_sent')}
+                {t('translations:ask_coop_for_password')}
               </Text>
               <Button
                 icon={SignOutIcon}
@@ -214,28 +193,6 @@ export const LoginInstance = ({ navigation, route }: Props) => {
             </TouchableOpacity>
             <TouchableOpacity
               style={styles.containerBottom}
-              onPress={() =>
-                navigation.navigate(OnboardingScreen.JoinInstance, {
-                  instance: instance,
-                })
-              }>
-              <Text style={styles.textButton}>
-                {t('translations:no_account')}
-                <Text> </Text>
-                <Text style={{ textDecorationLine: 'underline' }}>
-                  {t('translations:join_instance')}
-                </Text>
-              </Text>
-              <Icon
-                icon={PlusCircleIcon}
-                weight="fill"
-                size={20}
-                tone="muted-foreground"
-                style={styles.imageLogin}
-              />
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={styles.containerBottom}
               onPress={() => navigation.navigate(OnboardingScreen.Welcome)}>
               <Text style={styles.textButton}>
                 {t('translations:looking_for_instances')}
@@ -256,28 +213,6 @@ export const LoginInstance = ({ navigation, route }: Props) => {
 
         {screenState === ScreenState.passwordReset && (
           <>
-            <TouchableOpacity
-              style={styles.containerBottom}
-              onPress={() =>
-                navigation.navigate(OnboardingScreen.JoinInstance, {
-                  instance: instance,
-                })
-              }>
-              <Text style={styles.textButton}>
-                {t('translations:no_account')}
-                <Text> </Text>
-                <Text style={{ textDecorationLine: 'underline' }}>
-                  {t('translations:join_instance')}
-                </Text>
-              </Text>
-              <Icon
-                icon={PlusCircleIcon}
-                weight="fill"
-                size={20}
-                tone="muted-foreground"
-                style={styles.imageLogin}
-              />
-            </TouchableOpacity>
             <TouchableOpacity
               style={styles.containerBottom}
               onPress={() => navigation.navigate(OnboardingScreen.Welcome)}>

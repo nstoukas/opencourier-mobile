@@ -8,13 +8,6 @@ export type LoginParams = {
   rememberLogin?: boolean;
 };
 
-export type SignupParams = {
-  firstName: string;
-  lastName: string;
-  email: string;
-  password: string;
-};
-
 export type UserParams = {
   id: string;
   data?:

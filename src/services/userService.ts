@@ -2,7 +2,6 @@ import { DeliveryType, User, UserResponse } from '@app/types/types';
 import { UClient } from './Client';
 import {
   LoginParams,
-  SignupParams,
   UserServiceResponse,
   LoginResponse,
   UserSettings,
@@ -11,7 +10,6 @@ import { saveSession } from './session';
 
 export interface UserService {
   login: (params: LoginParams) => Promise<LoginResponse>;
-  signup: (params: SignupParams) => Promise<LoginResponse>;
   getUser: () => Promise<User>;
   getUserSettings: () => Promise<UserSettings>;
   // Resolves with the raw PATCH response; the only caller (useUserSettings) ignores it
@@ -35,14 +33,6 @@ export interface UserService {
 const userService = (client: UClient): UserService => {
   const login = async (params: LoginParams): Promise<LoginResponse> => {
     const { data } = await client.post<LoginResponse>('auth/login', params);
-    const { accessToken, refreshToken } = data.result.session;
-    // Both tokens: the refresh token renews the login when it expires (row 66).
-    await saveSession(accessToken, refreshToken, client);
-    return data;
-  };
-
-  const signup = async (params: SignupParams): Promise<LoginResponse> => {
-    const { data } = await client.post<LoginResponse>('auth/register', params);
     const { accessToken, refreshToken } = data.result.session;
     // Both tokens: the refresh token renews the login when it expires (row 66).
     await saveSession(accessToken, refreshToken, client);
@@ -93,7 +83,6 @@ const userService = (client: UClient): UserService => {
 
   return {
     login,
-    signup,
     getUser,
     getUserSettings,
     updateUserSettings,
