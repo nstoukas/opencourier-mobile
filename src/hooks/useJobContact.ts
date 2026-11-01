@@ -1,3 +1,5 @@
+import { useEffect, useState } from 'react';
+import { AppState } from 'react-native';
 import { useQuery } from '@tanstack/react-query';
 import { client } from '@app/services/Client';
 import { QueryKeys } from '@app/utilities/queryKeys';
@@ -11,17 +13,35 @@ export type JobContact = {
 
 const TEN_MINUTES = 10 * 60_000;
 
-// Read when Home opens and every ten minutes, so a number a representative changes reaches riders
-// without a restart (a stale time alone never asks again while Home stays open). It is saved on
-// the phone with the deliveries (queryPersistence.ts), so a rider with no data signal can still
-// call dispatch.
-export const useJobContact = () =>
-  useQuery({
+// Read when Home opens, every ten minutes while Home is in front and the app is active, and when
+// the app comes back to the foreground, so a number a representative changes reaches riders without
+// a restart (a stale time alone never asks again while Home stays open). No TanStack focus manager
+// is wired to AppState here, so the timer is scoped by hand, as in useDispatchState (row 72 review).
+// It is saved on the phone with the deliveries (queryPersistence.ts), so a rider with no data
+// signal can still call dispatch. `inFront` is Home's own useIsFocused.
+export const useJobContact = (inFront: boolean = true) => {
+  const [appActive, setAppActive] = useState(AppState.currentState === 'active');
+  const query = useQuery({
     queryKey: [QueryKeys.jobContact],
     queryFn: async (): Promise<JobContact> => {
       const { data } = await client.get('config/contact');
       // Every response is wrapped by the backend as { error, result }.
       return data.result;
     },
-    refetchInterval: TEN_MINUTES,
+    // false stops the timer; it starts again when both come back.
+    refetchInterval: inFront && appActive ? TEN_MINUTES : false,
   });
+
+  const { refetch } = query;
+  useEffect(() => {
+    const subscription = AppState.addEventListener('change', state => {
+      setAppActive(state === 'active');
+      if (state === 'active') {
+        void refetch();
+      }
+    });
+    return () => subscription.remove();
+  }, [refetch]);
+
+  return query;
+};

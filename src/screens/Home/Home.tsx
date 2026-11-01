@@ -59,8 +59,6 @@ export const HomeScreen = ({ navigation }: Props) => {
   const { t } = useTranslation();
   const { user, isLoading, updateStatus } = useUser();
   const connectionStatus = useConnectionStatus();
-  const { data: jobContact } = useJobContact();
-  const dispatchPhoneNumber = jobContact?.dispatchPhoneNumber;
   const [availableMapApps, setAvailableMapApps] = useState<string[]>([
     t('translations:cancel'),
   ]);
@@ -109,6 +107,8 @@ export const HomeScreen = ({ navigation }: Props) => {
   // `useIsFocused` is true while this screen is the one in front; the offer
   // screen can still be open over it (isHomeInFront checks that too).
   const isFocused = useIsFocused();
+  const { data: jobContact } = useJobContact(isFocused);
+  const dispatchPhoneNumber = jobContact?.dispatchPhoneNumber;
   useEffect(() => {
     if (!isFocused) {
       return;
