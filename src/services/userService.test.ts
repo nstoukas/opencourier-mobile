@@ -1,5 +1,3 @@
-import fs from 'fs';
-import path from 'path';
 import userService from './userService';
 import { UClient } from './Client';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -87,8 +85,89 @@ describe('userService (spec 0002, M5 & Row 66 Clause 3)', () => {
     );
   });
 
-  it('userService has no signup method and never posts to auth/register (spec 0013 AC-7)', () => {
-    const mockPost = jest.fn();
+  it('userService has no signup property and no service method calls auth/register across login and other methods (spec 0013 AC-7)', async () => {
+    const mockPost = jest.fn().mockResolvedValue({
+      data: {
+        result: {
+          session: {
+            accessToken: 'test-access-token',
+            refreshToken: 'test-refresh-token',
+            tokenType: 'Bearer',
+            expiresIn: 3600,
+          },
+        },
+      },
+    });
+    const mockGet = jest.fn().mockImplementation((url: string) => {
+      if (url === 'auth/me') {
+        return Promise.resolve({
+          data: {
+            result: {
+              email: 'rider@example.com',
+              role: 'COURIER',
+              courier: { id: 'c1', firstName: 'Rider', lastName: 'One' },
+            },
+          },
+        });
+      }
+      return Promise.resolve({ data: { result: {} } });
+    });
+    const mockPatch = jest.fn().mockResolvedValue({ data: { result: {} } });
+
+    const client = {
+      post: mockPost,
+      get: mockGet,
+      patch: mockPatch,
+      defaults: {
+        headers: {
+          common: {},
+        },
+      },
+    } as unknown as UClient;
+
+    const service = userService(client);
+
+    // Spec 0013 AC-7: The service object has no signup property
+    expect((service as any).signup).toBeUndefined();
+    expect('signup' in service).toBe(false);
+
+    // Exercise all service methods across login and the other methods
+    await service.login({
+      email: 'rider@example.com',
+      password: 'password123',
+    });
+    await service.getUser();
+    await service.getUserSettings();
+    await service.updateUserSettings({ vehicleType: 'moped' });
+    await service.setUserStatus('offline');
+    await service.setDeliverySettings('manual');
+    await service.setUserLocation({ latitude: 39.36, longitude: 22.94 });
+
+    // mockPost was called with auth/login, and non-vacuously not called with auth/register
+    expect(mockPost).toHaveBeenCalledWith('auth/login', {
+      email: 'rider@example.com',
+      password: 'password123',
+    });
+    expect(mockPost).not.toHaveBeenCalledWith(
+      expect.stringContaining('auth/register'),
+      expect.anything(),
+    );
+
+    // No client mock call across all service methods ever uses auth/register
+    const allCalledEndpoints = [
+      ...mockPost.mock.calls.map(call => call[0]),
+      ...mockGet.mock.calls.map(call => call[0]),
+      ...mockPatch.mock.calls.map(call => call[0]),
+    ];
+    for (const endpoint of allCalledEndpoints) {
+      expect(endpoint).not.toContain('auth/register');
+    }
+  });
+
+  it('login propagates rejection and does not save tokens when client.post rejects (failure case)', async () => {
+    const mockPost = jest
+      .fn()
+      .mockRejectedValue(new Error('Invalid email or password'));
     const client = {
       post: mockPost,
       defaults: {
@@ -99,47 +178,15 @@ describe('userService (spec 0002, M5 & Row 66 Clause 3)', () => {
     } as unknown as UClient;
 
     const service = userService(client);
+    await expect(
+      service.login({
+        email: 'rider@example.com',
+        password: 'wrongpassword',
+      }),
+    ).rejects.toThrow('Invalid email or password');
 
-    // The co-op issues every rider's login from admin; mobile has no sign up (spec 0013, AC-7)
-    expect((service as any).signup).toBeUndefined();
-    expect(mockPost).not.toHaveBeenCalledWith(
-      expect.stringContaining('auth/register'),
-      expect.anything(),
-    );
-  });
-
-  it('no file in src/services posts to or references auth/register (spec 0013 AC-7)', () => {
-    const servicesDir = path.resolve(__dirname);
-
-    const getSourceFiles = (dir: string): string[] => {
-      const dirEntries = fs.readdirSync(dir, { withFileTypes: true });
-      const files: string[] = [];
-      for (const entry of dirEntries) {
-        const fullPath = path.join(dir, entry.name);
-        if (entry.isDirectory()) {
-          files.push(...getSourceFiles(fullPath));
-        } else if (
-          (entry.name.endsWith('.ts') || entry.name.endsWith('.tsx')) &&
-          !entry.name.endsWith('.test.ts') &&
-          !entry.name.endsWith('.test.tsx')
-        ) {
-          files.push(fullPath);
-        }
-      }
-      return files;
-    };
-
-    const sourceFiles = getSourceFiles(servicesDir);
-    const violations: string[] = [];
-
-    for (const file of sourceFiles) {
-      const content = fs.readFileSync(file, 'utf-8');
-      if (content.includes('auth/register')) {
-        const relPath = path.relative(servicesDir, file);
-        violations.push(`src/services/${relPath} references auth/register`);
-      }
-    }
-
-    expect(violations).toEqual([]);
+    // AsyncStorage does not save any token on failure
+    expect(await AsyncStorage.getItem('token')).toBeNull();
+    expect(await AsyncStorage.getItem('refreshToken')).toBeNull();
   });
 });

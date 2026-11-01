@@ -1,4 +1,5 @@
 import React from 'react';
+import { TextInput } from 'react-native';
 import { render, screen, fireEvent, act } from '@testing-library/react-native';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { LoginInstance } from './LoginInstance';
@@ -79,20 +80,25 @@ describe('LoginInstance (spec 0013 AC-7: no public sign up; forgot password as t
     expect(screen.queryByText(i18n.t('translations:join_instance'))).toBeNull();
     expect(screen.queryByText(/join/i)).toBeNull();
 
-    // Forgot password trigger is visible
+    // Forgot password trigger is visible with pinned labels: "Forgot password? Ask the co-op"
     expect(
-      screen.getByText(new RegExp(i18n.t('translations:forgot_password'), 'i')),
+      screen.getByText('Forgot password? Ask the co-op'),
     ).toBeTruthy();
+    expect(screen.getByText('Ask the co-op')).toBeTruthy();
   });
 
-  it('forgot password state: shows ask_coop_for_password text, no email field, no Send Reset Link button, and no Join link', () => {
+  it('forgot password state: shows ask_coop_for_password text, no text inputs, no Send Reset Link button, and no Join link', () => {
     renderScreen();
 
-    // Press Forgot password / Reset Your Password link
-    const forgotPasswordTrigger = screen.getByText(
-      new RegExp(i18n.t('translations:reset_password'), 'i'),
-    );
+    // Press Forgot password / Ask the co-op link
+    const forgotPasswordTrigger = screen.getByText('Ask the co-op');
     fireEvent.press(forgotPasswordTrigger);
+
+    // Pin card title: "Forgot your password?" (spec 0013 AC-7 review fixes)
+    expect(screen.getByText('Forgot your password?')).toBeTruthy();
+    expect(
+      screen.getByText(i18n.t('translations:password_reset')),
+    ).toBeTruthy();
 
     // Spec 0013 AC-7: shows text only: ask the co-op to set a new password
     expect(
@@ -104,10 +110,18 @@ describe('LoginInstance (spec 0013 AC-7: no public sign up; forgot password as t
       ),
     ).toBeTruthy();
 
-    // Spec 0013 AC-7: no email field and no Send Reset Link button
+    // Spec 0013 AC-7: the forgot password state shows text only, with no form.
+    // Must fail if ANY text input is shown: query every TextInput and element with a placeholder
+    expect(screen.UNSAFE_queryAllByType(TextInput).length).toBe(0);
+    expect(screen.queryAllByPlaceholderText(/.+/).length).toBe(0);
+    expect(
+      screen.queryByPlaceholderText(i18n.t('translations:email')),
+    ).toBeNull();
+    expect(screen.queryByPlaceholderText('Email')).toBeNull();
     expect(
       screen.queryByPlaceholderText(i18n.t('translations:email_address')),
     ).toBeNull();
+    expect(screen.queryByPlaceholderText('Email Address')).toBeNull();
     expect(screen.queryByText(i18n.t('translations:send_reset'))).toBeNull();
     expect(screen.queryByText(/send reset/i)).toBeNull();
 
@@ -118,22 +132,22 @@ describe('LoginInstance (spec 0013 AC-7: no public sign up; forgot password as t
     expect(screen.queryByText(/join/i)).toBeNull();
 
     // "Back to log in" button is present
+    expect(screen.getByText('Back To Log In')).toBeTruthy();
     expect(screen.getByText(i18n.t('translations:back_to_login'))).toBeTruthy();
   });
 
   it('pressing "Back to log in" returns to the login form', () => {
     renderScreen();
 
-    // Navigate to forgot password state
-    fireEvent.press(
-      screen.getByText(new RegExp(i18n.t('translations:reset_password'), 'i')),
-    );
+    // Navigate to forgot password state via "Ask the co-op"
+    fireEvent.press(screen.getByText('Ask the co-op'));
+    expect(screen.getByText('Forgot your password?')).toBeTruthy();
     expect(
       screen.getByText(i18n.t('translations:ask_coop_for_password')),
     ).toBeTruthy();
 
     // Press "Back to log in"
-    const backButton = screen.getByText(i18n.t('translations:back_to_login'));
+    const backButton = screen.getByText('Back To Log In');
     fireEvent.press(backButton);
 
     // Returned to login state: login form is restored, password reset notice is gone
@@ -144,6 +158,7 @@ describe('LoginInstance (spec 0013 AC-7: no public sign up; forgot password as t
       screen.getByPlaceholderText(i18n.t('translations:password')),
     ).toBeTruthy();
     expect(screen.getByText(i18n.t('translations:log_in'))).toBeTruthy();
+    expect(screen.queryByText('Forgot your password?')).toBeNull();
     expect(
       screen.queryByText(i18n.t('translations:ask_coop_for_password')),
     ).toBeNull();
@@ -187,5 +202,31 @@ describe('LoginInstance (spec 0013 AC-7: no public sign up; forgot password as t
       email: 'rider@example.com',
       password: 'secretpassword',
     });
+  });
+
+  it('displays error message when login fails (failure case)', async () => {
+    mockLogin.mockRejectedValueOnce(new Error('Invalid email or password'));
+
+    renderScreen();
+
+    const emailInput = screen.getByPlaceholderText(
+      i18n.t('translations:email_address'),
+    );
+    const passwordInput = screen.getByPlaceholderText(
+      i18n.t('translations:password'),
+    );
+    const logInButton = screen.getByText(i18n.t('translations:log_in'));
+
+    act(() => {
+      fireEvent.changeText(emailInput, 'rider@example.com');
+      fireEvent.changeText(passwordInput, 'wrongpassword');
+    });
+
+    await act(async () => {
+      fireEvent.press(logInButton);
+    });
+
+    expect(mockLogin).toHaveBeenCalledTimes(1);
+    expect(screen.getByText('Invalid email or password')).toBeTruthy();
   });
 });
