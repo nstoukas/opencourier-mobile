@@ -49,7 +49,7 @@ let mockJobContact: any = {
 };
 
 jest.mock('@app/hooks/useJobContact', () => ({
-  useJobContact: jest.fn((inFront: boolean = true) => ({
+  useJobContact: jest.fn(() => ({
     data: mockJobContact,
     isLoading: false,
     refetch: jest.fn(),
@@ -478,7 +478,8 @@ describe('HomeScreen (Row 66, Clauses 1 & 5)', () => {
         const [config, onSelect] = (
           ActionSheet.showActionSheetWithOptions as jest.Mock
         ).mock.calls[
-          (ActionSheet.showActionSheetWithOptions as jest.Mock).mock.calls.length - 1
+          (ActionSheet.showActionSheetWithOptions as jest.Mock).mock.calls
+            .length - 1
         ];
 
         expect(config.title).toBe('Text the customer');
@@ -538,7 +539,8 @@ describe('HomeScreen (Row 66, Clauses 1 & 5)', () => {
         const [, onSelect] = (
           ActionSheet.showActionSheetWithOptions as jest.Mock
         ).mock.calls[
-          (ActionSheet.showActionSheetWithOptions as jest.Mock).mock.calls.length - 1
+          (ActionSheet.showActionSheetWithOptions as jest.Mock).mock.calls
+            .length - 1
         ];
 
         openURLSpy.mockClear();
@@ -583,7 +585,8 @@ describe('HomeScreen (Row 66, Clauses 1 & 5)', () => {
         });
 
         expect(
-          (ActionSheet.showActionSheetWithOptions as jest.Mock).mock.calls.length,
+          (ActionSheet.showActionSheetWithOptions as jest.Mock).mock.calls
+            .length,
         ).toBe(sheetCallsBefore);
         expect(openURLSpy).not.toHaveBeenCalled();
       });

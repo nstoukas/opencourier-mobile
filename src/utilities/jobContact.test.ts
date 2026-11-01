@@ -1,10 +1,5 @@
 import { OrderStatus } from '@app/types/enums';
-import {
-  isJobOver,
-  telUrl,
-  smsUrl,
-  CUSTOMER_SMS_PRESETS,
-} from './jobContact';
+import { isJobOver, telUrl, smsUrl, CUSTOMER_SMS_PRESETS } from './jobContact';
 
 describe('jobContact (row 72, decisions 72.4, 72.5)', () => {
   describe('isJobOver', () => {
@@ -17,10 +12,14 @@ describe('jobContact (row 72, decisions 72.4, 72.5)', () => {
       expect(isJobOver(OrderStatus.created)).toBe(false);
       expect(isJobOver(OrderStatus.accepted)).toBe(false);
       expect(isJobOver(OrderStatus.dispatched)).toBe(false);
-      expect(isJobOver(OrderStatus.courier_arrived_at_pickup_location)).toBe(false);
+      expect(isJobOver(OrderStatus.courier_arrived_at_pickup_location)).toBe(
+        false,
+      );
       expect(isJobOver(OrderStatus.picked_up)).toBe(false);
       expect(isJobOver(OrderStatus.on_the_way)).toBe(false);
-      expect(isJobOver(OrderStatus.courier_arrived_at_dropoff_location)).toBe(false);
+      expect(isJobOver(OrderStatus.courier_arrived_at_dropoff_location)).toBe(
+        false,
+      );
       expect(isJobOver('unknown_status')).toBe(false);
       expect(isJobOver('')).toBe(false);
     });

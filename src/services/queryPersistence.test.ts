@@ -118,7 +118,10 @@ describe('queryPersistence (spec 0009, AC-1, AC-11)', () => {
 
     it('never keeps dispatchState query even with data and whatever its status (spec 0014, AC-7)', () => {
       const sampleState = {
-        current: { reason: 'HEAT', message: 'Dispatch is stopped until 17:00 (heat).' },
+        current: {
+          reason: 'HEAT',
+          message: 'Dispatch is stopped until 17:00 (heat).',
+        },
         next: null,
       };
       expect(

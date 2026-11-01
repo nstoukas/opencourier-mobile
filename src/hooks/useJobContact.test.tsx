@@ -31,7 +31,9 @@ describe('useJobContact (row 72, decisions 72.5, 72.7, review fix 26bab10)', () 
       },
     });
     return ({ children }: { children: React.ReactNode }) => (
-      <QueryClientProvider client={activeQueryClient!}>{children}</QueryClientProvider>
+      <QueryClientProvider client={activeQueryClient!}>
+        {children}
+      </QueryClientProvider>
     );
   };
 
@@ -87,7 +89,7 @@ describe('useJobContact (row 72, decisions 72.5, 72.7, review fix 26bab10)', () 
     unmount();
   });
 
-  it("returns null dispatchPhoneNumber when the route returns dispatchPhoneNumber: null", async () => {
+  it('returns null dispatchPhoneNumber when the route returns dispatchPhoneNumber: null', async () => {
     (client.get as jest.Mock).mockResolvedValueOnce({
       data: {
         error: null,

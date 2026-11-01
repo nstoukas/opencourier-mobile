@@ -478,7 +478,8 @@ describe('InProgressCell (spec 0007, decision 65.10)', () => {
           dropoffPhoneNumber: '+306912345678',
         } as Order;
 
-        const { onTextCustomer: _, ...propsWithoutText } = noopProps;
+        // No handler for texting (undefined is what an absent prop reads as).
+        const propsWithoutText = { ...noopProps, onTextCustomer: undefined };
 
         const { UNSAFE_getAllByType } = render(
           <InProgressCell order={order} {...propsWithoutText} />,
@@ -586,7 +587,9 @@ describe('InProgressCell (spec 0007, decision 65.10)', () => {
           );
 
           const buttons = component.UNSAFE_queryAllByType(Button);
-          const dispatchButton = buttons.find(b => b.props.icon === HeadsetIcon);
+          const dispatchButton = buttons.find(
+            b => b.props.icon === HeadsetIcon,
+          );
           expect(dispatchButton).toBeUndefined();
         }
       });
