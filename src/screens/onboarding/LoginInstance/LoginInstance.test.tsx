@@ -118,9 +118,7 @@ describe('LoginInstance (spec 0013 AC-7: no public sign up; forgot password as t
     expect(screen.queryByText(/join/i)).toBeNull();
 
     // "Back to log in" button is present
-    expect(
-      screen.getByText(i18n.t('translations:back_to_login')),
-    ).toBeTruthy();
+    expect(screen.getByText(i18n.t('translations:back_to_login'))).toBeTruthy();
   });
 
   it('pressing "Back to log in" returns to the login form', () => {

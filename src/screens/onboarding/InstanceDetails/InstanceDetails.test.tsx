@@ -1,5 +1,10 @@
 import React from 'react';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react-native';
+import {
+  render,
+  screen,
+  fireEvent,
+  waitFor,
+} from '@testing-library/react-native';
 import { InstanceDetails } from './InstanceDetails';
 import { OnboardingScreen } from '@app/navigation/onboarding/types';
 import i18n from '@app/localization/i18n';
@@ -90,9 +95,7 @@ describe('InstanceDetails (spec 0013 AC-7: no public sign up in the app)', () =>
   });
 
   it('shows error state and retries fetching metadata when request fails', async () => {
-    (client.get as jest.Mock).mockRejectedValueOnce(
-      new Error('Network error'),
-    );
+    (client.get as jest.Mock).mockRejectedValueOnce(new Error('Network error'));
 
     render(<InstanceDetails navigation={mockNavigation} route={mockRoute} />);
 
