@@ -9,6 +9,7 @@ import { Order, User, UserStatus } from '@app/types/types';
 import { OrderSetting, OrderStatus } from '@app/types/enums';
 import { InProgressCell } from '@app/components/InProgressCell/InProgressCell';
 import { DispatchStopBanner } from '@app/components/DispatchStopBanner/DispatchStopBanner';
+import { CancelledJobCard } from '@app/components/CancelledJobCard/CancelledJobCard';
 import { useDispatchState } from '@app/hooks/useDispatchState';
 import { useJobContact } from '@app/hooks/useJobContact';
 import { CUSTOMER_SMS_PRESETS, smsUrl } from '@app/utilities/jobContact';
@@ -360,6 +361,32 @@ describe('HomeScreen (Row 66, Clauses 1 & 5)', () => {
       const banner2 = component2.UNSAFE_getByType(DispatchStopBanner);
       expect(banner2.props.inFront).toBe(false);
       expect(useDispatchState).toHaveBeenLastCalledWith(false);
+    });
+
+    it('passes useIsFocused value to CancelledJobCard inFront prop (spec 0015, AC-7)', () => {
+      // 1. When Home is focused (isFocused = true)
+      mockIsFocused = true;
+      const component1 = render(
+        <QueryClientProvider client={testQueryClient}>
+          <NavigationContainer>
+            <HomeScreen navigation={mockNav} route={mockRoute} />
+          </NavigationContainer>
+        </QueryClientProvider>,
+      );
+      const card1 = component1.UNSAFE_getByType(CancelledJobCard);
+      expect(card1.props.inFront).toBe(true);
+
+      // 2. When Home is blurred (isFocused = false)
+      mockIsFocused = false;
+      const component2 = render(
+        <QueryClientProvider client={testQueryClient}>
+          <NavigationContainer>
+            <HomeScreen navigation={mockNav} route={mockRoute} />
+          </NavigationContainer>
+        </QueryClientProvider>,
+      );
+      const card2 = component2.UNSAFE_getByType(CancelledJobCard);
+      expect(card2.props.inFront).toBe(false);
     });
   });
 

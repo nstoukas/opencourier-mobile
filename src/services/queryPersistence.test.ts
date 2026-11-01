@@ -27,7 +27,7 @@ describe('queryPersistence (spec 0009, AC-1, AC-11)', () => {
         state: { status, data },
       } as unknown as Query);
 
-    it('keeps a user, inProgressOrders, earnings or jobContact query when data is defined, whatever its status (AC-1, row 72 decision 72.7)', () => {
+    it('keeps a user, inProgressOrders, earnings, jobContact or cancelledJobs query when data is defined, whatever its status (AC-1, row 72 decision 72.7, spec 0015 AC-12)', () => {
       const allowedKeys = [
         QueryKeys.user,
         QueryKeys.inProgressOrders,
@@ -35,6 +35,7 @@ describe('queryPersistence (spec 0009, AC-1, AC-11)', () => {
         QueryKeys.earningsDay,
         QueryKeys.earningsDelivery,
         QueryKeys.jobContact,
+        QueryKeys.cancelledJobs,
       ];
 
       for (const key of allowedKeys) {
@@ -61,6 +62,7 @@ describe('queryPersistence (spec 0009, AC-1, AC-11)', () => {
         QueryKeys.earningsDay,
         QueryKeys.earningsDelivery,
         QueryKeys.jobContact,
+        QueryKeys.cancelledJobs,
       ];
 
       for (const key of allowedKeys) {
@@ -72,6 +74,22 @@ describe('queryPersistence (spec 0009, AC-1, AC-11)', () => {
           false,
         );
       }
+    });
+
+    it('specifically keeps QueryKeys.cancelledJobs so a cancelled card survives restart with no signal (spec 0015, AC-12)', () => {
+      const cancelledPayload = [
+        { id: 'del-cancelled-1', pickupBusinessName: 'Pizza' },
+      ];
+      expect(
+        shouldKeepQuery(
+          makeQuery(QueryKeys.cancelledJobs, cancelledPayload, 'success'),
+        ),
+      ).toBe(true);
+      expect(
+        shouldKeepQuery(
+          makeQuery(QueryKeys.cancelledJobs, cancelledPayload, 'error'),
+        ),
+      ).toBe(true);
     });
 
     it('specifically keeps QueryKeys.jobContact with dispatchPhoneNumber payload (decision 72.7)', () => {

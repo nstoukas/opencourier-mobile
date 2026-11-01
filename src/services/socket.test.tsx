@@ -214,7 +214,7 @@ describe('SocketProvider and useConnectionStatus', () => {
       });
     });
 
-    it('refetches offers, history, then inProgressOrders, and only after that resolves is user invalidated on DELIVERY_STATUS_UPDATED (spec 0008, AC-9)', async () => {
+    it('refetches offers, history, cancelledJobs, then inProgressOrders, and only after that resolves is user invalidated on DELIVERY_STATUS_UPDATED (spec 0008, AC-9, spec 0015)', async () => {
       let tree!: renderer.ReactTestRenderer;
       await act(async () => {
         tree = renderer.create(renderTree(queryClient));
@@ -244,8 +244,8 @@ describe('SocketProvider and useConnectionStatus', () => {
         });
       });
 
-      // newOrders, orderHistory, and inProgressOrders are called in the first wave
-      expect(invalidateQueriesSpy).toHaveBeenCalledTimes(3);
+      // newOrders, orderHistory, cancelledJobs, and inProgressOrders are called in the first wave
+      expect(invalidateQueriesSpy).toHaveBeenCalledTimes(4);
       expect(invalidateQueriesSpy).toHaveBeenNthCalledWith(1, {
         queryKey: [QueryKeys.newOrders],
       });
@@ -253,6 +253,9 @@ describe('SocketProvider and useConnectionStatus', () => {
         queryKey: [QueryKeys.orderHistory],
       });
       expect(invalidateQueriesSpy).toHaveBeenNthCalledWith(3, {
+        queryKey: [QueryKeys.cancelledJobs],
+      });
+      expect(invalidateQueriesSpy).toHaveBeenNthCalledWith(4, {
         queryKey: [QueryKeys.inProgressOrders],
       });
 
@@ -266,9 +269,9 @@ describe('SocketProvider and useConnectionStatus', () => {
         resolveInProgress();
       });
 
-      // Now user must be invalidated (4th call, strictly after inProgressOrders resolves)
-      expect(invalidateQueriesSpy).toHaveBeenCalledTimes(4);
-      expect(invalidateQueriesSpy).toHaveBeenNthCalledWith(4, {
+      // Now user must be invalidated (5th call, strictly after inProgressOrders resolves)
+      expect(invalidateQueriesSpy).toHaveBeenCalledTimes(5);
+      expect(invalidateQueriesSpy).toHaveBeenNthCalledWith(5, {
         queryKey: [QueryKeys.user],
       });
 

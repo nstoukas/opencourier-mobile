@@ -14,6 +14,22 @@ import { answerOffer } from './answerOffer';
 import { markOfferAnswered, offerKeyOf } from './answeredOffers';
 import { onNotificationEvent, onRemoteMessage } from './pushHandlers';
 import { onOnlineSignDismissed } from '@app/services/onlineService';
+import { alertNewCancelledJobs } from '@app/services/cancelledJobs/cancelledJobs';
+import { parseOfferMessage } from './offerMessage';
+
+jest.mock('@app/services/cancelledJobs/cancelledJobs', () => ({
+  alertNewCancelledJobs: jest.fn(() => Promise.resolve([])),
+}));
+
+jest.mock('./offerMessage', () => {
+  const actual = jest.requireActual('./offerMessage');
+  return {
+    ...actual,
+    parseOfferMessage: jest.fn((...args: any[]) =>
+      actual.parseOfferMessage(...args),
+    ),
+  };
+});
 
 jest.mock('@app/navigation/navigationRef', () => ({
   isHomeInFront: jest.fn(),
@@ -96,6 +112,68 @@ describe('pushHandlers (spec 0003, AC-6, AC-12)', () => {
       expect(invalidateSpy).toHaveBeenCalledWith({
         queryKey: [QueryKeys.newOrders],
       });
+    });
+  });
+
+  describe('Spec 0015: JOB_CANCELLED push message', () => {
+    it('raises alertNewCancelledJobs and invalidates cancelledJobs when token is stored', async () => {
+      const invalidateSpy = jest.spyOn(queryClient, 'invalidateQueries');
+
+      await onRemoteMessage(
+        {
+          data: {
+            type: 'JOB_CANCELLED',
+            deliveryId: 'del-cancelled-123',
+          },
+        } as any,
+        'background',
+      );
+
+      expect(alertNewCancelledJobs).toHaveBeenCalledWith([
+        { id: 'del-cancelled-123', pickupBusinessName: '' },
+      ]);
+      expect(invalidateSpy).toHaveBeenCalledWith({
+        queryKey: [QueryKeys.cancelledJobs],
+      });
+      expect(parseOfferMessage).not.toHaveBeenCalled();
+      expect(showOfferAlert).not.toHaveBeenCalled();
+    });
+
+    it('does nothing when no token is stored and never reaches offer parsing', async () => {
+      await AsyncStorage.removeItem('token');
+      const invalidateSpy = jest.spyOn(queryClient, 'invalidateQueries');
+
+      await onRemoteMessage(
+        {
+          data: {
+            type: 'JOB_CANCELLED',
+            deliveryId: 'del-cancelled-123',
+          },
+        } as any,
+        'background',
+      );
+
+      expect(alertNewCancelledJobs).not.toHaveBeenCalled();
+      expect(invalidateSpy).not.toHaveBeenCalled();
+      expect(parseOfferMessage).not.toHaveBeenCalled();
+      expect(showOfferAlert).not.toHaveBeenCalled();
+    });
+
+    it('does nothing when deliveryId is missing or not a string', async () => {
+      const invalidateSpy = jest.spyOn(queryClient, 'invalidateQueries');
+
+      await onRemoteMessage(
+        {
+          data: {
+            type: 'JOB_CANCELLED',
+          },
+        } as any,
+        'background',
+      );
+
+      expect(alertNewCancelledJobs).not.toHaveBeenCalled();
+      expect(invalidateSpy).not.toHaveBeenCalled();
+      expect(parseOfferMessage).not.toHaveBeenCalled();
     });
   });
 
