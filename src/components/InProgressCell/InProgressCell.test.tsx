@@ -116,11 +116,66 @@ describe('InProgressCell (spec 0007, decision 65.10)', () => {
     expect(caretDown).toBeDefined();
   });
 
-  describe('customer phone visibility (row 33, decision 33.1)', () => {
-    it('with dropoffPhoneNumber: customer call button is present and calls onCallCustomer, and restaurant call button is also present', () => {
+  describe('customer phone visibility (row 33, decision 33.1, review fix fa97175)', () => {
+    it('with dropoffPhoneNumber and status picked_up: customer call button is present and calls onCallCustomer, and restaurant call button is also present', () => {
+      // While the delivery is held, the customer's phone number is visible and callable.
       const order = {
         ...baseOrder,
         status: OrderStatus.picked_up,
+        dropoffPhoneNumber: '+306912345678',
+      } as Order;
+
+      const { UNSAFE_getAllByType } = render(
+        <InProgressCell order={order} {...noopProps} />,
+      );
+
+      const addresses = UNSAFE_getAllByType(InProgressAdress);
+      const restaurantAddress = addresses.find(
+        a => a.props.customerOrRestaurant === 'restaurant',
+      );
+      const customerAddress = addresses.find(
+        a => a.props.customerOrRestaurant === 'customer',
+      );
+
+      expect(restaurantAddress).toBeDefined();
+      expect(customerAddress).toBeDefined();
+
+      // Restaurant call button is present and calls onCallRestaurant
+      const restaurantPhoneIcon = restaurantAddress!
+        .findAllByType(Icon)
+        .find(i => i.props.icon === PhoneOutgoingIcon);
+      expect(restaurantPhoneIcon).toBeDefined();
+
+      const restaurantCallButton = restaurantAddress!
+        .findAllByType(TouchableOpacity)
+        .find(btn =>
+          btn.findAllByType(Icon).some(i => i.props.icon === PhoneOutgoingIcon),
+        );
+      expect(restaurantCallButton).toBeDefined();
+      fireEvent.press(restaurantCallButton!);
+      expect(noopProps.onCallRestaurant).toHaveBeenCalledWith(order);
+
+      // Customer call button is present and calls onCallCustomer
+      const customerPhoneIcon = customerAddress!
+        .findAllByType(Icon)
+        .find(i => i.props.icon === PhoneOutgoingIcon);
+      expect(customerPhoneIcon).toBeDefined();
+
+      const customerCallButton = customerAddress!
+        .findAllByType(TouchableOpacity)
+        .find(btn =>
+          btn.findAllByType(Icon).some(i => i.props.icon === PhoneOutgoingIcon),
+        );
+      expect(customerCallButton).toBeDefined();
+      fireEvent.press(customerCallButton!);
+      expect(noopProps.onCallCustomer).toHaveBeenCalledWith(order);
+    });
+
+    it('with dropoffPhoneNumber and status dispatched: customer call button is present and calls onCallCustomer, and restaurant call button is also present', () => {
+      // Dispatched delivery is held by rider: customer call button is active.
+      const order = {
+        ...baseOrder,
+        status: OrderStatus.dispatched,
         dropoffPhoneNumber: '+306912345678',
       } as Order;
 
@@ -168,6 +223,98 @@ describe('InProgressCell (spec 0007, decision 65.10)', () => {
       expect(customerCallButton).toBeDefined();
       fireEvent.press(customerCallButton!);
       expect(noopProps.onCallCustomer).toHaveBeenCalledWith(order);
+    });
+
+    it('with dropoffPhoneNumber and status dropped_off: customer call button is NOT shown, while restaurant call button remains unaffected', () => {
+      // Offline drop off: outbox shows status dropped_off while cached order retains customer phone number (spec 0009).
+      const order = {
+        ...baseOrder,
+        status: OrderStatus.dropped_off,
+        dropoffPhoneNumber: '+306912345678',
+      } as Order;
+
+      const { UNSAFE_getAllByType } = render(
+        <InProgressCell order={order} {...noopProps} />,
+      );
+
+      const addresses = UNSAFE_getAllByType(InProgressAdress);
+      const restaurantAddress = addresses.find(
+        a => a.props.customerOrRestaurant === 'restaurant',
+      );
+      const customerAddress = addresses.find(
+        a => a.props.customerOrRestaurant === 'customer',
+      );
+
+      expect(restaurantAddress).toBeDefined();
+      expect(customerAddress).toBeDefined();
+
+      // Customer onCall prop is undefined and no call button is rendered
+      expect(customerAddress!.props.onCall).toBeUndefined();
+      const customerPhoneIcon = customerAddress!
+        .findAllByType(Icon)
+        .find(i => i.props.icon === PhoneOutgoingIcon);
+      expect(customerPhoneIcon).toBeUndefined();
+
+      // Restaurant call button is unaffected: present and functional
+      const restaurantPhoneIcon = restaurantAddress!
+        .findAllByType(Icon)
+        .find(i => i.props.icon === PhoneOutgoingIcon);
+      expect(restaurantPhoneIcon).toBeDefined();
+
+      const restaurantCallButton = restaurantAddress!
+        .findAllByType(TouchableOpacity)
+        .find(btn =>
+          btn.findAllByType(Icon).some(i => i.props.icon === PhoneOutgoingIcon),
+        );
+      expect(restaurantCallButton).toBeDefined();
+      fireEvent.press(restaurantCallButton!);
+      expect(noopProps.onCallRestaurant).toHaveBeenCalledWith(order);
+    });
+
+    it('with dropoffPhoneNumber and status canceled: customer call button is NOT shown, while restaurant call button remains unaffected', () => {
+      // Canceled delivery: customer phone must not be callable even if cached delivery retained the number.
+      const order = {
+        ...baseOrder,
+        status: OrderStatus.canceled,
+        dropoffPhoneNumber: '+306912345678',
+      } as Order;
+
+      const { UNSAFE_getAllByType } = render(
+        <InProgressCell order={order} {...noopProps} />,
+      );
+
+      const addresses = UNSAFE_getAllByType(InProgressAdress);
+      const restaurantAddress = addresses.find(
+        a => a.props.customerOrRestaurant === 'restaurant',
+      );
+      const customerAddress = addresses.find(
+        a => a.props.customerOrRestaurant === 'customer',
+      );
+
+      expect(restaurantAddress).toBeDefined();
+      expect(customerAddress).toBeDefined();
+
+      // Customer onCall prop is undefined and no call button is rendered
+      expect(customerAddress!.props.onCall).toBeUndefined();
+      const customerPhoneIcon = customerAddress!
+        .findAllByType(Icon)
+        .find(i => i.props.icon === PhoneOutgoingIcon);
+      expect(customerPhoneIcon).toBeUndefined();
+
+      // Restaurant call button is unaffected: present and functional
+      const restaurantPhoneIcon = restaurantAddress!
+        .findAllByType(Icon)
+        .find(i => i.props.icon === PhoneOutgoingIcon);
+      expect(restaurantPhoneIcon).toBeDefined();
+
+      const restaurantCallButton = restaurantAddress!
+        .findAllByType(TouchableOpacity)
+        .find(btn =>
+          btn.findAllByType(Icon).some(i => i.props.icon === PhoneOutgoingIcon),
+        );
+      expect(restaurantCallButton).toBeDefined();
+      fireEvent.press(restaurantCallButton!);
+      expect(noopProps.onCallRestaurant).toHaveBeenCalledWith(order);
     });
 
     it('without dropoffPhoneNumber: no customer call button is rendered, while restaurant call button remains', () => {
