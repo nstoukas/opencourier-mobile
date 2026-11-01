@@ -1,3 +1,5 @@
+import fs from 'fs';
+import path from 'path';
 import userService from './userService';
 import { UClient } from './Client';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -85,20 +87,8 @@ describe('userService (spec 0002, M5 & Row 66 Clause 3)', () => {
     );
   });
 
-  it('signup saves BOTH accessToken and refreshToken in AsyncStorage and sets Authorization header (Row 66)', async () => {
-    const mockPost = jest.fn().mockResolvedValue({
-      data: {
-        result: {
-          session: {
-            accessToken: 'signup-access-token',
-            refreshToken: 'signup-refresh-token',
-            tokenType: 'Bearer',
-            expiresIn: 3600,
-          },
-        },
-      },
-    });
-
+  it('userService has no signup method and never posts to auth/register (spec 0013 AC-7)', () => {
+    const mockPost = jest.fn();
     const client = {
       post: mockPost,
       defaults: {
@@ -109,27 +99,47 @@ describe('userService (spec 0002, M5 & Row 66 Clause 3)', () => {
     } as unknown as UClient;
 
     const service = userService(client);
-    const signupParams = {
-      email: 'new@example.com',
-      password: 'password123',
-      firstName: 'New',
-      lastName: 'Rider',
-      phone: '1234567890',
+
+    // The co-op issues every rider's login from admin; mobile has no sign up (spec 0013, AC-7)
+    expect((service as any).signup).toBeUndefined();
+    expect(mockPost).not.toHaveBeenCalledWith(
+      expect.stringContaining('auth/register'),
+      expect.anything(),
+    );
+  });
+
+  it('no file in src/services posts to or references auth/register (spec 0013 AC-7)', () => {
+    const servicesDir = path.resolve(__dirname);
+
+    const getSourceFiles = (dir: string): string[] => {
+      const dirEntries = fs.readdirSync(dir, { withFileTypes: true });
+      const files: string[] = [];
+      for (const entry of dirEntries) {
+        const fullPath = path.join(dir, entry.name);
+        if (entry.isDirectory()) {
+          files.push(...getSourceFiles(fullPath));
+        } else if (
+          (entry.name.endsWith('.ts') || entry.name.endsWith('.tsx')) &&
+          !entry.name.endsWith('.test.ts') &&
+          !entry.name.endsWith('.test.tsx')
+        ) {
+          files.push(fullPath);
+        }
+      }
+      return files;
     };
-    const result = await service.signup(signupParams as any);
 
-    expect(mockPost).toHaveBeenCalledWith('auth/register', signupParams);
-    expect(result.result.session.accessToken).toBe('signup-access-token');
+    const sourceFiles = getSourceFiles(servicesDir);
+    const violations: string[] = [];
 
-    // Both tokens saved in AsyncStorage
-    expect(await AsyncStorage.getItem('token')).toBe('signup-access-token');
-    expect(await AsyncStorage.getItem('refreshToken')).toBe(
-      'signup-refresh-token',
-    );
+    for (const file of sourceFiles) {
+      const content = fs.readFileSync(file, 'utf-8');
+      if (content.includes('auth/register')) {
+        const relPath = path.relative(servicesDir, file);
+        violations.push(`src/services/${relPath} references auth/register`);
+      }
+    }
 
-    // Authorization header set on client
-    expect(client.defaults.headers.common.Authorization).toBe(
-      'Bearer signup-access-token',
-    );
+    expect(violations).toEqual([]);
   });
 });

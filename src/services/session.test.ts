@@ -267,7 +267,7 @@ describe('session service (Row 66, Clause 3)', () => {
       expect(retriedConfig.sessionRetried).toBe(true);
     });
 
-    it('does NOT refresh and rejects immediately when request url ends with auth/login, auth/register, or auth/refresh-tokens (even with query params)', async () => {
+    it('does NOT refresh and rejects immediately when request url ends with auth/login or auth/refresh-tokens (even with query params) (spec 0013 AC-7)', async () => {
       await AsyncStorage.setItem('refreshToken', 'existing-refresh-token');
       (axios.post as jest.Mock).mockResolvedValue({
         data: {
@@ -285,7 +285,6 @@ describe('session service (Row 66, Clause 3)', () => {
       for (const path of [
         'auth/login',
         'auth/login?x=1',
-        'auth/register',
         'auth/refresh-tokens',
       ]) {
         const err = makeError(401, path);
@@ -293,6 +292,29 @@ describe('session service (Row 66, Clause 3)', () => {
       }
       expect(axios.post).not.toHaveBeenCalled();
       expect(alertSpy).not.toHaveBeenCalled();
+    });
+
+    it('does not treat auth/register as a session path; attempts renewal on 401 (spec 0013 AC-7)', async () => {
+      await AsyncStorage.setItem('refreshToken', 'valid-refresh-token');
+      (axios.post as jest.Mock).mockResolvedValueOnce({
+        data: {
+          result: {
+            session: {
+              accessToken: 'renewed-token',
+              refreshToken: 'renewed-refresh',
+            },
+          },
+        },
+      });
+      mockHttp.mockResolvedValueOnce({ data: { success: true } });
+
+      const err = makeError(401, 'auth/register');
+      const errorHandler = onResponseError(mockHttp);
+
+      const response = await errorHandler(err);
+      expect(response).toEqual({ data: { success: true } });
+      expect(axios.post).toHaveBeenCalledTimes(1);
+      expect(mockHttp).toHaveBeenCalledTimes(1);
     });
 
     it('refreshes and retries when url contains auth/login as prefix but ends with something else (e.g. auth/login-history)', async () => {
