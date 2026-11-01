@@ -43,5 +43,8 @@ the error count is above `typecheck-baseline.json`, and lowers the file when the
 - A React Query refetch that fails keeps the data but sets `status: 'error'`: anything that filters on `status === 'success'` drops data that is still there (row 20 review).
 - No sign up in the app: the co-op issues every rider's login from admin and resets passwords there (spec 0013). An
   admin's password change makes the backend answer 401 to the old session, which ends it through the refused renewal path.
+- Dispatch stops (spec 0014) reach the app only by polling `dispatch-state` (`useDispatchState`): every minute while Home
+  is in front and the app is active, and on returning to the foreground. No TanStack focus manager is wired to AppState
+  here, so `refetchInterval` alone keeps running in the background; scope it by hand.
 
 _Drafted by /audit from the repo, worth a quick human pass. Edit freely: once a line stops matching this draft, later runs treat it as curated and will flag rather than overwrite it._
