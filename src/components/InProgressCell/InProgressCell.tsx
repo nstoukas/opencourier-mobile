@@ -132,8 +132,14 @@ export const InProgressCell = ({
                 customerOrRestaurant="customer"
                 onAddressPress={() => onCustomerAddressPress(order)}
                 onCall={
-                  // No number once the delivery ended, or before it is held (row 33).
-                  order.dropoffPhoneNumber ? () => onCallCustomer(order) : undefined
+                  // No number once the delivery ended, or before it is held (row 33). A drop off
+                  // still waiting for signal shows as dropped off while the cached delivery keeps its
+                  // number, so the shown status counts too (row 33 review).
+                  order.dropoffPhoneNumber &&
+                  order.status !== OrderStatus.dropped_off &&
+                  order.status !== OrderStatus.canceled
+                    ? () => onCallCustomer(order)
+                    : undefined
                 }
                 onCopyAddress={() => onMessageCustomer(order)}
                 expanded={bottomExpanded}
