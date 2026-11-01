@@ -7,6 +7,10 @@ import notifee, {
 import { client } from '@app/services/Client';
 import '@app/localization/i18n';
 import {
+  ensureOfferChannels,
+  OFFERS_INSISTENT_CHANNEL_ID,
+} from '@app/services/offerPush/offerAlert';
+import {
   acknowledgeJob,
   alertNewCancelledJobs,
   CANCELLED_JOBS_CHANNEL_ID,
@@ -278,7 +282,7 @@ describe('cancelledJobs service (spec 0015, AC-7, AC-8, AC-12, decisions 32.9, 3
   });
 
   describe('alertNewCancelledJobs (spec 0015, AC-7, item 1)', () => {
-    it('creates notification channel and displays one notification per new id on channel cancelled-jobs with vibration pattern', async () => {
+    it('creates notification channel and displays one notification per new id on channel cancelled-job-alerts with vibration pattern', async () => {
       const jobs = [
         {
           id: 'del-alert-1',
@@ -295,6 +299,7 @@ describe('cancelledJobs service (spec 0015, AC-7, AC-8, AC-12, decisions 32.9, 3
         name: 'Cancelled jobs',
         importance: AndroidImportance.HIGH,
         visibility: AndroidVisibility.PUBLIC,
+        sound: 'default',
         vibration: true,
         vibrationPattern: CANCELLED_VIBRATION,
       });
@@ -311,6 +316,72 @@ describe('cancelledJobs service (spec 0015, AC-7, AC-8, AC-12, decisions 32.9, 3
           pressAction: { id: 'default' },
         },
       });
+    });
+
+    it('pins CANCELLED_JOBS_CHANNEL_ID to "cancelled-job-alerts", avoiding the old soundless "cancelled-jobs"', () => {
+      // Android fixes a channel's sound on creation. The old id 'cancelled-jobs' shipped without sound,
+      // so any phone that created it remains silent unless a new channel id is used (row 32 verify).
+      expect(CANCELLED_JOBS_CHANNEL_ID).toBe('cancelled-job-alerts');
+      expect(CANCELLED_JOBS_CHANNEL_ID).not.toBe('cancelled-jobs');
+    });
+
+    it('pins CANCELLED_VIBRATION to notifee rule: even count of values and every value a positive integer (> 0)', () => {
+      // notifee refuses createChannel on Android when vibrationPattern starts with 0 or has an odd count:
+      // "expected an array containing an even number of positive values"
+      expect(Array.isArray(CANCELLED_VIBRATION)).toBe(true);
+      expect(CANCELLED_VIBRATION.length).toBeGreaterThan(0);
+      expect(CANCELLED_VIBRATION.length % 2).toBe(0);
+
+      // Must fail on old [0, 1000, 400, ...] pattern even with notifee mocked
+      for (const ms of CANCELLED_VIBRATION) {
+        expect(Number.isInteger(ms)).toBe(true);
+        expect(ms).toBeGreaterThan(0);
+      }
+    });
+
+    it('pins CANCELLED_VIBRATION to be distinct from the offer alert vibration pattern', async () => {
+      // Spec 0015 AC-7: "a long vibration pattern unlike the offer's"
+      await ensureOfferChannels();
+      const insistentCall = (
+        notifee.createChannel as jest.Mock
+      ).mock.calls.find(args => args[0]?.id === OFFERS_INSISTENT_CHANNEL_ID);
+      const offerPattern = insistentCall?.[0]?.vibrationPattern;
+      expect(offerPattern).toBeDefined();
+      expect(CANCELLED_VIBRATION).not.toEqual(offerPattern);
+    });
+
+    it('ensures alertNewCancelledJobs creates channel and posts notification with matching channel id and attributes', async () => {
+      const jobs = [
+        {
+          id: 'del-pin-channel',
+          pickupBusinessName: 'Souvlaki Bar',
+          cancelledBy: 'CUSTOMER' as const,
+        },
+      ];
+
+      await alertNewCancelledJobs(jobs);
+
+      const channelCall = (notifee.createChannel as jest.Mock).mock.calls.find(
+        args => args[0]?.id === CANCELLED_JOBS_CHANNEL_ID,
+      );
+      expect(channelCall).toBeDefined();
+      expect(channelCall[0]).toEqual(
+        expect.objectContaining({
+          id: CANCELLED_JOBS_CHANNEL_ID,
+          importance: AndroidImportance.HIGH,
+          sound: 'default',
+          vibration: true,
+          vibrationPattern: CANCELLED_VIBRATION,
+        }),
+      );
+
+      const notificationCall = (
+        notifee.displayNotification as jest.Mock
+      ).mock.calls.find(args => args[0]?.id === 'cancelled-del-pin-channel');
+      expect(notificationCall).toBeDefined();
+      expect(notificationCall[0].android.channelId).toBe(
+        CANCELLED_JOBS_CHANNEL_ID,
+      );
     });
 
     it('a second call with the same ids displays none (deduplication)', async () => {
