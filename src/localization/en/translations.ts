@@ -32,14 +32,15 @@ export default {
   no_account: `Don't have an account?`,
   send_reset: 'Send Reset Link',
   back_to_login: 'Back To Log In',
-  password_reset: 'Password Reset',
+  password_reset: 'Forgot your password?',
   email_sent:
     'An email with a reset link has been sent to your registered email address.',
   // Spec 0013: the co-op issues and resets every rider's login.
   ask_coop_for_password:
     'Ask the co-op to set a new password for you. Your login email stays the same.',
   forgot_password: 'Forgot password?',
-  reset_password: 'Reset Your Password',
+  // The link and the card no longer reset anything: the co-op sets a new password (spec 0013).
+  reset_password: 'Ask the co-op',
   account_information: 'Account information',
   manage_your_account: 'Manage your account and personal information',
   accessibility: 'Accessibility',

@@ -10,7 +10,8 @@ import { RemoteImage } from '@app/components/RemoteImage/RemoteImage';
 type Props = {
   style?: StyleProp<ViewStyle>;
   instance: Instance;
-  headerPurpose: 'join' | 'login_to';
+  // Only the login screen uses this header now: there is no sign up (spec 0013).
+  headerPurpose: 'login_to';
   onBack: () => void;
 };
 
@@ -18,7 +19,7 @@ export const InstanceHeader = ({
   style,
   instance,
   onBack,
-  headerPurpose = 'join',
+  headerPurpose,
 }: Props) => {
   const { t } = useTranslation();
   const { top } = useSafeAreaInsets();
