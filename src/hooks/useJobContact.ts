@@ -20,7 +20,9 @@ const TEN_MINUTES = 10 * 60_000;
 // It is saved on the phone with the deliveries (queryPersistence.ts), so a rider with no data
 // signal can still call dispatch. `inFront` is Home's own useIsFocused.
 export const useJobContact = (inFront: boolean = true) => {
-  const [appActive, setAppActive] = useState(AppState.currentState === 'active');
+  const [appActive, setAppActive] = useState(
+    AppState.currentState === 'active',
+  );
   const query = useQuery({
     queryKey: [QueryKeys.jobContact],
     queryFn: async (): Promise<JobContact> => {
