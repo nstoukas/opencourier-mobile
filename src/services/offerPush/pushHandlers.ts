@@ -29,6 +29,7 @@ import {
 } from './answeredOffers';
 import { answerOffer } from './answerOffer';
 import { onOnlineSignDismissed } from '@app/services/onlineService';
+import { alertNewCancelledJobs } from '@app/services/cancelledJobs/cancelledJobs';
 
 // Where the message was caught: `onMessage` (the app open in front) or
 // `setBackgroundMessageHandler` (closed, in the background, or locked).
@@ -39,6 +40,21 @@ export const onRemoteMessage = async (
   where: ReceivedWhere,
 ): Promise<void> => {
   const receivedAt = Date.now();
+  // Spec 0015: a job this rider held was cancelled. Only its id travels; the alert says to open
+  // the app, which reads the rest from its own route. Once per job, shared with the open app.
+  if (message.data?.type === 'JOB_CANCELLED') {
+    const deliveryId = message.data.deliveryId;
+    if (
+      typeof deliveryId === 'string' &&
+      (await AsyncStorage.getItem('token'))
+    ) {
+      await alertNewCancelledJobs([
+        { id: deliveryId, pickupBusinessName: '', cancelledBy: 'COOP' },
+      ]);
+      queryClient.invalidateQueries({ queryKey: [QueryKeys.cancelledJobs] });
+    }
+    return;
+  }
   const parsed = parseOfferMessage(message.data);
   if (parsed === null) {
     return;

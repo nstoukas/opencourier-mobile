@@ -9,6 +9,7 @@ import {
 import { styles } from './Home.styles';
 import { HomeHeader } from '@app/components/HomeHeader/HomeHeader';
 import { DispatchStopBanner } from '@app/components/DispatchStopBanner/DispatchStopBanner';
+import { CancelledJobCard } from '@app/components/CancelledJobCard/CancelledJobCard';
 import { RefusedSteps } from '@app/components/RefusedSteps/RefusedSteps';
 import {
   Comment,
@@ -428,6 +429,8 @@ export const HomeScreen = ({ navigation }: Props) => {
       />
       {/* Dispatch stopped for heat or a storm, or about to be (spec 0014). */}
       <DispatchStopBanner inFront={isFocused} />
+      {/* Spec 0015: a job this rider held was cancelled; covers the screen until handled. */}
+      <CancelledJobCard inFront={isFocused} />
       {/* Steps the co-op refused after they waited for signal (spec 0009). */}
       <RefusedSteps courierId={user?.id} />
       {selectedTab === HomeTabItem.History && !reportIncidentDismissed && (

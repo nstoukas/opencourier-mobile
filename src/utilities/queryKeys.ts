@@ -13,4 +13,6 @@ export const QueryKeys = {
   earningsDelivery: 'earningsDelivery',
   // The co-op's dispatch number for the job screen (row 72); saved to disk with the deliveries.
   jobContact: 'jobContact',
+  // The rider's jobs cancelled after they accepted them (spec 0015); saved to disk too.
+  cancelledJobs: 'cancelledJobs',
 };

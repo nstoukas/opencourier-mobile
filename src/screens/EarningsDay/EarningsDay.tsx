@@ -51,6 +51,12 @@ export const EarningsDay = ({ navigation, route }: Props) => {
       }>
       <View style={styles.cellText}>
         <Text style={styles.cellStore}>{item.pickupBusinessName}</Text>
+        {/* Spec 0015, AC-15: paid although it was cancelled, so say so. */}
+        {item.kind === 'CANCELLATION_COMPENSATION' && (
+          <Text style={styles.cellAddress}>
+            {t('translations:earnings_cancelled_job')}
+          </Text>
+        )}
         {/* The address can legitimately be null when the location was never geocoded. */}
         {item.dropoffAddress && (
           <Text style={styles.cellAddress} numberOfLines={1}>

@@ -93,7 +93,12 @@ const SocketProvider = ({ children }: Props) => {
       // rider whose new job had not arrived yet would stop tracking for a
       // moment, and Android may refuse the restart in the background.
       onDeliveryStatusUpdated: () => {
-        refetch([QueryKeys.newOrders, QueryKeys.orderHistory]);
+        // cancelledJobs: a job of this rider's cancelled now shows its card at once (spec 0015).
+        refetch([
+          QueryKeys.newOrders,
+          QueryKeys.orderHistory,
+          QueryKeys.cancelledJobs,
+        ]);
         queryClient
           .invalidateQueries({ queryKey: [QueryKeys.inProgressOrders] })
           .then(() =>

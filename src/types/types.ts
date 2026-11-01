@@ -115,6 +115,8 @@ export type EarningsDelivery = {
   compensation: number; // piece-rate pay
   tips: number;
   total: number;
+  // A pay that is not a drop off: a reassigned rider's payout, or a cancelled job's (spec 0015).
+  kind?: 'REASSIGNMENT_COMPENSATION' | 'CANCELLATION_COMPENSATION';
 };
 
 /**
