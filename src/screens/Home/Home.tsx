@@ -42,6 +42,12 @@ import { cancelOfferAlert } from '@app/services/offerPush/offerAlert';
 import { isHomeInFront } from '@app/navigation/navigationRef';
 import { color } from '@app/styles/theme';
 import { mapAppsFor, mapProbeUrl, mapRouteUrl } from '@app/utilities/mapLinks';
+import {
+  CUSTOMER_SMS_PRESETS,
+  smsUrl,
+  telUrl,
+} from '@app/utilities/jobContact';
+import { useJobContact } from '@app/hooks/useJobContact';
 
 type Props = DrawerScreenProp<DrawerScreens.Home>;
 
@@ -53,6 +59,8 @@ export const HomeScreen = ({ navigation }: Props) => {
   const { t } = useTranslation();
   const { user, isLoading, updateStatus } = useUser();
   const connectionStatus = useConnectionStatus();
+  const { data: jobContact } = useJobContact();
+  const dispatchPhoneNumber = jobContact?.dispatchPhoneNumber;
   const [availableMapApps, setAvailableMapApps] = useState<string[]>([
     t('translations:cancel'),
   ]);
@@ -207,11 +215,17 @@ export const HomeScreen = ({ navigation }: Props) => {
                   '',
               )
             }
-            onCallCustomer={() =>
-              Linking.openURL(`tel://${item.dropoffPhoneNumber}`)
+            onCallCustomer={order =>
+              openContactUrl(telUrl(order.dropoffPhoneNumber ?? ''))
             }
-            onCallRestaurant={() =>
-              Linking.openURL(`tel://${item.pickupPhoneNumber}`)
+            onCallRestaurant={order =>
+              openContactUrl(telUrl(order.pickupPhoneNumber))
+            }
+            onTextCustomer={showCustomerMessages}
+            onCallDispatch={
+              dispatchPhoneNumber
+                ? () => openContactUrl(telUrl(dispatchPhoneNumber))
+                : undefined
             }
             order={item}
             onRestaurantAddressPress={order =>
@@ -240,6 +254,43 @@ export const HomeScreen = ({ navigation }: Props) => {
       case HomeTabItem.History:
         return <HistoryCell order={item} onPress={() => undefined} />;
     }
+  };
+
+  // Row 72. Each contact opens the phone's own dialer or messages app with the number (and text)
+  // filled in; the rider presses call or send there. Nothing about it is recorded.
+  const openContactUrl = (url: string) => {
+    Linking.openURL(url).catch(error =>
+      console.log('Could not open the phone or messages app', error),
+    );
+  };
+
+  // The three preset messages, then Cancel. The cell only offers this while the customer's
+  // number is there and the job is not over.
+  const showCustomerMessages = (order: Order) => {
+    const phoneNumber = order.dropoffPhoneNumber;
+    if (!phoneNumber) {
+      return;
+    }
+    const options = [
+      ...CUSTOMER_SMS_PRESETS.map(preset => t(`translations:${preset.key}`)),
+      t('translations:cancel'),
+    ];
+    ActionSheet.showActionSheetWithOptions(
+      {
+        title: t('translations:text_customer_title'),
+        options,
+        cancelButtonIndex: CUSTOMER_SMS_PRESETS.length,
+        tintColor: color.route,
+        cancelButtonTintColor: color.destructive,
+      },
+      (buttonIndex: number) => {
+        const preset = CUSTOMER_SMS_PRESETS[buttonIndex];
+        // Cancel, or a tap outside the sheet, has no preset.
+        if (preset !== undefined) {
+          openContactUrl(smsUrl(phoneNumber, preset.body));
+        }
+      },
+    );
   };
 
   const onSelect = (buttonIndex: number) => {

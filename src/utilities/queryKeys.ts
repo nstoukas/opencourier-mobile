@@ -11,4 +11,6 @@ export const QueryKeys = {
   dispatchState: 'dispatchState',
   earningsDay: 'earningsDay',
   earningsDelivery: 'earningsDelivery',
+  // The co-op's dispatch number for the job screen (row 72); saved to disk with the deliveries.
+  jobContact: 'jobContact',
 };

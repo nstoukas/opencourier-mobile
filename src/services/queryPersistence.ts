@@ -8,14 +8,16 @@ import { QueryKeys } from '@app/utilities/queryKeys';
 // co-op setting: it decides no pay and no assignment.
 export const QUERY_CACHE_MAX_AGE_MS = 24 * 60 * 60 * 1000;
 
-// Only these are kept on the phone: the rider, the deliveries in progress and
-// the earnings. Offers never are: they end, and an old one must not show.
+// Only these are kept on the phone: the rider, the deliveries in progress, the
+// earnings and the dispatch number (row 72: a rider with no data signal can
+// still make a call). Offers never are: they end, and an old one must not show.
 const KEPT_QUERIES = new Set<string>([
   QueryKeys.user,
   QueryKeys.inProgressOrders,
   QueryKeys.earningsSummary,
   QueryKeys.earningsDay,
   QueryKeys.earningsDelivery,
+  QueryKeys.jobContact,
 ]);
 
 // Kept whenever it holds data. Not "status is success": a refetch that fails

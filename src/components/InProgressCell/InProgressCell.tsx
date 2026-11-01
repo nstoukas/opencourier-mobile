@@ -13,6 +13,9 @@ import { OrderStatus } from '@app/types/enums';
 import useUser from '@app/hooks/useUser';
 import { StorefrontIcon } from 'phosphor-react-native/src/icons/Storefront';
 import { HouseLineIcon } from 'phosphor-react-native/src/icons/HouseLine';
+import { HeadsetIcon } from 'phosphor-react-native/src/icons/Headset';
+import { Button, ButtonType } from '../Button/Button';
+import { isJobOver } from '@app/utilities/jobContact';
 
 type Props = {
   style?: StyleProp<ViewStyle>;
@@ -23,6 +26,10 @@ type Props = {
   onCallRestaurant: (order: Order) => void;
   onMessageCustomer: (order: Order) => void;
   onCallCustomer: (order: Order) => void;
+  // Opens the preset messages for the customer (row 72); left out, no message button.
+  onTextCustomer?: (order: Order) => void;
+  // Left out when the co-op has set no dispatch number: the button is not shown (row 72).
+  onCallDispatch?: () => void;
   onOrderItemsListForCustomer: () => void;
   onReportIssue: (order: Order) => void;
 };
@@ -36,6 +43,8 @@ export const InProgressCell = ({
   onMessageRestaurant,
   onCallCustomer,
   onCallRestaurant,
+  onTextCustomer,
+  onCallDispatch,
   onOrderItemsListForCustomer,
   onReportIssue,
 }: Props) => {
@@ -64,6 +73,13 @@ export const InProgressCell = ({
     }
   }, [user!.currentLocation, order]);
 
+  // No way to contact anyone once the job is over (row 72), counting a drop off still waiting
+  // for signal (row 33 review). The customer's number is also gone before the rider holds the
+  // delivery (row 33), so the customer's buttons need the number too.
+  const jobOver = isJobOver(order.status);
+  const canReachCustomer = !!order.dropoffPhoneNumber && !jobOver;
+  const canReachRestaurant = !!order.pickupPhoneNumber && !jobOver;
+
   return (
     <View style={[styles.container, style]}>
       <View style={{ paddingHorizontal: 12, paddingTop: 12 }}>
@@ -84,7 +100,9 @@ export const InProgressCell = ({
                 order={order}
                 customerOrRestaurant="restaurant"
                 onAddressPress={() => onRestaurantAddressPress(order)}
-                onCall={() => onCallRestaurant(order)}
+                onCall={
+                  canReachRestaurant ? () => onCallRestaurant(order) : undefined
+                }
                 onCopyAddress={() => onMessageRestaurant(order)}
                 expanded={topExpanded}
               />
@@ -132,13 +150,11 @@ export const InProgressCell = ({
                 customerOrRestaurant="customer"
                 onAddressPress={() => onCustomerAddressPress(order)}
                 onCall={
-                  // No number once the delivery ended, or before it is held (row 33). A drop off
-                  // still waiting for signal shows as dropped off while the cached delivery keeps its
-                  // number, so the shown status counts too (row 33 review).
-                  order.dropoffPhoneNumber &&
-                  order.status !== OrderStatus.dropped_off &&
-                  order.status !== OrderStatus.canceled
-                    ? () => onCallCustomer(order)
+                  canReachCustomer ? () => onCallCustomer(order) : undefined
+                }
+                onText={
+                  canReachCustomer && onTextCustomer
+                    ? () => onTextCustomer(order)
                     : undefined
                 }
                 onCopyAddress={() => onMessageCustomer(order)}
@@ -165,6 +181,16 @@ export const InProgressCell = ({
           </View>
         </View>
       </View>
+      {onCallDispatch && !jobOver ? (
+        <Button
+          style={styles.dispatchButton}
+          type={ButtonType.white}
+          icon={HeadsetIcon}
+          iconWeight="fill"
+          title={t('translations:call_dispatch')}
+          onPress={onCallDispatch}
+        />
+      ) : null}
       <NextStep
         order={order}
         onOrderItemsListForCustomer={() => onOrderItemsListForCustomer()}

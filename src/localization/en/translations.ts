@@ -474,4 +474,13 @@ export default {
     'The phone could not check for steps waiting to send. Try again in a moment; if it keeps happening, call the co-op before logging out.',
   logout_waiting_body:
     '{{count}} step(s) of your deliveries are still waiting to be sent. Connect to the internet first, then log out.',
+  // Row 72: contact from the job screen. The message texts themselves are in jobContact.ts.
+  call_dispatch: 'Call dispatch',
+  call_restaurant: 'Call the restaurant',
+  call_customer: 'Call the customer',
+  text_customer: 'Text the customer',
+  text_customer_title: 'Text the customer',
+  sms_outside: "I'm outside",
+  sms_arriving_5: 'Arriving in 5 min',
+  sms_cant_find_entrance: "Can't find the entrance",
 };

@@ -188,4 +188,9 @@ export const styles = StyleSheet.create({
     color: Colors.black1,
     marginLeft: 8,
   },
+  // Row 72: the dispatch call, spaced like the step buttons below it.
+  dispatchButton: {
+    marginHorizontal: 12,
+    marginTop: 10,
+  },
 });
