@@ -46,5 +46,9 @@ the error count is above `typecheck-baseline.json`, and lowers the file when the
 - Dispatch stops (spec 0014) reach the app only by polling `dispatch-state` (`useDispatchState`): every minute while Home
   is in front and the app is active, and on returning to the foreground. No TanStack focus manager is wired to AppState
   here, so `refetchInterval` alone keeps running in the background; scope it by hand.
+- Contact from the job (row 72): every call, text and dispatch button on the in progress card hides once `isJobOver`
+  (`src/utilities/jobContact.ts`) is true for the *shown* status, so a drop off still waiting for signal counts; each
+  button also needs its number. The customer's number is sent only while the rider holds the delivery (row 33). Calls
+  and texts open the phone's own apps and are never recorded (value 5).
 
 _Drafted by /audit from the repo, worth a quick human pass. Edit freely: once a line stops matching this draft, later runs treat it as curated and will flag rather than overwrite it._
