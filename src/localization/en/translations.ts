@@ -503,6 +503,10 @@ export default {
   cancelled_note_send: 'Send',
   cancelled_back: 'Back',
   cancelled_ok: 'OK',
+  cancelled_later: 'Later',
+  cancelled_reminder_food:
+    'Bring the food back to {{restaurant}}, then tap here.',
+  cancelled_reminder: 'Tap here to see it.',
   cancelled_send_failed: 'Could not send. Check your signal and try again.',
   earnings_cancelled_job: 'Cancelled job',
 };

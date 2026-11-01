@@ -48,9 +48,7 @@ export const onRemoteMessage = async (
       typeof deliveryId === 'string' &&
       (await AsyncStorage.getItem('token'))
     ) {
-      await alertNewCancelledJobs([
-        { id: deliveryId, pickupBusinessName: '', cancelledBy: 'COOP' },
-      ]);
+      await alertNewCancelledJobs([{ id: deliveryId, pickupBusinessName: '' }]);
       queryClient.invalidateQueries({ queryKey: [QueryKeys.cancelledJobs] });
     }
     return;

@@ -58,8 +58,16 @@ export const jobNeedingAttention = (
     job.pickedUp ? job.foodOutcome === null : !acknowledged.has(job.id),
   );
 
+// A lookup, not a key built from the server's value: an unknown value reads as the co-op's words
+// instead of a raw translation key (row 32 review).
+const CANCELLED_BY_KEYS: Record<CancelledBy, string> = {
+  RESTAURANT: 'translations:cancelled_by_restaurant',
+  CUSTOMER: 'translations:cancelled_by_customer',
+  COOP: 'translations:cancelled_by_coop',
+};
+
 export const cancelledByText = (by: CancelledBy): string =>
-  i18next.t(`translations:cancelled_by_${by.toLowerCase()}`);
+  i18next.t(CANCELLED_BY_KEYS[by] ?? CANCELLED_BY_KEYS.COOP);
 
 export const cancelledPayText = (job: CancelledJob): string =>
   job.payAmount === null
@@ -133,8 +141,10 @@ export const acknowledgeJob = (id: string, now = Date.now()) =>
 
 // Raises the alert for each job not alerted before, and remembers it (AC-7). Returns the ids it
 // alerted. The open app and a push both call this, so a job alerts once whichever comes first.
+// A push knows only the id: no name and no canceller, which the generic body covers.
 export const alertNewCancelledJobs = async (
-  jobs: Pick<CancelledJob, 'id' | 'pickupBusinessName' | 'cancelledBy'>[],
+  jobs: (Pick<CancelledJob, 'id' | 'pickupBusinessName'> &
+    Partial<Pick<CancelledJob, 'cancelledBy'>>)[],
   now = Date.now(),
 ): Promise<string[]> => {
   const alerted = await readIds(ALERTED_KEY, now);
@@ -150,7 +160,7 @@ export const alertNewCancelledJobs = async (
       body: job.pickupBusinessName
         ? i18next.t('translations:cancelled_body', {
             restaurant: job.pickupBusinessName,
-            by: cancelledByText(job.cancelledBy),
+            by: cancelledByText(job.cancelledBy ?? 'COOP'),
           })
         : i18next.t('translations:cancelled_body_unknown'),
       android: {

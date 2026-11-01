@@ -4,7 +4,6 @@ import { useQuery } from '@tanstack/react-query';
 import { QueryKeys } from '@app/utilities/queryKeys';
 import {
   alertNewCancelledJobs,
-  CancelledJob,
   fetchCancelledJobs,
 } from '@app/services/cancelledJobs/cancelledJobs';
 
@@ -47,5 +46,5 @@ export const useCancelledJobs = (inFront: boolean = true) => {
     }
   }, [data]);
 
-  return query as typeof query & { data: CancelledJob[] | undefined };
+  return query;
 };

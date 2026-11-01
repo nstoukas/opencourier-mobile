@@ -57,6 +57,25 @@ export const styles = StyleSheet.create({
     color: color.foreground,
     marginTop: 8,
   },
+  bannerWrap: {
+    paddingHorizontal: 12,
+    paddingTop: 8,
+  },
+  reminder: {
+    backgroundColor: color['destructive-soft'],
+    borderRadius: radius.md,
+    padding: 12,
+    minHeight: 48,
+  },
+  reminderTitle: {
+    ...typeScale.caption,
+    fontWeight: '700',
+    color: color.foreground,
+  },
+  reminderText: {
+    ...typeScale['body-sm'],
+    color: color.foreground,
+  },
   error: {
     ...typeScale['body-sm'],
     color: color.destructive,

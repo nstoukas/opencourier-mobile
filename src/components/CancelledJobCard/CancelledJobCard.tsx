@@ -1,5 +1,12 @@
 import React, { useEffect, useState } from 'react';
-import { Linking, Modal, Text, TextInput, View } from 'react-native';
+import {
+  Linking,
+  Modal,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
+} from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { useQueryClient } from '@tanstack/react-query';
 import { Button, ButtonType } from '@app/components/Button/Button';
@@ -33,7 +40,12 @@ export const CancelledJobCard = ({ inFront = true }: Props) => {
   const { t } = useTranslation();
   const queryClient = useQueryClient();
   const { data: jobs } = useCancelledJobs(inFront);
-  const [acknowledged, setAcknowledged] = useState<Set<string>>(new Set());
+  // null until read from the phone: nothing is shown before, so a job already acknowledged never
+  // flashes on a restart (row 32 review).
+  const [acknowledged, setAcknowledged] = useState<Set<string> | null>(null);
+  // Jobs the rider set aside with Later in this session (row 32 review, decision 32.16): the card
+  // steps aside and a banner on Home brings it back. The outcome is still owed.
+  const [later, setLater] = useState<Set<string>>(new Set());
   const [writingNote, setWritingNote] = useState(false);
   const [note, setNote] = useState('');
   const [sending, setSending] = useState(false);
@@ -42,10 +54,13 @@ export const CancelledJobCard = ({ inFront = true }: Props) => {
   useEffect(() => {
     loadAcknowledged()
       .then(setAcknowledged)
-      .catch(() => undefined);
+      // Unreadable: show every job again, the safe direction.
+      .catch(() => setAcknowledged(new Set()));
   }, []);
 
-  const job = jobNeedingAttention(jobs, acknowledged);
+  const job = acknowledged
+    ? jobNeedingAttention(jobs, acknowledged)
+    : undefined;
 
   // A new job starts with a clean form.
   useEffect(() => {
@@ -86,13 +101,45 @@ export const CancelledJobCard = ({ inFront = true }: Props) => {
 
   const acknowledge = async () => {
     await acknowledgeJob(job.id).catch(() => undefined);
-    setAcknowledged(previous => new Set(previous).add(job.id));
+    setAcknowledged(previous => new Set(previous ?? []).add(job.id));
   };
+
+  const setAside = () => setLater(previous => new Set(previous).add(job.id));
+  const bringBack = () =>
+    setLater(previous => {
+      const next = new Set(previous);
+      next.delete(job.id);
+      return next;
+    });
 
   const restaurant = job.pickupBusinessName || job.pickupName;
 
+  // Set aside: a banner on Home, tap to open the card again. Offers, the job screen and the menu
+  // stay usable on the ride back (values 4 and 32.8).
+  if (later.has(job.id)) {
+    return (
+      <View style={styles.bannerWrap}>
+        <TouchableOpacity
+          style={styles.reminder}
+          onPress={bringBack}
+          accessibilityRole="button"
+          testID="cancelled-job-banner">
+          <Text style={styles.reminderTitle}>
+            {t('translations:cancelled_title')}
+          </Text>
+          <Text style={styles.reminderText}>
+            {job.pickedUp
+              ? t('translations:cancelled_reminder_food', { restaurant })
+              : t('translations:cancelled_reminder')}
+          </Text>
+        </TouchableOpacity>
+      </View>
+    );
+  }
+
   return (
-    <Modal visible animationType="fade" onRequestClose={() => undefined}>
+    // The Android back button sets the card aside, never records anything.
+    <Modal visible animationType="fade" onRequestClose={setAside}>
       <View style={styles.screen} testID="cancelled-job-card">
         <View style={styles.banner} accessibilityRole="alert">
           <Text style={styles.bannerTitle}>
@@ -196,6 +243,14 @@ export const CancelledJobCard = ({ inFront = true }: Props) => {
             onPress={acknowledge}
           />
         ) : null}
+
+        <Button
+          style={styles.button}
+          type={ButtonType.white}
+          title={t('translations:cancelled_later')}
+          disabled={sending}
+          onPress={setAside}
+        />
 
         {errorText ? (
           <Text style={styles.error} accessibilityRole="alert">
