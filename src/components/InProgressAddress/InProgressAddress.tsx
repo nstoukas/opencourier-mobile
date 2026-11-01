@@ -18,7 +18,8 @@ type Props = {
   order: Order;
   onAddressPress: (order: Order) => void;
   onCopyAddress: (order: Order) => void;
-  onCall: (order: Order) => void;
+  // Left out when there is no number to call (row 33): the call button is not shown.
+  onCall?: (order: Order) => void;
   customerOrRestaurant: 'customer' | 'restaurant';
   expanded: boolean;
 };
@@ -64,12 +65,14 @@ export const InProgressAdress = ({
         onPress={() => onCopyAddress(order)}>
         <Icon icon={CopyIcon} weight="fill" size={14} />
       </TouchableOpacity>
-      <TouchableOpacity
-        hitSlop={hitSlopFor(32, 32, 4)}
-        style={styles.buttonAddress}
-        onPress={() => onCall(order)}>
-        <Icon icon={PhoneOutgoingIcon} weight="fill" size={14} />
-      </TouchableOpacity>
+      {onCall ? (
+        <TouchableOpacity
+          hitSlop={hitSlopFor(32, 32, 4)}
+          style={styles.buttonAddress}
+          onPress={() => onCall(order)}>
+          <Icon icon={PhoneOutgoingIcon} weight="fill" size={14} />
+        </TouchableOpacity>
+      ) : null}
     </View>
   );
 };

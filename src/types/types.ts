@@ -281,7 +281,8 @@ export type Order = {
   pickupReadyAt: string;
   pickupDeadlineAt: string;
   dropoffName: string;
-  dropoffPhoneNumber: string;
+  // Only while this rider holds the delivery (row 33): left out in an offer and after the end.
+  dropoffPhoneNumber?: string;
   dropoffBusinessName: string;
   dropoffNotes: string;
   dropoffSellerNotes: string;

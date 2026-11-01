@@ -131,7 +131,10 @@ export const InProgressCell = ({
                 order={order}
                 customerOrRestaurant="customer"
                 onAddressPress={() => onCustomerAddressPress(order)}
-                onCall={() => onCallCustomer(order)}
+                onCall={
+                  // No number once the delivery ended, or before it is held (row 33).
+                  order.dropoffPhoneNumber ? () => onCallCustomer(order) : undefined
+                }
                 onCopyAddress={() => onMessageCustomer(order)}
                 expanded={bottomExpanded}
               />
