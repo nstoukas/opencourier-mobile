@@ -8,6 +8,7 @@ import {
 } from 'react-native';
 import { styles } from './Home.styles';
 import { HomeHeader } from '@app/components/HomeHeader/HomeHeader';
+import { DispatchStopBanner } from '@app/components/DispatchStopBanner/DispatchStopBanner';
 import { RefusedSteps } from '@app/components/RefusedSteps/RefusedSteps';
 import {
   Comment,
@@ -374,6 +375,8 @@ export const HomeScreen = ({ navigation }: Props) => {
         loadingNewOrders={selectedTab === HomeTabItem.New && isLoadingOrders}
         connectionStatus={connectionStatus}
       />
+      {/* Dispatch stopped for heat or a storm, or about to be (spec 0014). */}
+      <DispatchStopBanner />
       {/* Steps the co-op refused after they waited for signal (spec 0009). */}
       <RefusedSteps courierId={user?.id} />
       {selectedTab === HomeTabItem.History && !reportIncidentDismissed && (

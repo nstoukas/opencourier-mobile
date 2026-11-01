@@ -35,6 +35,9 @@ export default {
   password_reset: 'Forgot your password?',
   email_sent:
     'An email with a reset link has been sent to your registered email address.',
+  // Spec 0014: the Home banner while dispatch is stopped, or about to be.
+  dispatch_stopped_title: 'Dispatch stopped',
+  dispatch_stops_soon_title: 'Dispatch stops soon',
   // Spec 0013: the co-op issues and resets every rider's login.
   ask_coop_for_password:
     'Ask the co-op to set a new password for you. Your login email stays the same.',

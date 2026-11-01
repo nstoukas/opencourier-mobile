@@ -26,7 +26,8 @@ export const OFFER_ENDED_EVENT = 'OFFER_ENDED';
 // What the backend sends with OFFER_ENDED (backend `OfferEndedMessage`).
 export type OfferEndedMessage = {
   deliveryId: string;
-  reason: 'EXPIRED' | 'OFFLINE' | 'MOVED';
+  // STOPPED: dispatch was stopped for heat or a storm (spec 0014).
+  reason: 'EXPIRED' | 'OFFLINE' | 'MOVED' | 'STOPPED';
 };
 
 // The delivery id from an OFFER_ENDED message, or null if it is missing.
