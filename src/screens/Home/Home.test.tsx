@@ -1,6 +1,6 @@
 import React from 'react';
 import { Linking } from 'react-native';
-import { render, act, fireEvent } from '@testing-library/react-native';
+import { render, act, fireEvent, cleanup } from '@testing-library/react-native';
 import { NavigationContainer } from '@react-navigation/native';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import ActionSheet from 'react-native-action-sheet';
@@ -8,14 +8,19 @@ import { HomeScreen } from './Home';
 import { Order, User, UserStatus } from '@app/types/types';
 import { OrderSetting, OrderStatus } from '@app/types/enums';
 import { InProgressCell } from '@app/components/InProgressCell/InProgressCell';
+import { DispatchStopBanner } from '@app/components/DispatchStopBanner/DispatchStopBanner';
+import { useDispatchState } from '@app/hooks/useDispatchState';
 import { DrawerScreens } from '@app/navigation/drawer/types';
 import '@app/localization/i18n';
+
+let mockIsFocused = true;
 
 jest.mock('@react-navigation/native', () => {
   const actual = jest.requireActual('@react-navigation/native');
   const mockReact = require('react');
   return {
     ...actual,
+    useIsFocused: () => mockIsFocused,
     useFocusEffect: (callback: () => void | (() => void)) => {
       mockReact.useEffect(() => {
         return callback();
@@ -23,6 +28,19 @@ jest.mock('@react-navigation/native', () => {
     },
   };
 });
+
+let mockDispatchState: any = {
+  current: null,
+  next: null,
+};
+
+jest.mock('@app/hooks/useDispatchState', () => ({
+  useDispatchState: jest.fn((inFront: boolean = true) => ({
+    data: mockDispatchState,
+    isLoading: false,
+    refetch: jest.fn(),
+  })),
+}));
 
 let mockUser: User | undefined = {
   id: 'courier-1',
@@ -81,7 +99,10 @@ describe('HomeScreen (Row 66, Clauses 1 & 5)', () => {
   let testQueryClient: QueryClient;
 
   beforeEach(() => {
+    jest.useFakeTimers();
     jest.clearAllMocks();
+    mockIsFocused = true;
+    mockDispatchState = { current: null, next: null };
     testQueryClient = new QueryClient({
       defaultOptions: { queries: { retry: false } },
     });
@@ -95,9 +116,11 @@ describe('HomeScreen (Row 66, Clauses 1 & 5)', () => {
   });
 
   afterEach(() => {
+    cleanup();
     openURLSpy.mockRestore();
     canOpenURLSpy.mockRestore();
     testQueryClient.clear();
+    jest.useRealTimers();
   });
 
   describe('Clause 1: Map navigation to customer vs restaurant', () => {
@@ -249,6 +272,79 @@ describe('HomeScreen (Row 66, Clauses 1 & 5)', () => {
       // Callback identity remained stable via useCallback, so no second refetch storm
       expect(mockHomeOrders.refetchInProgress).toHaveBeenCalledTimes(1);
       expect(mockHomeOrders.refechHistory).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  describe('Dispatch stop banner (spec 0014, AC-7 and review fix af6d39c)', () => {
+    it('renders the banner (testID dispatch-stop-banner) when dispatch state has a current stop', () => {
+      mockDispatchState = {
+        current: {
+          reason: 'HEAT',
+          startsAt: '2026-11-01T10:00:00Z',
+          endsAt: '2026-11-01T15:00:00Z',
+          message: 'Dispatch is stopped until 17:00 (heat).',
+        },
+        next: null,
+      };
+
+      const component = render(
+        <QueryClientProvider client={testQueryClient}>
+          <NavigationContainer>
+            <HomeScreen navigation={mockNav} route={mockRoute} />
+          </NavigationContainer>
+        </QueryClientProvider>,
+      );
+
+      expect(component.getByTestId('dispatch-stop-banner')).toBeTruthy();
+      expect(component.getByText('Dispatch stopped')).toBeTruthy();
+      expect(
+        component.getByText('Dispatch is stopped until 17:00 (heat).'),
+      ).toBeTruthy();
+    });
+
+    it('does not render the banner when there is no current or upcoming stop', () => {
+      mockDispatchState = {
+        current: null,
+        next: null,
+      };
+
+      const component = render(
+        <QueryClientProvider client={testQueryClient}>
+          <NavigationContainer>
+            <HomeScreen navigation={mockNav} route={mockRoute} />
+          </NavigationContainer>
+        </QueryClientProvider>,
+      );
+
+      expect(component.queryByTestId('dispatch-stop-banner')).toBeNull();
+    });
+
+    it('passes useIsFocused value to DispatchStopBanner inFront prop', () => {
+      // 1. When Home is focused (isFocused = true)
+      mockIsFocused = true;
+      const component1 = render(
+        <QueryClientProvider client={testQueryClient}>
+          <NavigationContainer>
+            <HomeScreen navigation={mockNav} route={mockRoute} />
+          </NavigationContainer>
+        </QueryClientProvider>,
+      );
+      const banner1 = component1.UNSAFE_getByType(DispatchStopBanner);
+      expect(banner1.props.inFront).toBe(true);
+      expect(useDispatchState).toHaveBeenLastCalledWith(true);
+
+      // 2. When Home is blurred (isFocused = false)
+      mockIsFocused = false;
+      const component2 = render(
+        <QueryClientProvider client={testQueryClient}>
+          <NavigationContainer>
+            <HomeScreen navigation={mockNav} route={mockRoute} />
+          </NavigationContainer>
+        </QueryClientProvider>,
+      );
+      const banner2 = component2.UNSAFE_getByType(DispatchStopBanner);
+      expect(banner2.props.inFront).toBe(false);
+      expect(useDispatchState).toHaveBeenLastCalledWith(false);
     });
   });
 });

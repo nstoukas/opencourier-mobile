@@ -99,6 +99,28 @@ describe('queryPersistence (spec 0009, AC-1, AC-11)', () => {
         ),
       ).toBe(false);
     });
+
+    it('never keeps dispatchState query even with data and whatever its status (spec 0014, AC-7)', () => {
+      const sampleState = {
+        current: { reason: 'HEAT', message: 'Dispatch is stopped until 17:00 (heat).' },
+        next: null,
+      };
+      expect(
+        shouldKeepQuery(
+          makeQuery(QueryKeys.dispatchState, sampleState, 'success'),
+        ),
+      ).toBe(false);
+      expect(
+        shouldKeepQuery(
+          makeQuery(QueryKeys.dispatchState, sampleState, 'error'),
+        ),
+      ).toBe(false);
+      expect(
+        shouldKeepQuery(
+          makeQuery(QueryKeys.dispatchState, sampleState, 'pending'),
+        ),
+      ).toBe(false);
+    });
   });
 
   describe('persistOptions and queryClient default gcTime', () => {

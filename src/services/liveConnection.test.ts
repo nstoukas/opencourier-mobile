@@ -468,6 +468,9 @@ describe('liveConnection', () => {
       expect(
         endedDeliveryId({ deliveryId: 'order-456', reason: 'OFFLINE' }),
       ).toBe('order-456');
+      expect(
+        endedDeliveryId({ deliveryId: 'order-789', reason: 'STOPPED' }),
+      ).toBe('order-789');
     });
 
     it('returns null if deliveryId is empty string, missing, or non-string', () => {
@@ -508,6 +511,15 @@ describe('liveConnection', () => {
 
       expect(onOfferEndedMock).toHaveBeenCalledTimes(1);
       expect(onOfferEndedMock).toHaveBeenCalledWith('order-789');
+
+      // Dispatch stopped for heat or storm (spec 0014, AC-5)
+      fakeSocket.emit(OFFER_ENDED_EVENT, {
+        deliveryId: 'order-999',
+        reason: 'STOPPED',
+      });
+
+      expect(onOfferEndedMock).toHaveBeenCalledTimes(2);
+      expect(onOfferEndedMock).toHaveBeenLastCalledWith('order-999');
     });
 
     it('does not throw when OFFER_ENDED arrives and onOfferEnded handler is omitted', () => {
