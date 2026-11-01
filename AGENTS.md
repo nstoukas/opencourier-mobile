@@ -50,5 +50,10 @@ the error count is above `typecheck-baseline.json`, and lowers the file when the
   (`src/utilities/jobContact.ts`) is true for the *shown* status, so a drop off still waiting for signal counts; each
   button also needs its number. The customer's number is sent only while the rider holds the delivery (row 33). Calls
   and texts open the phone's own apps and are never recorded (value 5).
+- notifee refuses a vibration pattern that has a 0 or an odd number of values, and Android fixes a channel's sound when
+  the channel is first made, so a new sound needs a new channel id. `jest.setup.js` mocks notifee, so a test must check
+  the pattern itself: row 32's alert never fired on a real phone while every test passed.
+- A cancelled job (spec 0015) shows a full screen card from `GET deliveries/cancelled-jobs` until the food outcome is
+  recorded (after pickup) or OK is tapped (before); Later sets it aside for the session behind a banner on Home.
 
 _Drafted by /audit from the repo, worth a quick human pass. Edit freely: once a line stops matching this draft, later runs treat it as curated and will flag rather than overwrite it._
