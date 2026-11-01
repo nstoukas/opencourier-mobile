@@ -41,5 +41,7 @@ the error count is above `typecheck-baseline.json`, and lowers the file when the
   app's own `onRemoteMessage` (decision 58.27).
 - Cutting the app off from the backend on the emulator: `adb reverse --remove tcp:3000` (switching wifi off does nothing, the app reaches the backend through adb); `adb reverse tcp:3000 tcp:3000` restores. An already open connection survives the removal, so wait for "No connection" before tapping (spec 0009).
 - A React Query refetch that fails keeps the data but sets `status: 'error'`: anything that filters on `status === 'success'` drops data that is still there (row 20 review).
+- No sign up in the app: the co-op issues every rider's login from admin and resets passwords there (spec 0013). An
+  admin's password change makes the backend answer 401 to the old session, which ends it through the refused renewal path.
 
 _Drafted by /audit from the repo, worth a quick human pass. Edit freely: once a line stops matching this draft, later runs treat it as curated and will flag rather than overwrite it._
