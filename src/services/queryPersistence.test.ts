@@ -27,13 +27,14 @@ describe('queryPersistence (spec 0009, AC-1, AC-11)', () => {
         state: { status, data },
       } as unknown as Query);
 
-    it('keeps a user, inProgressOrders or earnings query when data is defined, whatever its status (AC-1)', () => {
+    it('keeps a user, inProgressOrders, earnings or jobContact query when data is defined, whatever its status (AC-1, row 72 decision 72.7)', () => {
       const allowedKeys = [
         QueryKeys.user,
         QueryKeys.inProgressOrders,
         QueryKeys.earningsSummary,
         QueryKeys.earningsDay,
         QueryKeys.earningsDelivery,
+        QueryKeys.jobContact,
       ];
 
       for (const key of allowedKeys) {
@@ -59,6 +60,7 @@ describe('queryPersistence (spec 0009, AC-1, AC-11)', () => {
         QueryKeys.earningsSummary,
         QueryKeys.earningsDay,
         QueryKeys.earningsDelivery,
+        QueryKeys.jobContact,
       ];
 
       for (const key of allowedKeys) {
@@ -70,6 +72,20 @@ describe('queryPersistence (spec 0009, AC-1, AC-11)', () => {
           false,
         );
       }
+    });
+
+    it('specifically keeps QueryKeys.jobContact with dispatchPhoneNumber payload (decision 72.7)', () => {
+      const contactPayload = { dispatchPhoneNumber: '+302421012345' };
+      expect(
+        shouldKeepQuery(
+          makeQuery(QueryKeys.jobContact, contactPayload, 'success'),
+        ),
+      ).toBe(true);
+      expect(
+        shouldKeepQuery(
+          makeQuery(QueryKeys.jobContact, contactPayload, 'error'),
+        ),
+      ).toBe(true);
     });
 
     it('never keeps newOrders or orderHistory even with data (AC-1)', () => {

@@ -10,6 +10,8 @@ import { OrderSetting, OrderStatus } from '@app/types/enums';
 import { InProgressCell } from '@app/components/InProgressCell/InProgressCell';
 import { DispatchStopBanner } from '@app/components/DispatchStopBanner/DispatchStopBanner';
 import { useDispatchState } from '@app/hooks/useDispatchState';
+import { useJobContact } from '@app/hooks/useJobContact';
+import { CUSTOMER_SMS_PRESETS, smsUrl } from '@app/utilities/jobContact';
 import { DrawerScreens } from '@app/navigation/drawer/types';
 import '@app/localization/i18n';
 
@@ -37,6 +39,18 @@ let mockDispatchState: any = {
 jest.mock('@app/hooks/useDispatchState', () => ({
   useDispatchState: jest.fn((inFront: boolean = true) => ({
     data: mockDispatchState,
+    isLoading: false,
+    refetch: jest.fn(),
+  })),
+}));
+
+let mockJobContact: any = {
+  dispatchPhoneNumber: '+302421012345',
+};
+
+jest.mock('@app/hooks/useJobContact', () => ({
+  useJobContact: jest.fn((inFront: boolean = true) => ({
+    data: mockJobContact,
     isLoading: false,
     refetch: jest.fn(),
   })),
@@ -103,6 +117,7 @@ describe('HomeScreen (Row 66, Clauses 1 & 5)', () => {
     jest.clearAllMocks();
     mockIsFocused = true;
     mockDispatchState = { current: null, next: null };
+    mockJobContact = { dispatchPhoneNumber: '+302421012345' };
     testQueryClient = new QueryClient({
       defaultOptions: { queries: { retry: false } },
     });
@@ -345,6 +360,233 @@ describe('HomeScreen (Row 66, Clauses 1 & 5)', () => {
       const banner2 = component2.UNSAFE_getByType(DispatchStopBanner);
       expect(banner2.props.inFront).toBe(false);
       expect(useDispatchState).toHaveBeenLastCalledWith(false);
+    });
+  });
+
+  describe('Contact from the job (row 72, decisions 72.4, 72.5, 72.7)', () => {
+    it('passes useIsFocused to useJobContact', () => {
+      mockIsFocused = true;
+      render(
+        <QueryClientProvider client={testQueryClient}>
+          <NavigationContainer>
+            <HomeScreen navigation={mockNav} route={mockRoute} />
+          </NavigationContainer>
+        </QueryClientProvider>,
+      );
+      expect(useJobContact).toHaveBeenCalledWith(true);
+    });
+
+    it('wires onCallDispatch when dispatchPhoneNumber is returned and calls openURL with tel:<number>', async () => {
+      mockJobContact = { dispatchPhoneNumber: '+302421012345' };
+
+      const component = render(
+        <QueryClientProvider client={testQueryClient}>
+          <NavigationContainer>
+            <HomeScreen navigation={mockNav} route={mockRoute} />
+          </NavigationContainer>
+        </QueryClientProvider>,
+      );
+
+      // Switch to InProgress tab
+      fireEvent.press(component.getByText(/in progress/i));
+
+      const cell = component.UNSAFE_getAllByType(InProgressCell)[0];
+      expect(cell.props.onCallDispatch).toBeDefined();
+
+      await act(async () => {
+        cell.props.onCallDispatch();
+      });
+
+      expect(openURLSpy).toHaveBeenCalledWith('tel:+302421012345');
+    });
+
+    it('sets onCallDispatch to undefined when dispatchPhoneNumber is null', async () => {
+      mockJobContact = { dispatchPhoneNumber: null };
+
+      const component = render(
+        <QueryClientProvider client={testQueryClient}>
+          <NavigationContainer>
+            <HomeScreen navigation={mockNav} route={mockRoute} />
+          </NavigationContainer>
+        </QueryClientProvider>,
+      );
+
+      fireEvent.press(component.getByText(/in progress/i));
+
+      const cell = component.UNSAFE_getAllByType(InProgressCell)[0];
+      expect(cell.props.onCallDispatch).toBeUndefined();
+    });
+
+    it('wires onCallCustomer to open tel:<customer number>', async () => {
+      const component = render(
+        <QueryClientProvider client={testQueryClient}>
+          <NavigationContainer>
+            <HomeScreen navigation={mockNav} route={mockRoute} />
+          </NavigationContainer>
+        </QueryClientProvider>,
+      );
+
+      fireEvent.press(component.getByText(/in progress/i));
+
+      const cell = component.UNSAFE_getAllByType(InProgressCell)[0];
+      await act(async () => {
+        cell.props.onCallCustomer(mockOrder);
+      });
+
+      expect(openURLSpy).toHaveBeenCalledWith('tel:444555666');
+    });
+
+    it('wires onCallRestaurant to open tel:<restaurant number>', async () => {
+      const component = render(
+        <QueryClientProvider client={testQueryClient}>
+          <NavigationContainer>
+            <HomeScreen navigation={mockNav} route={mockRoute} />
+          </NavigationContainer>
+        </QueryClientProvider>,
+      );
+
+      fireEvent.press(component.getByText(/in progress/i));
+
+      const cell = component.UNSAFE_getAllByType(InProgressCell)[0];
+      await act(async () => {
+        cell.props.onCallRestaurant(mockOrder);
+      });
+
+      expect(openURLSpy).toHaveBeenCalledWith('tel:111222333');
+    });
+
+    describe('showCustomerMessages preset options (decision 72.4)', () => {
+      it('opens ActionSheet with preset messages and picking a preset opens sms:<number>?body=<encoded text>', async () => {
+        const component = render(
+          <QueryClientProvider client={testQueryClient}>
+            <NavigationContainer>
+              <HomeScreen navigation={mockNav} route={mockRoute} />
+            </NavigationContainer>
+          </QueryClientProvider>,
+        );
+
+        fireEvent.press(component.getByText(/in progress/i));
+
+        const cell = component.UNSAFE_getAllByType(InProgressCell)[0];
+
+        // Trigger onTextCustomer
+        await act(async () => {
+          cell.props.onTextCustomer(mockOrder);
+        });
+
+        expect(ActionSheet.showActionSheetWithOptions).toHaveBeenCalled();
+        const [config, onSelect] = (
+          ActionSheet.showActionSheetWithOptions as jest.Mock
+        ).mock.calls[
+          (ActionSheet.showActionSheetWithOptions as jest.Mock).mock.calls.length - 1
+        ];
+
+        expect(config.title).toBe('Text the customer');
+        expect(config.cancelButtonIndex).toBe(3);
+        expect(config.options).toEqual([
+          "I'm outside",
+          'Arriving in 5 min',
+          "Can't find the entrance",
+          'Cancel',
+        ]);
+
+        // Select preset 0: Outside
+        await act(async () => {
+          onSelect(0);
+        });
+
+        expect(openURLSpy).toHaveBeenCalledWith(
+          smsUrl(mockOrder.dropoffPhoneNumber!, CUSTOMER_SMS_PRESETS[0].body),
+        );
+
+        // Select preset 1: Arriving in 5
+        await act(async () => {
+          onSelect(1);
+        });
+
+        expect(openURLSpy).toHaveBeenCalledWith(
+          smsUrl(mockOrder.dropoffPhoneNumber!, CUSTOMER_SMS_PRESETS[1].body),
+        );
+
+        // Select preset 2: Can't find entrance
+        await act(async () => {
+          onSelect(2);
+        });
+
+        expect(openURLSpy).toHaveBeenCalledWith(
+          smsUrl(mockOrder.dropoffPhoneNumber!, CUSTOMER_SMS_PRESETS[2].body),
+        );
+      });
+
+      it('selecting Cancel or dismissing ActionSheet opens nothing', async () => {
+        const component = render(
+          <QueryClientProvider client={testQueryClient}>
+            <NavigationContainer>
+              <HomeScreen navigation={mockNav} route={mockRoute} />
+            </NavigationContainer>
+          </QueryClientProvider>,
+        );
+
+        fireEvent.press(component.getByText(/in progress/i));
+
+        const cell = component.UNSAFE_getAllByType(InProgressCell)[0];
+
+        await act(async () => {
+          cell.props.onTextCustomer(mockOrder);
+        });
+
+        const [, onSelect] = (
+          ActionSheet.showActionSheetWithOptions as jest.Mock
+        ).mock.calls[
+          (ActionSheet.showActionSheetWithOptions as jest.Mock).mock.calls.length - 1
+        ];
+
+        openURLSpy.mockClear();
+
+        // Cancel index (3)
+        await act(async () => {
+          onSelect(3);
+        });
+        expect(openURLSpy).not.toHaveBeenCalled();
+
+        // Dismiss outside (undefined)
+        await act(async () => {
+          onSelect(undefined);
+        });
+        expect(openURLSpy).not.toHaveBeenCalled();
+      });
+
+      it('does nothing when order has no dropoffPhoneNumber', async () => {
+        const component = render(
+          <QueryClientProvider client={testQueryClient}>
+            <NavigationContainer>
+              <HomeScreen navigation={mockNav} route={mockRoute} />
+            </NavigationContainer>
+          </QueryClientProvider>,
+        );
+
+        fireEvent.press(component.getByText(/in progress/i));
+
+        const cell = component.UNSAFE_getAllByType(InProgressCell)[0];
+
+        const orderWithoutNumber = {
+          ...mockOrder,
+          dropoffPhoneNumber: undefined,
+        };
+
+        const sheetCallsBefore = (
+          ActionSheet.showActionSheetWithOptions as jest.Mock
+        ).mock.calls.length;
+
+        await act(async () => {
+          cell.props.onTextCustomer(orderWithoutNumber);
+        });
+
+        expect(
+          (ActionSheet.showActionSheetWithOptions as jest.Mock).mock.calls.length,
+        ).toBe(sheetCallsBefore);
+        expect(openURLSpy).not.toHaveBeenCalled();
+      });
     });
   });
 });

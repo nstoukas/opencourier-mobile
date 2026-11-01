@@ -5,10 +5,13 @@ import { InProgressCell } from './InProgressCell';
 import { InProgressCellHeader } from '../InProgressCellHeader/InProgressCellHeader';
 import { InProgressAdress } from '../InProgressAddress/InProgressAddress';
 import { Icon } from '@app/components/Icon/Icon';
+import { Button } from '@app/components/Button/Button';
 import { CheckCircleIcon } from 'phosphor-react-native/src/icons/CheckCircle';
 import { CaretDownIcon } from 'phosphor-react-native/src/icons/CaretDown';
 import { HouseLineIcon } from 'phosphor-react-native/src/icons/HouseLine';
 import { PhoneOutgoingIcon } from 'phosphor-react-native/src/icons/PhoneOutgoing';
+import { ChatTextIcon } from 'phosphor-react-native/src/icons/ChatText';
+import { HeadsetIcon } from 'phosphor-react-native/src/icons/Headset';
 import { OrderStatus } from '@app/types/enums';
 import { Order } from '@app/types/types';
 import '@app/localization/i18n';
@@ -54,6 +57,7 @@ describe('InProgressCell (spec 0007, decision 65.10)', () => {
     onCallRestaurant: jest.fn(),
     onMessageCustomer: jest.fn(),
     onCallCustomer: jest.fn(),
+    onTextCustomer: jest.fn(),
     onOrderItemsListForCustomer: jest.fn(),
     onReportIssue: jest.fn(),
   };
@@ -116,12 +120,13 @@ describe('InProgressCell (spec 0007, decision 65.10)', () => {
     expect(caretDown).toBeDefined();
   });
 
-  describe('customer phone visibility (row 33, decision 33.1, review fix fa97175)', () => {
-    it('with dropoffPhoneNumber and status picked_up: customer call button is present and calls onCallCustomer, and restaurant call button is also present', () => {
-      // While the delivery is held, the customer's phone number is visible and callable.
+  describe('contact controls from the job (rows 33 & 72, decisions 33.1, 72.4, 72.5)', () => {
+    it('with dropoffPhoneNumber, pickupPhoneNumber and status picked_up: customer call and restaurant call buttons are present and functional', () => {
+      // While the delivery is held, both phone numbers are visible and callable (decision 72.5).
       const order = {
         ...baseOrder,
         status: OrderStatus.picked_up,
+        pickupPhoneNumber: '+302421011111',
         dropoffPhoneNumber: '+306912345678',
       } as Order;
 
@@ -171,11 +176,12 @@ describe('InProgressCell (spec 0007, decision 65.10)', () => {
       expect(noopProps.onCallCustomer).toHaveBeenCalledWith(order);
     });
 
-    it('with dropoffPhoneNumber and status dispatched: customer call button is present and calls onCallCustomer, and restaurant call button is also present', () => {
-      // Dispatched delivery is held by rider: customer call button is active.
+    it('with dropoffPhoneNumber, pickupPhoneNumber and status dispatched: customer call and restaurant call buttons are present and functional', () => {
+      // Dispatched delivery is held by rider: customer and restaurant call buttons are active.
       const order = {
         ...baseOrder,
         status: OrderStatus.dispatched,
+        pickupPhoneNumber: '+302421011111',
         dropoffPhoneNumber: '+306912345678',
       } as Order;
 
@@ -225,11 +231,13 @@ describe('InProgressCell (spec 0007, decision 65.10)', () => {
       expect(noopProps.onCallCustomer).toHaveBeenCalledWith(order);
     });
 
-    it('with dropoffPhoneNumber and status dropped_off: customer call button is NOT shown, while restaurant call button remains unaffected', () => {
-      // Offline drop off: outbox shows status dropped_off while cached order retains customer phone number (spec 0009).
+    it('with dropoffPhoneNumber and status dropped_off: neither customer call nor restaurant call button is shown (decision 72.5)', () => {
+      // Offline drop off: outbox shows status dropped_off while cached order retains phone numbers.
+      // Under decision 72.5, no contact control outlives the job.
       const order = {
         ...baseOrder,
         status: OrderStatus.dropped_off,
+        pickupPhoneNumber: '+302421011111',
         dropoffPhoneNumber: '+306912345678',
       } as Order;
 
@@ -248,34 +256,27 @@ describe('InProgressCell (spec 0007, decision 65.10)', () => {
       expect(restaurantAddress).toBeDefined();
       expect(customerAddress).toBeDefined();
 
-      // Customer onCall prop is undefined and no call button is rendered
+      // Customer onCall prop is undefined and no customer call button is rendered
       expect(customerAddress!.props.onCall).toBeUndefined();
       const customerPhoneIcon = customerAddress!
         .findAllByType(Icon)
         .find(i => i.props.icon === PhoneOutgoingIcon);
       expect(customerPhoneIcon).toBeUndefined();
 
-      // Restaurant call button is unaffected: present and functional
+      // Restaurant onCall prop is undefined and no restaurant call button is rendered (decision 72.5)
+      expect(restaurantAddress!.props.onCall).toBeUndefined();
       const restaurantPhoneIcon = restaurantAddress!
         .findAllByType(Icon)
         .find(i => i.props.icon === PhoneOutgoingIcon);
-      expect(restaurantPhoneIcon).toBeDefined();
-
-      const restaurantCallButton = restaurantAddress!
-        .findAllByType(TouchableOpacity)
-        .find(btn =>
-          btn.findAllByType(Icon).some(i => i.props.icon === PhoneOutgoingIcon),
-        );
-      expect(restaurantCallButton).toBeDefined();
-      fireEvent.press(restaurantCallButton!);
-      expect(noopProps.onCallRestaurant).toHaveBeenCalledWith(order);
+      expect(restaurantPhoneIcon).toBeUndefined();
     });
 
-    it('with dropoffPhoneNumber and status canceled: customer call button is NOT shown, while restaurant call button remains unaffected', () => {
-      // Canceled delivery: customer phone must not be callable even if cached delivery retained the number.
+    it('with dropoffPhoneNumber and status canceled: neither customer call nor restaurant call button is shown (decision 72.5)', () => {
+      // Canceled delivery: phone controls must disappear for both customer and restaurant.
       const order = {
         ...baseOrder,
         status: OrderStatus.canceled,
+        pickupPhoneNumber: '+302421011111',
         dropoffPhoneNumber: '+306912345678',
       } as Order;
 
@@ -301,26 +302,19 @@ describe('InProgressCell (spec 0007, decision 65.10)', () => {
         .find(i => i.props.icon === PhoneOutgoingIcon);
       expect(customerPhoneIcon).toBeUndefined();
 
-      // Restaurant call button is unaffected: present and functional
+      // Restaurant onCall prop is undefined and no restaurant call button is rendered (decision 72.5)
+      expect(restaurantAddress!.props.onCall).toBeUndefined();
       const restaurantPhoneIcon = restaurantAddress!
         .findAllByType(Icon)
         .find(i => i.props.icon === PhoneOutgoingIcon);
-      expect(restaurantPhoneIcon).toBeDefined();
-
-      const restaurantCallButton = restaurantAddress!
-        .findAllByType(TouchableOpacity)
-        .find(btn =>
-          btn.findAllByType(Icon).some(i => i.props.icon === PhoneOutgoingIcon),
-        );
-      expect(restaurantCallButton).toBeDefined();
-      fireEvent.press(restaurantCallButton!);
-      expect(noopProps.onCallRestaurant).toHaveBeenCalledWith(order);
+      expect(restaurantPhoneIcon).toBeUndefined();
     });
 
     it('without dropoffPhoneNumber: no customer call button is rendered, while restaurant call button remains', () => {
       const order = {
         ...baseOrder,
         status: OrderStatus.picked_up,
+        pickupPhoneNumber: '+302421011111',
         dropoffPhoneNumber: undefined,
       } as Order;
 
@@ -366,6 +360,7 @@ describe('InProgressCell (spec 0007, decision 65.10)', () => {
       const order = {
         ...baseOrder,
         status: OrderStatus.picked_up,
+        pickupPhoneNumber: '+302421011111',
         dropoffPhoneNumber: '',
       } as Order;
 
@@ -383,6 +378,279 @@ describe('InProgressCell (spec 0007, decision 65.10)', () => {
         .findAllByType(Icon)
         .find(i => i.props.icon === PhoneOutgoingIcon);
       expect(customerPhoneIcon).toBeUndefined();
+
+      const restaurantAddress = addresses.find(
+        a => a.props.customerOrRestaurant === 'restaurant',
+      );
+      expect(restaurantAddress!.props.onCall).toBeDefined();
+    });
+
+    it('without pickupPhoneNumber: no restaurant call button is rendered even while the job is active (decision 72.5)', () => {
+      const order = {
+        ...baseOrder,
+        status: OrderStatus.picked_up,
+        pickupPhoneNumber: undefined,
+        dropoffPhoneNumber: '+306912345678',
+      } as unknown as Order;
+
+      const { UNSAFE_getAllByType } = render(
+        <InProgressCell order={order} {...noopProps} />,
+      );
+
+      const addresses = UNSAFE_getAllByType(InProgressAdress);
+      const restaurantAddress = addresses.find(
+        a => a.props.customerOrRestaurant === 'restaurant',
+      );
+      expect(restaurantAddress!.props.onCall).toBeUndefined();
+
+      const restaurantPhoneIcon = restaurantAddress!
+        .findAllByType(Icon)
+        .find(i => i.props.icon === PhoneOutgoingIcon);
+      expect(restaurantPhoneIcon).toBeUndefined();
+    });
+
+    describe('customer text messages (row 72, decision 72.4)', () => {
+      it('with dropoffPhoneNumber and active status: renders message button and calls onTextCustomer', () => {
+        const order = {
+          ...baseOrder,
+          status: OrderStatus.picked_up,
+          pickupPhoneNumber: '+302421011111',
+          dropoffPhoneNumber: '+306912345678',
+        } as Order;
+
+        const { UNSAFE_getAllByType } = render(
+          <InProgressCell order={order} {...noopProps} />,
+        );
+
+        const addresses = UNSAFE_getAllByType(InProgressAdress);
+        const customerAddress = addresses.find(
+          a => a.props.customerOrRestaurant === 'customer',
+        );
+        expect(customerAddress).toBeDefined();
+        expect(customerAddress!.props.onText).toBeDefined();
+
+        const messageIcon = customerAddress!
+          .findAllByType(Icon)
+          .find(i => i.props.icon === ChatTextIcon);
+        expect(messageIcon).toBeDefined();
+
+        const messageButton = customerAddress!
+          .findAllByType(TouchableOpacity)
+          .find(btn =>
+            btn.findAllByType(Icon).some(i => i.props.icon === ChatTextIcon),
+          );
+        expect(messageButton).toBeDefined();
+
+        fireEvent.press(messageButton!);
+        expect(noopProps.onTextCustomer).toHaveBeenCalledTimes(1);
+        expect(noopProps.onTextCustomer).toHaveBeenCalledWith(order);
+      });
+
+      it('without dropoffPhoneNumber: no customer message button is rendered', () => {
+        const order = {
+          ...baseOrder,
+          status: OrderStatus.picked_up,
+          pickupPhoneNumber: '+302421011111',
+          dropoffPhoneNumber: undefined,
+        } as unknown as Order;
+
+        const { UNSAFE_getAllByType } = render(
+          <InProgressCell order={order} {...noopProps} />,
+        );
+
+        const addresses = UNSAFE_getAllByType(InProgressAdress);
+        const customerAddress = addresses.find(
+          a => a.props.customerOrRestaurant === 'customer',
+        );
+        expect(customerAddress!.props.onText).toBeUndefined();
+
+        const messageIcon = customerAddress!
+          .findAllByType(Icon)
+          .find(i => i.props.icon === ChatTextIcon);
+        expect(messageIcon).toBeUndefined();
+      });
+
+      it('without onTextCustomer prop: no customer message button is rendered even with a phone number', () => {
+        const order = {
+          ...baseOrder,
+          status: OrderStatus.picked_up,
+          pickupPhoneNumber: '+302421011111',
+          dropoffPhoneNumber: '+306912345678',
+        } as Order;
+
+        const { onTextCustomer: _, ...propsWithoutText } = noopProps;
+
+        const { UNSAFE_getAllByType } = render(
+          <InProgressCell order={order} {...propsWithoutText} />,
+        );
+
+        const addresses = UNSAFE_getAllByType(InProgressAdress);
+        const customerAddress = addresses.find(
+          a => a.props.customerOrRestaurant === 'customer',
+        );
+        expect(customerAddress!.props.onText).toBeUndefined();
+      });
+
+      it('when status is dropped_off or canceled: no customer message button is rendered', () => {
+        for (const status of [OrderStatus.dropped_off, OrderStatus.canceled]) {
+          const order = {
+            ...baseOrder,
+            status,
+            pickupPhoneNumber: '+302421011111',
+            dropoffPhoneNumber: '+306912345678',
+          } as Order;
+
+          const { UNSAFE_getAllByType } = render(
+            <InProgressCell order={order} {...noopProps} />,
+          );
+
+          const addresses = UNSAFE_getAllByType(InProgressAdress);
+          const customerAddress = addresses.find(
+            a => a.props.customerOrRestaurant === 'customer',
+          );
+          expect(customerAddress!.props.onText).toBeUndefined();
+
+          const messageIcon = customerAddress!
+            .findAllByType(Icon)
+            .find(i => i.props.icon === ChatTextIcon);
+          expect(messageIcon).toBeUndefined();
+        }
+      });
+    });
+
+    describe('Call dispatch button (row 72, decisions 72.5, 72.7)', () => {
+      it('shows Call dispatch button when onCallDispatch is provided and the job is active, and pressing it calls onCallDispatch', () => {
+        const onCallDispatch = jest.fn();
+        const order = {
+          ...baseOrder,
+          status: OrderStatus.picked_up,
+          pickupPhoneNumber: '+302421011111',
+          dropoffPhoneNumber: '+306912345678',
+        } as Order;
+
+        const component = render(
+          <InProgressCell
+            order={order}
+            {...noopProps}
+            onCallDispatch={onCallDispatch}
+          />,
+        );
+
+        const buttons = component.UNSAFE_getAllByType(Button);
+        const dispatchButton = buttons.find(b => b.props.icon === HeadsetIcon);
+        expect(dispatchButton).toBeDefined();
+        expect(dispatchButton!.props.title).toBe('Call dispatch');
+
+        fireEvent.press(dispatchButton!);
+        expect(onCallDispatch).toHaveBeenCalledTimes(1);
+      });
+
+      it('does NOT show Call dispatch button when onCallDispatch is omitted or undefined even if job is active', () => {
+        const order = {
+          ...baseOrder,
+          status: OrderStatus.picked_up,
+          pickupPhoneNumber: '+302421011111',
+          dropoffPhoneNumber: '+306912345678',
+        } as Order;
+
+        const component = render(
+          <InProgressCell
+            order={order}
+            {...noopProps}
+            onCallDispatch={undefined}
+          />,
+        );
+
+        const buttons = component.UNSAFE_queryAllByType(Button);
+        const dispatchButton = buttons.find(b => b.props.icon === HeadsetIcon);
+        expect(dispatchButton).toBeUndefined();
+      });
+
+      it('does NOT show Call dispatch button when the job is dropped_off or canceled even if onCallDispatch is provided', () => {
+        const onCallDispatch = jest.fn();
+
+        for (const status of [OrderStatus.dropped_off, OrderStatus.canceled]) {
+          const order = {
+            ...baseOrder,
+            status,
+            pickupPhoneNumber: '+302421011111',
+            dropoffPhoneNumber: '+306912345678',
+          } as Order;
+
+          const component = render(
+            <InProgressCell
+              order={order}
+              {...noopProps}
+              onCallDispatch={onCallDispatch}
+            />,
+          );
+
+          const buttons = component.UNSAFE_queryAllByType(Button);
+          const dispatchButton = buttons.find(b => b.props.icon === HeadsetIcon);
+          expect(dispatchButton).toBeUndefined();
+        }
+      });
+    });
+
+    describe('All contact controls disappear when job is over (decision 72.5)', () => {
+      it('renders none of: customer call, customer message, restaurant call, Call dispatch when dropped_off or canceled', () => {
+        const onCallDispatch = jest.fn();
+
+        for (const status of [OrderStatus.dropped_off, OrderStatus.canceled]) {
+          const order = {
+            ...baseOrder,
+            status,
+            pickupPhoneNumber: '+302421011111',
+            dropoffPhoneNumber: '+306912345678',
+          } as Order;
+
+          const component = render(
+            <InProgressCell
+              order={order}
+              {...noopProps}
+              onCallDispatch={onCallDispatch}
+            />,
+          );
+
+          const addresses = component.UNSAFE_getAllByType(InProgressAdress);
+          const restaurantAddress = addresses.find(
+            a => a.props.customerOrRestaurant === 'restaurant',
+          )!;
+          const customerAddress = addresses.find(
+            a => a.props.customerOrRestaurant === 'customer',
+          )!;
+
+          // No restaurant call
+          expect(restaurantAddress.props.onCall).toBeUndefined();
+          expect(
+            restaurantAddress
+              .findAllByType(Icon)
+              .find(i => i.props.icon === PhoneOutgoingIcon),
+          ).toBeUndefined();
+
+          // No customer call
+          expect(customerAddress.props.onCall).toBeUndefined();
+          expect(
+            customerAddress
+              .findAllByType(Icon)
+              .find(i => i.props.icon === PhoneOutgoingIcon),
+          ).toBeUndefined();
+
+          // No customer message
+          expect(customerAddress.props.onText).toBeUndefined();
+          expect(
+            customerAddress
+              .findAllByType(Icon)
+              .find(i => i.props.icon === ChatTextIcon),
+          ).toBeUndefined();
+
+          // No call dispatch
+          const buttons = component.UNSAFE_queryAllByType(Button);
+          expect(
+            buttons.find(b => b.props.icon === HeadsetIcon),
+          ).toBeUndefined();
+        }
+      });
     });
   });
 });
