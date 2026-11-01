@@ -78,9 +78,14 @@ export const cancelledPayText = (job: CancelledJob): string =>
 
 // --- The alert, once per job ---------------------------------------------
 
-export const CANCELLED_JOBS_CHANNEL_ID = 'cancelled-jobs';
+// Android fixes a channel's sound when the channel is first made. The first build made
+// 'cancelled-jobs' with no sound (row 32 verify), so the channel moved to a new id when the sound
+// was added; changing the sound again needs another new id.
+export const CANCELLED_JOBS_CHANNEL_ID = 'cancelled-job-alerts';
 // Long buzzes, unlike an offer's ring, so a rider in gloves knows which it is without looking.
-export const CANCELLED_VIBRATION = [0, 1000, 400, 1000, 400, 1000];
+// notifee needs an even number of values, every one above 0 (wait, buzz, wait, buzz...): a leading
+// 0 made it refuse the channel, so no alert ever sounded (row 32 verify).
+export const CANCELLED_VIBRATION = [300, 1000, 400, 1000, 400, 1000];
 const ALERTED_KEY = 'cancelledJobsAlerted';
 const ACKNOWLEDGED_KEY = 'cancelledJobsAcknowledged';
 const ONE_DAY_MS = 24 * 60 * 60 * 1000;
@@ -95,6 +100,9 @@ const ensureCancelledChannel = async () => {
     name: i18next.t('translations:cancelled_channel'),
     importance: AndroidImportance.HIGH,
     visibility: AndroidVisibility.PUBLIC,
+    // The phone's own notification sound (AC-7; decision 32.9: no custom sound file). Without it
+    // the channel was silent.
+    sound: 'default',
     vibration: true,
     vibrationPattern: CANCELLED_VIBRATION,
   });
