@@ -8,6 +8,7 @@ const mockUseLocationPermission = jest.fn(() => ({
   requestLocationPermission: jest.fn(),
 }));
 const mockUseLocationTracking = jest.fn();
+const mockUseArrivalDetection = jest.fn();
 const mockUseOfferPushRegistration = jest.fn();
 const mockUseUser = jest.fn(() => ({
   user: { id: 'courier-1', name: 'Courier' },
@@ -20,6 +21,10 @@ jest.mock('@app/hooks/useLocationPermission', () => ({
 
 jest.mock('@app/hooks/useLocationTracking', () => ({
   useLocationTracking: (...args: any[]) => mockUseLocationTracking(...args),
+}));
+
+jest.mock('@app/hooks/useArrivalDetection', () => ({
+  useArrivalDetection: (...args: any[]) => mockUseArrivalDetection(...args),
 }));
 
 jest.mock('@app/services/offerPush/registration', () => ({
@@ -103,5 +108,6 @@ describe('Router (Row 67, Ruling: one permission reader)', () => {
     );
 
     expect(mockUseGrantedLocationPermission).toHaveBeenCalledTimes(1);
+    expect(mockUseArrivalDetection).toHaveBeenCalledWith('courier-1');
   });
 });

@@ -1,6 +1,6 @@
 import { MainScreens } from './types';
 
-describe('MainScreens navigation routes (Row 18, no photos and trimmed settings)', () => {
+describe('MainScreens navigation routes (Row 18, spec 0021: no photos, trimmed settings, quicker delivery)', () => {
   const removedScreens = [
     'PhotoAttachment',
     'ThemeScreen',
@@ -11,12 +11,12 @@ describe('MainScreens navigation routes (Row 18, no photos and trimmed settings)
     'EarningsMethodScreen',
     'WeightOrderScreen',
     'OrderPreferenceScreen',
+    'ItemsCollected',
+    'MarkAsDelivered',
   ];
 
   const keptScreens = [
     'Drawer',
-    'ItemsCollected',
-    'MarkAsDelivered',
     'PayoutActivity',
     'Licences',
     'LanguageScreen',

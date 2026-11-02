@@ -1,6 +1,12 @@
 import React from 'react';
 import { Alert, Linking } from 'react-native';
-import { render, act, fireEvent, cleanup, waitFor } from '@testing-library/react-native';
+import {
+  render,
+  act,
+  fireEvent,
+  cleanup,
+  waitFor,
+} from '@testing-library/react-native';
 import { NavigationContainer } from '@react-navigation/native';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import ActionSheet from 'react-native-action-sheet';
@@ -14,7 +20,7 @@ import { NewOrderCell } from '@app/components/NewOrderCell/NewOrderCell';
 import { RouteMap } from '@app/components/RouteMap/RouteMap';
 import { HomeTopSlot } from '@app/components/HomeTopSlot/HomeTopSlot';
 import { HomeCard } from '@app/components/HomeCard/HomeCard';
-import { RouteLines } from '@app/components/RouteLines/RouteLines';
+import { JobFooter } from '@app/components/JobFooter/JobFooter';
 import ButtonSwipe from '@app/components/ButtonSwipe/ButtonSwipe';
 import { DispatchStopBanner } from '@app/components/DispatchStopBanner/DispatchStopBanner';
 import { CancelledJobCard } from '@app/components/CancelledJobCard/CancelledJobCard';
@@ -206,7 +212,9 @@ describe('HomeScreen (spec 0018, AC-5 to AC-15)', () => {
     getPickupPointsSpy = jest
       .spyOn(services.routeService, 'getPickupPoints')
       .mockResolvedValue([]);
-    jest.spyOn(mapPreferences, 'getRestaurantLayerChoice').mockResolvedValue(null);
+    jest
+      .spyOn(mapPreferences, 'getRestaurantLayerChoice')
+      .mockResolvedValue(null);
     ownPositionModule.setOwnPosition({ latitude: 39.3622, longitude: 22.9425 });
   });
 
@@ -254,7 +262,9 @@ describe('HomeScreen (spec 0018, AC-5 to AC-15)', () => {
       const { getByTestId, getByText } = renderHome();
 
       expect(getByTestId('home-card-last-call')).toBeTruthy();
-      expect(getByText(i18n.t('translations:last_call_explained'))).toBeTruthy();
+      expect(
+        getByText(i18n.t('translations:last_call_explained')),
+      ).toBeTruthy();
       expect(getByText(i18n.t('translations:stay_online'))).toBeTruthy();
       expect(getByText(i18n.t('translations:go_offline'))).toBeTruthy();
     });
@@ -400,7 +410,7 @@ describe('HomeScreen (spec 0018, AC-5 to AC-15)', () => {
       expect(getByText('Dispatch stopped for storm')).toBeTruthy();
     });
 
-    it('requests the route with server status of shown job and feeds legs to RouteMap and RouteLines', async () => {
+    it('requests the route with server status of shown job and feeds legs to RouteMap and InProgressCell', async () => {
       mockHomeOrders.dataSourceNew = [];
       mockHomeOrders.dataSourceInProgress = [mockJob];
       mockHomeOrders.serverInProgress = [
@@ -417,14 +427,22 @@ describe('HomeScreen (spec 0018, AC-5 to AC-15)', () => {
         expect(routeMap.props.legs.length).toBeGreaterThan(0);
       });
 
-      // RouteLines shows formatted km and minutes
-      const routeLines = component.UNSAFE_getByType(RouteLines);
-      expect(routeLines.props.toRestaurant).toEqual({ km: '1.2', minutes: 4 });
-      expect(routeLines.props.toCustomer).toEqual({ km: '2.9', minutes: 5 });
+      // InProgressCell receives formatted km and minutes
+      const cell = component.UNSAFE_getByType(InProgressCell);
+      expect(cell.props.toRestaurant).toEqual({ km: '1.2', minutes: 4 });
+      expect(cell.props.toCustomer).toEqual({ km: '2.9', minutes: 5 });
+
+      // JobFooter is rendered in HomeCard footer slot outside ScrollView (spec 0021, AC-9)
+      const homeCard = component.UNSAFE_getByType(HomeCard);
+      expect(homeCard.props.footer).toBeTruthy();
+      const jobFooter = component.UNSAFE_getByType(JobFooter);
+      expect(jobFooter.props.order.id).toBe(mockJob.id);
     });
 
     it('shows "Route not available" when route query fails with no data', async () => {
-      getDeliveryRouteSpy.mockRejectedValue(new Error('503 Service Unavailable'));
+      getDeliveryRouteSpy.mockRejectedValue(
+        new Error('503 Service Unavailable'),
+      );
       mockHomeOrders.dataSourceNew = [];
       mockHomeOrders.dataSourceInProgress = [mockJob];
       mockHomeOrders.serverInProgress = [mockJob];
@@ -463,11 +481,11 @@ describe('HomeScreen (spec 0018, AC-5 to AC-15)', () => {
     it('wires onCallDispatch when dispatchPhoneNumber is set', async () => {
       const { UNSAFE_getByType } = renderHome();
 
-      const cell = UNSAFE_getByType(InProgressCell);
-      expect(cell.props.onCallDispatch).toBeDefined();
+      const footer = UNSAFE_getByType(JobFooter);
+      expect(footer.props.onCallDispatch).toBeDefined();
 
       await act(async () => {
-        cell.props.onCallDispatch!();
+        footer.props.onCallDispatch!();
       });
       expect(openURLSpy).toHaveBeenCalledWith('tel:+302421012345');
     });
@@ -501,7 +519,9 @@ describe('HomeScreen (spec 0018, AC-5 to AC-15)', () => {
   describe('User deliverySetting safety', () => {
     it('renders safely when user is undefined (no crash on deliverySetting)', () => {
       mockUser = undefined;
-      const errorSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
+      const errorSpy = jest
+        .spyOn(console, 'error')
+        .mockImplementation(() => {});
 
       expect(() => {
         renderHome();

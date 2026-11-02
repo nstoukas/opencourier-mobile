@@ -80,7 +80,7 @@ describe('geo track (Row 67, Clause 2)', () => {
     );
   });
 
-  it('converts watchPosition coords [latitude, longitude] to geojson Point [longitude, latitude]', () => {
+  it('converts watchPosition coords [latitude, longitude] to geojson Point [longitude, latitude] and passes fix info', () => {
     let watchSuccessCb: ((pos: any) => void) | undefined;
     (Geolocation.watchPosition as jest.Mock).mockImplementation(
       (success: (pos: any) => void) => {
@@ -93,20 +93,33 @@ describe('geo track (Row 67, Clause 2)', () => {
     track(onUpdate, testOptions);
 
     expect(watchSuccessCb).toBeDefined();
+    const before = Date.now();
     watchSuccessCb!({
       coords: {
         latitude: 39.362,
         longitude: 22.945,
+        accuracy: 14.5,
       },
     });
+    const after = Date.now();
 
-    expect(onUpdate).toHaveBeenCalledWith({
-      type: 'Point',
-      coordinates: [22.945, 39.362],
-    });
+    expect(onUpdate).toHaveBeenCalledTimes(1);
+    expect(onUpdate).toHaveBeenCalledWith(
+      {
+        type: 'Point',
+        coordinates: [22.945, 39.362],
+      },
+      {
+        accuracyMetres: 14.5,
+        at: expect.any(Number),
+      },
+    );
+    const passedAt = onUpdate.mock.calls[0][1].at;
+    expect(passedAt).toBeGreaterThanOrEqual(before);
+    expect(passedAt).toBeLessThanOrEqual(after);
   });
 
-  it('converts getCurrentPosition coords [latitude, longitude] to geojson Point [longitude, latitude]', () => {
+  it('converts getCurrentPosition coords [latitude, longitude] to geojson Point [longitude, latitude] with null accuracy if missing', () => {
     let getSuccessCb: ((pos: any) => void) | undefined;
     (Geolocation.getCurrentPosition as jest.Mock).mockImplementation(
       (success: (pos: any) => void) => {
@@ -125,9 +138,15 @@ describe('geo track (Row 67, Clause 2)', () => {
       },
     });
 
-    expect(onUpdate).toHaveBeenCalledWith({
-      type: 'Point',
-      coordinates: [23.727, 37.983],
-    });
+    expect(onUpdate).toHaveBeenCalledWith(
+      {
+        type: 'Point',
+        coordinates: [23.727, 37.983],
+      },
+      {
+        accuracyMetres: null,
+        at: expect.any(Number),
+      },
+    );
   });
 });

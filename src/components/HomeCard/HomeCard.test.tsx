@@ -101,6 +101,25 @@ describe('HomeCard (spec 0018, AC-8)', () => {
       const ghScroll = UNSAFE_getByType(RNGHScrollView);
       expect(ghScroll).toBeTruthy();
     });
+
+    it('renders footer prop outside the ScrollView so the swipe is pinned (spec 0021, AC-9)', () => {
+      const { UNSAFE_getByType, getByTestId } = render(
+        <HomeCard
+          {...defaultProps}
+          mode={HomeCardMode.Job}
+          footer={<Text testID="pinned-job-footer">Pinned Footer</Text>}>
+          <Text>Job Cell Content</Text>
+        </HomeCard>,
+      );
+
+      expect(getByTestId('pinned-job-footer')).toBeTruthy();
+
+      const ghScroll = UNSAFE_getByType(RNGHScrollView);
+      const insideScroll = ghScroll.findAllByProps({
+        testID: 'pinned-job-footer',
+      });
+      expect(insideScroll).toHaveLength(0);
+    });
   });
 
   describe('pager (1 of N)', () => {

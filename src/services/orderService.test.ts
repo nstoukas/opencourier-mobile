@@ -319,6 +319,71 @@ describe('orderService & isOfferEndedError (spec 0002, AC-5)', () => {
       expect(payload.note).toBe('Left package at side door');
     });
 
+    it('sends detected: true only on arrived routes and only when detected is true (spec 0021, AC-4, AC-13)', async () => {
+      const arrivedSteps: JobStep[] = [
+        'arrived_at_pickup',
+        'arrived_at_dropoff',
+      ];
+
+      for (const step of arrivedSteps) {
+        const mockPost = jest.fn().mockResolvedValue({
+          data: { result: { status: 'ANY' } },
+        });
+        const client = { post: mockPost } as unknown as UClient;
+        const service = orderService(client);
+
+        await (service.sendJobStep as any)(
+          { deliveryId: 'del-123', step, detected: true },
+          200,
+        );
+
+        expect(mockPost).toHaveBeenCalledTimes(1);
+        expect(mockPost.mock.calls[0][1]).toEqual({
+          tapAgeMs: 200,
+          detected: true,
+        });
+      }
+
+      // When detected is false or undefined on arrived step: detected is NOT sent
+      for (const detectedVal of [false, undefined]) {
+        const mockPost = jest.fn().mockResolvedValue({
+          data: { result: { status: 'ANY' } },
+        });
+        const client = { post: mockPost } as unknown as UClient;
+        const service = orderService(client);
+
+        await (service.sendJobStep as any)(
+          {
+            deliveryId: 'del-123',
+            step: 'arrived_at_pickup',
+            detected: detectedVal,
+          },
+          200,
+        );
+
+        expect(mockPost.mock.calls[0][1]).toEqual({ tapAgeMs: 200 });
+        expect('detected' in mockPost.mock.calls[0][1]).toBe(false);
+      }
+
+      // Non-arrived steps never send detected even if set to true
+      const otherSteps: JobStep[] = ['dispatched', 'picked_up', 'delivered'];
+      for (const step of otherSteps) {
+        const mockPost = jest.fn().mockResolvedValue({
+          data: { result: { status: 'ANY' } },
+        });
+        const client = { post: mockPost } as unknown as UClient;
+        const service = orderService(client);
+
+        await (service.sendJobStep as any)(
+          { deliveryId: 'del-123', step, detected: true },
+          200,
+        );
+
+        expect(mockPost.mock.calls[0][1]).toEqual({ tapAgeMs: 200 });
+        expect('detected' in mockPost.mock.calls[0][1]).toBe(false);
+      }
+    });
+
     it('returns { kind: "delivery", status: data.result.status } on 2xx answer', async () => {
       const mockPost = jest.fn().mockResolvedValue({
         data: {
@@ -570,7 +635,9 @@ describe('orderService & isOfferEndedError (spec 0002, AC-5)', () => {
       const error409Other = makeAxiosError(409, {
         result: [{ code: 'SOME_OTHER_CODE' }],
       });
-      const error500 = makeAxiosError(500, { message: 'Internal server error' });
+      const error500 = makeAxiosError(500, {
+        message: 'Internal server error',
+      });
 
       expect(isDispatchNoLongerNeeded(error409Other)).toBe(false);
       expect(isDispatchNoLongerNeeded(error500)).toBe(false);
@@ -595,39 +662,47 @@ describe('orderService & isOfferEndedError (spec 0002, AC-5)', () => {
       const mockPost = jest
         .fn()
         .mockResolvedValueOnce({ data: { result: { id: 'del-101' } } })
-        .mockResolvedValueOnce({ data: { result: { status: OrderStatus.dispatched } } });
+        .mockResolvedValueOnce({
+          data: { result: { status: OrderStatus.dispatched } },
+        });
 
       const service = orderService({ post: mockPost } as unknown as UClient);
       const res = await service.acceptOrder({ id: 'del-101', automatic: true });
 
       expect(mockPost).toHaveBeenCalledTimes(2);
-      expect(mockPost).toHaveBeenNthCalledWith(
-        1,
-        'deliveries/del-101/accept',
-        { automatic: true },
-      );
+      expect(mockPost).toHaveBeenNthCalledWith(1, 'deliveries/del-101/accept', {
+        automatic: true,
+      });
       expect(mockPost).toHaveBeenNthCalledWith(
         2,
         'deliveries/del-101/mark-as-dispatched',
         {},
       );
-      expect(res).toEqual({ data: { result: { status: OrderStatus.dispatched } } });
+      expect(res).toEqual({
+        data: { result: { status: OrderStatus.dispatched } },
+      });
     });
 
     it('sends empty body {} on accept call when automatic is false or omitted (AC-11)', async () => {
-      const mockPost = jest
-        .fn()
-        .mockResolvedValue({ data: { result: {} } });
+      const mockPost = jest.fn().mockResolvedValue({ data: { result: {} } });
 
       const service = orderService({ post: mockPost } as unknown as UClient);
 
       // automatic: false
       await service.acceptOrder({ id: 'del-102', automatic: false });
-      expect(mockPost).toHaveBeenNthCalledWith(1, 'deliveries/del-102/accept', {});
+      expect(mockPost).toHaveBeenNthCalledWith(
+        1,
+        'deliveries/del-102/accept',
+        {},
+      );
 
       // automatic omitted
       await service.acceptOrder({ id: 'del-103' });
-      expect(mockPost).toHaveBeenNthCalledWith(3, 'deliveries/del-103/accept', {});
+      expect(mockPost).toHaveBeenNthCalledWith(
+        3,
+        'deliveries/del-103/accept',
+        {},
+      );
     });
 
     it('resolves { data: null, error: null } without throwing when mark-as-dispatched answers 409 CANT_UPDATE_DELIVERY_STATUS (AC-10)', async () => {
@@ -657,7 +732,10 @@ describe('orderService & isOfferEndedError (spec 0002, AC-5)', () => {
         .mockRejectedValueOnce(error404);
 
       const service = orderService({ post: mockPost } as unknown as UClient);
-      const res = await service.acceptOrder({ id: 'del-105', automatic: false });
+      const res = await service.acceptOrder({
+        id: 'del-105',
+        automatic: false,
+      });
 
       expect(res).toEqual({ data: null, error: null });
     });
@@ -669,8 +747,12 @@ describe('orderService & isOfferEndedError (spec 0002, AC-5)', () => {
         .mockResolvedValueOnce({ data: {} })
         .mockRejectedValueOnce(error500);
 
-      const service500 = orderService({ post: mockPost500 } as unknown as UClient);
-      await expect(service500.acceptOrder({ id: 'del-106' })).rejects.toThrow(error500);
+      const service500 = orderService({
+        post: mockPost500,
+      } as unknown as UClient);
+      await expect(service500.acceptOrder({ id: 'del-106' })).rejects.toThrow(
+        error500,
+      );
 
       const error409Other = makeAxiosError(409, {
         result: [{ code: 'DIFFERENT_CODE' }],
@@ -680,8 +762,12 @@ describe('orderService & isOfferEndedError (spec 0002, AC-5)', () => {
         .mockResolvedValueOnce({ data: {} })
         .mockRejectedValueOnce(error409Other);
 
-      const service409 = orderService({ post: mockPost409 } as unknown as UClient);
-      await expect(service409.acceptOrder({ id: 'del-107' })).rejects.toThrow(error409Other);
+      const service409 = orderService({
+        post: mockPost409,
+      } as unknown as UClient);
+      await expect(service409.acceptOrder({ id: 'del-107' })).rejects.toThrow(
+        error409Other,
+      );
     });
 
     it('throws when the initial accept call fails', async () => {
@@ -691,7 +777,9 @@ describe('orderService & isOfferEndedError (spec 0002, AC-5)', () => {
       const mockPost = jest.fn().mockRejectedValue(errorAccept);
 
       const service = orderService({ post: mockPost } as unknown as UClient);
-      await expect(service.acceptOrder({ id: 'del-108' })).rejects.toThrow(errorAccept);
+      await expect(service.acceptOrder({ id: 'del-108' })).rejects.toThrow(
+        errorAccept,
+      );
       expect(mockPost).toHaveBeenCalledTimes(1);
     });
   });
@@ -706,7 +794,9 @@ describe('orderService & isOfferEndedError (spec 0002, AC-5)', () => {
       const service = orderService({ post: mockPost } as unknown as UClient);
       const res = await service.handBack('del-handback-1');
 
-      expect(mockPost).toHaveBeenCalledWith('deliveries/del-handback-1/hand-back');
+      expect(mockPost).toHaveBeenCalledWith(
+        'deliveries/del-handback-1/hand-back',
+      );
       expect(res).toEqual(mockResult);
     });
 
@@ -726,7 +816,9 @@ describe('orderService & isOfferEndedError (spec 0002, AC-5)', () => {
 
       // Scenario A: Phone clock is accurate (phoneNow matches serverNow)
       let phoneTimeAccurate = new Date(serverNow).getTime(); // 12:00:00.000Z
-      const dateSpy = jest.spyOn(Date, 'now').mockImplementation(() => phoneTimeAccurate);
+      const dateSpy = jest
+        .spyOn(Date, 'now')
+        .mockImplementation(() => phoneTimeAccurate);
 
       const mockGet = jest.fn().mockImplementation(async () => {
         phoneTimeAccurate += 2000; // 2s round trip
@@ -753,8 +845,11 @@ describe('orderService & isOfferEndedError (spec 0002, AC-5)', () => {
         // serverExpiresAt - serverNow = +60,000 ms
         // handBackUntilOnPhone = midpoint + 60,000
         const midpointAccurate = new Date(serverNow).getTime() + 1000;
-        expect(ordersAccurate[0].handBackUntilOnPhone).toBe(midpointAccurate + 60000);
-        const secondsLeftAccurate = (ordersAccurate[0].handBackUntilOnPhone! - midpointAccurate) / 1000;
+        expect(ordersAccurate[0].handBackUntilOnPhone).toBe(
+          midpointAccurate + 60000,
+        );
+        const secondsLeftAccurate =
+          (ordersAccurate[0].handBackUntilOnPhone! - midpointAccurate) / 1000;
         expect(secondsLeftAccurate).toBe(60);
 
         // Job without handBackUntil is returned unchanged (no handBackUntilOnPhone property added)
@@ -778,11 +873,13 @@ describe('orderService & isOfferEndedError (spec 0002, AC-5)', () => {
         });
 
         const ordersFast = await service.getInProgressOrders();
-        const midpointFast = new Date(serverNow).getTime() - 5 * 60 * 1000 + 1000;
+        const midpointFast =
+          new Date(serverNow).getTime() - 5 * 60 * 1000 + 1000;
         expect(ordersFast[0].handBackUntilOnPhone).toBe(midpointFast + 60000);
 
         // Crucial: seconds left from the phone's now at the midpoint is STILL exactly 60 seconds!
-        const secondsLeftFast = (ordersFast[0].handBackUntilOnPhone! - midpointFast) / 1000;
+        const secondsLeftFast =
+          (ordersFast[0].handBackUntilOnPhone! - midpointFast) / 1000;
         expect(secondsLeftFast).toBe(60);
       } finally {
         dateSpy.mockRestore();
