@@ -4,6 +4,7 @@ import { Order } from '@app/types/types';
 import { OrderStatus } from '@app/types/enums';
 import { addJobSteps } from '@app/services/jobStepOutbox';
 import { dropHeldArrival, findHeldArrival } from '@app/services/heldArrivals';
+import { setPickedUpAt } from '@app/services/pickupTimes';
 import { JobStep, hasReachedStep } from '@app/utilities/jobSteps';
 import {
   ARRIVAL_STEP,
@@ -140,8 +141,17 @@ const useOrder = () => {
 
   // The first swipe (AC-5): the arrival at the restaurant if none, then the
   // pickup. Never the server's PICKED_UP shortcut without an arrival.
-  const pickedUp = (order: Order): Promise<boolean> =>
-    queueAtStop(order, 'pickup', [{ step: 'picked_up' }]);
+  // The swipe's time is kept for the card's "picked up 12:41" (review fix).
+  const pickedUp = async (order: Order): Promise<boolean> => {
+    const at = Date.now();
+    const queued = await queueAtStop(order, 'pickup', [
+      { step: 'picked_up', tappedAt: at },
+    ]);
+    if (queued) {
+      setPickedUpAt(order.id, at);
+    }
+    return queued;
+  };
 
   // The second swipe (AC-5): the arrival at the customer if none, then
   // delivered, with no note and no photo.

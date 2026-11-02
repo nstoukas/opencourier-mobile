@@ -73,6 +73,8 @@ export const findHeldArrival = async (
   courierId: string,
   deliveryId: string,
 ): Promise<HeldArrival | null> => {
+  // Waits for a write still under way, so a hold made in the same instant is seen (review nit).
+  await writing;
   await load();
   return held.find(a => same(a, courierId, deliveryId)) ?? null;
 };

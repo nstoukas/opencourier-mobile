@@ -31,9 +31,9 @@ export const JOB_STEP_TARGET: Record<JobStep, OrderStatus> = {
 export const JOB_STEP_LABEL_KEY: Record<JobStep, string> = {
   dispatched: 'translations:step_dispatched',
   arrived_at_pickup: 'translations:arrived_at_pickup',
-  picked_up: 'translations:confirm_items',
+  picked_up: 'translations:swipe_picked_up',
   arrived_at_dropoff: 'translations:step_arrived_at_dropoff',
-  delivered: 'translations:mark_as_delivered',
+  delivered: 'translations:swipe_delivered',
 };
 
 // A job's statuses in the order they happen (spec 0009). A status not in this

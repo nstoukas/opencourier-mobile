@@ -8,6 +8,7 @@ import routeService, { RouteService } from './routeService';
 import { setOwnPosition } from './ownPosition';
 import { setLatestFix } from './latestFix';
 import { clearHeldArrivals } from './heldArrivals';
+import { clearPickedUpTimes } from './pickupTimes';
 import notificationDeviceService, {
   NotificationDeviceService,
 } from './notificationDeviceService';
@@ -38,6 +39,7 @@ const Services = (): Services => {
     setOwnPosition(null);
     // Nor inherits a fix or a held arrival from them (spec 0021).
     setLatestFix(null);
+    clearPickedUpTimes();
     clearHeldArrivals().catch(error =>
       console.log('Could not clear held arrivals', error),
     );

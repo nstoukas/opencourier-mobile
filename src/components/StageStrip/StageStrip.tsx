@@ -30,9 +30,7 @@ export const StageStrip = ({ stage, toRestaurant, toCustomer }: Props) => {
           state === 'done' && styles.dotDone,
         ]}
       />
-      <Text
-        style={[styles.label, state === 'current' && styles.labelCurrent]}
-        accessibilityState={{ selected: state === 'current' }}>
+      <Text style={[styles.label, state === 'current' && styles.labelCurrent]}>
         {label}
         {km ? ` · ${km} km` : ''}
       </Text>

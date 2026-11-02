@@ -22,6 +22,12 @@ const RootStack = createNativeStackNavigator<RootStackParamList>();
 
 const DEFAULT_OPTIONS = { headerShown: false };
 
+// Renders nothing: it only runs arrival detection (spec 0021).
+const ArrivalDetector = ({ courierId }: { courierId: string | undefined }) => {
+  useArrivalDetection(courierId);
+  return null;
+};
+
 export const Router = () => {
   const { user } = useUser();
   const { locationPermission } = useLocationPermission();
@@ -39,59 +45,62 @@ export const Router = () => {
 
   // The one location watch: only while Online or on a job (row 67).
   useLocationTracking(user, locationPermission);
-  // Arrival at the restaurant and the customer, noticed from that watch's
-  // fixes on the phone (spec 0021).
-  useArrivalDetection(user?.id);
 
   return (
-    <RootStack.Navigator>
-      {!user ? (
-        <>
-          <RootStack.Screen
-            name={RootScreen.Loading}
-            component={LoadingScreen}
-            options={DEFAULT_OPTIONS}
-          />
-          <RootStack.Screen
-            name={RootScreen.Onboarding}
-            component={OnboardingStack}
-            options={DEFAULT_OPTIONS}
-          />
-        </>
-      ) : (
-        <>
-          <RootStack.Screen
-            name={RootScreen.Main}
-            component={MainStack}
-            options={DEFAULT_OPTIONS}
-          />
-          <RootStack.Screen
-            name={RootScreen.SelectOrganizationModal}
-            component={SelectOrganizationModal}
-            options={{ headerShown: false, presentation: 'transparentModal' }}
-          />
-          <RootStack.Screen
-            name={RootScreen.UserStatusModal}
-            component={StatusPopupScreen}
-            options={{ headerShown: false, presentation: 'transparentModal' }}
-          />
-          <RootStack.Screen
-            name={RootScreen.AddNoteModal}
-            component={AddNote}
-            options={{ headerShown: false, presentation: 'transparentModal' }}
-          />
-          <RootStack.Screen
-            name={RootScreen.DeleteNoteModal}
-            component={DeleteNote}
-            options={{ headerShown: false, presentation: 'transparentModal' }}
-          />
-          <RootStack.Screen
-            name={RootScreen.DatePickerScreen}
-            component={DatePickerScreen}
-            options={{ headerShown: false, presentation: 'transparentModal' }}
-          />
-        </>
-      )}
-    </RootStack.Navigator>
+    <>
+      {/* Arrival at the restaurant and the customer, noticed from the
+          location watch's fixes on the phone (spec 0021). Its own leaf, so
+          each fix redraws only this, not the whole navigator (review nit). */}
+      <ArrivalDetector courierId={user?.id} />
+      <RootStack.Navigator>
+        {!user ? (
+          <>
+            <RootStack.Screen
+              name={RootScreen.Loading}
+              component={LoadingScreen}
+              options={DEFAULT_OPTIONS}
+            />
+            <RootStack.Screen
+              name={RootScreen.Onboarding}
+              component={OnboardingStack}
+              options={DEFAULT_OPTIONS}
+            />
+          </>
+        ) : (
+          <>
+            <RootStack.Screen
+              name={RootScreen.Main}
+              component={MainStack}
+              options={DEFAULT_OPTIONS}
+            />
+            <RootStack.Screen
+              name={RootScreen.SelectOrganizationModal}
+              component={SelectOrganizationModal}
+              options={{ headerShown: false, presentation: 'transparentModal' }}
+            />
+            <RootStack.Screen
+              name={RootScreen.UserStatusModal}
+              component={StatusPopupScreen}
+              options={{ headerShown: false, presentation: 'transparentModal' }}
+            />
+            <RootStack.Screen
+              name={RootScreen.AddNoteModal}
+              component={AddNote}
+              options={{ headerShown: false, presentation: 'transparentModal' }}
+            />
+            <RootStack.Screen
+              name={RootScreen.DeleteNoteModal}
+              component={DeleteNote}
+              options={{ headerShown: false, presentation: 'transparentModal' }}
+            />
+            <RootStack.Screen
+              name={RootScreen.DatePickerScreen}
+              component={DatePickerScreen}
+              options={{ headerShown: false, presentation: 'transparentModal' }}
+            />
+          </>
+        )}
+      </RootStack.Navigator>
+    </>
   );
 };

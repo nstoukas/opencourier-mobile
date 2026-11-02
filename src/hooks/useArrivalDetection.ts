@@ -131,6 +131,8 @@ export const useArrivalDetection = (courierId: string | undefined): void => {
       if (stage === 'pickup' && hold) {
         // Released at the window's end plus the server's grace, never while
         // the rider's hand back is on its way (AC-12).
+        // No end (null) means the server has closed the window: the job list
+        // nulls handBackUntil once it is over, so the hold is released now.
         const releaseAt = (job.handBackUntilOnPhone ?? 0) + HAND_BACK_GRACE_MS;
         if (now >= releaseAt && !isHandBackInFlight(job.id)) {
           send(hold.firstFixAt);

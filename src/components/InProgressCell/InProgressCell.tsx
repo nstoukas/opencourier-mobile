@@ -23,6 +23,7 @@ import { isJobOver } from '@app/utilities/jobContact';
 import { LegFigures } from '@app/utilities/routeLegs';
 import { hidesCustomerDetails } from '@app/utilities/handBackWindow';
 import { useHandBackCountdown } from '@app/hooks/useHandBack';
+import { getPickedUpAt } from '@app/services/pickupTimes';
 import {
   cardStageOf,
   firstNameOf,
@@ -59,11 +60,8 @@ export const canMoveDropoffPin = (order: Order): boolean =>
   !order.dropoffPointCorrectedAt;
 
 // The time of day a step happened, as the rider's phone shows times.
-const timeOf = (iso: string | null | undefined): string => {
-  if (!iso) {
-    return '';
-  }
-  const date = new Date(iso);
+const timeOf = (at: number): string => {
+  const date = new Date(at);
   return Number.isNaN(date.getTime())
     ? ''
     : date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
@@ -133,6 +131,7 @@ export const InProgressCell = ({
     order.dropoffLocation?.formattedAddress ??
     '';
   const firstName = firstNameOf(order.dropoffName);
+  const pickedUpAt = getPickedUpAt(order.id);
   const floorAndBell = [
     order.dropoffFloor
       ? t('translations:dropoff_floor', { floor: order.dropoffFloor })
@@ -251,10 +250,12 @@ export const InProgressCell = ({
           ) : null}
           <View style={styles.restaurantLine} testID="job-restaurant-line">
             <Text style={styles.secondary} numberOfLines={1}>
-              {order.pickupReadyAt
+              {/* The time the rider swiped Picked up on this phone. Never pickupReadyAt: that is
+                  the restaurant's planned ready time (review fix). Unknown after a restart: name only. */}
+              {pickedUpAt !== undefined
                 ? t('translations:picked_up_at', {
                     restaurant: restaurantName,
-                    time: timeOf(order.pickupReadyAt),
+                    time: timeOf(pickedUpAt),
                   })
                 : restaurantName}
             </Text>
