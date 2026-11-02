@@ -4,6 +4,7 @@ import '@app/localization/i18n';
 import i18n from '@app/localization/i18n';
 import { OrderStatus } from '@app/types/enums';
 import { Order } from '@app/types/types';
+import { clearPickedUpTimes, setPickedUpAt } from '@app/services/pickupTimes';
 import { InProgressCell, canMoveDropoffPin } from './InProgressCell';
 
 describe('InProgressCell (spec 0021, AC-6 to AC-8, AC-14, spec 0016)', () => {
@@ -31,6 +32,11 @@ describe('InProgressCell (spec 0021, AC-6 to AC-8, AC-14, spec 0016)', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
+    clearPickedUpTimes();
+  });
+
+  afterEach(() => {
+    clearPickedUpTimes();
   });
 
   describe('canMoveDropoffPin helper (spec 0016)', () => {
@@ -160,6 +166,9 @@ describe('InProgressCell (spec 0021, AC-6 to AC-8, AC-14, spec 0016)', () => {
       const onTextCustomer = jest.fn();
       const onNavigate = jest.fn();
 
+      const swipeTime = new Date('2026-11-02T12:41:00Z').getTime();
+      setPickedUpAt(dropoffOrder.id, swipeTime);
+
       const { getByTestId, getByText } = render(
         <InProgressCell
           order={dropoffOrder}
@@ -200,8 +209,71 @@ describe('InProgressCell (spec 0021, AC-6 to AC-8, AC-14, spec 0016)', () => {
       fireEvent.press(navButton);
       expect(onNavigate).toHaveBeenCalledWith(dropoffOrder);
 
-      // Restaurant line with picked up time
+      // Restaurant line with picked up swipe time
+      const formattedSwipeTime = new Date(swipeTime).toLocaleTimeString([], {
+        hour: '2-digit',
+        minute: '2-digit',
+      });
+      const expectedText = i18n.t('translations:picked_up_at', {
+        restaurant: 'Souvlaki Bar',
+        time: formattedSwipeTime,
+      });
       expect(getByTestId('job-restaurant-line')).toBeTruthy();
+      expect(getByText(expectedText)).toBeTruthy();
+    });
+
+    it('shows the swipe time from pickupTimes, never pickupReadyAt (which may be hours ago)', () => {
+      // pickupReadyAt is 3 hours ago: 09:41
+      const threeHoursAgo = new Date('2026-11-02T09:41:00Z').toISOString();
+      const swipeTime = new Date('2026-11-02T12:41:00Z').getTime();
+
+      const orderWithStaleReadyAt: Order = {
+        ...dropoffOrder,
+        pickupReadyAt: threeHoursAgo,
+      } as unknown as Order;
+
+      setPickedUpAt(orderWithStaleReadyAt.id, swipeTime);
+
+      const formattedSwipeTime = new Date(swipeTime).toLocaleTimeString([], {
+        hour: '2-digit',
+        minute: '2-digit',
+      });
+      const formattedReadyAt = new Date(threeHoursAgo).toLocaleTimeString([], {
+        hour: '2-digit',
+        minute: '2-digit',
+      });
+
+      const { getByTestId, getByText, queryByText } = render(
+        <InProgressCell order={orderWithStaleReadyAt} {...noopProps} />,
+      );
+
+      const expectedText = i18n.t('translations:picked_up_at', {
+        restaurant: 'Souvlaki Bar',
+        time: formattedSwipeTime,
+      });
+
+      expect(getByTestId('job-restaurant-line')).toBeTruthy();
+      expect(getByText(expectedText)).toBeTruthy();
+      expect(queryByText(new RegExp(formattedReadyAt))).toBeNull();
+    });
+
+    it('with pickupReadyAt set and no recorded swipe time (e.g. after restart), shows restaurant name only', () => {
+      // pickupReadyAt is set on the order
+      const orderWithReadyAt: Order = {
+        ...dropoffOrder,
+        pickupReadyAt: '2026-11-02T12:41:00Z',
+      } as unknown as Order;
+
+      // No recorded time in pickupTimes
+      clearPickedUpTimes();
+
+      const { getByTestId, getByText, queryByText } = render(
+        <InProgressCell order={orderWithReadyAt} {...noopProps} />,
+      );
+
+      expect(getByTestId('job-restaurant-line')).toBeTruthy();
+      expect(getByText('Souvlaki Bar')).toBeTruthy();
+      expect(queryByText(/picked up/i)).toBeNull();
     });
 
     it('renders "Pin wrong? Set it where I stand" button when at dropoff and not corrected', () => {

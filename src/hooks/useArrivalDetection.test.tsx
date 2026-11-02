@@ -546,4 +546,159 @@ describe('useArrivalDetection (spec 0021, AC-1, AC-2, AC-12, AC-13)', () => {
       });
     });
   });
+
+  describe('re-check paths, queued guard and retry (spec 0021, review fix)', () => {
+    it('detects arrival when radius arrives AFTER the fix (no new fix needed) (AC-1)', async () => {
+      let resolveContact: (val: any) => void;
+      fetchContactSpy.mockImplementation(
+        () =>
+          new Promise(resolve => {
+            resolveContact = resolve;
+          }),
+      );
+
+      renderHook(() => useArrivalDetection('courier-1'), { wrapper });
+
+      await act(async () => {
+        await Promise.resolve();
+      });
+
+      const fixTime = Date.now();
+      // Fix arrives while radius is still undefined/pending
+      act(() => {
+        setLatestFix({
+          latitude: 39.362,
+          longitude: 22.945,
+          accuracyMetres: 15,
+          at: fixTime,
+        });
+      });
+
+      await act(async () => {
+        await Promise.resolve();
+      });
+
+      // No detection yet because radius is not known
+      expect(mockDetectedArrival).not.toHaveBeenCalled();
+
+      // Radius arrives now (no new fix)
+      await act(async () => {
+        resolveContact!({
+          dispatchPhoneNumber: '+302421012345',
+          arrivalRadiusMetres: 50,
+        });
+      });
+
+      // Effect re-runs with updated radius and detects arrival using existing recent fix
+      await waitFor(() => {
+        expect(mockDetectedArrival).toHaveBeenCalledTimes(1);
+      });
+      expect(mockDetectedArrival).toHaveBeenCalledWith(
+        expect.objectContaining({ id: 'job-1' }),
+        'pickup',
+        fixTime,
+      );
+    });
+
+    it('queued guard: two effect runs for the same job and stage queue one arrival only (AC-1)', async () => {
+      let resolveDetected: (ok: boolean) => void;
+      mockDetectedArrival.mockImplementation(
+        () =>
+          new Promise(resolve => {
+            resolveDetected = resolve;
+          }),
+      );
+
+      renderHook(() => useArrivalDetection('courier-1'), { wrapper });
+
+      await act(async () => {
+        await Promise.resolve();
+      });
+
+      const fixTime = Date.now();
+      // First effect run with fix
+      act(() => {
+        setLatestFix({
+          latitude: 39.362,
+          longitude: 22.945,
+          accuracyMetres: 15,
+          at: fixTime,
+        });
+      });
+
+      await act(async () => {
+        await Promise.resolve();
+      });
+
+      expect(mockDetectedArrival).toHaveBeenCalledTimes(1);
+
+      // Second effect run with another fix for same job and stage
+      act(() => {
+        setLatestFix({
+          latitude: 39.362,
+          longitude: 22.945,
+          accuracyMetres: 14,
+          at: fixTime + 5000,
+        });
+      });
+
+      await act(async () => {
+        await Promise.resolve();
+      });
+
+      // Queued guard stops a duplicate call: still 1
+      expect(mockDetectedArrival).toHaveBeenCalledTimes(1);
+
+      resolveDetected!(true);
+    });
+
+    it('when detectedArrival resolves false the key is released so a later run queues it (AC-1)', async () => {
+      mockDetectedArrival.mockResolvedValueOnce(false);
+
+      renderHook(() => useArrivalDetection('courier-1'), { wrapper });
+
+      await act(async () => {
+        await Promise.resolve();
+      });
+
+      const fixTime = Date.now();
+      act(() => {
+        setLatestFix({
+          latitude: 39.362,
+          longitude: 22.945,
+          accuracyMetres: 15,
+          at: fixTime,
+        });
+      });
+
+      await act(async () => {
+        await Promise.resolve();
+      });
+
+      expect(mockDetectedArrival).toHaveBeenCalledTimes(1);
+
+      // Later run succeeds
+      mockDetectedArrival.mockResolvedValueOnce(true);
+
+      act(() => {
+        setLatestFix({
+          latitude: 39.362,
+          longitude: 22.945,
+          accuracyMetres: 12,
+          at: fixTime + 1000,
+        });
+      });
+
+      await act(async () => {
+        await Promise.resolve();
+      });
+
+      expect(mockDetectedArrival).toHaveBeenCalledTimes(2);
+      expect(mockDetectedArrival).toHaveBeenLastCalledWith(
+        expect.objectContaining({ id: 'job-1' }),
+        'pickup',
+        fixTime + 1000,
+      );
+    });
+  });
 });

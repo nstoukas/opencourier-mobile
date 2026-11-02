@@ -157,4 +157,24 @@ describe('heldArrivals store (spec 0021, AC-12)', () => {
     await dropHeldArrival('rider-1', 'del-sub');
     expect(listener).not.toHaveBeenCalled();
   });
+
+  it('findHeldArrival waits for a write under way: a hold written in the same instant is found (spec 0021, review nit)', async () => {
+    // Ensure initial load is completed so load() has already resolved
+    await findHeldArrival('rider-1', 'del-init');
+
+    const arrival = {
+      courierId: 'rider-1',
+      deliveryId: 'del-write-wait',
+      firstFixAt: 1700000088888,
+    };
+
+    // Start holding without awaiting the write
+    const writePromise = holdArrival(arrival);
+
+    // In the same instant, search for the held arrival
+    const found = await findHeldArrival('rider-1', 'del-write-wait');
+    await writePromise;
+
+    expect(found).toEqual(arrival);
+  });
 });

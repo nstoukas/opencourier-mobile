@@ -5,6 +5,11 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { AxiosError } from 'axios';
 import { services } from '@app/services/service';
 import { dropWaitingSteps } from '@app/services/jobStepOutbox';
+import { dropHeldArrival } from '@app/services/heldArrivals';
+import {
+  isHandBackInFlight,
+  endHandBack,
+} from '@app/services/handBackInFlight';
 import { Order } from '@app/types/types';
 import { OrderStatus } from '@app/types/enums';
 import { QueryKeys } from '@app/utilities/queryKeys';
@@ -13,6 +18,10 @@ import '@app/localization/i18n';
 
 jest.mock('@app/services/jobStepOutbox', () => ({
   dropWaitingSteps: jest.fn().mockResolvedValue(undefined),
+}));
+
+jest.mock('@app/services/heldArrivals', () => ({
+  dropHeldArrival: jest.fn().mockResolvedValue(undefined),
 }));
 
 describe('useHandBack & useHandBackCountdown (spec 0020, AC-9)', () => {
@@ -39,6 +48,7 @@ describe('useHandBack & useHandBackCountdown (spec 0020, AC-9)', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
+    endHandBack(mockOrder.id);
     alertSpy = jest.spyOn(Alert, 'alert');
     handBackSpy = jest
       .spyOn(services.orderService, 'handBack')
@@ -142,13 +152,15 @@ describe('useHandBack & useHandBackCountdown (spec 0020, AC-9)', () => {
 
     it('on success: calls handBack, dropWaitingSteps, removes job from cache, invalidates queries', async () => {
       const wrapper = createWrapper();
-      queryClient.setQueryData<Order[]>([QueryKeys.inProgressOrders], [
-        mockOrder,
-        { id: 'del-other' } as Order,
-      ]);
+      queryClient.setQueryData<Order[]>(
+        [QueryKeys.inProgressOrders],
+        [mockOrder, { id: 'del-other' } as Order],
+      );
       const invalidateSpy = jest.spyOn(queryClient, 'invalidateQueries');
 
-      const { result } = renderHook(() => useHandBack('courier-1'), { wrapper });
+      const { result } = renderHook(() => useHandBack('courier-1'), {
+        wrapper,
+      });
 
       act(() => {
         result.current.handBack(mockOrder);
@@ -164,8 +176,15 @@ describe('useHandBack & useHandBackCountdown (spec 0020, AC-9)', () => {
       // 1. handBack called
       expect(handBackSpy).toHaveBeenCalledWith('del-handback-123');
 
-      // 2. dropWaitingSteps called for this courier and delivery
-      expect(dropWaitingSteps).toHaveBeenCalledWith('courier-1', 'del-handback-123');
+      // 2. dropWaitingSteps and dropHeldArrival called for this courier and delivery
+      expect(dropWaitingSteps).toHaveBeenCalledWith(
+        'courier-1',
+        'del-handback-123',
+      );
+      expect(dropHeldArrival).toHaveBeenCalledWith(
+        'courier-1',
+        'del-handback-123',
+      );
 
       // 3. Removed from inProgressOrders cache immediately
       const cachedJobs = queryClient.getQueryData<Order[]>([
@@ -205,7 +224,9 @@ describe('useHandBack & useHandBackCountdown (spec 0020, AC-9)', () => {
 
       handBackSpy.mockRejectedValueOnce(error409);
 
-      const { result } = renderHook(() => useHandBack('courier-1'), { wrapper });
+      const { result } = renderHook(() => useHandBack('courier-1'), {
+        wrapper,
+      });
 
       act(() => {
         result.current.handBack(mockOrder);
@@ -244,7 +265,9 @@ describe('useHandBack & useHandBackCountdown (spec 0020, AC-9)', () => {
 
       handBackSpy.mockRejectedValueOnce(error404);
 
-      const { result } = renderHook(() => useHandBack('courier-1'), { wrapper });
+      const { result } = renderHook(() => useHandBack('courier-1'), {
+        wrapper,
+      });
 
       act(() => {
         result.current.handBack(mockOrder);
@@ -270,7 +293,9 @@ describe('useHandBack & useHandBackCountdown (spec 0020, AC-9)', () => {
       // No response object
       handBackSpy.mockRejectedValueOnce(networkError);
 
-      const { result } = renderHook(() => useHandBack('courier-1'), { wrapper });
+      const { result } = renderHook(() => useHandBack('courier-1'), {
+        wrapper,
+      });
 
       act(() => {
         result.current.handBack(mockOrder);
@@ -297,7 +322,9 @@ describe('useHandBack & useHandBackCountdown (spec 0020, AC-9)', () => {
       });
       handBackSpy.mockReturnValueOnce(deferredHandBack);
 
-      const { result } = renderHook(() => useHandBack('courier-1'), { wrapper });
+      const { result } = renderHook(() => useHandBack('courier-1'), {
+        wrapper,
+      });
 
       // First hand back confirm
       act(() => {
@@ -330,6 +357,79 @@ describe('useHandBack & useHandBackCountdown (spec 0020, AC-9)', () => {
 
       expect(handBackSpy).toHaveBeenCalledTimes(1);
       expect(result.current.handingBackId).toBeNull();
+    });
+
+    it('marks delivery in flight during request and clears it after success, dropping held arrival before flag is cleared (AC-12)', async () => {
+      const wrapper = createWrapper();
+      let wasInFlightDuringRequest = false;
+      let wasInFlightWhenHoldDropped = false;
+
+      (dropHeldArrival as jest.Mock).mockImplementation(async () => {
+        wasInFlightWhenHoldDropped = isHandBackInFlight(mockOrder.id);
+      });
+
+      handBackSpy.mockImplementation(async () => {
+        wasInFlightDuringRequest = isHandBackInFlight(mockOrder.id);
+        return { status: 'ASSIGNING_COURIER' };
+      });
+
+      const { result } = renderHook(() => useHandBack('courier-1'), {
+        wrapper,
+      });
+
+      act(() => {
+        result.current.handBack(mockOrder);
+      });
+
+      const confirmButton = alertSpy.mock.calls[0][2].find(
+        (b: any) => b.text === 'Give it back',
+      );
+
+      await act(async () => {
+        await confirmButton.onPress();
+      });
+
+      // Flag was set during request
+      expect(wasInFlightDuringRequest).toBe(true);
+      // dropHeldArrival was called for this courier and order
+      expect(dropHeldArrival).toHaveBeenCalledWith('courier-1', mockOrder.id);
+      // dropHeldArrival happened while flag was still in flight (ordering check)
+      expect(wasInFlightWhenHoldDropped).toBe(true);
+      // Flag cleared in finally after success
+      expect(isHandBackInFlight(mockOrder.id)).toBe(false);
+    });
+
+    it('clears in-flight flag on failure and does NOT drop held arrival (AC-12)', async () => {
+      const wrapper = createWrapper();
+      let wasInFlightDuringRequest = false;
+
+      handBackSpy.mockImplementation(async () => {
+        wasInFlightDuringRequest = isHandBackInFlight(mockOrder.id);
+        throw new Error('Server error');
+      });
+
+      const { result } = renderHook(() => useHandBack('courier-1'), {
+        wrapper,
+      });
+
+      act(() => {
+        result.current.handBack(mockOrder);
+      });
+
+      const confirmButton = alertSpy.mock.calls[0][2].find(
+        (b: any) => b.text === 'Give it back',
+      );
+
+      await act(async () => {
+        await confirmButton.onPress();
+      });
+
+      // Flag was set during request
+      expect(wasInFlightDuringRequest).toBe(true);
+      // Flag cleared in finally despite failure
+      expect(isHandBackInFlight(mockOrder.id)).toBe(false);
+      // Hold is NOT dropped on failure
+      expect(dropHeldArrival).not.toHaveBeenCalled();
     });
   });
 });

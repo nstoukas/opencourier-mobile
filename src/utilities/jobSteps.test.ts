@@ -1,5 +1,12 @@
+import '@app/localization/i18n';
+import i18n from '@app/localization/i18n';
 import { OrderStatus } from '@app/types/enums';
-import { hasReachedStep, shownStatus, jobRank } from './jobSteps';
+import {
+  hasReachedStep,
+  shownStatus,
+  jobRank,
+  JOB_STEP_LABEL_KEY,
+} from './jobSteps';
 
 describe('jobSteps utility (spec 0009, AC-2, AC-6)', () => {
   describe('jobRank and hasReachedStep', () => {
@@ -110,6 +117,15 @@ describe('jobSteps utility (spec 0009, AC-2, AC-6)', () => {
     it('non-job server status outside JOB_ORDER wins', () => {
       expect(shownStatus('CREATED', ['dispatched'])).toBe('CREATED');
       expect(shownStatus('FAILED', ['delivered'])).toBe('FAILED');
+    });
+  });
+
+  describe('JOB_STEP_LABEL_KEY (spec 0021, review fix)', () => {
+    it('maps picked_up to translations:swipe_picked_up (Picked up) and delivered to translations:swipe_delivered (Delivered)', () => {
+      expect(JOB_STEP_LABEL_KEY.picked_up).toBe('translations:swipe_picked_up');
+      expect(JOB_STEP_LABEL_KEY.delivered).toBe('translations:swipe_delivered');
+      expect(i18n.t(JOB_STEP_LABEL_KEY.picked_up)).toBe('Picked up');
+      expect(i18n.t(JOB_STEP_LABEL_KEY.delivered)).toBe('Delivered');
     });
   });
 });

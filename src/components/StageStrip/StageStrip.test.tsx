@@ -1,7 +1,9 @@
 import React from 'react';
+import { StyleSheet } from 'react-native';
 import { render } from '@testing-library/react-native';
 import '@app/localization/i18n';
 import i18n from '@app/localization/i18n';
+import { color } from '@app/styles/theme';
 import { StageStrip } from './StageStrip';
 
 describe('StageStrip (spec 0021, AC-6)', () => {
@@ -19,14 +21,16 @@ describe('StageStrip (spec 0021, AC-6)', () => {
     const restaurantLabel = getByText(
       `${i18n.t('translations:stage_restaurant')} · 1.2 km`,
     );
-    expect(restaurantLabel.props.accessibilityState).toEqual({
-      selected: true,
-    });
+    expect(StyleSheet.flatten(restaurantLabel.props.style).color).toBe(
+      color.foreground,
+    );
 
     const customerLabel = getByText(
       `${i18n.t('translations:stage_customer')} · 3.5 km`,
     );
-    expect(customerLabel.props.accessibilityState).toEqual({ selected: false });
+    expect(StyleSheet.flatten(customerLabel.props.style).color).toBe(
+      color['muted-foreground'],
+    );
   });
 
   it('renders dropoff stage with Restaurant done and Customer current', () => {
@@ -40,15 +44,17 @@ describe('StageStrip (spec 0021, AC-6)', () => {
 
     // At dropoff, restaurant km is hidden and restaurant is done
     const restaurantLabel = getByText(i18n.t('translations:stage_restaurant'));
-    expect(restaurantLabel.props.accessibilityState).toEqual({
-      selected: false,
-    });
+    expect(StyleSheet.flatten(restaurantLabel.props.style).color).toBe(
+      color['muted-foreground'],
+    );
 
     // Customer is current with km
     const customerLabel = getByText(
       `${i18n.t('translations:stage_customer')} · 2.8 km`,
     );
-    expect(customerLabel.props.accessibilityState).toEqual({ selected: true });
+    expect(StyleSheet.flatten(customerLabel.props.style).color).toBe(
+      color.foreground,
+    );
   });
 
   it('renders stops without km when leg figures are not available', () => {

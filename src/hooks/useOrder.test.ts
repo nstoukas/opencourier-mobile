@@ -5,6 +5,7 @@ import { Order } from '@app/types/types';
 import { OrderStatus } from '@app/types/enums';
 import * as jobStepOutbox from '@app/services/jobStepOutbox';
 import * as heldArrivals from '@app/services/heldArrivals';
+import { clearPickedUpTimes, getPickedUpAt } from '@app/services/pickupTimes';
 import useOrder from './useOrder';
 
 let mockUser: any;
@@ -32,6 +33,7 @@ describe('useOrder (spec 0009, spec 0021, AC-3, AC-5, AC-12)', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
+    clearPickedUpTimes();
     mockUser = { id: 'rider-42' };
     addJobStepsSpy = jest
       .spyOn(jobStepOutbox, 'addJobSteps')
@@ -47,6 +49,7 @@ describe('useOrder (spec 0009, spec 0021, AC-3, AC-5, AC-12)', () => {
   });
 
   afterEach(() => {
+    clearPickedUpTimes();
     consoleLogSpy.mockRestore();
     alertSpy.mockRestore();
     findHeldSpy.mockRestore();
@@ -394,6 +397,43 @@ describe('useOrder (spec 0009, spec 0021, AC-3, AC-5, AC-12)', () => {
         }),
       ]);
       expect(dropHeldSpy).toHaveBeenCalledWith('rider-42', 'del-123');
+    });
+
+    it('records swipe time in pickupTimes when queuing succeeded', async () => {
+      const now = 1700000000000;
+      const dateSpy = jest.spyOn(Date, 'now').mockReturnValue(now);
+
+      const { result } = renderHook(() => useOrder());
+
+      let success: boolean | undefined;
+      await act(async () => {
+        success = await result.current.pickedUp({
+          ...baseOrder,
+          status: OrderStatus.dispatched,
+        });
+      });
+
+      expect(success).toBe(true);
+      expect(getPickedUpAt('del-123')).toBe(now);
+
+      dateSpy.mockRestore();
+    });
+
+    it('does NOT record swipe time in pickupTimes when queuing failed', async () => {
+      addJobStepsSpy.mockRejectedValueOnce(new Error('Storage failure'));
+
+      const { result } = renderHook(() => useOrder());
+
+      let success: boolean | undefined;
+      await act(async () => {
+        success = await result.current.pickedUp({
+          ...baseOrder,
+          status: OrderStatus.dispatched,
+        });
+      });
+
+      expect(success).toBe(false);
+      expect(getPickedUpAt('del-123')).toBeUndefined();
     });
   });
 

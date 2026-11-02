@@ -215,4 +215,50 @@ describe('RefusedSteps component (spec 0009, AC-6)', () => {
 
     consoleSpy.mockRestore();
   });
+
+  it('names the refused step Picked up when picked_up is refused (spec 0021, review fix)', async () => {
+    const item: OutboxItem = {
+      id: 'step-pickup',
+      courierId: 'rider-1',
+      deliveryId: 'del-101',
+      step: 'picked_up',
+      tappedAt: 1000,
+      state: 'refused',
+      restaurantName: 'Tasty Gyros',
+    };
+    await seedOutbox([item]);
+
+    render(<RefusedSteps courierId="rider-1" />);
+
+    const translatedStep = i18n.t('translations:swipe_picked_up');
+    expect(translatedStep).toBe('Picked up');
+    const expectedBody = i18n.t('translations:step_refused_body', {
+      restaurant: 'Tasty Gyros',
+      step: translatedStep,
+    });
+    expect(screen.getByText(expectedBody)).toBeTruthy();
+  });
+
+  it('names the refused step Delivered when delivered is refused (spec 0021, review fix)', async () => {
+    const item: OutboxItem = {
+      id: 'step-deliv',
+      courierId: 'rider-1',
+      deliveryId: 'del-101',
+      step: 'delivered',
+      tappedAt: 1000,
+      state: 'refused',
+      restaurantName: 'Tasty Gyros',
+    };
+    await seedOutbox([item]);
+
+    render(<RefusedSteps courierId="rider-1" />);
+
+    const translatedStep = i18n.t('translations:swipe_delivered');
+    expect(translatedStep).toBe('Delivered');
+    const expectedBody = i18n.t('translations:step_refused_body', {
+      restaurant: 'Tasty Gyros',
+      step: translatedStep,
+    });
+    expect(screen.getByText(expectedBody)).toBeTruthy();
+  });
 });

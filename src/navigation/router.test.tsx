@@ -110,4 +110,16 @@ describe('Router (Row 67, Ruling: one permission reader)', () => {
     expect(mockUseGrantedLocationPermission).toHaveBeenCalledTimes(1);
     expect(mockUseArrivalDetection).toHaveBeenCalledWith('courier-1');
   });
+
+  it('runs arrival detection via ArrivalDetector with undefined when no user is logged in (spec 0021, review nit)', () => {
+    mockUseUser.mockReturnValueOnce({ user: undefined as any });
+
+    render(
+      <NavigationContainer>
+        <Router />
+      </NavigationContainer>,
+    );
+
+    expect(mockUseArrivalDetection).toHaveBeenCalledWith(undefined);
+  });
 });
