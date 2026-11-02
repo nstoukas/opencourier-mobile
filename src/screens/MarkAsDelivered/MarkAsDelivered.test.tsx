@@ -4,20 +4,19 @@ import { MarkAsDelivered } from './MarkAsDelivered';
 import { CustomerNotes } from '@app/types/types';
 import * as jobStepOutbox from '@app/services/jobStepOutbox';
 import { services } from '@app/services/service';
+import ButtonSwipe from '@app/components/ButtonSwipe/ButtonSwipe';
 import i18n from '@app/localization/i18n';
 
 jest.mock('@app/hooks/useUser', () => () => ({
   user: { id: 'test-courier-789' },
 }));
 
-describe('MarkAsDelivered (Row 18, no photos; Row 20, bad signal outbox)', () => {
+describe('MarkAsDelivered (Row 18, Row 20, spec 0018, AC-9)', () => {
   let consoleErrorSpy: jest.SpyInstance;
   const keyWarnings: unknown[][] = [];
   let addJobStepsSpy: jest.SpyInstance;
   let sendJobStepSpy: jest.SpyInstance;
 
-  // React logs a missing key warning once per component per test file,
-  // so the spy is set up before the file's first render.
   beforeAll(() => {
     consoleErrorSpy = jest
       .spyOn(console, 'error')
@@ -86,22 +85,32 @@ describe('MarkAsDelivered (Row 18, no photos; Row 20, bad signal outbox)', () =>
     ).toBeNull();
   });
 
-  it('renders Confirm and Report issue buttons', () => {
-    render(<MarkAsDelivered {...defaultProps} />);
+  it('renders Delivered swipe and Report issue button', () => {
+    const { UNSAFE_getByType } = render(<MarkAsDelivered {...defaultProps} />);
 
-    expect(
-      screen.getByText(i18n.t('translations:confirm_mark_as_delivered')),
-    ).toBeTruthy();
+    const swipe = UNSAFE_getByType(ButtonSwipe);
+    expect(swipe.props.title).toBe(i18n.t('translations:confirm_mark_as_delivered'));
     expect(screen.getByText(i18n.t('translations:report_issue'))).toBeTruthy();
   });
 
-  it('pressing Confirm adds a "delivered" step with empty note and goes back, with no network call', async () => {
-    render(<MarkAsDelivered {...defaultProps} />);
+  it('Delivered swipe with onSwiped(false) does nothing', async () => {
+    const { UNSAFE_getByType } = render(<MarkAsDelivered {...defaultProps} />);
 
+    const swipe = UNSAFE_getByType(ButtonSwipe);
     await act(async () => {
-      fireEvent.press(
-        screen.getByText(i18n.t('translations:confirm_mark_as_delivered')),
-      );
+      swipe.props.onSwiped(false);
+    });
+
+    expect(addJobStepsSpy).not.toHaveBeenCalled();
+    expect(mockNavigation.goBack).not.toHaveBeenCalled();
+  });
+
+  it('swiping Delivered adds a "delivered" step with empty note and goes back, with no network call', async () => {
+    const { UNSAFE_getByType } = render(<MarkAsDelivered {...defaultProps} />);
+
+    const swipe = UNSAFE_getByType(ButtonSwipe);
+    await act(async () => {
+      await swipe.props.onSwiped(true);
     });
 
     // 1. Adds 'delivered' step to the outbox
@@ -125,17 +134,16 @@ describe('MarkAsDelivered (Row 18, no photos; Row 20, bad signal outbox)', () =>
     expect(sendJobStepSpy).not.toHaveBeenCalled();
   });
 
-  it('pressing Confirm adds a "delivered" step with the selected note and goes back, with no network call', async () => {
-    render(<MarkAsDelivered {...defaultProps} />);
+  it('swiping Delivered adds a "delivered" step with the selected note and goes back, with no network call', async () => {
+    const { UNSAFE_getByType } = render(<MarkAsDelivered {...defaultProps} />);
 
     // Select the quick note: CustomerNotes.BellnotRung
     const bellNoteText = i18n.t(`translations:${CustomerNotes.BellnotRung}`);
     fireEvent.press(screen.getByText(bellNoteText));
 
+    const swipe = UNSAFE_getByType(ButtonSwipe);
     await act(async () => {
-      fireEvent.press(
-        screen.getByText(i18n.t('translations:confirm_mark_as_delivered')),
-      );
+      await swipe.props.onSwiped(true);
     });
 
     expect(addJobStepsSpy).toHaveBeenCalledTimes(1);
@@ -155,9 +163,29 @@ describe('MarkAsDelivered (Row 18, no photos; Row 20, bad signal outbox)', () =>
     expect(sendJobStepSpy).not.toHaveBeenCalled();
   });
 
+  it('draws a fresh swipe with a new key when the delivered step is refused (AC-9)', async () => {
+    // Make addJobSteps fail so markAsDelivered returns false
+    addJobStepsSpy.mockRejectedValueOnce(new Error('Storage failure'));
+
+    const { UNSAFE_getByType } = render(<MarkAsDelivered {...defaultProps} />);
+
+    const swipeBefore = UNSAFE_getByType(ButtonSwipe);
+    expect((swipeBefore as any)._fiber.key).toBe('0');
+
+    await act(async () => {
+      await swipeBefore.props.onSwiped(true);
+    });
+
+    // Does not go back
+    expect(mockNavigation.goBack).not.toHaveBeenCalled();
+
+    // Key increments to '1' so swipe resets to the beginning
+    const swipeAfter = UNSAFE_getByType(ButtonSwipe);
+    expect((swipeAfter as any)._fiber.key).toBe('1');
+  });
+
   it('renders quick notes with React keys and logs no key warning (Row 66, Clause 6)', () => {
     render(<MarkAsDelivered {...defaultProps} />);
-
     expect(keyWarnings).toHaveLength(0);
   });
 });

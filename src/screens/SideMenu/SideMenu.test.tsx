@@ -6,6 +6,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import Geolocation from 'react-native-geolocation-service';
 import { SideMenuItem, UserStatus } from '@app/types/types';
+import { DrawerScreens } from '@app/navigation/drawer/types';
 import { LOGOUT_OFFLINE_TIMEOUT_MS } from '@app/utilities/constants';
 import * as jobStepOutbox from '@app/services/jobStepOutbox';
 import * as queryPersistence from '@app/services/queryPersistence';
@@ -99,8 +100,8 @@ describe('SideMenu logout (spec 0002, AC-6; spec 0009, AC-8, AC-11)', () => {
     queryClient.clear();
   });
 
-  const renderSideMenu = () => {
-    const mockNavigation: any = {
+  const renderSideMenu = (nav?: any) => {
+    const mockNavigation: any = nav ?? {
       navigate: jest.fn(),
       closeDrawer: jest.fn(),
     };
@@ -337,8 +338,8 @@ describe('SideMenu Location switch (Row 67, Clause 3)', () => {
     queryClient.clear();
   });
 
-  const renderSideMenu = () => {
-    const mockNavigation: any = {
+  const renderSideMenu = (nav?: any) => {
+    const mockNavigation: any = nav ?? {
       navigate: jest.fn(),
       closeDrawer: jest.fn(),
     };
@@ -382,5 +383,27 @@ describe('SideMenu Location switch (Row 67, Clause 3)', () => {
     expect(openSettingsSpy).toHaveBeenCalledTimes(1);
     expect(Geolocation.watchPosition).not.toHaveBeenCalled();
     expect(mockRequestLocationPermission).not.toHaveBeenCalled();
+  });
+
+  describe('SideMenu navigation items (spec 0018, AC-13)', () => {
+    it('has History item and pressing it navigates to DrawerScreens.History', () => {
+      const mockNav = {
+        navigate: jest.fn(),
+        closeDrawer: jest.fn(),
+      } as any;
+
+      const component = renderSideMenu(mockNav);
+      const plainItems = component.root.findAllByType(SideMenuItemPlain);
+      const historyItem = plainItems.find(
+        item => item.props.item === SideMenuItem.History,
+      );
+      expect(historyItem).toBeDefined();
+
+      act(() => {
+        historyItem!.props.onPress(SideMenuItem.History);
+      });
+
+      expect(mockNav.navigate).toHaveBeenCalledWith(DrawerScreens.History);
+    });
   });
 });

@@ -1,5 +1,5 @@
 import React from 'react';
-import { render, screen } from '@testing-library/react-native';
+import { render, screen, act } from '@testing-library/react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { QueryClient } from '@tanstack/react-query';
 
@@ -134,6 +134,12 @@ describe('App smoke tests', () => {
     mockGetOrdersHistory.mockResolvedValue([]);
     mockGetUserInstances.mockResolvedValue([]);
     mockGetInstanceMetadata.mockResolvedValue({});
+  });
+
+  afterEach(async () => {
+    await act(async () => {
+      jest.runOnlyPendingTimers();
+    });
   });
 
   it('renders logged out: passes through Loading and reaches Landing (AC-4)', async () => {

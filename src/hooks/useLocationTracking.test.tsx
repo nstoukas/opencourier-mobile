@@ -18,7 +18,7 @@ import { TrackingMode, WATCH_OPTIONS } from '@app/utilities/locationTracking';
 import { QueryKeys } from '@app/utilities/queryKeys';
 import { stopOnlineService } from '@app/services/onlineService';
 import useUser from '@app/hooks/useUser';
-import Map from '@app/components/Map/Map';
+import { getOwnPosition, setOwnPosition } from '@app/services/ownPosition';
 import { useLocationTracking } from './useLocationTracking';
 
 const mockSetUserLocation = jest.fn().mockResolvedValue({});
@@ -296,9 +296,12 @@ describe('useLocationTracking (Row 67, Clauses 1, 2, 3, 4)', () => {
       expect(refetchSpy).not.toHaveBeenCalled();
     });
 
-    it('writes the position into the React Query cache for [QueryKeys.user] without invalidating or refetching, and consumer Map reads the updated position', async () => {
+    it('writes the position into setOwnPosition and the React Query cache for [QueryKeys.user] without invalidating or refetching (spec 0018, AC-5)', async () => {
       const invalidateSpy = jest.spyOn(queryClient, 'invalidateQueries');
       const refetchSpy = jest.spyOn(queryClient, 'refetchQueries');
+
+      setOwnPosition(null);
+      expect(getOwnPosition()).toBeNull();
 
       const initialUser: User = {
         id: 'rider-1',
@@ -310,34 +313,6 @@ describe('useLocationTracking (Row 67, Clauses 1, 2, 3, 4)', () => {
 
       renderHook(() => useLocationTracking(onlineUser, true), {
         wrapper: createWrapper(),
-      });
-
-      // Consumer Map reads user location through useUser under the same QueryClient
-      const MapConsumer = ({ order }: { order: Order }) => {
-        const { user } = useUser();
-        if (!user) {
-          return null;
-        }
-        return <Map order={order} user={user} />;
-      };
-
-      const testOrder: Order = {
-        id: 'order-1',
-        pickupLocation: { latitude: 39.36, longitude: 22.94 },
-        dropoffLocation: { latitude: 39.37, longitude: 22.95 },
-      } as Order;
-
-      const { UNSAFE_getByType } = render(
-        <QueryClientProvider client={queryClient}>
-          <MapConsumer order={testOrder} />
-        </QueryClientProvider>,
-      );
-
-      // Verify initial position in Map consumer
-      const polylineBefore = UNSAFE_getByType(Polyline);
-      expect(polylineBefore.props.coordinates[0]).toEqual({
-        latitude: 39.0,
-        longitude: 22.0,
       });
 
       expect(watchCallback).toBeDefined();
@@ -352,6 +327,12 @@ describe('useLocationTracking (Row 67, Clauses 1, 2, 3, 4)', () => {
         });
       });
 
+      // Position written to setOwnPosition (AC-5)
+      expect(getOwnPosition()).toEqual({
+        latitude: 39.362,
+        longitude: 22.945,
+      });
+
       // Position written directly into React Query cache for [QueryKeys.user]
       const cachedUser = queryClient.getQueryData<User>([QueryKeys.user]);
       expect(cachedUser?.currentLocation).toEqual({
@@ -362,15 +343,6 @@ describe('useLocationTracking (Row 67, Clauses 1, 2, 3, 4)', () => {
       // Does not trigger any queries invalidation or refetches
       expect(invalidateSpy).not.toHaveBeenCalled();
       expect(refetchSpy).not.toHaveBeenCalled();
-
-      // Consumer Map receives new coordinates reactive to query cache update
-      await waitFor(() => {
-        const polylineAfter = UNSAFE_getByType(Polyline);
-        expect(polylineAfter.props.coordinates[0]).toEqual({
-          latitude: 39.362,
-          longitude: 22.945,
-        });
-      });
     });
 
     it('drops a first fix that arrives after the watch was stopped by rerendering to Offline (calls neither setUserLocation nor setQueryData)', async () => {

@@ -1,9 +1,10 @@
 import React from 'react';
-import { render, screen, fireEvent, act } from '@testing-library/react-native';
+import { render, screen, act } from '@testing-library/react-native';
 import { NextStep } from './NextStep';
 import { OrderStatus } from '@app/types/enums';
 import { Order } from '@app/types/types';
 import { MainScreens } from '@app/navigation/main/types';
+import ButtonSwipe from '../ButtonSwipe/ButtonSwipe';
 import * as jobStepOutbox from '@app/services/jobStepOutbox';
 import i18n from '@app/localization/i18n';
 
@@ -23,7 +24,7 @@ jest.mock('@app/hooks/useUser', () => () => ({
   user: { id: 'test-courier-id' },
 }));
 
-describe('NextStep component (spec 0009, AC-2)', () => {
+describe('NextStep component (spec 0009, spec 0018, AC-8, AC-9)', () => {
   let addJobStepsSpy: jest.SpyInstance;
 
   beforeEach(() => {
@@ -107,8 +108,38 @@ describe('NextStep component (spec 0009, AC-2)', () => {
     });
   });
 
-  describe('Mark as delivered button visibility', () => {
-    it('shows Mark as delivered for picked_up, on_the_way and courier_arrived_at_dropoff_location', () => {
+  describe('Step titles per status (spec 0018, AC-9)', () => {
+    it('shows "Arrived at the restaurant" swipe for ACCEPTED and DISPATCHED', () => {
+      for (const status of [OrderStatus.accepted, OrderStatus.dispatched]) {
+        const { unmount, UNSAFE_getByType } = render(
+          <NextStep
+            order={{ ...baseOrder, status }}
+            onOrderItemsListForCustomer={jest.fn()}
+          />,
+        );
+
+        const swipe = UNSAFE_getByType(ButtonSwipe);
+        expect(swipe.props.title).toBe(i18n.t('translations:arrived_at_pickup'));
+        unmount();
+      }
+    });
+
+    it('shows "Confirm items" swipe for COURIER_ARRIVED_AT_PICKUP_LOCATION', () => {
+      const { UNSAFE_getByType } = render(
+        <NextStep
+          order={{
+            ...baseOrder,
+            status: OrderStatus.courier_arrived_at_pickup_location,
+          }}
+          onOrderItemsListForCustomer={jest.fn()}
+        />,
+      );
+
+      const swipe = UNSAFE_getByType(ButtonSwipe);
+      expect(swipe.props.title).toBe(i18n.t('translations:confirm_items'));
+    });
+
+    it('shows "Arrived at the customer" swipe from PICKED_UP on', () => {
       const deliveredStatuses = [
         OrderStatus.picked_up,
         OrderStatus.on_the_way,
@@ -116,57 +147,42 @@ describe('NextStep component (spec 0009, AC-2)', () => {
       ];
 
       for (const status of deliveredStatuses) {
-        const { unmount } = render(
+        const { unmount, UNSAFE_getByType } = render(
           <NextStep
             order={{ ...baseOrder, status }}
             onOrderItemsListForCustomer={jest.fn()}
           />,
         );
 
-        expect(
-          screen.getByText(i18n.t('translations:mark_as_delivered')),
-        ).toBeTruthy();
-        unmount();
-      }
-    });
-
-    it('does not show Mark as delivered for accepted, dispatched, or courier_arrived_at_pickup_location', () => {
-      const nonDeliveredStatuses = [
-        OrderStatus.accepted,
-        OrderStatus.dispatched,
-        OrderStatus.courier_arrived_at_pickup_location,
-      ];
-
-      for (const status of nonDeliveredStatuses) {
-        const { unmount } = render(
-          <NextStep
-            order={{ ...baseOrder, status }}
-            onOrderItemsListForCustomer={jest.fn()}
-          />,
+        const swipe = UNSAFE_getByType(ButtonSwipe);
+        expect(swipe.props.title).toBe(
+          i18n.t('translations:arrived_at_customer'),
         );
-
-        expect(
-          screen.queryByText(i18n.t('translations:mark_as_delivered')),
-        ).toBeNull();
         unmount();
       }
     });
   });
 
-  describe('Button actions and job steps added', () => {
-    it('tapping Arrived at pickup on an ACCEPTED order adds two steps: dispatched and arrived_at_pickup', async () => {
-      render(
+  describe('Swipe actions and job steps added (Pin 8)', () => {
+    it('swiping Arrived at pickup on an ACCEPTED order adds dispatched + arrived_at_pickup when swiped true; false adds nothing', async () => {
+      const { UNSAFE_getByType } = render(
         <NextStep
           order={{ ...baseOrder, status: OrderStatus.accepted }}
           onOrderItemsListForCustomer={jest.fn()}
         />,
       );
 
-      const arrivedBtn = screen.getByText(
-        i18n.t('translations:arrived_at_pickup'),
-      );
+      const swipe = UNSAFE_getByType(ButtonSwipe);
+
+      // Incomplete swipe (false) does nothing
       await act(async () => {
-        fireEvent.press(arrivedBtn);
+        swipe.props.onSwiped(false);
+      });
+      expect(addJobStepsSpy).not.toHaveBeenCalled();
+
+      // Successful swipe (true) adds dispatched and arrived_at_pickup
+      await act(async () => {
+        await swipe.props.onSwiped(true);
       });
 
       expect(addJobStepsSpy).toHaveBeenCalledTimes(1);
@@ -179,36 +195,27 @@ describe('NextStep component (spec 0009, AC-2)', () => {
       expect(added[0].deliveryId).toBe(baseOrder.id);
     });
 
-    it('tapping Arrived at pickup on a DISPATCHED order adds one step: arrived_at_pickup', async () => {
-      render(
+    it('swiping Arrived at pickup on a DISPATCHED order adds one step: arrived_at_pickup', async () => {
+      const { UNSAFE_getByType } = render(
         <NextStep
           order={{ ...baseOrder, status: OrderStatus.dispatched }}
           onOrderItemsListForCustomer={jest.fn()}
         />,
       );
 
-      const arrivedBtn = screen.getByText(
-        i18n.t('translations:arrived_at_pickup'),
-      );
+      const swipe = UNSAFE_getByType(ButtonSwipe);
+
       await act(async () => {
-        fireEvent.press(arrivedBtn);
+        await swipe.props.onSwiped(true);
       });
 
       expect(addJobStepsSpy).toHaveBeenCalledTimes(1);
       const added = addJobStepsSpy.mock.calls[0][0];
-      expect(added.map((item: any) => item.step)).toEqual([
-        'arrived_at_pickup',
-      ]);
+      expect(added.map((item: any) => item.step)).toEqual(['arrived_at_pickup']);
     });
 
-    it('tapping Confirm items on a COURIER_ARRIVED_AT_PICKUP_LOCATION order adds picked_up', async () => {
-      // If order is ACCEPTED, showPrePickupActions is true, but isCourierArrivedAtPickup is false
-      // If we render with courier_arrived_at_pickup_location, Confirm items shows.
-      // But if an ACCEPTED order somehow triggered confirmOrderItems (e.g. from useOrder directly),
-      // let's verify useOrder's withDispatch adds dispatched + picked_up:
-      // In NextStep, showConfirmOrderItems is only true when isCourierArrivedAtPickup is true.
-      // When at courier_arrived_at_pickup_location, Confirm items adds one step: picked_up.
-      render(
+    it('swiping Confirm items on COURIER_ARRIVED_AT_PICKUP_LOCATION adds picked_up', async () => {
+      const { UNSAFE_getByType } = render(
         <NextStep
           order={{
             ...baseOrder,
@@ -218,9 +225,10 @@ describe('NextStep component (spec 0009, AC-2)', () => {
         />,
       );
 
-      const confirmBtn = screen.getByText(i18n.t('translations:confirm_items'));
+      const swipe = UNSAFE_getByType(ButtonSwipe);
+
       await act(async () => {
-        fireEvent.press(confirmBtn);
+        await swipe.props.onSwiped(true);
       });
 
       expect(addJobStepsSpy).toHaveBeenCalledTimes(1);
@@ -228,46 +236,26 @@ describe('NextStep component (spec 0009, AC-2)', () => {
       expect(added.map((item: any) => item.step)).toEqual(['picked_up']);
     });
 
-    it('Confirm items on an ACCEPTED order adds dispatched + picked_up via useOrder', async () => {
-      // Simulate calling confirmOrderItems on ACCEPTED order
-      // (Even if NextStep only displays the button once arrived at pickup, useOrder withDispatch handles ACCEPTED)
-      const { default: useOrder } = require('@app/hooks/useOrder');
-      // Render dummy component to call hook
-      let hookResult: any;
-      const TestHook = () => {
-        hookResult = useOrder();
-        return null;
-      };
-      render(<TestHook />);
-
-      await act(async () => {
-        await hookResult.confirmOrderItems({
-          ...baseOrder,
-          status: OrderStatus.accepted,
-        });
-      });
-
-      expect(addJobStepsSpy).toHaveBeenCalledTimes(1);
-      const added = addJobStepsSpy.mock.calls[0][0];
-      expect(added.map((item: any) => item.step)).toEqual([
-        'dispatched',
-        'picked_up',
-      ]);
-    });
-
-    it('Mark as delivered adds arrived_at_dropoff then navigates when not yet at customer (picked_up)', async () => {
-      render(
+    it('swiping Arrived at customer on picked_up adds arrived_at_dropoff and navigates', async () => {
+      const { UNSAFE_getByType } = render(
         <NextStep
           order={{ ...baseOrder, status: OrderStatus.picked_up }}
           onOrderItemsListForCustomer={jest.fn()}
         />,
       );
 
-      const deliveredBtn = screen.getByText(
-        i18n.t('translations:mark_as_delivered'),
-      );
+      const swipe = UNSAFE_getByType(ButtonSwipe);
+
+      // Incomplete swipe does nothing
       await act(async () => {
-        fireEvent.press(deliveredBtn);
+        swipe.props.onSwiped(false);
+      });
+      expect(addJobStepsSpy).not.toHaveBeenCalled();
+      expect(mockNavigate).not.toHaveBeenCalled();
+
+      // Successful swipe
+      await act(async () => {
+        await swipe.props.onSwiped(true);
       });
 
       expect(addJobStepsSpy).toHaveBeenCalledTimes(1);
@@ -280,33 +268,8 @@ describe('NextStep component (spec 0009, AC-2)', () => {
       });
     });
 
-    it('Mark as delivered adds arrived_at_dropoff then navigates when on_the_way', async () => {
-      render(
-        <NextStep
-          order={{ ...baseOrder, status: OrderStatus.on_the_way }}
-          onOrderItemsListForCustomer={jest.fn()}
-        />,
-      );
-
-      const deliveredBtn = screen.getByText(
-        i18n.t('translations:mark_as_delivered'),
-      );
-      await act(async () => {
-        fireEvent.press(deliveredBtn);
-      });
-
-      expect(addJobStepsSpy).toHaveBeenCalledTimes(1);
-      const added = addJobStepsSpy.mock.calls[0][0];
-      expect(added.map((item: any) => item.step)).toEqual([
-        'arrived_at_dropoff',
-      ]);
-      expect(mockNavigate).toHaveBeenCalledWith(MainScreens.MarkAsDelivered, {
-        order: expect.objectContaining({ id: baseOrder.id }),
-      });
-    });
-
-    it('Mark as delivered adds nothing when already at the customer (courier_arrived_at_dropoff_location) and navigates', async () => {
-      render(
+    it('swiping Arrived at customer when already at dropoff adds nothing and navigates', async () => {
+      const { UNSAFE_getByType } = render(
         <NextStep
           order={{
             ...baseOrder,
@@ -316,18 +279,35 @@ describe('NextStep component (spec 0009, AC-2)', () => {
         />,
       );
 
-      const deliveredBtn = screen.getByText(
-        i18n.t('translations:mark_as_delivered'),
-      );
+      const swipe = UNSAFE_getByType(ButtonSwipe);
+
       await act(async () => {
-        fireEvent.press(deliveredBtn);
+        await swipe.props.onSwiped(true);
       });
 
-      // No steps added because already at dropoff!
       expect(addJobStepsSpy).not.toHaveBeenCalled();
       expect(mockNavigate).toHaveBeenCalledWith(MainScreens.MarkAsDelivered, {
         order: expect.objectContaining({ id: baseOrder.id }),
       });
+    });
+
+    it('draws a fresh swipe with a new key after a swipe attempt (AC-9)', async () => {
+      const { UNSAFE_getByType } = render(
+        <NextStep
+          order={{ ...baseOrder, status: OrderStatus.dispatched }}
+          onOrderItemsListForCustomer={jest.fn()}
+        />,
+      );
+
+      const swipeBefore = UNSAFE_getByType(ButtonSwipe);
+      expect((swipeBefore as any)._fiber.key).toBe(`${baseOrder.id}-${OrderStatus.dispatched}-0`);
+
+      await act(async () => {
+        await swipeBefore.props.onSwiped(true);
+      });
+
+      const swipeAfter = UNSAFE_getByType(ButtonSwipe);
+      expect((swipeAfter as any)._fiber.key).toBe(`${baseOrder.id}-${OrderStatus.dispatched}-1`);
     });
   });
 });

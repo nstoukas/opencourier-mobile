@@ -2,16 +2,10 @@ import React from 'react';
 import renderer, { act } from 'react-test-renderer';
 import { Order } from '@app/types/types';
 import '@app/localization/i18n';
-
-jest.mock('../Map/Map', () => {
-  const { View } = require('react-native');
-  return () => <View testID="mock-map" />;
-});
-
-jest.mock('@app/utilities/geo', () => ({
-  ...jest.requireActual('@app/utilities/geo'),
-  getDistance: jest.fn().mockResolvedValue({ distance: 3100, duration: 60 }),
-}));
+import ButtonSwipe from '../ButtonSwipe/ButtonSwipe';
+import { ButtonOrder } from '../ButtonOrder/ButtonOrder';
+import { NewOrderCell } from './NewOrderCell';
+import { Paralelogram } from '../Paralelogram/Paralelogram';
 
 jest.mock('@app/hooks/useUser', () => () => ({
   user: {
@@ -20,10 +14,7 @@ jest.mock('@app/hooks/useUser', () => () => ({
   },
 }));
 
-import { NewOrderCell } from './NewOrderCell';
-import { Paralelogram } from '../Paralelogram/Paralelogram';
-
-describe('NewOrderCell (spec 0002 & Row 66 Clauses 4 & 6)', () => {
+describe('NewOrderCell (spec 0002, spec 0018, AC-7, AC-8, AC-9)', () => {
   let consoleErrorSpy: jest.SpyInstance;
   const keyWarnings: unknown[][] = [];
 
@@ -82,11 +73,9 @@ describe('NewOrderCell (spec 0002 & Row 66 Clauses 4 & 6)', () => {
       );
     });
 
-    // No countdown bar (Paralelograms) drawn
     const paralelograms = component!.root.findAllByType(Paralelogram);
     expect(paralelograms).toHaveLength(0);
 
-    // "Waiting less than 1 min" line is shown
     const waitingNode = component!.root.findByProps({
       testID: 'offer-waiting',
     });
@@ -146,11 +135,9 @@ describe('NewOrderCell (spec 0002 & Row 66 Clauses 4 & 6)', () => {
       );
     });
 
-    // Countdown bar (Paralelograms) is drawn under buttons
     const paralelograms = component!.root.findAllByType(Paralelogram);
     expect(paralelograms.length).toBeGreaterThan(0);
 
-    // "Waiting X min" line is NOT shown when there is a deadline
     const waitingNodes = component!.root.findAllByProps({
       testID: 'offer-waiting',
     });
@@ -161,7 +148,7 @@ describe('NewOrderCell (spec 0002 & Row 66 Clauses 4 & 6)', () => {
     });
   });
 
-  it('renders distance in "km" and never "mi" (Row 66, Clause 4)', async () => {
+  it('renders distances from route in "km" and never "mi" (AC-7)', async () => {
     let component: renderer.ReactTestRenderer;
     await act(async () => {
       component = renderer.create(
@@ -175,14 +162,62 @@ describe('NewOrderCell (spec 0002 & Row 66 Clauses 4 & 6)', () => {
           millisRemaining={null}
           totalMillis={null}
           millisWaited={1000}
+          toRestaurant={{ km: '1.2', minutes: 4 }}
+          toCustomer={{ km: '2.9', minutes: 5 }}
         />,
       );
     });
 
     const rootString = JSON.stringify(component!.toJSON());
-    expect(rootString).toContain('3.1 km');
+    expect(rootString).toContain('1.2 km');
+    expect(rootString).toContain('2.9 km');
     expect(rootString).not.toMatch(/\bmi\b/);
     expect(rootString).not.toContain('miles');
+
+    act(() => {
+      component.unmount();
+    });
+  });
+
+  it('Accept swipe calls onAccept only when onSwiped(true); onSwiped(false) calls nothing (AC-9)', () => {
+    const onAcceptMock = jest.fn();
+    const onDeclineMock = jest.fn();
+
+    let component: renderer.ReactTestRenderer;
+    act(() => {
+      component = renderer.create(
+        <NewOrderCell
+          order={dummyOrder}
+          autoAcceptOrders={false}
+          onAccept={onAcceptMock}
+          onDecline={onDeclineMock}
+          onCopyCustomer={jest.fn()}
+          onCopyRestaurant={jest.fn()}
+        />,
+      );
+    });
+
+    const swipe = component!.root.findByType(ButtonSwipe);
+    expect(swipe.props.title).toBe('Accept');
+
+    // Incomplete swipe (let go early)
+    act(() => {
+      swipe.props.onSwiped(false);
+    });
+    expect(onAcceptMock).not.toHaveBeenCalled();
+
+    // Successful swipe
+    act(() => {
+      swipe.props.onSwiped(true);
+    });
+    expect(onAcceptMock).toHaveBeenCalledWith(dummyOrder);
+
+    // Decline button
+    const declineBtn = component!.root.findByType(ButtonOrder);
+    act(() => {
+      declineBtn.props.onPress();
+    });
+    expect(onDeclineMock).toHaveBeenCalledWith(dummyOrder);
 
     act(() => {
       component.unmount();

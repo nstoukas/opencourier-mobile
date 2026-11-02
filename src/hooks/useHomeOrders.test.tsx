@@ -1343,5 +1343,57 @@ describe('useHomeOrders', () => {
         tree.unmount();
       });
     });
+
+    it('invalidates inProgressOrders before user on successful accept (spec 0018, AC-10)', async () => {
+      const orderId = 'order-invalidate-order';
+      queryClient.setQueryData([QueryKeys.newOrders], [{ id: orderId }]);
+
+      const invalidateCalls: string[] = [];
+      const invalidateSpy = jest
+        .spyOn(queryClient, 'invalidateQueries')
+        .mockImplementation(async (options: any) => {
+          if (options?.queryKey?.[0]) {
+            invalidateCalls.push(options.queryKey[0]);
+          }
+          return undefined;
+        });
+
+      mockAcceptOrder.mockResolvedValueOnce({});
+
+      let hookResult: ReturnType<typeof useHomeOrders> | undefined;
+      let tree: renderer.ReactTestRenderer;
+      await act(async () => {
+        tree = renderer.create(
+          <QueryClientProvider client={queryClient}>
+            <HookHost
+              onRender={h => {
+                hookResult = h;
+              }}
+            />
+          </QueryClientProvider>,
+        );
+      });
+
+      await act(async () => {
+        hookResult?.acceptOrderFn(orderId);
+        await Promise.resolve();
+      });
+
+      // Assert that inProgressOrders was invalidated before user
+      const inProgressIndex = invalidateCalls.indexOf(QueryKeys.inProgressOrders);
+      const userIndex = invalidateCalls.indexOf(QueryKeys.user);
+
+      expect(inProgressIndex).toBeGreaterThanOrEqual(0);
+      expect(userIndex).toBeGreaterThanOrEqual(0);
+      expect(inProgressIndex).toBeLessThan(userIndex);
+
+      // Also assert serverInProgress is exposed
+      expect(hookResult?.serverInProgress).toBeDefined();
+
+      invalidateSpy.mockRestore();
+      act(() => {
+        tree.unmount();
+      });
+    });
   });
 });

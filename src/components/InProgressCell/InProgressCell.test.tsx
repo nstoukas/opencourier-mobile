@@ -15,12 +15,7 @@ import { HeadsetIcon } from 'phosphor-react-native/src/icons/Headset';
 import { MapPinIcon } from 'phosphor-react-native/src/icons/MapPin';
 import { OrderStatus } from '@app/types/enums';
 import { Order } from '@app/types/types';
-import '@app/localization/i18n';
-
-jest.mock('../Map/Map', () => {
-  const { View } = require('react-native');
-  return () => <View testID="mock-map" />;
-});
+import i18n from '@app/localization/i18n';
 
 jest.mock('@app/hooks/useUser', () => () => ({
   user: {
@@ -925,6 +920,65 @@ describe('InProgressCell (spec 0007, decision 65.10)', () => {
           expect(pinButton).toBeDefined();
           expect(pinButton.props.disabled).toBe(true);
           expect(pinButton.props.isLoading).toBe(true);
+        });
+      });
+
+      describe('Navigate button and RouteLines (spec 0018, AC-7, AC-12)', () => {
+        it('shows Navigate button when onNavigate is provided and job is active, and pressing it calls onNavigate', () => {
+          const onNavigateMock = jest.fn();
+          const order = {
+            ...baseOrder,
+            status: OrderStatus.picked_up,
+          } as Order;
+
+          const { getByText } = render(
+            <InProgressCell
+              order={order}
+              {...noopProps}
+              onNavigate={onNavigateMock}
+            />,
+          );
+
+          const navButton = getByText(i18n.t('translations:navigate'));
+          fireEvent.press(navButton);
+          expect(onNavigateMock).toHaveBeenCalledWith(order);
+        });
+
+        it('hides Navigate button when job is over (dropped_off or canceled)', () => {
+          for (const status of [OrderStatus.dropped_off, OrderStatus.canceled]) {
+            const { queryByText, unmount } = render(
+              <InProgressCell
+                order={{ ...baseOrder, status } as Order}
+                {...noopProps}
+                onNavigate={jest.fn()}
+              />,
+            );
+
+            expect(queryByText(i18n.t('translations:navigate'))).toBeNull();
+            unmount();
+          }
+        });
+
+        it('renders RouteLines with distance and duration lines', () => {
+          const { getByText } = render(
+            <InProgressCell
+              order={baseOrder as Order}
+              {...noopProps}
+              toRestaurant={{ km: '1.2', minutes: 4 }}
+              toCustomer={{ km: '2.9', minutes: 5 }}
+            />,
+          );
+
+          expect(
+            getByText(
+              i18n.t('translations:route_to_restaurant', { km: '1.2', minutes: 4 }),
+            ),
+          ).toBeTruthy();
+          expect(
+            getByText(
+              i18n.t('translations:route_to_customer', { km: '2.9', minutes: 5 }),
+            ),
+          ).toBeTruthy();
         });
       });
     });
