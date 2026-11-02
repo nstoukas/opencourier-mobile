@@ -76,4 +76,11 @@ the error count is above `typecheck-baseline.json`, and lowers the file when the
   are left out). Never add the customer's name, items, a full address or €/km to it. `ButtonSwipe` takes a `height`; its
   knob, travel and half way follow from it, and the default 48 px swipe is unchanged.
 
+- Auto accept and the hand back (spec 0020): only the app's auto accept loop sends `{ automatic: true }` with an accept; a
+  tap never does, and only an automatic accept posts the `auto-accepted` notice (its own channel and `auto_accept.wav`;
+  a new sound needs a new channel id). After an accept, a 409 `CANT_UPDATE_DELIVERY_STATUS` or a 404 on the dispatched step
+  counts as done. The Hand back button counts down from `handBackUntilOnPhone` (the server's end, corrected by the job
+  list's `serverNow`); during the window, before the restaurant, the card shows only the drop off area
+  (`hidesCustomerDetails`, `dropoffAreaOf`, a copy of the backend rule that must stay the same).
+
 _Drafted by /audit from the repo, worth a quick human pass. Edit freely: once a line stops matching this draft, later runs treat it as curated and will flag rather than overwrite it._
