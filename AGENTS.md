@@ -71,4 +71,9 @@ the error count is above `typecheck-baseline.json`, and lowers the file when the
   mount. On the emulator, the Google Maps SDK can time out reaching Google after a restart and draw nothing at all (no
   streets, no markers): that is the network, not the screen (decision 69.16).
 
+- The offer card (spec 0019) shows only the total, the km to the restaurant and to the customer, the minutes, the
+  restaurant and the drop off area, from the offer's `offerTrip` and `dropoffArea` (the backend works them out; null parts
+  are left out). Never add the customer's name, items, a full address or €/km to it. `ButtonSwipe` takes a `height`; its
+  knob, travel and half way follow from it, and the default 48 px swipe is unchanged.
+
 _Drafted by /audit from the repo, worth a quick human pass. Edit freely: once a line stops matching this draft, later runs treat it as curated and will flag rather than overwrite it._
