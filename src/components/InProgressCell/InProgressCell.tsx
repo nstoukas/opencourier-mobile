@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { StyleProp, ViewStyle, View } from 'react-native';
+import { StyleProp, Text, ViewStyle, View } from 'react-native';
 import { styles } from './InProgressCell.styles';
 import { Note, Order } from '@app/types/types';
 import { useTranslation } from 'react-i18next';
@@ -16,6 +16,7 @@ import { HouseLineIcon } from 'phosphor-react-native/src/icons/HouseLine';
 import { HeadsetIcon } from 'phosphor-react-native/src/icons/Headset';
 import { Button, ButtonType } from '../Button/Button';
 import { isJobOver } from '@app/utilities/jobContact';
+import { MapPinIcon } from 'phosphor-react-native/src/icons/MapPin';
 
 type Props = {
   style?: StyleProp<ViewStyle>;
@@ -32,7 +33,17 @@ type Props = {
   onCallDispatch?: () => void;
   onOrderItemsListForCustomer: () => void;
   onReportIssue: (order: Order) => void;
+  // Spec 0016: "Pin wrong? Set it where I stand". Left out, no button.
+  onMovePin?: (order: Order) => void;
+  // True while this delivery's pin move runs: the button spins and ignores taps.
+  movingPin?: boolean;
 };
+
+// Spec 0016 (AC-8): the pin can be moved while the shown status is "arrived at
+// drop off" (the rider stands at the door), once per delivery.
+export const canMoveDropoffPin = (order: Order): boolean =>
+  order.status === OrderStatus.courier_arrived_at_dropoff_location &&
+  !order.dropoffPointCorrectedAt;
 
 export const InProgressCell = ({
   style,
@@ -47,6 +58,8 @@ export const InProgressCell = ({
   onCallDispatch,
   onOrderItemsListForCustomer,
   onReportIssue,
+  onMovePin,
+  movingPin,
 }: Props) => {
   const { t } = useTranslation();
   const [topExpanded, setTopExpanded] = useState<boolean>(true);
@@ -160,6 +173,32 @@ export const InProgressCell = ({
                 onCopyAddress={() => onMessageCustomer(order)}
                 expanded={bottomExpanded}
               />
+              {/* Spec 0016 (AC-7): floor and doorbell on their own lines, above the notes. */}
+              {order.dropoffFloor ? (
+                <Text style={styles.dropoffDetail}>
+                  {t('translations:dropoff_floor', {
+                    floor: order.dropoffFloor,
+                  })}
+                </Text>
+              ) : null}
+              {order.dropoffDoorbell ? (
+                <Text style={styles.dropoffDetail}>
+                  {t('translations:dropoff_doorbell', {
+                    doorbell: order.dropoffDoorbell,
+                  })}
+                </Text>
+              ) : null}
+              {onMovePin && canMoveDropoffPin(order) ? (
+                <Button
+                  style={styles.movePinButton}
+                  type={ButtonType.white}
+                  icon={MapPinIcon}
+                  title={t('translations:pin_wrong_button')}
+                  isLoading={movingPin}
+                  disabled={movingPin}
+                  onPress={() => onMovePin(order)}
+                />
+              ) : null}
               <InProgressNotes
                 order={order}
                 notes={

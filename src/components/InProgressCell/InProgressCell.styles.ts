@@ -193,4 +193,13 @@ export const styles = StyleSheet.create({
     marginHorizontal: 12,
     marginTop: 10,
   },
+  // Spec 0016: floor and doorbell, larger than the notes so the rider reads them at a glance.
+  dropoffDetail: {
+    ...typeScale.h4,
+    color: color.foreground,
+    marginTop: 6,
+  },
+  movePinButton: {
+    marginTop: 10,
+  },
 });

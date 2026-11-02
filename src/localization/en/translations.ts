@@ -509,4 +509,19 @@ export default {
   cancelled_reminder: 'Tap here to see it.',
   cancelled_send_failed: 'Could not send. Check your signal and try again.',
   earnings_cancelled_job: 'Cancelled job',
+  // Spec 0016: floor and doorbell on the job screen, and moving a wrong pin.
+  dropoff_floor: 'Floor {{floor}}',
+  dropoff_doorbell: 'Doorbell {{doorbell}}',
+  pin_wrong_button: 'Pin wrong? Set it where I stand',
+  pin_move_title: 'Move the pin',
+  pin_move_body:
+    "Move the customer's pin to where you stand now? The restaurant's saved customer is updated for next time.",
+  pin_move_confirm: 'Move pin',
+  pin_move_cancel: 'Cancel',
+  pin_not_precise:
+    'Your location is not precise enough here. Step outside and try again.',
+  pin_no_fix: 'Could not read your location. Try again.',
+  pin_moved: 'Pin moved {{distance}}. Thank you.',
+  pin_no_connection: 'No connection. Try again when you have signal.',
+  pin_move_failed: 'Could not move the pin. Try again.',
 };

@@ -51,6 +51,20 @@ export interface OrderService {
     reason: DeliveryIssueReason;
     note?: string;
   }) => Promise<OrderServiceReponse>;
+  // Spec 0016: moves the customer's drop off pin to where the rider stands.
+  // Online only; throws the axios error on a refusal or no signal.
+  moveDropoffPin: (params: {
+    id: string;
+    latitude: number;
+    longitude: number;
+  }) => Promise<MoveDropoffPinAnswer>;
+}
+
+// The server's answer to a pin move: how far it moved, and whether the
+// restaurant's saved customer moved too (spec 0016, AC-9).
+export interface MoveDropoffPinAnswer {
+  savedCustomerUpdated: boolean;
+  distanceMetres: number;
 }
 
 const orderService = (client: UClient): OrderService => {
@@ -131,6 +145,18 @@ const orderService = (client: UClient): OrderService => {
         : { reason: params.reason },
     );
 
+  const moveDropoffPin = async (params: {
+    id: string;
+    latitude: number;
+    longitude: number;
+  }): Promise<MoveDropoffPinAnswer> => {
+    const { data } = await client.post(
+      `deliveries/${params.id}/dropoff-point`,
+      { latitude: params.latitude, longitude: params.longitude },
+    );
+    return data.result;
+  };
+
   return {
     getNewOrders,
     getOrdersHistory,
@@ -138,6 +164,7 @@ const orderService = (client: UClient): OrderService => {
     acceptOrder,
     sendJobStep,
     reportIssue,
+    moveDropoffPin,
     declineOrder,
   };
 };

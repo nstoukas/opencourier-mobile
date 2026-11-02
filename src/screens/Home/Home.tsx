@@ -49,6 +49,7 @@ import {
   telUrl,
 } from '@app/utilities/jobContact';
 import { useJobContact } from '@app/hooks/useJobContact';
+import { useMoveDropoffPin } from '@app/hooks/useMoveDropoffPin';
 
 type Props = DrawerScreenProp<DrawerScreens.Home>;
 
@@ -59,6 +60,8 @@ export const HomeScreen = ({ navigation }: Props) => {
     useState<boolean>(false);
   const { t } = useTranslation();
   const { user, isLoading, updateStatus } = useUser();
+  // Spec 0016: the rider moves a wrong drop off pin to where they stand.
+  const { movePin, movingId } = useMoveDropoffPin();
   const connectionStatus = useConnectionStatus();
   const [availableMapApps, setAvailableMapApps] = useState<string[]>([
     t('translations:cancel'),
@@ -250,6 +253,8 @@ export const HomeScreen = ({ navigation }: Props) => {
             onReportIssue={order =>
               navigation.navigate(MainScreens.ReportIssue, { order: order })
             }
+            onMovePin={movePin}
+            movingPin={movingId === item.id}
           />
         );
       case HomeTabItem.History:

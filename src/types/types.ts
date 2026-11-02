@@ -288,6 +288,12 @@ export type Order = {
   dropoffBusinessName: string;
   dropoffNotes: string;
   dropoffSellerNotes: string;
+  // Spec 0016: the floor and the name on the doorbell. Like the phone, only while this rider holds
+  // the delivery (row 33): left out in an offer and after the end.
+  dropoffFloor?: string | null;
+  dropoffDoorbell?: string | null;
+  // Spec 0016: set once the rider moved the drop off pin (at most once per delivery).
+  dropoffPointCorrectedAt?: string | null;
   dropoffVerification: Verification;
   dropoffReadyAt: string;
   dropoffEta: string;
