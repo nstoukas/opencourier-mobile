@@ -60,4 +60,15 @@ the error count is above `typecheck-baseline.json`, and lowers the file when the
   with no figure (0, negative), is online only, and is shown once per delivery (`dropoffPointCorrectedAt`). It needs the
   location permission, which the emulator can lose: `adb shell pm grant com.opendeli android.permission.ACCESS_FINE_LOCATION`.
 
+- Home is a full screen map (spec 0018): `RouteMap` behind, `HomeCard` (one of Offline, Online, Last call, an offer, a job)
+  at the bottom, `HomeTopSlot` (status, connection dot, banners) on top; History is a side menu screen. Routes come only
+  from the backend's `deliveries/:id/route`, asked by the SERVER status (not the outbox's); no routing server is ever called
+  from the app (`routingSourceGuard.test.ts` fails on `project-osrm`). The rider marker is the phone's own newest fix
+  (`ownPosition.ts`, memory only, cleared at logout), never the `user` cache, which each refetch resets to the server copy.
+- Every main action is a `ButtonSwipe`, which only moves its knob back when `isSwiped` changes: give each one a `key` that
+  changes after its action runs (status plus an attempt counter), or a refused step leaves the knob at the end.
+- The Jest map mock is a `forwardRef` with `fitToCoordinates` and `animateToRegion` as `jest.fn()` and fires `onMapReady` on
+  mount. On the emulator, the Google Maps SDK can time out reaching Google after a restart and draw nothing at all (no
+  streets, no markers): that is the network, not the screen (decision 69.16).
+
 _Drafted by /audit from the repo, worth a quick human pass. Edit freely: once a line stops matching this draft, later runs treat it as curated and will flag rather than overwrite it._
