@@ -53,7 +53,8 @@ export const isPreciseEnough = (accuracy: number): boolean =>
 
 // The server's own sentence from a refusal (a 4xx such as the 409 "The pin is
 // already where you stand"), if it sent one. A 5xx's text is not for riders.
-const serverMessage = (error: unknown): string | undefined => {
+// Also used by the hand back (spec 0020), whose 409s carry the rider's sentence.
+export const serverMessage = (error: unknown): string | undefined => {
   if (!axios.isAxiosError(error)) {
     return undefined;
   }

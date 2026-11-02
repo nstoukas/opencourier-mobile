@@ -27,6 +27,9 @@ type Props = {
   order: Order;
   onReportIssue?: (order: Order) => void;
   onOrderItemsListForCustomer: () => void;
+  // What the items line calls the customer instead of their name: the drop
+  // off area during the free hand back (spec 0020, decision 71.10).
+  customerTitle?: string;
 };
 
 export const NextStep = ({
@@ -34,6 +37,7 @@ export const NextStep = ({
   order,
   onReportIssue,
   onOrderItemsListForCustomer,
+  customerTitle,
 }: Props) => {
   const { t } = useTranslation();
   const navigation = useNavigation<MainNavigationProp>();
@@ -67,7 +71,9 @@ export const NextStep = ({
         onPress={() => onOrderItemsListForCustomer()}>
         <Icon icon={CheckCircleIcon} weight="fill" size={20} tone="success" />
         <View style={styles.cellText}>
-          <Text style={styles.cellName}>{order.dropoffName}</Text>
+          <Text style={styles.cellName}>
+            {customerTitle ?? order.dropoffName}
+          </Text>
           <Text style={styles.cellItems}>
             {`${order.orderItems.length} ` +
               (order.orderItems.length > 1 ? 'items' : 'item')}

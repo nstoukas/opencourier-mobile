@@ -4,6 +4,7 @@ import { UClient } from './Client';
 import { OrderServiceReponse } from './types';
 import { Order } from '@app/types/types';
 import { offerTimesOnPhone } from '@app/utilities/offerClock';
+import { handBackUntilOnPhone } from '@app/utilities/handBackWindow';
 import { JOB_STEP_ROUTE, JobStep } from '@app/utilities/jobSteps';
 import { StepAnswer } from './jobStepOutbox';
 
@@ -29,14 +30,47 @@ export const isOfferEndedError = (error: unknown): boolean => {
   );
 };
 
+// The error code Mark as dispatched answers (with a 409) for any status but
+// ACCEPTED: the delivery is already dispatched, or it is no longer this
+// rider's to dispatch (a hand back landed in between, spec 0020, AC-10).
+export const CANT_UPDATE_DELIVERY_STATUS_CODE = 'CANT_UPDATE_DELIVERY_STATUS';
+
+// True for that 409. After an accept that went through, it means there is
+// nothing left to do: the outbox counts it as sent for the same reason.
+export const isCantUpdateStatusError = (error: unknown): boolean => {
+  if (!axios.isAxiosError(error) || error.response?.status !== 409) {
+    return false;
+  }
+  const result = error.response.data?.result;
+  return (
+    Array.isArray(result) &&
+    result.some(
+      (item: { code?: string }) =>
+        item?.code === CANT_UPDATE_DELIVERY_STATUS_CODE,
+    )
+  );
+};
+
+// What the app sends with an accept (spec 0020, AC-11). `automatic` is true
+// only when the phone accepted by itself (the rider's auto accept setting);
+// a rider's own tap leaves it out.
+export type AcceptOrderParams = { id: string; automatic?: boolean };
+
 export interface OrderService {
   // The list of offers (the `data` array of the paginated response), each
   // with its offer times moved onto the phone's clock (`phoneClock`).
   getNewOrders: () => Promise<Order[]>;
-  // Both return `data.result.data`, the same orders array as getNewOrders.
+  // The jobs (`data.result.data`); a job with a free hand back window gets
+  // its end moved onto the phone's clock (`handBackUntilOnPhone`, spec 0020).
   getInProgressOrders: () => Promise<Order[]>;
+  // Returns `data.result.data`, the same orders array as getNewOrders.
   getOrdersHistory: () => Promise<Order[]>;
-  acceptOrder: (id: string) => Promise<OrderServiceReponse>;
+  // Accepts, then marks as dispatched. A 409 CANT_UPDATE_DELIVERY_STATUS on
+  // the second call counts as done (spec 0020, AC-10).
+  acceptOrder: (params: AcceptOrderParams) => Promise<OrderServiceReponse>;
+  // Spec 0020 (AC-9): gives an accepted order back inside the free window.
+  // Online only; throws the axios error on a refusal (404, 409) or no signal.
+  handBack: (id: string) => Promise<{ status: string }>;
   declineOrder: (id: string) => Promise<OrderServiceReponse>;
   // Sends one job step from the outbox (spec 0009) and reports the answer;
   // it never throws. `tapAgeMs` is how long ago the rider tapped.
@@ -86,10 +120,29 @@ const orderService = (client: UClient): OrderService => {
   };
 
   const getInProgressOrders = async (): Promise<Order[]> => {
+    // The phone's clock on both sides of the request, as in getNewOrders: the
+    // midpoint is the phone time that best matches the server's `serverNow`.
+    const sentAt = Date.now();
     const { data } = await client.get(
       'deliveries/in-progress?page=0&perPage=10',
     );
-    return data.result.data;
+    const receivedAt = Date.now();
+    const phoneNow = sentAt + (receivedAt - sentAt) / 2;
+    const orders: Order[] = data.result.data;
+    // Only a job inside its free hand back window has an end to move; the
+    // others are returned as they came.
+    return orders.map(order =>
+      order.handBackUntil
+        ? {
+            ...order,
+            handBackUntilOnPhone: handBackUntilOnPhone(
+              order.handBackUntil,
+              data.result.serverNow,
+              phoneNow,
+            ),
+          }
+        : order,
+    );
   };
 
   const getOrdersHistory = async (): Promise<Order[]> => {
@@ -97,9 +150,33 @@ const orderService = (client: UClient): OrderService => {
     return data.result.data;
   };
 
-  const acceptOrder = async (id: string): Promise<OrderServiceReponse> => {
-    await client.post(`deliveries/${id}/accept`, {});
-    return client.post(`deliveries/${id}/mark-as-dispatched`, {});
+  const acceptOrder = async ({
+    id,
+    automatic = false,
+  }: AcceptOrderParams): Promise<OrderServiceReponse> => {
+    // The server writes "accepted automatically" on the delivery's timeline
+    // when told (spec 0020, AC-1); a tap sends an empty body, as before.
+    await client.post(
+      `deliveries/${id}/accept`,
+      automatic ? { automatic: true } : {},
+    );
+    try {
+      return await client.post(`deliveries/${id}/mark-as-dispatched`, {});
+    } catch (error) {
+      // The accept went through. A 409 here means the delivery is already
+      // past ACCEPTED or no longer this rider's (a hand back in between):
+      // nothing is left to do, so it is not an "Error accepting order".
+      if (isCantUpdateStatusError(error)) {
+        return { data: null, error: null };
+      }
+      throw error;
+    }
+  };
+
+  const handBack = async (id: string): Promise<{ status: string }> => {
+    // No body: the server knows the rider from the login.
+    const { data } = await client.post(`deliveries/${id}/hand-back`);
+    return data.result;
   };
 
   const declineOrder = async (id: string): Promise<OrderServiceReponse> => {
@@ -162,6 +239,7 @@ const orderService = (client: UClient): OrderService => {
     getOrdersHistory,
     getInProgressOrders,
     acceptOrder,
+    handBack,
     sendJobStep,
     reportIssue,
     moveDropoffPin,

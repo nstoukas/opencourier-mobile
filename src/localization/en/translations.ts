@@ -544,4 +544,14 @@ export default {
   pin_moved: 'Pin moved {{distance}}. Thank you.',
   pin_no_connection: 'No connection. Try again when you have signal.',
   pin_move_failed: 'Could not move the pin. Try again.',
+  // Spec 0020: the free hand back on the job card, and the auto accept notice.
+  hand_back_button: 'Hand back · {{seconds}} s',
+  hand_back_confirm_title: 'Give this order back?',
+  hand_back_confirm_body: 'It goes to another rider. No cost to you.',
+  hand_back_confirm: 'Give it back',
+  hand_back_cancel: 'Keep it',
+  hand_back_no_connection: 'No connection. Try again when you have signal.',
+  hand_back_failed: 'Could not hand the order back. Try again.',
+  auto_accepted_channel: 'Orders accepted automatically',
+  auto_accepted_title: 'Order accepted automatically: {{restaurant}}',
 };

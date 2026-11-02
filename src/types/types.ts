@@ -349,6 +349,13 @@ export type Order = {
   // Spec 0019: the drop off street, or the city when the street would give
   // the house away (the same as the offer push). Offers only.
   dropoffArea?: string;
+  // Spec 0020: the end of the free hand back, as ISO date text on the server's
+  // clock; set only while it is ahead and the rider has not reached the
+  // restaurant. The job list (deliveries/in-progress) sends it.
+  handBackUntil?: string | null;
+  // The time above moved onto this phone's clock (see
+  // `utilities/handBackWindow.ts`). Not sent by the server.
+  handBackUntilOnPhone?: number | null;
 };
 
 // An offer's times in milliseconds on the phone's own clock (like Date.now()).

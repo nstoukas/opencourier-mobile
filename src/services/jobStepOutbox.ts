@@ -187,6 +187,24 @@ export const dismissRefused = (
     ),
   );
 
+// Removes this rider's steps of a delivery still waiting to be sent: the
+// rider handed the delivery back (spec 0020, AC-9), so none of them may go
+// out for a job that is no longer theirs. Refused items stay for their card.
+export const dropWaitingSteps = (
+  courierId: string,
+  deliveryId: string,
+): Promise<void> =>
+  change(current =>
+    current.filter(
+      item =>
+        !(
+          item.courierId === courierId &&
+          item.deliveryId === deliveryId &&
+          item.state === 'waiting'
+        ),
+    ),
+  );
+
 // How many steps of this rider wait to be sent, once the stored list is read
 // (asked right after the app starts, memory alone could still say 0).
 export const waitingCount = async (courierId: string): Promise<number> => {

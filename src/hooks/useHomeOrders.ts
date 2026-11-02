@@ -27,7 +27,21 @@ import {
   isOfferAlertDisplayed,
 } from '@app/services/offerPush/offerAlert';
 import { playOfferSound } from '@app/services/offerPush/phone';
+import { announceAutoAccept } from '@app/services/offerPush/autoAccepted';
 import { isHomeInFront } from '@app/navigation/navigationRef';
+
+// What one accept carries (spec 0020, AC-11). `automatic` is true only when
+// the phone accepted by itself; `restaurantName` names the order in the auto
+// accept notice (AC-12). Only `id` and `automatic` are sent to the server.
+type AcceptVariables = {
+  id: string;
+  automatic: boolean;
+  restaurantName?: string;
+};
+
+// The restaurant's name as the rest of the app shows it.
+const restaurantNameOf = (order: Order): string =>
+  order.pickupBusinessName || order.pickupName || '';
 
 // An offer's timing as the countdowns need it (spec 0002).
 const offerTimingOf = (order: Order): OfferTiming => ({
@@ -140,10 +154,17 @@ export const useHomeOrders = () => {
   // mutations
 
   const { mutate: acceptOrder } = useMutation({
-    mutationFn: services.orderService.acceptOrder,
-    // The second argument is the offer id we passed to `acceptOrder(id)`.
-    onSuccess: async (_result, orderId) => {
+    mutationFn: ({ id, automatic }: AcceptVariables) =>
+      services.orderService.acceptOrder({ id, automatic }),
+    // The second argument is what we passed to `acceptOrder({ ... })`; the
+    // `{ id: orderId }` pattern takes its `id` out under the name `orderId`.
+    onSuccess: async (_result, { id: orderId, automatic, restaurantName }) => {
       countdowns.forget(orderId);
+      // The phone took this order by itself: say so, with its own sound, once
+      // (spec 0020, AC-12). A tapped accept plays nothing new.
+      if (automatic) {
+        announceAutoAccept(orderId, restaurantName ?? '');
+      }
       refetchNew();
       // The jobs first, then the user, in that order (as socket.tsx does, for
       // row 68's tracking reason): a rider on Last call is set Offline by the
@@ -154,7 +175,7 @@ export const useHomeOrders = () => {
       });
       await queryClient.invalidateQueries({ queryKey: [QueryKeys.user] });
     },
-    onError: (error, orderId) => {
+    onError: (error, { id: orderId }) => {
       if (isOfferEndedError(error)) {
         dropEndedOffer(orderId);
         return;
@@ -242,7 +263,8 @@ export const useHomeOrders = () => {
       return;
     }
     answerHere(orderId);
-    acceptOrder(orderId);
+    // The rider's own tap: never `automatic` (spec 0020, AC-11).
+    acceptOrder({ id: orderId, automatic: false });
     setDataSourceNew(current => current.filter(order => order.id !== orderId));
   };
 
@@ -264,8 +286,10 @@ export const useHomeOrders = () => {
       // timer of offers that are gone.
       countdowns.sync(offers.map(offerTimingOf));
       // Auto accept riders: the phone accepts each offer as soon as it
-      // arrives (AC-8), at most once per offer. The server never accepts on
-      // the rider's behalf.
+      // arrives (AC-8), at most once per offer, and tells the server it did
+      // so by itself (spec 0020, AC-11). The server never accepts on the
+      // rider's behalf. Only ordinary offers exist, so every offer here is
+      // one (AC-13); add ons (row 81) must be skipped here once they exist.
       if (autoAccept) {
         for (const order of offers) {
           if (
@@ -273,7 +297,11 @@ export const useHomeOrders = () => {
             countdowns.claimForAutoAccept(order.id)
           ) {
             answerHere(order.id);
-            acceptOrder(order.id);
+            acceptOrder({
+              id: order.id,
+              automatic: true,
+              restaurantName: restaurantNameOf(order),
+            });
           }
         }
       }

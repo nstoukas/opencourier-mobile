@@ -15,8 +15,11 @@ import { Button, ButtonType } from '../Button/Button';
 import { isJobOver } from '@app/utilities/jobContact';
 import { MapPinIcon } from 'phosphor-react-native/src/icons/MapPin';
 import { NavigationArrowIcon } from 'phosphor-react-native/src/icons/NavigationArrow';
+import { ArrowUUpLeftIcon } from 'phosphor-react-native/src/icons/ArrowUUpLeft';
 import { RouteLines } from '../RouteLines/RouteLines';
 import { LegFigures } from '@app/utilities/routeLegs';
+import { canHandBack, dropoffAreaOf } from '@app/utilities/handBackWindow';
+import { useHandBackCountdown } from '@app/hooks/useHandBack';
 
 type Props = {
   style?: StyleProp<ViewStyle>;
@@ -43,6 +46,11 @@ type Props = {
   routeUnavailable?: boolean;
   // Spec 0018 (AC-12): opens the rider's navigation app toward the next stop.
   onNavigate?: (order: Order) => void;
+  // Spec 0020 (AC-9): gives the order back inside the free window (asks
+  // first). Left out, no Hand back button.
+  onHandBack?: (order: Order) => void;
+  // True while this delivery's hand back is being sent: the button spins.
+  handingBack?: boolean;
 };
 
 // Spec 0016 (AC-8): the pin can be moved while the shown status is "arrived at
@@ -70,6 +78,8 @@ export const InProgressCell = ({
   toCustomer,
   routeUnavailable = false,
   onNavigate,
+  onHandBack,
+  handingBack,
 }: Props) => {
   const { t } = useTranslation();
   const [topExpanded, setTopExpanded] = useState<boolean>(true);
@@ -81,6 +91,18 @@ export const InProgressCell = ({
   const jobOver = isJobOver(order.status);
   const canReachCustomer = !!order.dropoffPhoneNumber && !jobOver;
   const canReachRestaurant = !!order.pickupPhoneNumber && !jobOver;
+
+  // Spec 0020: the free hand back window. The card is drawn again each second
+  // while it is open, so the countdown moves and everything below changes back
+  // the moment it ends.
+  const handBackSeconds = useHandBackCountdown(order.handBackUntilOnPhone);
+  const inHandBackWindow = handBackSeconds > 0;
+  const showHandBack = !!onHandBack && canHandBack(order, Date.now());
+  // Decision 71.10: during the window the card shows only the drop off area,
+  // as the offer card does, never the customer's name or full address, so a
+  // rider who gives the order back has seen no more than the offer showed.
+  const dropoffArea = dropoffAreaOf(order.dropoffLocation) || 'N/A';
+  const restaurantName = order.pickupBusinessName || order.pickupName || 'N/A';
 
   return (
     <View style={[styles.container, style]}>
@@ -102,8 +124,21 @@ export const InProgressCell = ({
             onPress={() => onNavigate(order)}
           />
         ) : null}
+        {showHandBack ? (
+          <Button
+            style={styles.dispatchButton}
+            type={ButtonType.white}
+            icon={ArrowUUpLeftIcon}
+            title={t('translations:hand_back_button', {
+              seconds: handBackSeconds,
+            })}
+            isLoading={handingBack}
+            disabled={handingBack}
+            onPress={() => onHandBack?.(order)}
+          />
+        ) : null}
         <InProgressCellHeader
-          title={order.dropoffName ?? 'N/A'}
+          title={inHandBackWindow ? restaurantName : order.dropoffName ?? 'N/A'}
           icon={StorefrontIcon}
           expanded={topExpanded}
           onExpandedPress={() => setTopExpanded(!topExpanded)}
@@ -144,7 +179,9 @@ export const InProgressCell = ({
           </View>
         </View>
         <InProgressCellHeader
-          title={order.dropoffBusinessName ?? 'N/A'}
+          title={
+            inHandBackWindow ? dropoffArea : order.dropoffBusinessName ?? 'N/A'
+          }
           icon={HouseLineIcon}
           expanded={bottomExpanded}
           onExpandedPress={() => setBottomExpanded(!bottomExpanded)}
@@ -153,66 +190,70 @@ export const InProgressCell = ({
         <View style={styles.containerContentRestaurant}>
           <View style={styles.containerLeft} />
           <View style={styles.containerInfo}>
-            <View style={[styles.colapsable]}>
-              <InProgressAdress
-                order={order}
-                customerOrRestaurant="customer"
-                onAddressPress={() => onCustomerAddressPress(order)}
-                onCall={
-                  canReachCustomer ? () => onCallCustomer(order) : undefined
-                }
-                onText={
-                  canReachCustomer && onTextCustomer
-                    ? () => onTextCustomer(order)
-                    : undefined
-                }
-                onCopyAddress={() => onMessageCustomer(order)}
-                expanded={bottomExpanded}
-              />
-              {/* Spec 0016 (AC-7): floor and doorbell on their own lines, above the notes. */}
-              {order.dropoffFloor ? (
-                <Text style={styles.dropoffDetail}>
-                  {t('translations:dropoff_floor', {
-                    floor: order.dropoffFloor,
-                  })}
-                </Text>
-              ) : null}
-              {order.dropoffDoorbell ? (
-                <Text style={styles.dropoffDetail}>
-                  {t('translations:dropoff_doorbell', {
-                    doorbell: order.dropoffDoorbell,
-                  })}
-                </Text>
-              ) : null}
-              {onMovePin && canMoveDropoffPin(order) ? (
-                <Button
-                  style={styles.movePinButton}
-                  type={ButtonType.white}
-                  icon={MapPinIcon}
-                  title={t('translations:pin_wrong_button')}
-                  isLoading={movingPin}
-                  disabled={movingPin}
-                  onPress={() => onMovePin(order)}
+            {/* During the free hand back the area in the title above is all
+                that shows of the customer (decision 71.10). */}
+            {inHandBackWindow ? null : (
+              <View style={[styles.colapsable]}>
+                <InProgressAdress
+                  order={order}
+                  customerOrRestaurant="customer"
+                  onAddressPress={() => onCustomerAddressPress(order)}
+                  onCall={
+                    canReachCustomer ? () => onCallCustomer(order) : undefined
+                  }
+                  onText={
+                    canReachCustomer && onTextCustomer
+                      ? () => onTextCustomer(order)
+                      : undefined
+                  }
+                  onCopyAddress={() => onMessageCustomer(order)}
+                  expanded={bottomExpanded}
                 />
-              ) : null}
-              <InProgressNotes
-                order={order}
-                notes={
-                  order.dropoffSellerNotes ? [order.dropoffSellerNotes] : []
-                }
-                headerTitle={t('translations:customer_notes')}
-                expanded={bottomExpanded}
-                noteCreationDisabled={true}
-              />
-              <InProgressNotes
-                order={order}
-                notes={order.dropOffLocationNotes}
-                headerTitle={t('translations:location_courier_notes')}
-                expanded={bottomExpanded}
-                noteCreationDisabled={false}
-                type="location"
-              />
-            </View>
+                {/* Spec 0016 (AC-7): floor and doorbell on their own lines, above the notes. */}
+                {order.dropoffFloor ? (
+                  <Text style={styles.dropoffDetail}>
+                    {t('translations:dropoff_floor', {
+                      floor: order.dropoffFloor,
+                    })}
+                  </Text>
+                ) : null}
+                {order.dropoffDoorbell ? (
+                  <Text style={styles.dropoffDetail}>
+                    {t('translations:dropoff_doorbell', {
+                      doorbell: order.dropoffDoorbell,
+                    })}
+                  </Text>
+                ) : null}
+                {onMovePin && canMoveDropoffPin(order) ? (
+                  <Button
+                    style={styles.movePinButton}
+                    type={ButtonType.white}
+                    icon={MapPinIcon}
+                    title={t('translations:pin_wrong_button')}
+                    isLoading={movingPin}
+                    disabled={movingPin}
+                    onPress={() => onMovePin(order)}
+                  />
+                ) : null}
+                <InProgressNotes
+                  order={order}
+                  notes={
+                    order.dropoffSellerNotes ? [order.dropoffSellerNotes] : []
+                  }
+                  headerTitle={t('translations:customer_notes')}
+                  expanded={bottomExpanded}
+                  noteCreationDisabled={true}
+                />
+                <InProgressNotes
+                  order={order}
+                  notes={order.dropOffLocationNotes}
+                  headerTitle={t('translations:location_courier_notes')}
+                  expanded={bottomExpanded}
+                  noteCreationDisabled={false}
+                  type="location"
+                />
+              </View>
+            )}
           </View>
         </View>
       </View>
@@ -228,6 +269,7 @@ export const InProgressCell = ({
       ) : null}
       <NextStep
         order={order}
+        customerTitle={inHandBackWindow ? dropoffArea : undefined}
         onOrderItemsListForCustomer={() => onOrderItemsListForCustomer()}
         onReportIssue={() => onReportIssue(order)}
       />

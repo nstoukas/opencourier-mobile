@@ -13,7 +13,10 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import axios from 'axios';
 import i18next from 'i18next';
-import { isOfferEndedError } from '@app/services/orderService';
+import {
+  isCantUpdateStatusError,
+  isOfferEndedError,
+} from '@app/services/orderService';
 import { queryClient } from '@app/services/queryClient';
 import { QueryKeys } from '@app/utilities/queryKeys';
 import {
@@ -69,8 +72,18 @@ export const answerOffer = async (
 
   try {
     if (answer === 'accept') {
+      // A tap on the alert is the rider's own: never `automatic` (spec 0020,
+      // AC-11), so the body stays empty.
       await api.post(`${path}/accept`, {});
-      await api.post(`${path}/mark-as-dispatched`, {});
+      // As in the app's acceptOrder (AC-10): a 409 CANT_UPDATE_DELIVERY_STATUS
+      // here means nothing is left to do (a hand back landed in between).
+      await api
+        .post(`${path}/mark-as-dispatched`, {})
+        .catch((error: unknown) => {
+          if (!isCantUpdateStatusError(error)) {
+            throw error;
+          }
+        });
     } else {
       await api.post(`${path}/reject`, {});
     }

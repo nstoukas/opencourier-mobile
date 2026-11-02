@@ -34,6 +34,11 @@ import {
 } from '@app/utilities/jobContact';
 import { useJobContact } from '@app/hooks/useJobContact';
 import { useMoveDropoffPin } from '@app/hooks/useMoveDropoffPin';
+import { useHandBack } from '@app/hooks/useHandBack';
+import {
+  dropoffAreaOf,
+  isHandBackWindowOpen,
+} from '@app/utilities/handBackWindow';
 import { useDeliveryRoute } from '@app/hooks/useDeliveryRoute';
 import { usePickupPoints } from '@app/hooks/usePickupPoints';
 import { useNavigateTo } from '@app/hooks/useNavigateTo';
@@ -72,6 +77,8 @@ export const HomeScreen = ({ navigation }: Props) => {
   const { t } = useTranslation();
   const { user, isLoading, updateStatus } = useUser();
   const { movePin, movingId } = useMoveDropoffPin();
+  // Spec 0020 (AC-9): the free hand back in the first minute after accepting.
+  const { handBack, handingBackId } = useHandBack(user?.id);
   const connectionStatus = useConnectionStatus();
   const navigateTo = useNavigateTo();
   const { locationPermission } = useLocationPermission();
@@ -324,7 +331,10 @@ export const HomeScreen = ({ navigation }: Props) => {
         onCustomerAddressPress={navigateToCustomer}
         onOrderItemsListForCustomer={() =>
           navigation.navigate(MainScreens.ItemsCollected, {
-            customerName: order.dropoffName,
+            // The area, not the name, during the free hand back (71.10).
+            customerName: isHandBackWindowOpen(order, Date.now())
+              ? dropoffAreaOf(order.dropoffLocation)
+              : order.dropoffName,
             items: order.orderItems,
           })
         }
@@ -337,6 +347,8 @@ export const HomeScreen = ({ navigation }: Props) => {
         toCustomer={lines.toCustomer}
         routeUnavailable={routeUnavailable}
         onNavigate={onNavigate}
+        onHandBack={handBack}
+        handingBack={handingBackId === order.id}
       />
     );
   };
