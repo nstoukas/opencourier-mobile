@@ -20,7 +20,7 @@ export type OfferAlertData = {
   restaurantName: string;
   dropoffArea: string; // a street or a town, never a house number
   distanceKm: string; // already formatted by the server, e.g. "2.4"
-  minutes: string; // empty until row 70 sends it
+  minutes: string; // empty: the push does not send it yet (spec 0019, decision 70.4)
   insistent: boolean; // the server's 2 minute re send (AC-7)
 };
 

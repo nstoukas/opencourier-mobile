@@ -32,16 +32,12 @@ export const styles = StyleSheet.create({
   buttonTop: {
     marginBottom: 12,
   },
+  // flexShrink lets a long name or street wrap inside its row instead of
+  // being cut off at the card's edge (Fable's review).
   textName: {
     fontWeight: '700',
     fontSize: typeScale.body.fontSize,
-  },
-  map: {
-    width: 143,
-    height: 138,
-    borderRadius: radius.xl,
-    backgroundColor: Colors.gray1,
-    marginRight: 16,
+    flexShrink: 1,
   },
   containerLoader: {
     flexDirection: 'row',
@@ -77,6 +73,7 @@ export const styles = StyleSheet.create({
   textArea: {
     fontSize: typeScale.body.fontSize,
     color: Colors.black3,
+    flexShrink: 1,
   },
   // Decline matches the Accept swipe's width (spec 0019, AC-5).
   buttonDecline: {

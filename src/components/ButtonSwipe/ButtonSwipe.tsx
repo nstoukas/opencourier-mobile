@@ -53,9 +53,12 @@ const ButtonSwipe: FunctionComponent<Props> = ({
 }: Props) => {
   // The knob is a circle filling the height inside the padding; it travels the
   // rest of the width (spec 0019: a taller swipe gets a thumb sized knob).
-  const knob = height - 2 * BUTTON_PADDING;
-  const swipeRange = BUTTON_WIDTH - 2 * BUTTON_PADDING - knob;
-  const halfWay = BUTTON_WIDTH / 2 - knob / 2;
+  // The room for the knob sets how far it travels; the knob drawn is 2 px
+  // smaller, so a default 48 px swipe draws its 32 px knob exactly as before.
+  const knobRoom = height - 2 * BUTTON_PADDING;
+  const knob = knobRoom - 2;
+  const swipeRange = BUTTON_WIDTH - 2 * BUTTON_PADDING - knobRoom;
+  const halfWay = BUTTON_WIDTH / 2 - knobRoom / 2;
   const X = useSharedValue(0);
 
   useEffect(() => {
@@ -110,7 +113,7 @@ const ButtonSwipe: FunctionComponent<Props> = ({
             translateX: interpolate(
               X.value,
               [0, swipeRange],
-              [0, BUTTON_WIDTH / 2 - knob],
+              [0, BUTTON_WIDTH / 2 - knobRoom],
               Extrapolate.CLAMP,
             ),
           },
