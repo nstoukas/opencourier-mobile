@@ -176,6 +176,28 @@ Needs a native rebuild (a new sound file and notification channel).
 - Tests by agy (`5332208`): 1025 pass; 10 checked by hand by putting their bug back. Reviewed by
   Fable (approve with nits, fixed in `ab04175`).
 
+### Two swipes per job, arrival noticed by the app, one stop at a time (row 19, spec 0021): `767f4bd` to `26bf756`
+No native rebuild needed. Needs the backend's row 19.
+- **Arrival is noticed.** The app compares the fixes it already takes with the restaurant and the
+  customer. Within the co-op's radius (and an accuracy of at most max(radius, 30 m)), it records
+  the arrival, marked "detected". Nothing new about the rider's position leaves the phone. Every
+  job is checked on its own, legs included. An arrival made with no signal waits in the outbox with
+  its true time.
+- **The free hand back is kept.** An arrival detected during the hand back window is held, kept
+  across an app restart. It is sent when the window ends, with the time the rider really arrived.
+- **Two swipes.** "Picked up", then "Delivered", always in the same pinned spot below the card.
+  A swipe with no arrival on record records a tapped one first. "I'm here" is the manual backup.
+  The Mark as delivered screen, its note chips and the Items collected screen are gone.
+- **One stop at a time**, in the general shape of the big rider apps. At the restaurant the order
+  code (`#k3x9qz`) and "for Maria" lead; at the door the customer's name, address, floor and
+  doorbell, with 48 px call, message and navigate icons. Every note (leave at door, the customer's,
+  the restaurant's, other riders') fits on one line that opens a sheet by author. Items open a
+  sheet with tick boxes that never leave the phone.
+- Fixed after review (`15b5ba5`): "picked up HH:MM" showed the restaurant's planned ready time; it
+  now shows the rider's own swipe.
+- Tests by agy (`54dd3de`, `26bf756`): 1081 pass; 15 checked by hand by putting their bug back.
+  Verified on the emulator, every acceptance criterion.
+
 ## Fixed
 
 - **One countdown per offer, and accept or decline sent at most once (row 60).** Every
