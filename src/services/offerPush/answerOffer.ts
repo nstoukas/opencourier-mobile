@@ -14,7 +14,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import axios from 'axios';
 import i18next from 'i18next';
 import {
-  isCantUpdateStatusError,
+  isDispatchNoLongerNeeded,
   isOfferEndedError,
 } from '@app/services/orderService';
 import { queryClient } from '@app/services/queryClient';
@@ -76,11 +76,11 @@ export const answerOffer = async (
       // AC-11), so the body stays empty.
       await api.post(`${path}/accept`, {});
       // As in the app's acceptOrder (AC-10): a 409 CANT_UPDATE_DELIVERY_STATUS
-      // here means nothing is left to do (a hand back landed in between).
+      // or a 404 here means nothing is left to do (a hand back landed in between).
       await api
         .post(`${path}/mark-as-dispatched`, {})
         .catch((error: unknown) => {
-          if (!isCantUpdateStatusError(error)) {
+          if (!isDispatchNoLongerNeeded(error)) {
             throw error;
           }
         });

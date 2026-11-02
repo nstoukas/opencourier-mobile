@@ -51,6 +51,15 @@ export const isCantUpdateStatusError = (error: unknown): boolean => {
   );
 };
 
+// True when the Mark as dispatched call right after an accept has nothing
+// left to do (spec 0020, AC-10): a 409 CANT_UPDATE_DELIVERY_STATUS (already
+// past ACCEPTED), or a 404, which the server answers once the delivery is no
+// longer this rider's (a hand back or an admin's reassign landed in between;
+// row 71 review). The accept itself went through either way.
+export const isDispatchNoLongerNeeded = (error: unknown): boolean =>
+  isCantUpdateStatusError(error) ||
+  (axios.isAxiosError(error) && error.response?.status === 404);
+
 // What the app sends with an accept (spec 0020, AC-11). `automatic` is true
 // only when the phone accepted by itself (the rider's auto accept setting);
 // a rider's own tap leaves it out.
@@ -163,10 +172,10 @@ const orderService = (client: UClient): OrderService => {
     try {
       return await client.post(`deliveries/${id}/mark-as-dispatched`, {});
     } catch (error) {
-      // The accept went through. A 409 here means the delivery is already
-      // past ACCEPTED or no longer this rider's (a hand back in between):
-      // nothing is left to do, so it is not an "Error accepting order".
-      if (isCantUpdateStatusError(error)) {
+      // The accept went through. A 409 or 404 here means the delivery is
+      // already past ACCEPTED or no longer this rider's (a hand back in
+      // between): nothing is left to do, so it is not an "Error accepting order".
+      if (isDispatchNoLongerNeeded(error)) {
         return { data: null, error: null };
       }
       throw error;
