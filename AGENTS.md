@@ -55,5 +55,9 @@ the error count is above `typecheck-baseline.json`, and lowers the file when the
   the pattern itself: row 32's alert never fired on a real phone while every test passed.
 - A cancelled job (spec 0015) shows a full screen card from `GET deliveries/cancelled-jobs` until the food outcome is
   recorded (after pickup) or OK is tapped (before); Later sets it aside for the session behind a banner on Home.
+- Floor and doorbell (spec 0016) come in the courier DTO only while the rider holds the delivery, like the phone. The
+  pin move (`useMoveDropoffPin`) reads one fresh location only after the rider confirms, refuses an accuracy over 50 m or
+  with no figure (0, negative), is online only, and is shown once per delivery (`dropoffPointCorrectedAt`). It needs the
+  location permission, which the emulator can lose: `adb shell pm grant com.opendeli android.permission.ACCESS_FINE_LOCATION`.
 
 _Drafted by /audit from the repo, worth a quick human pass. Edit freely: once a line stops matching this draft, later runs treat it as curated and will flag rather than overwrite it._
