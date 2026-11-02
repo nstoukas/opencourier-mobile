@@ -6,6 +6,7 @@ import { services } from '@app/services/service';
 import { navigationRef } from '@app/navigation/navigationRef';
 import { RootScreen } from '@app/navigation/types';
 import {
+  clearSos,
   getSosRecord,
   loadSosRecord,
   resetSosStoreForTests,
@@ -229,7 +230,8 @@ describe('useSos & beginSos (spec 0022, AC-3, AC-12)', () => {
       expect(navigateSpy).not.toHaveBeenCalled();
     });
 
-    it('runs sender at once when record exists, then every 5000 ms, and stops when gone', async () => {
+    it('runs sender at once when record exists, then every 5000 ms (and not before), and stops when record is gone (AC-5)', async () => {
+      expect(SOS_SEND_EVERY_MS).toBe(5000);
       const sendSosSpy = jest
         .spyOn(sosSenderModule, 'sendSos')
         .mockResolvedValue('idle');
@@ -243,17 +245,47 @@ describe('useSos & beginSos (spec 0022, AC-3, AC-12)', () => {
       // Called immediately on mount/appearance
       expect(sendSosSpy).toHaveBeenCalledTimes(1);
 
-      // Advance by 5000 ms -> called again
+      // AC-5: waiting points are sent every 5 s (5000 ms), and not before
       act(() => {
-        jest.advanceTimersByTime(SOS_SEND_EVERY_MS);
+        jest.advanceTimersByTime(4999);
+      });
+      expect(sendSosSpy).toHaveBeenCalledTimes(1);
+
+      act(() => {
+        jest.advanceTimersByTime(1);
       });
       expect(sendSosSpy).toHaveBeenCalledTimes(2);
 
-      // Advance by another 5000 ms -> called again
+      // Keeps running every 5 s while the record exists
       act(() => {
-        jest.advanceTimersByTime(SOS_SEND_EVERY_MS);
+        jest.advanceTimersByTime(4999);
+      });
+      expect(sendSosSpy).toHaveBeenCalledTimes(2);
+
+      act(() => {
+        jest.advanceTimersByTime(1);
       });
       expect(sendSosSpy).toHaveBeenCalledTimes(3);
+
+      act(() => {
+        jest.advanceTimersByTime(5000);
+      });
+      expect(sendSosSpy).toHaveBeenCalledTimes(4);
+
+      // Once the record is gone, no more rounds
+      await act(async () => {
+        await clearSos('rider-1');
+      });
+
+      act(() => {
+        jest.advanceTimersByTime(5000);
+      });
+      expect(sendSosSpy).toHaveBeenCalledTimes(4);
+
+      act(() => {
+        jest.advanceTimersByTime(10000);
+      });
+      expect(sendSosSpy).toHaveBeenCalledTimes(4);
 
       unmount();
       sendSosSpy.mockRestore();

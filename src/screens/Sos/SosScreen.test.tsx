@@ -83,11 +83,51 @@ describe('SosScreen (spec 0022, AC-3, AC-6)', () => {
     );
   });
 
-  describe('no signal indicator', () => {
-    it('shows "No signal: your position is saved and will be sent" only when outcome was noSignal and something waits', async () => {
+  describe('no signal indicator (AC-3)', () => {
+    it('does NOT show "No signal" when an incident or points wait but outcome was idle or retry', async () => {
+      // Something waits: no incidentId yet
+      await startSos('rider-1', { clientId: 'c1', heldAt: 1000 });
+
+      const outcomeSpy = jest
+        .spyOn(sosSenderModule, 'getLastSosOutcome')
+        .mockReturnValue('idle');
+
+      const { queryByTestId, rerender } = render(<SosScreen />);
+      // While awaiting incidentId, 'idle' outcome must NOT show noSignal banner
+      expect(queryByTestId('sos-no-signal')).toBeNull();
+
+      // While awaiting incidentId, 'retry' outcome must NOT show noSignal banner
+      outcomeSpy.mockReturnValue('retry');
+      rerender(<SosScreen />);
+      expect(queryByTestId('sos-no-signal')).toBeNull();
+
+      // Server gets incidentId, but points are waiting -> something waits
+      await act(async () => {
+        await markSosStarted('rider-1', 'c1', 'inc-123');
+        await addSosPoint('rider-1', {
+          latitude: 39.36,
+          longitude: 22.94,
+          takenAt: 1500,
+        });
+      });
+
+      // While points are waiting, 'idle' outcome must NOT show noSignal banner
+      outcomeSpy.mockReturnValue('idle');
+      rerender(<SosScreen />);
+      expect(queryByTestId('sos-no-signal')).toBeNull();
+
+      // While points are waiting, 'retry' outcome must NOT show noSignal banner
+      outcomeSpy.mockReturnValue('retry');
+      rerender(<SosScreen />);
+      expect(queryByTestId('sos-no-signal')).toBeNull();
+
+      outcomeSpy.mockRestore();
+    });
+
+    it('shows "No signal: your position is saved and will be sent" only after a noSignal round when something waits', async () => {
       await startSos('rider-1', { clientId: 'c1', heldAt: 1000 });
       // Case 1: no incidentId yet, and outcome is noSignal -> waits for incidentId
-      jest
+      const outcomeSpy = jest
         .spyOn(sosSenderModule, 'getLastSosOutcome')
         .mockReturnValue('noSignal');
 
@@ -126,17 +166,10 @@ describe('SosScreen (spec 0022, AC-3, AC-6)', () => {
           () => 'rider-1',
         );
       });
-      // Mock outcome back to noSignal with 0 points
-      jest
-        .spyOn(sosSenderModule, 'getLastSosOutcome')
-        .mockReturnValue('noSignal');
       rerender(<SosScreen />);
       expect(queryByTestId('sos-no-signal')).toBeNull();
 
-      // Case 4: outcome is idle or retry -> does NOT show
-      jest.spyOn(sosSenderModule, 'getLastSosOutcome').mockReturnValue('idle');
-      rerender(<SosScreen />);
-      expect(queryByTestId('sos-no-signal')).toBeNull();
+      outcomeSpy.mockRestore();
     });
   });
 
