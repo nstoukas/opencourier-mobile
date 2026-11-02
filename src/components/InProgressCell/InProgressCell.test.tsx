@@ -1,6 +1,6 @@
 import React from 'react';
 import { TouchableOpacity } from 'react-native';
-import { render, fireEvent } from '@testing-library/react-native';
+import { render, fireEvent, act } from '@testing-library/react-native';
 import { InProgressCell, canMoveDropoffPin } from './InProgressCell';
 import { InProgressCellHeader } from '../InProgressCellHeader/InProgressCellHeader';
 import { InProgressAdress } from '../InProgressAddress/InProgressAddress';
@@ -979,6 +979,182 @@ describe('InProgressCell (spec 0007, decision 65.10)', () => {
               i18n.t('translations:route_to_customer', { km: '2.9', minutes: 5 }),
             ),
           ).toBeTruthy();
+        });
+      });
+
+      describe('Hand back button & customer details privacy (spec 0020, AC-4, AC-9, decisions 71.10, 71.12)', () => {
+        beforeEach(() => {
+          jest.useFakeTimers();
+        });
+
+        afterEach(() => {
+          jest.useRealTimers();
+        });
+
+        it('shows "Hand back · N s" only when canHandBack holds and disappears at 0 (fake timers)', () => {
+          const now = 500_000;
+          jest.setSystemTime(now);
+
+          const onHandBack = jest.fn();
+          const order = {
+            ...baseOrder,
+            status: OrderStatus.accepted,
+            handBackUntilOnPhone: now + 42_000,
+            waitingToSend: false,
+          } as Order;
+
+          const component = render(
+            <InProgressCell
+              order={order}
+              {...noopProps}
+              onHandBack={onHandBack}
+            />,
+          );
+
+          // Shows initial seconds
+          const button = component.getByText('Hand back · 42 s');
+          expect(button).toBeTruthy();
+
+          // Pressing it calls onHandBack
+          fireEvent.press(button);
+          expect(onHandBack).toHaveBeenCalledWith(order);
+
+          // Advance timers 2 seconds
+          act(() => {
+            jest.advanceTimersByTime(2000);
+          });
+          expect(component.getByText('Hand back · 40 s')).toBeTruthy();
+
+          // Advance past window end -> button disappears
+          act(() => {
+            jest.advanceTimersByTime(40_000);
+          });
+          expect(component.queryByText(/Hand back/i)).toBeNull();
+        });
+
+        it('with a waiting outbox step for the delivery the button is absent', () => {
+          const now = 500_000;
+          jest.setSystemTime(now);
+
+          const order = {
+            ...baseOrder,
+            status: OrderStatus.accepted,
+            handBackUntilOnPhone: now + 30_000,
+            waitingToSend: true, // Outbox step waiting
+          } as Order;
+
+          const component = render(
+            <InProgressCell
+              order={order}
+              {...noopProps}
+              onHandBack={jest.fn()}
+            />,
+          );
+
+          expect(component.queryByText(/Hand back/i)).toBeNull();
+        });
+
+        it('button is absent when status is COURIER_ARRIVED_AT_PICKUP_LOCATION even inside the window', () => {
+          const now = 500_000;
+          jest.setSystemTime(now);
+
+          const order = {
+            ...baseOrder,
+            status: OrderStatus.courier_arrived_at_pickup_location,
+            handBackUntilOnPhone: now + 30_000,
+            waitingToSend: false,
+          } as Order;
+
+          const component = render(
+            <InProgressCell
+              order={order}
+              {...noopProps}
+              onHandBack={jest.fn()}
+            />,
+          );
+
+          expect(component.queryByText(/Hand back/i)).toBeNull();
+        });
+
+        it('during the window customer details, floor, doorbell, notes and copy button are not rendered and area is; after the window they are', () => {
+          const now = 600_000;
+          jest.setSystemTime(now);
+
+          const order = {
+            ...baseOrder,
+            status: OrderStatus.accepted,
+            handBackUntilOnPhone: now + 20_000,
+            waitingToSend: false,
+            dropoffName: 'Nikos Papadopoulos',
+            dropoffBusinessName: 'Papadopoulos Residence',
+            pickupBusinessName: 'Taverna Olympos',
+            dropoffLocation: {
+              street: 'Iasonos',
+              houseNumber: '42',
+              city: 'Volos',
+            },
+            dropoffAddress: 'Iasonos 42, Volos',
+            dropoffFloor: '3',
+            dropoffDoorbell: 'Papadopoulos',
+            dropoffPhoneNumber: '+306912345678',
+            dropoffSellerNotes: 'Secret customer note',
+            dropOffLocationNotes: [
+              { id: 'loc-1', note: 'Secret location note', upvotes: 0, downvotes: 0 } as any,
+            ],
+          } as unknown as Order;
+
+          const component = render(
+            <InProgressCell
+              order={order}
+              {...noopProps}
+              onHandBack={jest.fn()}
+            />,
+          );
+
+          // DURING WINDOW:
+          // Top header shows restaurant name, NOT customer name
+          expect(component.getByText('Taverna Olympos')).toBeTruthy();
+          expect(component.queryByText('Nikos Papadopoulos')).toBeNull();
+
+          // Bottom header and NextStep show area 'Iasonos', NOT 'Papadopoulos Residence'
+          expect(component.getAllByText('Iasonos').length).toBe(2);
+          expect(component.queryByText('Papadopoulos Residence')).toBeNull();
+
+          // Customer details are NOT rendered
+          expect(component.queryByText('Iasonos 42, Volos')).toBeNull();
+          expect(component.queryByText(/Floor/i)).toBeNull();
+          expect(component.queryByText(/Doorbell/i)).toBeNull();
+          expect(component.queryByText('Secret customer note')).toBeNull();
+          expect(component.queryByText('Secret location note')).toBeNull();
+
+          // AFTER WINDOW (advance 21s):
+          act(() => {
+            jest.advanceTimersByTime(21_000);
+          });
+
+          // Top header and NextStep show customer name
+          expect(component.getAllByText('Nikos Papadopoulos').length).toBe(2);
+
+          // Bottom header shows customer business name
+          expect(component.getByText('Papadopoulos Residence')).toBeTruthy();
+
+          // Floor and doorbell are rendered
+          expect(
+            component.getByText(
+              i18n.t('translations:dropoff_floor', { floor: '3' }),
+            ),
+          ).toBeTruthy();
+          expect(
+            component.getByText(
+              i18n.t('translations:dropoff_doorbell', {
+                doorbell: 'Papadopoulos',
+              }),
+            ),
+          ).toBeTruthy();
+
+          // Notes are rendered
+          expect(component.getByText('Secret customer note')).toBeTruthy();
+          expect(component.getByText('Secret location note')).toBeTruthy();
         });
       });
     });

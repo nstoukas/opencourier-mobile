@@ -2,6 +2,9 @@ import { AxiosError } from 'axios';
 import orderService, {
   isOfferEndedError,
   OFFER_HAS_ENDED_CODE,
+  isCantUpdateStatusError,
+  isDispatchNoLongerNeeded,
+  CANT_UPDATE_DELIVERY_STATUS_CODE,
 } from './orderService';
 import { UClient } from './Client';
 import { DeliveryIssueReason, OrderStatus } from '@app/types/enums';
@@ -503,6 +506,307 @@ describe('orderService & isOfferEndedError (spec 0002, AC-5)', () => {
           longitude: 22.95,
         }),
       ).rejects.toThrow(networkError);
+    });
+  });
+
+  describe('isCantUpdateStatusError & isDispatchNoLongerNeeded (spec 0020, AC-10)', () => {
+    const makeAxiosError = (status: number, data: unknown): AxiosError => {
+      const err = new AxiosError('Request failed');
+      err.response = {
+        status,
+        statusText: 'Error',
+        headers: {},
+        config: {} as any,
+        data,
+      };
+      return err;
+    };
+
+    it('isCantUpdateStatusError returns true for 409 with CANT_UPDATE_DELIVERY_STATUS code', () => {
+      const error = makeAxiosError(409, {
+        error: true,
+        result: [
+          {
+            code: CANT_UPDATE_DELIVERY_STATUS_CODE,
+            message: 'Status cannot be updated',
+          },
+        ],
+      });
+      expect(isCantUpdateStatusError(error)).toBe(true);
+    });
+
+    it('isCantUpdateStatusError returns false for 409 with another code', () => {
+      const error = makeAxiosError(409, {
+        error: true,
+        result: [{ code: 'OTHER_CODE' }],
+      });
+      expect(isCantUpdateStatusError(error)).toBe(false);
+    });
+
+    it('isCantUpdateStatusError returns false for non-409 errors and non-Axios errors', () => {
+      const error500 = makeAxiosError(500, {
+        result: [{ code: CANT_UPDATE_DELIVERY_STATUS_CODE }],
+      });
+      expect(isCantUpdateStatusError(error500)).toBe(false);
+      expect(isCantUpdateStatusError(new Error('fail'))).toBe(false);
+      expect(isCantUpdateStatusError(null)).toBe(false);
+    });
+
+    it('isDispatchNoLongerNeeded returns true for 409 CANT_UPDATE_DELIVERY_STATUS and 404', () => {
+      const error409 = makeAxiosError(409, {
+        error: true,
+        result: [{ code: CANT_UPDATE_DELIVERY_STATUS_CODE }],
+      });
+      const error404 = makeAxiosError(404, {
+        error: true,
+        message: 'Delivery not found',
+      });
+
+      expect(isDispatchNoLongerNeeded(error409)).toBe(true);
+      expect(isDispatchNoLongerNeeded(error404)).toBe(true);
+    });
+
+    it('isDispatchNoLongerNeeded returns false for 500 or 409 with other code', () => {
+      const error409Other = makeAxiosError(409, {
+        result: [{ code: 'SOME_OTHER_CODE' }],
+      });
+      const error500 = makeAxiosError(500, { message: 'Internal server error' });
+
+      expect(isDispatchNoLongerNeeded(error409Other)).toBe(false);
+      expect(isDispatchNoLongerNeeded(error500)).toBe(false);
+      expect(isDispatchNoLongerNeeded(new Error('plain error'))).toBe(false);
+    });
+  });
+
+  describe('acceptOrder (spec 0020, AC-1, AC-10, AC-11)', () => {
+    const makeAxiosError = (status: number, data: unknown): AxiosError => {
+      const err = new AxiosError('Request failed');
+      err.response = {
+        status,
+        statusText: 'Error',
+        headers: {},
+        config: {} as any,
+        data,
+      };
+      return err;
+    };
+
+    it('sends { automatic: true } on accept call when automatic is true, and marks dispatched', async () => {
+      const mockPost = jest
+        .fn()
+        .mockResolvedValueOnce({ data: { result: { id: 'del-101' } } })
+        .mockResolvedValueOnce({ data: { result: { status: OrderStatus.dispatched } } });
+
+      const service = orderService({ post: mockPost } as unknown as UClient);
+      const res = await service.acceptOrder({ id: 'del-101', automatic: true });
+
+      expect(mockPost).toHaveBeenCalledTimes(2);
+      expect(mockPost).toHaveBeenNthCalledWith(
+        1,
+        'deliveries/del-101/accept',
+        { automatic: true },
+      );
+      expect(mockPost).toHaveBeenNthCalledWith(
+        2,
+        'deliveries/del-101/mark-as-dispatched',
+        {},
+      );
+      expect(res).toEqual({ data: { result: { status: OrderStatus.dispatched } } });
+    });
+
+    it('sends empty body {} on accept call when automatic is false or omitted (AC-11)', async () => {
+      const mockPost = jest
+        .fn()
+        .mockResolvedValue({ data: { result: {} } });
+
+      const service = orderService({ post: mockPost } as unknown as UClient);
+
+      // automatic: false
+      await service.acceptOrder({ id: 'del-102', automatic: false });
+      expect(mockPost).toHaveBeenNthCalledWith(1, 'deliveries/del-102/accept', {});
+
+      // automatic omitted
+      await service.acceptOrder({ id: 'del-103' });
+      expect(mockPost).toHaveBeenNthCalledWith(3, 'deliveries/del-103/accept', {});
+    });
+
+    it('resolves { data: null, error: null } without throwing when mark-as-dispatched answers 409 CANT_UPDATE_DELIVERY_STATUS (AC-10)', async () => {
+      const error409 = makeAxiosError(409, {
+        error: true,
+        result: [{ code: CANT_UPDATE_DELIVERY_STATUS_CODE }],
+      });
+      const mockPost = jest
+        .fn()
+        .mockResolvedValueOnce({ data: { result: 'accepted' } })
+        .mockRejectedValueOnce(error409);
+
+      const service = orderService({ post: mockPost } as unknown as UClient);
+      const res = await service.acceptOrder({ id: 'del-104', automatic: true });
+
+      expect(res).toEqual({ data: null, error: null });
+    });
+
+    it('resolves { data: null, error: null } without throwing when mark-as-dispatched answers 404 (AC-10)', async () => {
+      const error404 = makeAxiosError(404, {
+        error: true,
+        message: 'Delivery not found',
+      });
+      const mockPost = jest
+        .fn()
+        .mockResolvedValueOnce({ data: { result: 'accepted' } })
+        .mockRejectedValueOnce(error404);
+
+      const service = orderService({ post: mockPost } as unknown as UClient);
+      const res = await service.acceptOrder({ id: 'del-105', automatic: false });
+
+      expect(res).toEqual({ data: null, error: null });
+    });
+
+    it('throws when mark-as-dispatched answers 500 or 409 with other code', async () => {
+      const error500 = makeAxiosError(500, { message: 'Server crashed' });
+      const mockPost500 = jest
+        .fn()
+        .mockResolvedValueOnce({ data: {} })
+        .mockRejectedValueOnce(error500);
+
+      const service500 = orderService({ post: mockPost500 } as unknown as UClient);
+      await expect(service500.acceptOrder({ id: 'del-106' })).rejects.toThrow(error500);
+
+      const error409Other = makeAxiosError(409, {
+        result: [{ code: 'DIFFERENT_CODE' }],
+      });
+      const mockPost409 = jest
+        .fn()
+        .mockResolvedValueOnce({ data: {} })
+        .mockRejectedValueOnce(error409Other);
+
+      const service409 = orderService({ post: mockPost409 } as unknown as UClient);
+      await expect(service409.acceptOrder({ id: 'del-107' })).rejects.toThrow(error409Other);
+    });
+
+    it('throws when the initial accept call fails', async () => {
+      const errorAccept = makeAxiosError(409, {
+        result: [{ code: 'ALREADY_ASSIGNED' }],
+      });
+      const mockPost = jest.fn().mockRejectedValue(errorAccept);
+
+      const service = orderService({ post: mockPost } as unknown as UClient);
+      await expect(service.acceptOrder({ id: 'del-108' })).rejects.toThrow(errorAccept);
+      expect(mockPost).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  describe('handBack (spec 0020, AC-9)', () => {
+    it('posts to deliveries/<id>/hand-back with no body and returns data.result', async () => {
+      const mockResult = { status: 'ASSIGNING_COURIER' };
+      const mockPost = jest.fn().mockResolvedValue({
+        data: { result: mockResult },
+      });
+
+      const service = orderService({ post: mockPost } as unknown as UClient);
+      const res = await service.handBack('del-handback-1');
+
+      expect(mockPost).toHaveBeenCalledWith('deliveries/del-handback-1/hand-back');
+      expect(res).toEqual(mockResult);
+    });
+
+    it('throws when client.post rejects on handBack', async () => {
+      const err = new AxiosError('Hand back refused');
+      const mockPost = jest.fn().mockRejectedValue(err);
+
+      const service = orderService({ post: mockPost } as unknown as UClient);
+      await expect(service.handBack('del-handback-2')).rejects.toThrow(err);
+    });
+  });
+
+  describe('getInProgressOrders attaches handBackUntilOnPhone (spec 0020, AC-3)', () => {
+    it('corrects handBackUntil using midpoint, giving identical seconds left even with phone clock 5 minutes off', async () => {
+      const serverNow = '2026-11-02T12:00:00.000Z';
+      const handBackUntil = '2026-11-02T12:01:00.000Z'; // 60s window on server
+
+      // Scenario A: Phone clock is accurate (phoneNow matches serverNow)
+      let phoneTimeAccurate = new Date(serverNow).getTime(); // 12:00:00.000Z
+      const dateSpy = jest.spyOn(Date, 'now').mockImplementation(() => phoneTimeAccurate);
+
+      const mockGet = jest.fn().mockImplementation(async () => {
+        phoneTimeAccurate += 2000; // 2s round trip
+        return {
+          data: {
+            result: {
+              serverNow,
+              data: [
+                { id: 'del-hb-1', handBackUntil },
+                { id: 'del-no-hb', handBackUntil: null },
+              ],
+            },
+          },
+        };
+      });
+
+      const service = orderService({ get: mockGet } as unknown as UClient);
+
+      try {
+        const ordersAccurate = await service.getInProgressOrders();
+        expect(ordersAccurate).toHaveLength(2);
+
+        // sentAt = 12:00:00, receivedAt = 12:00:02 -> midpoint = 12:00:01
+        // serverExpiresAt - serverNow = +60,000 ms
+        // handBackUntilOnPhone = midpoint + 60,000
+        const midpointAccurate = new Date(serverNow).getTime() + 1000;
+        expect(ordersAccurate[0].handBackUntilOnPhone).toBe(midpointAccurate + 60000);
+        const secondsLeftAccurate = (ordersAccurate[0].handBackUntilOnPhone! - midpointAccurate) / 1000;
+        expect(secondsLeftAccurate).toBe(60);
+
+        // Job without handBackUntil is returned unchanged (no handBackUntilOnPhone property added)
+        expect(ordersAccurate[1].handBackUntil).toBeNull();
+        expect(ordersAccurate[1].handBackUntilOnPhone).toBeUndefined();
+
+        // Scenario B: Phone clock is 5 minutes in the past
+        let phoneTimeFast = new Date(serverNow).getTime() - 5 * 60 * 1000; // 11:55:00
+        dateSpy.mockImplementation(() => phoneTimeFast);
+
+        mockGet.mockImplementation(async () => {
+          phoneTimeFast += 2000;
+          return {
+            data: {
+              result: {
+                serverNow,
+                data: [{ id: 'del-hb-1', handBackUntil }],
+              },
+            },
+          };
+        });
+
+        const ordersFast = await service.getInProgressOrders();
+        const midpointFast = new Date(serverNow).getTime() - 5 * 60 * 1000 + 1000;
+        expect(ordersFast[0].handBackUntilOnPhone).toBe(midpointFast + 60000);
+
+        // Crucial: seconds left from the phone's now at the midpoint is STILL exactly 60 seconds!
+        const secondsLeftFast = (ordersFast[0].handBackUntilOnPhone! - midpointFast) / 1000;
+        expect(secondsLeftFast).toBe(60);
+      } finally {
+        dateSpy.mockRestore();
+      }
+    });
+
+    it('returns jobs without handBackUntil unchanged', async () => {
+      const mockGet = jest.fn().mockResolvedValue({
+        data: {
+          result: {
+            serverNow: '2026-11-02T12:00:00.000Z',
+            data: [
+              { id: 'del-plain-1' },
+              { id: 'del-plain-2', handBackUntil: null },
+            ],
+          },
+        },
+      });
+
+      const service = orderService({ get: mockGet } as unknown as UClient);
+      const orders = await service.getInProgressOrders();
+
+      expect(orders[0].handBackUntilOnPhone).toBeUndefined();
+      expect(orders[1].handBackUntilOnPhone).toBeUndefined();
     });
   });
 });

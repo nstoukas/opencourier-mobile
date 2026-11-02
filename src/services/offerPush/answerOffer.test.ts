@@ -1,7 +1,10 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import axios from 'axios';
 import notifee from '@notifee/react-native';
-import { OFFER_HAS_ENDED_CODE } from '@app/services/orderService';
+import {
+  CANT_UPDATE_DELIVERY_STATUS_CODE,
+  OFFER_HAS_ENDED_CODE,
+} from '@app/services/orderService';
 import { queryClient } from '@app/services/queryClient';
 import { QueryKeys } from '@app/utilities/queryKeys';
 import '@app/localization/i18n';
@@ -351,5 +354,100 @@ describe('answerOffer (spec 0003, AC-5)', () => {
     expect(notifee.cancelNotification).toHaveBeenCalledWith(
       'del-headless-no-auth',
     );
+  });
+
+  describe('mark-as-dispatched error handling in answerOffer (spec 0020, AC-10)', () => {
+    it('resolves as sent when mark-as-dispatched answers 409 CANT_UPDATE_DELIVERY_STATUS', async () => {
+      const offer = {
+        deliveryId: 'del-dispatch-409',
+        offeredAt: '2026-10-26T10:40:00.000Z',
+      };
+
+      const error409: any = new Error('Request failed with status code 409');
+      error409.response = {
+        status: 409,
+        data: {
+          error: true,
+          result: [{ code: CANT_UPDATE_DELIVERY_STATUS_CODE }],
+        },
+      };
+
+      // 1. Accept succeeds
+      mockPost.mockResolvedValueOnce({ status: 200, data: {} });
+      // 2. Mark as dispatched fails with 409 CANT_UPDATE_DELIVERY_STATUS
+      mockPost.mockRejectedValueOnce(error409);
+
+      const outcome = await answerOffer(offer, 'accept');
+
+      expect(outcome).toBe('sent');
+      expect(mockPost).toHaveBeenCalledTimes(2);
+      expect(mockPost).toHaveBeenNthCalledWith(
+        1,
+        'deliveries/del-dispatch-409/accept',
+        {},
+      );
+      expect(mockPost).toHaveBeenNthCalledWith(
+        2,
+        'deliveries/del-dispatch-409/mark-as-dispatched',
+        {},
+      );
+      expect(invalidateSpy).toHaveBeenCalledWith({
+        queryKey: [QueryKeys.inProgressOrders],
+      });
+    });
+
+    it('resolves as sent when mark-as-dispatched answers 404', async () => {
+      const offer = {
+        deliveryId: 'del-dispatch-404',
+        offeredAt: '2026-10-26T10:41:00.000Z',
+      };
+
+      const error404: any = new Error('Request failed with status code 404');
+      error404.response = {
+        status: 404,
+        data: { error: true, message: 'Delivery not found' },
+      };
+
+      mockPost.mockResolvedValueOnce({ status: 200, data: {} });
+      mockPost.mockRejectedValueOnce(error404);
+
+      const outcome = await answerOffer(offer, 'accept');
+
+      expect(outcome).toBe('sent');
+      expect(mockPost).toHaveBeenCalledTimes(2);
+    });
+
+    it('fails when mark-as-dispatched answers 500 or 409 with other code', async () => {
+      const offer500 = {
+        deliveryId: 'del-dispatch-500',
+        offeredAt: '2026-10-26T10:42:00.000Z',
+      };
+
+      const error500: any = new Error('Request failed with status code 500');
+      error500.response = { status: 500, data: { message: 'Crash' } };
+
+      mockPost.mockResolvedValueOnce({ status: 200, data: {} });
+      mockPost.mockRejectedValueOnce(error500);
+
+      const outcome500 = await answerOffer(offer500, 'accept');
+      expect(outcome500).toBe('failed');
+
+      const offer409Other = {
+        deliveryId: 'del-dispatch-409-other',
+        offeredAt: '2026-10-26T10:43:00.000Z',
+      };
+
+      const error409Other: any = new Error('Request failed with status code 409');
+      error409Other.response = {
+        status: 409,
+        data: { error: true, result: [{ code: 'SOME_OTHER_ERROR' }] },
+      };
+
+      mockPost.mockResolvedValueOnce({ status: 200, data: {} });
+      mockPost.mockRejectedValueOnce(error409Other);
+
+      const outcome409 = await answerOffer(offer409Other, 'accept');
+      expect(outcome409).toBe('failed');
+    });
   });
 });

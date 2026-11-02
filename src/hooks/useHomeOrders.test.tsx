@@ -71,10 +71,16 @@ jest.mock('@app/services/service', () => ({
       getInProgressOrders: () =>
         Promise.resolve({ data: { result: { data: [] } } }),
       getOrdersHistory: () => mockGetOrdersHistory(),
-      acceptOrder: (id: string) => mockAcceptOrder(id),
+      acceptOrder: (params: { id: string; automatic?: boolean }) =>
+        mockAcceptOrder(params),
       declineOrder: (id: string) => mockDeclineOrder(id),
     },
   },
+}));
+
+const mockAnnounceAutoAccept = jest.fn();
+jest.mock('@app/services/offerPush/autoAccepted', () => ({
+  announceAutoAccept: (...args: any[]) => mockAnnounceAutoAccept(...args),
 }));
 
 const mockRemindRiderOfOffer = jest.fn();
@@ -184,7 +190,10 @@ describe('useHomeOrders', () => {
 
       // Accepted immediately on arrival (before advancing timers)
       expect(mockAcceptOrder).toHaveBeenCalledTimes(1);
-      expect(mockAcceptOrder).toHaveBeenCalledWith('order-123');
+      expect(mockAcceptOrder).toHaveBeenCalledWith({
+        id: 'order-123',
+        automatic: true,
+      });
       expect(mockDeclineOrder).not.toHaveBeenCalled();
 
       // Trigger further passes with the SAME offer still in the list:
@@ -218,7 +227,10 @@ describe('useHomeOrders', () => {
 
       // Still called exactly once for order-123 (claimForAutoAccept prevented duplicate send)
       expect(mockAcceptOrder).toHaveBeenCalledTimes(1);
-      expect(mockAcceptOrder).toHaveBeenCalledWith('order-123');
+      expect(mockAcceptOrder).toHaveBeenCalledWith({
+        id: 'order-123',
+        automatic: true,
+      });
 
       // A second offer id arrives and is accepted once too
       mockGetNewOrders.mockResolvedValueOnce([{ ...testOffer }, testOffer2]);
@@ -229,7 +241,10 @@ describe('useHomeOrders', () => {
       });
 
       expect(mockAcceptOrder).toHaveBeenCalledTimes(2);
-      expect(mockAcceptOrder).toHaveBeenLastCalledWith('order-456');
+      expect(mockAcceptOrder).toHaveBeenLastCalledWith({
+        id: 'order-456',
+        automatic: true,
+      });
 
       act(() => {
         tree.unmount();
@@ -271,7 +286,10 @@ describe('useHomeOrders', () => {
 
       // Offer is claimed and accepted immediately upon switching
       expect(mockAcceptOrder).toHaveBeenCalledTimes(1);
-      expect(mockAcceptOrder).toHaveBeenCalledWith('order-123');
+      expect(mockAcceptOrder).toHaveBeenCalledWith({
+        id: 'order-123',
+        automatic: true,
+      });
 
       act(() => {
         tree.unmount();
@@ -324,6 +342,121 @@ describe('useHomeOrders', () => {
       });
 
       expect(mockAcceptOrder).toHaveBeenCalledTimes(2);
+
+      act(() => {
+        tree.unmount();
+      });
+    });
+
+    it('auto-accept sends automatic: true and calls announceAutoAccept once per offer with restaurant name (spec 0020, AC-11, AC-12)', async () => {
+      mockDeliverySetting = OrderSetting.auto_accept;
+      mockAcceptOrder.mockResolvedValueOnce({});
+
+      const testOffer: Order = {
+        id: 'order-auto-1',
+        offeredAt: '2026-10-26T12:00:00.000Z',
+        pickupBusinessName: 'Souvlaki Palace',
+        phoneClock: { offeredAt: 100000, expiresAt: 160000 },
+      } as Order;
+
+      queryClient.setQueryData([QueryKeys.newOrders], [testOffer]);
+
+      let tree: renderer.ReactTestRenderer;
+      await act(async () => {
+        tree = renderer.create(
+          <QueryClientProvider client={queryClient}>
+            <HookHost onRender={() => {}} />
+          </QueryClientProvider>,
+        );
+        await Promise.resolve();
+      });
+
+      expect(mockAcceptOrder).toHaveBeenCalledTimes(1);
+      expect(mockAcceptOrder).toHaveBeenCalledWith({
+        id: 'order-auto-1',
+        automatic: true,
+      });
+
+      expect(mockAnnounceAutoAccept).toHaveBeenCalledTimes(1);
+      expect(mockAnnounceAutoAccept).toHaveBeenCalledWith(
+        'order-auto-1',
+        'Souvlaki Palace',
+      );
+
+      act(() => {
+        tree.unmount();
+      });
+    });
+
+    it('auto-accept falls back to generic text when restaurant name is missing, and tap accept sends automatic: false without announceAutoAccept', async () => {
+      mockDeliverySetting = OrderSetting.auto_accept;
+      mockAcceptOrder.mockResolvedValueOnce({});
+
+      const offerNoName: Order = {
+        id: 'order-auto-no-name',
+        offeredAt: '2026-10-26T12:00:00.000Z',
+        phoneClock: { offeredAt: 100000, expiresAt: 160000 },
+      } as Order;
+
+      queryClient.setQueryData([QueryKeys.newOrders], [offerNoName]);
+
+      let tree: renderer.ReactTestRenderer;
+      await act(async () => {
+        tree = renderer.create(
+          <QueryClientProvider client={queryClient}>
+            <HookHost onRender={() => {}} />
+          </QueryClientProvider>,
+        );
+        await Promise.resolve();
+      });
+
+      expect(mockAnnounceAutoAccept).toHaveBeenCalledWith(
+        'order-auto-no-name',
+        'a new order',
+      );
+
+      act(() => {
+        tree.unmount();
+      });
+
+      // Now manual mode: tap accept sends automatic: false and never calls announceAutoAccept
+      mockDeliverySetting = OrderSetting.manual;
+      mockAcceptOrder.mockClear();
+      mockAnnounceAutoAccept.mockClear();
+      mockAcceptOrder.mockResolvedValueOnce({});
+
+      const manualOffer: Order = {
+        id: 'order-manual-tap',
+        offeredAt: '2026-10-26T12:01:00.000Z',
+        pickupBusinessName: 'Pizza Roma',
+        phoneClock: { offeredAt: 100000, expiresAt: 160000 },
+      } as Order;
+
+      queryClient.setQueryData([QueryKeys.newOrders], [manualOffer]);
+
+      let hookResult: ReturnType<typeof useHomeOrders> | undefined;
+      await act(async () => {
+        tree = renderer.create(
+          <QueryClientProvider client={queryClient}>
+            <HookHost onRender={h => (hookResult = h)} />
+          </QueryClientProvider>,
+        );
+        await Promise.resolve();
+      });
+
+      expect(mockAcceptOrder).not.toHaveBeenCalled();
+
+      await act(async () => {
+        hookResult?.acceptOrderFn('order-manual-tap');
+        await Promise.resolve();
+      });
+
+      expect(mockAcceptOrder).toHaveBeenCalledTimes(1);
+      expect(mockAcceptOrder).toHaveBeenCalledWith({
+        id: 'order-manual-tap',
+        automatic: false,
+      });
+      expect(mockAnnounceAutoAccept).not.toHaveBeenCalled();
 
       act(() => {
         tree.unmount();
@@ -785,7 +918,10 @@ describe('useHomeOrders', () => {
       });
 
       // Auto-accepted initially
-      expect(mockAcceptOrder).toHaveBeenCalledWith('pre-offline-offer');
+      expect(mockAcceptOrder).toHaveBeenCalledWith({
+        id: 'pre-offline-offer',
+        automatic: true,
+      });
       mockAcceptOrder.mockClear();
 
       // Rider goes Offline
@@ -827,7 +963,9 @@ describe('useHomeOrders', () => {
       });
 
       // M1: Cached preOfflineOffer must NOT be re-tracked or auto-accepted!
-      expect(mockAcceptOrder).not.toHaveBeenCalledWith('pre-offline-offer');
+      expect(mockAcceptOrder).not.toHaveBeenCalledWith(
+        expect.objectContaining({ id: 'pre-offline-offer' }),
+      );
       expect(hookResult?.dataSourceNew).toEqual([]);
 
       const freshOnlineOffer: Order = {
@@ -846,8 +984,13 @@ describe('useHomeOrders', () => {
 
       // Only the fresh offer is accepted and tracked
       expect(mockAcceptOrder).toHaveBeenCalledTimes(1);
-      expect(mockAcceptOrder).toHaveBeenCalledWith('fresh-online-offer');
-      expect(mockAcceptOrder).not.toHaveBeenCalledWith('pre-offline-offer');
+      expect(mockAcceptOrder).toHaveBeenCalledWith({
+        id: 'fresh-online-offer',
+        automatic: true,
+      });
+      expect(mockAcceptOrder).not.toHaveBeenCalledWith(
+        expect.objectContaining({ id: 'pre-offline-offer' }),
+      );
 
       act(() => {
         tree.unmount();
@@ -881,7 +1024,10 @@ describe('useHomeOrders', () => {
       });
 
       expect(mockAcceptOrder).toHaveBeenCalledTimes(1);
-      expect(mockAcceptOrder).toHaveBeenCalledWith('order-123');
+      expect(mockAcceptOrder).toHaveBeenCalledWith({
+        id: 'order-123',
+        automatic: false,
+      });
 
       act(() => {
         tree.unmount();
@@ -1131,7 +1277,10 @@ describe('useHomeOrders', () => {
       });
 
       expect(mockAcceptOrder).toHaveBeenCalledTimes(1);
-      expect(mockAcceptOrder).toHaveBeenCalledWith(orderId);
+      expect(mockAcceptOrder).toHaveBeenCalledWith({
+        id: orderId,
+        automatic: false,
+      });
 
       act(() => {
         tree.unmount();
@@ -1246,7 +1395,10 @@ describe('useHomeOrders', () => {
         );
       });
 
-      expect(mockAcceptOrder).toHaveBeenCalledWith(orderId);
+      expect(mockAcceptOrder).toHaveBeenCalledWith({
+        id: orderId,
+        automatic: true,
+      });
       expect(isOfferAnswered(key)).toBe(true);
 
       const outcome = await answerOffer(

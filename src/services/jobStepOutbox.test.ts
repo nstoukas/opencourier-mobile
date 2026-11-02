@@ -5,6 +5,7 @@ import {
   addJobSteps,
   flushOutbox,
   dismissRefused,
+  dropWaitingSteps,
   waitingCount,
   getOutboxItems,
   resetOutboxForTests,
@@ -847,6 +848,115 @@ describe('jobStepOutbox (spec 0009, AC-3, AC-6, AC-8)', () => {
       expect(remaining).toHaveLength(1);
       expect(remaining[0].step).toBe('arrived_at_pickup');
       expect(remaining[0].state).toBe('waiting');
+    });
+  });
+
+  describe('dropWaitingSteps (spec 0020, AC-9)', () => {
+    it('removes only that rider and delivery waiting items, leaving refused items and other deliveries/riders', async () => {
+      await addJobSteps([
+        {
+          courierId: 'rider-1',
+          deliveryId: 'del-1',
+          step: 'dispatched',
+          tappedAt: 1000,
+          restaurantName: 'R1',
+        },
+        {
+          courierId: 'rider-1',
+          deliveryId: 'del-2',
+          step: 'dispatched',
+          tappedAt: 1020,
+          restaurantName: 'R2',
+        },
+        {
+          courierId: 'rider-2',
+          deliveryId: 'del-1',
+          step: 'dispatched',
+          tappedAt: 1030,
+          restaurantName: 'R1',
+        },
+      ]);
+
+      // Refuse the first step for rider-1 on del-1
+      await flushOutbox(
+        'rider-1',
+        async item => {
+          if (item.deliveryId === 'del-1') {
+            return { kind: 'error', httpStatus: 403 };
+          }
+          return { kind: 'none' };
+        },
+      );
+
+      // Now add a new waiting step on del-1 for rider-1
+      await addJobSteps([
+        {
+          courierId: 'rider-1',
+          deliveryId: 'del-1',
+          step: 'arrived_at_pickup',
+          tappedAt: 1040,
+          restaurantName: 'R1',
+        },
+      ]);
+
+      const beforeDrop = getOutboxItems();
+      expect(beforeDrop).toHaveLength(4);
+      expect(
+        beforeDrop.find(
+          i =>
+            i.courierId === 'rider-1' &&
+            i.deliveryId === 'del-1' &&
+            i.step === 'dispatched',
+        )?.state,
+      ).toBe('refused');
+      expect(
+        beforeDrop.find(
+          i =>
+            i.courierId === 'rider-1' &&
+            i.deliveryId === 'del-1' &&
+            i.step === 'arrived_at_pickup',
+        )?.state,
+      ).toBe('waiting');
+
+      // Drop waiting steps for rider-1 on del-1
+      await dropWaitingSteps('rider-1', 'del-1');
+
+      const afterDrop = getOutboxItems();
+      expect(afterDrop).toHaveLength(3);
+
+      // The waiting step for rider-1 and del-1 was dropped
+      expect(
+        afterDrop.find(
+          i =>
+            i.courierId === 'rider-1' &&
+            i.deliveryId === 'del-1' &&
+            i.step === 'arrived_at_pickup',
+        ),
+      ).toBeUndefined();
+
+      // The refused step for rider-1 on del-1 remains (for RefusedSteps card)
+      expect(
+        afterDrop.find(
+          i =>
+            i.courierId === 'rider-1' &&
+            i.deliveryId === 'del-1' &&
+            i.step === 'dispatched',
+        )?.state,
+      ).toBe('refused');
+
+      // Steps for other deliveries for rider-1 remain
+      expect(
+        afterDrop.find(
+          i => i.courierId === 'rider-1' && i.deliveryId === 'del-2',
+        )?.state,
+      ).toBe('waiting');
+
+      // Steps for other couriers on del-1 remain
+      expect(
+        afterDrop.find(
+          i => i.courierId === 'rider-2' && i.deliveryId === 'del-1',
+        )?.state,
+      ).toBe('waiting');
     });
   });
 });
