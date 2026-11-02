@@ -23,11 +23,9 @@ export enum InstanceTabItem {
   Rules = 'rules',
 }
 
+// Only the History screen shows an empty list since spec 0018 (home is a map).
 export enum HomeEmptyState {
-  New = 'New',
-  InProgress = 'In Progress',
   History = 'History',
-  WaitingNewOrders = 'waitingNewOrders',
 }
 
 export enum SideMenuItem {
@@ -62,7 +60,7 @@ export enum DeliveryType {
 export enum PickupType {
   LineupThirdPartyPickup = 'line_up_pickup',
   ParkThirdPartyLot = 'park_in_lot',
-  DontOpenBags = `dont_open_bags`,
+  DontOpenBags = 'dont_open_bags',
   CallOnArrival = 'call_on_arrival',
 }
 
@@ -76,7 +74,7 @@ export enum CustomerNotes {
   PreventLeaks = 'prevent_leaks',
   BellnotRung = 'bell_not_rung',
   HandleWithCare = 'handle_with_care',
-  DontBlockDoor = `dont_block_door`,
+  DontBlockDoor = 'dont_block_door',
 }
 
 export enum EarningsTabItem {
@@ -418,11 +416,6 @@ export type ConfirmItemsCheck = {
   orderId: string;
   confirmedItems: boolean;
 };
-
-export enum MapDestination {
-  customer,
-  restaurant,
-}
 
 export type Instance = {
   registry?: any;

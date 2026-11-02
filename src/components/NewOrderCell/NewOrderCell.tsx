@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   StyleProp,
   ViewStyle,
@@ -79,6 +79,9 @@ export const NewOrderCell = ({
   routeUnavailable = false,
 }: Props) => {
   const { t } = useTranslation();
+  // A new key after each attempt draws the swipe fresh, so an accept that did
+  // not go through (already answered, a refused claim) leaves no knob at the end.
+  const [acceptAttempt, setAcceptAttempt] = useState(0);
   const numberOfParalelograms = Math.floor(SCREEN_WIDTH / PARALELOGRAM_WIDTH);
 
   // An offer with a deadline shows a countdown bar; one without shows how
@@ -159,9 +162,15 @@ export const NewOrderCell = ({
             take an offer. A swipe let go early does nothing. With auto accept
             the offer is claimed on arrival and home never shows this card. */}
         <ButtonSwipe
+          key={acceptAttempt}
           style={styles.buttonTop}
           isSwiped={false}
-          onSwiped={didSwipe => didSwipe && onAccept(order)}
+          onSwiped={didSwipe => {
+            if (didSwipe) {
+              onAccept(order);
+              setAcceptAttempt(attempt => attempt + 1);
+            }
+          }}
           enabled={true}
           title={t('translations:accept')}
           subtitle={t('translations:slide_to_accept')}

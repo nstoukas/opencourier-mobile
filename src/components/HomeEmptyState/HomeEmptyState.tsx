@@ -14,25 +14,15 @@ export const HomeEmptyStateComponent = ({ style, state }: Props) => {
   const { t } = useTranslation();
   const imageSource = useMemo(() => {
     switch (state) {
-      case HomeEmptyState.WaitingNewOrders:
-      // return Images.Box;
       case HomeEmptyState.History:
-      case HomeEmptyState.InProgress:
-      case HomeEmptyState.New:
         return Images.Car;
     }
   }, [state]);
 
   const title = useMemo(() => {
     switch (state) {
-      case HomeEmptyState.New:
-        return t('translations:no_new_orders');
       case HomeEmptyState.History:
         return t('translations:no_previous_orders');
-      case HomeEmptyState.InProgress:
-        return t('translations:no_orders_in_progress');
-      case HomeEmptyState.WaitingNewOrders:
-        return t('translations:no_new_orders');
     }
   }, [state]);
 

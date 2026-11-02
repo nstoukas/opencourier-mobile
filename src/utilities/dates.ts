@@ -49,7 +49,3 @@ export const shortDate = (date: Moment): string => {
 
 export const formatTime = (time: string) =>
   new Date(time).toLocaleTimeString(APP_LOCALE, { timeStyle: 'short' });
-
-export function secondsToMinutes(seconds: number): number {
-  return Math.ceil(Math.ceil(seconds) / 60);
-}

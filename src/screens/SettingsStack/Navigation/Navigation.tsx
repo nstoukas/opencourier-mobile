@@ -30,6 +30,13 @@ export const NavigationScreen = ({ navigation }: Props) => {
     getNavigationApp().then(setSelectedApp);
   }, []);
 
+  // A saved app that is no longer on the phone counts as "Ask every time":
+  // that is what Navigate will do with it (Fable's review).
+  const shownChoice =
+    selectedApp !== null && installed.includes(selectedApp)
+      ? selectedApp
+      : null;
+
   const choose = (app: MapLinkingOptions | null) => {
     setSelectedApp(app);
     setNavigationApp(app).catch(() => undefined);
@@ -44,12 +51,12 @@ export const NavigationScreen = ({ navigation }: Props) => {
       key={key}
       testID={`navigation-app-${key}`}
       accessibilityRole="radio"
-      accessibilityState={{ checked: selectedApp === app }}
+      accessibilityState={{ checked: shownChoice === app }}
       onPress={() => choose(app)}
       style={[
         touchRow,
         styles.button,
-        selectedApp === app && { backgroundColor: color.card },
+        shownChoice === app && { backgroundColor: color.card },
       ]}>
       <Text style={styles.textButton}>{label}</Text>
     </TouchableOpacity>
@@ -65,6 +72,11 @@ export const NavigationScreen = ({ navigation }: Props) => {
         <Text style={styles.textSectionTitle}>
           {t('translations:navigation_app_title')}
         </Text>
+        {installed.length === 0 && (
+          <Text style={styles.textInfo} testID="navigation-app-none">
+            {t('translations:navigation_app_none')}
+          </Text>
+        )}
         <View style={styles.containerGray}>
           {installed.map(app => option(app, t(`translations:${app}`), app))}
           {option('ask', t('translations:navigation_app_ask'), null)}

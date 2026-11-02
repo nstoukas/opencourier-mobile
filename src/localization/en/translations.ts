@@ -271,7 +271,6 @@ export default {
   contact_customer: 'Contact customer',
   mark_as_delivered: 'Mark as delivered',
   items_confirmed: 'Items confirmed',
-  away: 'away',
   type_a_note: 'Type a note',
   quick_note: 'Quick Note For Customer',
   marking_as_delivered: 'Marking As Delivered',
@@ -341,10 +340,6 @@ export default {
   last_name: 'Last Name',
   phone: 'Phone',
   address: 'Address',
-  auto_copy: 'Auto Copy to Clipboard',
-  enable_auto_copy:
-    'Enable this to automatically save pickup and delivery addresses to your clipboard, simplifying your navigation tasks \n\nIt will only happen after every accepted order and pick-up order confirmation.',
-  preferred_nav: 'Preferred Navigation App',
   apple: 'Apple',
   google: 'Google',
   enable_notifications: 'Enable\nNotifications',

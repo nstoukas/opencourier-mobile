@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import MapView, { Callout, Marker, Polyline } from 'react-native-maps';
 import { useTranslation } from 'react-i18next';
@@ -71,8 +71,8 @@ export const RouteMap = ({
     if (dropoff) {
       points.push(dropoff);
     }
-    legs.forEach(leg => points.push(...leg.points));
-    return points;
+    // concat, not push(...): a long line would be too many arguments for one call.
+    return legs.reduce((all, leg) => all.concat(leg.points), points);
   }, [ownPosition, pickup, dropoff, legs]);
 
   const frame = () => {
@@ -114,15 +114,24 @@ export const RouteMap = ({
     map.animateToRegion({ ...FALLBACK_CENTRE, ...ZOOMED_IN });
   };
 
-  // Fit once per delivery and status; a rider who zoomed keeps the zoom
-  // through the minute refetches. With no job, fit when the first own
-  // position arrives.
+  // Fit once per delivery and status, so a rider who zoomed keeps the zoom
+  // through the minute refetches, and again only when something the fit needs
+  // first becomes available for this key: the map itself (Android ignores a
+  // fit before it is ready), the card's height, the route's lines, the rider's
+  // own position, or (with no job) the restaurants (Fable's review). Each of
+  // these flips once, so the fit runs a few times at most per delivery and status.
+  const [mapReady, setMapReady] = useState(false);
   const hasOwnPosition = ownPosition !== null;
+  const hasLegs = legs.length > 0;
+  const insetKnown = bottomInset > 0;
+  const hasPickupPoints = pickupPoints.length > 0;
   useEffect(() => {
-    frame();
+    if (mapReady) {
+      frame();
+    }
     // `frame` reads the latest props; only these changes should move the map.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [fitKey, hasOwnPosition]);
+  }, [fitKey, mapReady, hasOwnPosition, hasLegs, insetKnown, hasPickupPoints]);
 
   return (
     <View style={StyleSheet.absoluteFill} testID="route-map">
@@ -130,6 +139,7 @@ export const RouteMap = ({
           Android can snapshot a custom pin before it is drawn and show nothing. */}
       <MapView
         ref={mapRef}
+        onMapReady={() => setMapReady(true)}
         style={StyleSheet.absoluteFill}
         initialRegion={{ ...(ownPosition ?? FALLBACK_CENTRE), ...ZOOMED_IN }}
         // The rider is drawn below from the phone's own fix; the map's own
@@ -199,7 +209,8 @@ export const RouteMap = ({
           </Marker>
         )}
       </MapView>
-      <View style={styles.mapButtons}>
+      {/* Just above the card, clear of the banners at the top of home. */}
+      <View style={[styles.mapButtons, { bottom: bottomInset + space['4'] }]}>
         <TouchableOpacity
           testID="map-layers-button"
           accessibilityRole="switch"
@@ -230,7 +241,6 @@ const styles = StyleSheet.create({
   mapButtons: {
     position: 'absolute',
     right: space['4'],
-    top: '40%',
     gap: space['2'],
   },
   mapButton: {

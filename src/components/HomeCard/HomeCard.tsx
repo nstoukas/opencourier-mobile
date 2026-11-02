@@ -1,13 +1,10 @@
 import React, { ReactNode } from 'react';
-import {
-  ScrollView,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View,
-} from 'react-native';
+import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+// Gesture handler's own ScrollView, so the swipes inside the card (also gesture
+// handler) and the card's scrolling agree on who takes a drag (Fable's review).
+import { ScrollView } from 'react-native-gesture-handler';
 import ButtonSwipe from '@app/components/ButtonSwipe/ButtonSwipe';
 import { Button, ButtonType } from '@app/components/Button/Button';
 import { Icon } from '@app/components/Icon/Icon';

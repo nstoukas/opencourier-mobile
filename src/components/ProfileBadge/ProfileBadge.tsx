@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import React, { useMemo } from 'react';
 import {
   Image,
@@ -36,6 +37,7 @@ export const ProfileBadge = ({
         return Colors.yellow1;
     }
   }, [userStatus]);
+  const { t } = useTranslation();
 
   return (
     <TouchableOpacity
@@ -61,7 +63,9 @@ export const ProfileBadge = ({
             { backgroundColor: backgroundColor },
           ]}>
           <Text style={styles.textStatus} numberOfLines={1}>
-            {userStatus.toLowerCase()}
+            {/* 'online', 'offline' and 'last_call' are translation keys: the
+                rider reads Online, Offline or Last Call, never the raw value. */}
+            {t(`translations:${userStatus.toLowerCase()}`)}
           </Text>
         </View>
       )}

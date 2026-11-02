@@ -48,8 +48,11 @@ export const useDeliveryRoute = ({
     queryKey: [QueryKeys.deliveryRoute, deliveryId, serverStatus],
     queryFn: () => services.routeService.getDeliveryRoute(deliveryId!),
     // A delivered job has no route (the server answers 404 once it is over).
+    // No server status yet means the server's list no longer has this job (it
+    // just finished): asking would only get a 404 (Fable's review).
     enabled:
       deliveryId !== undefined &&
+      serverStatus !== undefined &&
       !waitingToSend &&
       serverStatus !== OrderStatus.dropped_off,
     refetchInterval: isJob && inFront && appActive ? EVERY_MINUTE : false,

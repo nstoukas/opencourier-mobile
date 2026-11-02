@@ -44,7 +44,7 @@ const ButtonSwipe: FunctionComponent<Props> = ({
   onSwiped,
   enabled,
   isLoading,
-  title = `Slide to Complete`,
+  title = 'Slide to Complete',
   subtitle = '',
   style = {},
 }: Props) => {
@@ -119,8 +119,11 @@ const ButtonSwipe: FunctionComponent<Props> = ({
         </View>
       ) : (
         <>
+          {/* activeOffsetX: the swipe claims a drag once it has moved 10 px
+              sideways, before a scrolling card around it can take it (spec 0018). */}
           <PanGestureHandler
             onGestureEvent={animatedGestureHandler}
+            activeOffsetX={[-10, 10]}
             enabled={enabled}>
             <Animated.View style={[styles.swipeable, AnimatedStyles.swipeable]}>
               <LinearGradient

@@ -122,6 +122,11 @@ jest.mock('react-native-maps', () => {
       fitToCoordinates: MockMapView.fitToCoordinates,
       animateToRegion: MockMapView.animateToRegion,
     }));
+    // A real map says it is ready once, soon after it mounts.
+    const { onMapReady } = props;
+    React.useEffect(() => {
+      onMapReady?.();
+    }, [onMapReady]);
     return React.createElement(View, props);
   });
   MockMapView.fitToCoordinates = jest.fn();

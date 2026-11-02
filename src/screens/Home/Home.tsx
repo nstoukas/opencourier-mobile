@@ -54,7 +54,8 @@ type Props = DrawerScreenProp<DrawerScreens.Home>;
 
 type CardItem = { kind: 'offer' | 'job'; order: Order };
 
-// An offer's route is asked for at the server's offer status.
+// An offer's route is asked for at the server's offer status. A string, because
+// the app's OrderStatus has no member for it: offers never carry their status.
 const OFFER_STATUS = 'ASSIGNING_COURIER';
 
 const pointOf = (location?: {
@@ -124,7 +125,11 @@ export const HomeScreen = ({ navigation }: Props) => {
   // It stays on the phone.
   useFocusEffect(
     useCallback(() => {
-      if (!locationPermission) {
+      // While Online, on Last call or holding a job, the tracking watch already
+      // feeds the position; one more reader would only spend battery.
+      const tracking =
+        userStatus !== UserStatus.Offline || dataSourceInProgress.length > 0;
+      if (!locationPermission || tracking) {
         return;
       }
       Geolocation.getCurrentPosition(
@@ -136,7 +141,7 @@ export const HomeScreen = ({ navigation }: Props) => {
         () => undefined,
         { enableHighAccuracy: true, timeout: 15000, maximumAge: 10000 },
       );
-    }, [locationPermission]),
+    }, [locationPermission, userStatus, dataSourceInProgress.length]),
   );
   const storedOwnPosition = useOwnPosition();
   // Without the permission the phone has no position of its own to show.

@@ -78,26 +78,12 @@ export const styles = StyleSheet.create({
     shadowOpacity: 0.6,
     elevation: 3,
   },
-  containerMap: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginVertical: 16,
-  },
   map: {
     width: 143,
     height: 138,
     borderRadius: radius.xl,
     backgroundColor: Colors.gray1,
     marginRight: 16,
-  },
-  textDistance: {
-    fontSize: typeScale.body.fontSize,
-    marginLeft: 8,
-  },
-  containerAway: {},
-  containerTextAway: {
-    flexDirection: 'row',
-    alignItems: 'center',
   },
   containerLoader: {
     flexDirection: 'row',

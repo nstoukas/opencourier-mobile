@@ -5,6 +5,7 @@ import userService, { UserService } from './userService';
 import instanceService, { InstanceService } from './instanceService';
 import earningsService, { EarningsService } from './earningsService';
 import routeService, { RouteService } from './routeService';
+import { setOwnPosition } from './ownPosition';
 import notificationDeviceService, {
   NotificationDeviceService,
 } from './notificationDeviceService';
@@ -31,6 +32,8 @@ const Services = (): Services => {
 
   const logout = () => {
     client.defaults.headers.common.Authorization = undefined;
+    // The next rider on this phone never sees the last one's position (spec 0018).
+    setOwnPosition(null);
   };
 
   return {

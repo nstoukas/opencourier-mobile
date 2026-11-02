@@ -41,7 +41,6 @@ export const useHomeOrders = () => {
   const queryClient = useQueryClient();
   const [dataSourceNew, setDataSourceNew] = useState<Order[]>([]);
   const [dataSourceInProgress, setDataSourceInProgress] = useState<Order[]>([]);
-  const [dataSourceHistory, setDataSourceHistory] = useState<Order[]>([]);
 
   // quieries
 
@@ -63,14 +62,8 @@ export const useHomeOrders = () => {
     queryKey: [QueryKeys.inProgressOrders],
   });
 
-  const {
-    data: historyOrders,
-    isLoading: loadingHistoryOrders,
-    refetch: refechHistory,
-  } = useQuery({
-    queryFn: services.orderService.getOrdersHistory,
-    queryKey: [QueryKeys.orderHistory],
-  });
+  // The history has its own screen and query since spec 0018 (History.tsx);
+  // home no longer asks for it.
 
   // Bumped by each reminder, so the "Waiting X min" line is drawn again.
   const [, setReminderTick] = useState(0);
@@ -332,12 +325,6 @@ export const useHomeOrders = () => {
   }, [inProgressOrders, outboxItems, user?.id]);
 
   useEffect(() => {
-    if (historyOrders) {
-      setDataSourceHistory(historyOrders);
-    }
-  }, [historyOrders]);
-
-  useEffect(() => {
     if (user?.status === UserStatus.Online) {
       refetchNew();
     }
@@ -363,7 +350,6 @@ export const useHomeOrders = () => {
 
   return {
     dataSourceNew,
-    dataSourceHistory,
     dataSourceInProgress,
     // The jobs as the SERVER has them, without the outbox's waiting steps:
     // the route is asked for the server's status (spec 0018, AC-6).
@@ -381,10 +367,8 @@ export const useHomeOrders = () => {
     upDownVotedNoteIds,
     upvoteCommentTemp,
     downvoteCommentTemp,
-    isLoading:
-      loadingNewOrders || loadingInProgressOrders || loadingHistoryOrders,
+    isLoading: loadingNewOrders || loadingInProgressOrders,
     refetchNew,
     refetchInProgress,
-    refechHistory,
   };
 };

@@ -13,7 +13,8 @@ import { MainScreens } from '@app/navigation/main/types';
 import { useTranslation } from 'react-i18next';
 import messaging from '@react-native-firebase/messaging';
 import Clipboard from '@react-native-clipboard/clipboard';
-import { SettingsOptions } from '@app/types/types';
+import { MapLinkingOptions, SettingsOptions } from '@app/types/types';
+import { getNavigationApp } from '@app/services/mapPreferences';
 import {
   SettingsCell,
   SettingsCellType,
@@ -108,6 +109,19 @@ export const SettingsScreen = ({ navigation }: Props) => {
     Clipboard.setString(token);
   };
 
+  // Spec 0018 (AC-12): the Navigation row shows the saved navigation app, read
+  // again each time Settings comes into view (the rider may have just changed it).
+  const [navigationApp, setNavigationAppShown] =
+    useState<MapLinkingOptions | null>(null);
+  useEffect(() => {
+    const refresh = () => {
+      getNavigationApp().then(setNavigationAppShown);
+    };
+    refresh();
+    // `addListener` returns the function that removes the listener again.
+    return navigation.addListener?.('focus', refresh);
+  }, [navigation]);
+
   const cellSubtitleForSetting = (setting: SettingsOptions) => {
     switch (setting) {
       case SettingsOptions.accountInformation:
@@ -117,7 +131,8 @@ export const SettingsScreen = ({ navigation }: Props) => {
       case SettingsOptions.language:
         return 'select_language';
       case SettingsOptions.navigation:
-        return 'customize_navigation';
+        // The app's name is its own translation key ('google_maps', 'waze'...).
+        return navigationApp ?? 'navigation_app_ask';
       case SettingsOptions.operatingArea:
         return 'manage_you_areas';
       case SettingsOptions.verification:

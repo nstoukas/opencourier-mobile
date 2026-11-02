@@ -26,27 +26,12 @@ export const styles = StyleSheet.create({
     alignItems: 'center',
     marginLeft: 8,
   },
-  containerMap: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginTop: 16,
-    marginBottom: 24,
-  },
   map: {
     width: 143,
     height: 138,
     borderRadius: radius.xl,
     backgroundColor: Colors.gray1,
     marginRight: 16,
-  },
-  textDistance: {
-    fontSize: typeScale.body.fontSize,
-    marginLeft: 8,
-  },
-  containerAway: {},
-  containerTextAway: {
-    flexDirection: 'row',
-    alignItems: 'center',
   },
   containerHeader: {
     flexDirection: 'row',
