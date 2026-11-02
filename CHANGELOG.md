@@ -4,7 +4,7 @@ This fork adapts [Princeton-HCI/opencourier-mobile](https://github.com/Princeton
 the courier app, for a Greek workers' cooperative delivering by moped in Volos.
 
 Everything below sits on top of upstream `main` on the branch `feat/courier-earnings`
-(48 commits, 26 July – 26 October 2026). Each entry names its commit, and the commit message
+(159 commits, 26 July to 2 November 2026). Each entry names its commit, and the commit message
 has the full reasoning and verification notes.
 
 ---
@@ -109,6 +109,72 @@ part below was checked on the emulator with messages handed to the app's own han
   pressed in the shade, and say it had ended over a live one. `690f047`
 - Tests by agy: 295 pass in all (214 before). `b93ae41`, `902534c`, `4faab04`
 - The old push code this replaces (`pushNavigation.ts`, `onMessageReceived`) is gone. `f08df5e`
+
+On 2 November the courier app stack built from 27 October to 2 November was merged in, from
+row 65 (design foundation) to row 71. The GA rows (pay and matching) among them have the entries
+below; the others are recorded in the workspace's scope and walkthroughs. With them the suite is
+at **1025 passing tests**.
+
+### Job steps wait for signal (row 20, spec 0009): `8fb0240` to `5f19e36`
+Built on the branch `feat/bad-signal-outbox` with the backend half (the tap time). Merge the
+backend first: this half sends `tapAgeMs`, which an older backend refuses.
+- **A tap is accepted at once.** Every job step goes into an outbox kept on the phone and is sent
+  in order when the server can be reached: after each tap, at login, on reconnect, when the app
+  comes to the front, and every 30 s while steps wait. The step shows "Waiting to send" until then,
+  and survives a restart. Each step carries its age, so pay lands on the day the rider tapped.
+- **A refused step says so.** A step the server refuses (the delivery was cancelled meanwhile, say)
+  and the later steps of that job are never sent; Home shows a card naming the restaurant and the
+  step, with "Call the co-op".
+- **What was loaded stays readable.** The rider, the jobs in progress and the earnings are kept on
+  the phone for 24 hours (offers never are), and removed at logout.
+- **Log out waits** while this rider's steps wait to be sent, since a Delivered is part of their
+  pay; it also waits when the outbox cannot be read (`d7ececa`).
+- Fixed after review: the saved cache kept data from queries that had errored, no double steps
+  (`3665d25`).
+- Tests by agy: 709 pass after the review round, then `sendJobStep`, the refusal cards and the
+  logout guard (`5a5d16c`, `058efb7`, `79b640a`); every put the bug back check repeated by hand.
+
+### No sign up in the app (row 16, spec 0013): `21d24de` to `1aba61c`
+The co-op now issues every rider's login from admin, so the app's sign up screen is gone.
+- The Join screen, the unused Forgot password screen and `userService.signup` are deleted. Log in
+  is the main button on the instance page.
+- "Forgot password?" says to ask the co-op to set a new password; the login email stays the same.
+- A password change in admin signs the phone out (the backend refuses the old session with a 401,
+  and the app ends it).
+- Tests by agy (`f6b8a25`, `82b9ab0`): 734 pass; every put the bug back check repeated by hand.
+
+### Dispatch stop banner on Home (row 29, spec 0014): `8dc73be` to `e4f2446`
+- "Dispatch stopped" or "Dispatch stops soon" with the backend's own sentence, under the header.
+  Home reads it when it opens, every minute while it is in front (`af6d39c`), and when the app
+  returns to the foreground. It is never saved to the phone, so an old answer cannot show after a
+  restart.
+- `'STOPPED'` is a reason an offer can end.
+- Tests by agy (`b053461`): 750 pass; every put the bug back check repeated by hand.
+
+### A cancelled job still pays, and says what to do with the food (row 32, spec 0015): `1cb5ea0` to `824ed70`
+- **A loud alert, once**, on its own channel, whether the app or a push sees the cancellation
+  first. Found in the live verify: Android refused the first vibration pattern and the channel had
+  no sound; both fixed (`cf2fa88`).
+- **A card over Home** with the pay, who cancelled and what to do with the food; after a pickup,
+  "Food returned" or "Couldn't return it" with a note. It can be set aside with Later (`96eebae`).
+- The earnings day list labels a cancelled job's pay.
+- The backend now refuses a rider's own cancel (decision 32.14).
+- Tests by agy (`7c581ab`, `6a69208`): 849 pass; every put the bug back check repeated by hand.
+
+### Auto accept rings its own sound; a free Hand back in the first minute (row 71, spec 0020): `df6fd95` to `aef7190`
+Needs a native rebuild (a new sound file and notification channel).
+- **An automatic accept says so**: the app sends `automatic: true`, and one notification "Order
+  accepted automatically: <restaurant>" plays a new rising sound (`res/raw/auto_accept.wav`) on its
+  own channel. A tapped accept plays nothing new.
+- **Hand back · 42 s** on the job while the co-op's window is open, counted down by the server's
+  clock so a wrong phone clock cannot stretch or cut it. A tap asks first ("No cost to you"); on
+  success the job leaves Home and its waiting steps are dropped. A refusal shows the server's own
+  sentence.
+- **During the window** the card shows the drop off area, not the customer's name or full address.
+- A 409 or 404 on the dispatched step after an accept (a hand back landed between the two calls)
+  counts as done instead of "Error accepting order" (`f36b063`).
+- Tests by agy (`5332208`): 1025 pass; 10 checked by hand by putting their bug back. Reviewed by
+  Fable (approve with nits, fixed in `ab04175`).
 
 ## Fixed
 
