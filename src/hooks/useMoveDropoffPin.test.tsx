@@ -2,7 +2,7 @@ import React from 'react';
 import { Alert } from 'react-native';
 import { renderHook, act } from '@testing-library/react-native';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import axios, { AxiosError } from 'axios';
+import { AxiosError } from 'axios';
 import Geolocation from 'react-native-geolocation-service';
 import { services } from '@app/services/service';
 import { Order } from '@app/types/types';
@@ -41,9 +41,7 @@ describe('useMoveDropoffPin (spec 0016, AC-8)', () => {
     });
     invalidateSpy = jest.spyOn(queryClient, 'invalidateQueries');
     return ({ children }: { children: React.ReactNode }) => (
-      <QueryClientProvider client={queryClient}>
-        {children}
-      </QueryClientProvider>
+      <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
     );
   };
 
@@ -196,39 +194,42 @@ describe('useMoveDropoffPin (spec 0016, AC-8)', () => {
       ['accuracy 0 (Android unknown)', 0],
       ['negative accuracy (iOS invalid)', -5],
       ['NaN accuracy', NaN],
-    ])('refuses %s with "Your location is not precise enough here. Step outside and try again." and makes no request', async (_, accuracy) => {
-      const wrapper = createWrapper();
-      const { result } = renderHook(() => useMoveDropoffPin(), { wrapper });
+    ])(
+      'refuses %s with "Your location is not precise enough here. Step outside and try again." and makes no request',
+      async (_, accuracy) => {
+        const wrapper = createWrapper();
+        const { result } = renderHook(() => useMoveDropoffPin(), { wrapper });
 
-      (Geolocation.getCurrentPosition as jest.Mock).mockImplementation(
-        success => {
-          success({
-            coords: {
-              latitude: 39.3622,
-              longitude: 22.9425,
-              accuracy,
-            },
-          });
-        },
-      );
+        (Geolocation.getCurrentPosition as jest.Mock).mockImplementation(
+          success => {
+            success({
+              coords: {
+                latitude: 39.3622,
+                longitude: 22.9425,
+                accuracy,
+              },
+            });
+          },
+        );
 
-      act(() => {
-        result.current.movePin(mockOrder);
-      });
+        act(() => {
+          result.current.movePin(mockOrder);
+        });
 
-      const buttons = alertSpy.mock.calls[0][2];
-      await act(async () => {
-        buttons[1].onPress();
-      });
+        const buttons = alertSpy.mock.calls[0][2];
+        await act(async () => {
+          buttons[1].onPress();
+        });
 
-      expect(alertSpy).toHaveBeenCalledTimes(2);
-      expect(alertSpy).toHaveBeenLastCalledWith(
-        'Move the pin',
-        'Your location is not precise enough here. Step outside and try again.',
-      );
-      expect(moveDropoffPinSpy).not.toHaveBeenCalled();
-      expect(result.current.movingId).toBeNull();
-    });
+        expect(alertSpy).toHaveBeenCalledTimes(2);
+        expect(alertSpy).toHaveBeenLastCalledWith(
+          'Move the pin',
+          'Your location is not precise enough here. Step outside and try again.',
+        );
+        expect(moveDropoffPinSpy).not.toHaveBeenCalled();
+        expect(result.current.movingId).toBeNull();
+      },
+    );
 
     it('accepts a fix with accuracy exactly 50 m and posts to deliveries/:id/dropoff-point', async () => {
       const wrapper = createWrapper();
@@ -277,51 +278,54 @@ describe('useMoveDropoffPin (spec 0016, AC-8)', () => {
       ['999 m', 999],
       ['1.0 km', 1000],
       ['30 m', 30],
-    ])('success posts { latitude, longitude } and shows "Pin moved %s. Thank you." (metres: %i)', async (formatted, distanceMetres) => {
-      const wrapper = createWrapper();
-      const { result } = renderHook(() => useMoveDropoffPin(), { wrapper });
+    ])(
+      'success posts { latitude, longitude } and shows "Pin moved %s. Thank you." (metres: %i)',
+      async (formatted, distanceMetres) => {
+        const wrapper = createWrapper();
+        const { result } = renderHook(() => useMoveDropoffPin(), { wrapper });
 
-      (Geolocation.getCurrentPosition as jest.Mock).mockImplementation(
-        success => {
-          success({
-            coords: {
-              latitude: 39.3622,
-              longitude: 22.9425,
-              accuracy: 20,
-            },
-          });
-        },
-      );
+        (Geolocation.getCurrentPosition as jest.Mock).mockImplementation(
+          success => {
+            success({
+              coords: {
+                latitude: 39.3622,
+                longitude: 22.9425,
+                accuracy: 20,
+              },
+            });
+          },
+        );
 
-      moveDropoffPinSpy.mockResolvedValue({
-        savedCustomerUpdated: true,
-        distanceMetres,
-      });
+        moveDropoffPinSpy.mockResolvedValue({
+          savedCustomerUpdated: true,
+          distanceMetres,
+        });
 
-      act(() => {
-        result.current.movePin(mockOrder);
-      });
+        act(() => {
+          result.current.movePin(mockOrder);
+        });
 
-      const buttons = alertSpy.mock.calls[0][2];
-      await act(async () => {
-        buttons[1].onPress();
-      });
+        const buttons = alertSpy.mock.calls[0][2];
+        await act(async () => {
+          buttons[1].onPress();
+        });
 
-      expect(moveDropoffPinSpy).toHaveBeenCalledWith({
-        id: mockOrder.id,
-        latitude: 39.3622,
-        longitude: 22.9425,
-      });
-      expect(alertSpy).toHaveBeenLastCalledWith(
-        'Move the pin',
-        `Pin moved ${formatted}. Thank you.`,
-      );
-      // Query cache is invalidated after success
-      expect(invalidateSpy).toHaveBeenCalledWith({
-        queryKey: [QueryKeys.inProgressOrders],
-      });
-      expect(result.current.movingId).toBeNull();
-    });
+        expect(moveDropoffPinSpy).toHaveBeenCalledWith({
+          id: mockOrder.id,
+          latitude: 39.3622,
+          longitude: 22.9425,
+        });
+        expect(alertSpy).toHaveBeenLastCalledWith(
+          'Move the pin',
+          `Pin moved ${formatted}. Thank you.`,
+        );
+        // Query cache is invalidated after success
+        expect(invalidateSpy).toHaveBeenCalledWith({
+          queryKey: [QueryKeys.inProgressOrders],
+        });
+        expect(result.current.movingId).toBeNull();
+      },
+    );
 
     it('shows "No connection. Try again when you have signal." for axios error with no response, and invalidates query', async () => {
       const wrapper = createWrapper();

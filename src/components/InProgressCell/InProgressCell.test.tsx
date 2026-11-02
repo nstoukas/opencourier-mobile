@@ -798,7 +798,9 @@ describe('InProgressCell (spec 0007, decision 65.10)', () => {
           const buttons = component.UNSAFE_queryAllByType(Button);
           const pinButton = buttons.find(b => b.props.icon === MapPinIcon);
           expect(pinButton).toBeDefined();
-          expect(pinButton!.props.title).toBe('Pin wrong? Set it where I stand');
+          expect(pinButton!.props.title).toBe(
+            'Pin wrong? Set it where I stand',
+          );
         });
 
         it('hides button in PICKED_UP, ON_THE_WAY, DROPPED_OFF and DISPATCHED', () => {
@@ -892,7 +894,9 @@ describe('InProgressCell (spec 0007, decision 65.10)', () => {
             />,
           );
 
-          const pinButton = component.getByText('Pin wrong? Set it where I stand');
+          const pinButton = component.getByText(
+            'Pin wrong? Set it where I stand',
+          );
           fireEvent.press(pinButton);
 
           expect(onMovePin).toHaveBeenCalledTimes(1);
