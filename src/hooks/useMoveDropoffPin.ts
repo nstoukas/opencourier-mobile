@@ -1,4 +1,4 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useRef, useState } from 'react';
 import { Alert } from 'react-native';
 import axios from 'axios';
 import Geolocation from 'react-native-geolocation-service';
@@ -7,7 +7,6 @@ import { useTranslation } from 'react-i18next';
 import { services } from '@app/services/service';
 import { Order } from '@app/types/types';
 import { QueryKeys } from '@app/utilities/queryKeys';
-import { formatDistance } from '@app/utilities/geo';
 
 // Spec 0016 (AC-8): a fix less precise than this is refused; between the
 // buildings of a street, a worse one could put the pin across the road.
@@ -38,10 +37,28 @@ const readFreshFix = (): Promise<Fix | null> =>
     );
   });
 
-// The server's own sentence from a refusal (a 409 such as "The pin is already
-// where you stand"), if it sent one.
+// A pin move's distance for the thank you line: whole metres under 1 km ("141 m"),
+// km with one decimal above (a move of 30 m must not read "0 km").
+export const formatPinDistance = (metres: number): string =>
+  metres < 1000
+    ? `${Math.round(metres)} m`
+    : `${(metres / 1000).toFixed(1)} km`;
+
+// A fix the phone says is within 50 m. Android reports 0 when it has no
+// figure, iOS a negative number for an invalid fix: neither counts as precise.
+export const isPreciseEnough = (accuracy: number): boolean =>
+  Number.isFinite(accuracy) &&
+  accuracy > 0 &&
+  accuracy <= PIN_MAX_ACCURACY_METRES;
+
+// The server's own sentence from a refusal (a 4xx such as the 409 "The pin is
+// already where you stand"), if it sent one. A 5xx's text is not for riders.
 const serverMessage = (error: unknown): string | undefined => {
   if (!axios.isAxiosError(error)) {
+    return undefined;
+  }
+  const status = error.response?.status ?? 0;
+  if (status < 400 || status >= 500) {
     return undefined;
   }
   const result = error.response?.data?.result;
@@ -56,9 +73,16 @@ export const useMoveDropoffPin = () => {
   const { t } = useTranslation();
   const queryClient = useQueryClient();
   const [movingId, setMovingId] = useState<string | null>(null);
+  // State updates land on the next render; this ref stops a second Move pin
+  // tapped in the same instant (two dialogs stacked on iOS) at once.
+  const sendingRef = useRef(false);
 
   const send = useCallback(
     async (order: Order) => {
+      if (sendingRef.current) {
+        return;
+      }
+      sendingRef.current = true;
       setMovingId(order.id);
       try {
         const fix = await readFreshFix();
@@ -69,7 +93,7 @@ export const useMoveDropoffPin = () => {
           );
           return;
         }
-        if (fix.accuracy > PIN_MAX_ACCURACY_METRES) {
+        if (!isPreciseEnough(fix.accuracy)) {
           Alert.alert(
             t('translations:pin_move_title'),
             t('translations:pin_not_precise'),
@@ -85,7 +109,7 @@ export const useMoveDropoffPin = () => {
           Alert.alert(
             t('translations:pin_move_title'),
             t('translations:pin_moved', {
-              distance: formatDistance(answer.distanceMetres),
+              distance: formatPinDistance(answer.distanceMetres),
             }),
           );
         } catch (error) {
@@ -105,6 +129,7 @@ export const useMoveDropoffPin = () => {
           queryKey: [QueryKeys.inProgressOrders],
         });
       } finally {
+        sendingRef.current = false;
         setMovingId(null);
       }
     },
