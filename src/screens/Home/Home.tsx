@@ -37,7 +37,7 @@ import { useMoveDropoffPin } from '@app/hooks/useMoveDropoffPin';
 import { useHandBack } from '@app/hooks/useHandBack';
 import {
   dropoffAreaOf,
-  isHandBackWindowOpen,
+  hidesCustomerDetails,
 } from '@app/utilities/handBackWindow';
 import { useDeliveryRoute } from '@app/hooks/useDeliveryRoute';
 import { usePickupPoints } from '@app/hooks/usePickupPoints';
@@ -332,8 +332,8 @@ export const HomeScreen = ({ navigation }: Props) => {
         onOrderItemsListForCustomer={() =>
           navigation.navigate(MainScreens.ItemsCollected, {
             // The area, not the name, during the free hand back (71.10).
-            customerName: isHandBackWindowOpen(order, Date.now())
-              ? dropoffAreaOf(order.dropoffLocation)
+            customerName: hidesCustomerDetails(order, Date.now())
+              ? dropoffAreaOf(order.dropoffLocation) || 'N/A'
               : order.dropoffName,
             items: order.orderItems,
           })

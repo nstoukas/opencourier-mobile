@@ -18,7 +18,11 @@ import { NavigationArrowIcon } from 'phosphor-react-native/src/icons/NavigationA
 import { ArrowUUpLeftIcon } from 'phosphor-react-native/src/icons/ArrowUUpLeft';
 import { RouteLines } from '../RouteLines/RouteLines';
 import { LegFigures } from '@app/utilities/routeLegs';
-import { canHandBack, dropoffAreaOf } from '@app/utilities/handBackWindow';
+import {
+  canHandBack,
+  dropoffAreaOf,
+  hidesCustomerDetails,
+} from '@app/utilities/handBackWindow';
 import { useHandBackCountdown } from '@app/hooks/useHandBack';
 
 type Props = {
@@ -96,7 +100,9 @@ export const InProgressCell = ({
   // while it is open, so the countdown moves and everything below changes back
   // the moment it ends.
   const handBackSeconds = useHandBackCountdown(order.handBackUntilOnPhone);
-  const inHandBackWindow = handBackSeconds > 0;
+  // Only before the restaurant, by the status shown (row 71 review).
+  const inHandBackWindow =
+    handBackSeconds > 0 && hidesCustomerDetails(order, Date.now());
   const showHandBack = !!onHandBack && canHandBack(order, Date.now());
   // Decision 71.10: during the window the card shows only the drop off area,
   // as the offer card does, never the customer's name or full address, so a

@@ -163,7 +163,10 @@ export const useHomeOrders = () => {
       // The phone took this order by itself: say so, with its own sound, once
       // (spec 0020, AC-12). A tapped accept plays nothing new.
       if (automatic) {
-        announceAutoAccept(orderId, restaurantName ?? '');
+        announceAutoAccept(
+          orderId,
+          restaurantName || i18next.t('translations:auto_accepted_no_name'),
+        );
       }
       refetchNew();
       // The jobs first, then the user, in that order (as socket.tsx does, for

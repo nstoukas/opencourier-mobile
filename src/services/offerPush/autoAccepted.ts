@@ -53,6 +53,9 @@ export const announceAutoAccept = async (
       android: {
         channelId: AUTO_ACCEPTED_CHANNEL_ID,
         importance: AndroidImportance.HIGH,
+        // It has done its job once heard: it leaves the tray by itself after
+        // two minutes, so a day of auto accepts does not pile up (row 71 review).
+        timeoutAfter: 2 * 60 * 1000,
         pressAction: { id: 'default' },
       },
       ios: { sound: 'default' },

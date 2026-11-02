@@ -72,9 +72,13 @@ export const useHandBack = (courierId: string | undefined) => {
         const answered = axios.isAxiosError(error) && !!error.response;
         // A 409 carries the server's sentence (at the restaurant, the window
         // is over, the order changed); a 404 says it is not theirs.
+        const notYours =
+          axios.isAxiosError(error) && error.response?.status === 404;
         Alert.alert(
           !answered
             ? t('translations:hand_back_no_connection')
+            : notYours
+            ? t('translations:hand_back_not_yours')
             : serverMessage(error) ?? t('translations:hand_back_failed'),
         );
       } finally {

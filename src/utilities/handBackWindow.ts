@@ -12,6 +12,7 @@ import { offerTimesOnPhone } from './offerClock';
 
 // Only before the rider reaches the restaurant (decision 71.6): once there,
 // the food is waiting for them.
+// Typed as plain strings so `includes(order.status)` accepts any status text.
 const HAND_BACK_STATUSES: string[] = [
   OrderStatus.accepted,
   OrderStatus.dispatched,
@@ -46,6 +47,14 @@ export const handBackSecondsLeft = (
 // off area, not the customer's name and address (decision 71.10).
 export const isHandBackWindowOpen = (order: Order, now: number): boolean =>
   handBackSecondsLeft(order.handBackUntilOnPhone, now) > 0;
+
+// True while the card must show the area instead of the customer: the window
+// is open AND the status the screen shows is still before the restaurant. A
+// rider who swiped "Arrived at pickup" inside the minute (the step may still
+// wait in the outbox) sees the customer's name again, which the restaurant
+// asks for (row 71 review).
+export const hidesCustomerDetails = (order: Order, now: number): boolean =>
+  isHandBackWindowOpen(order, now) && HAND_BACK_STATUSES.includes(order.status);
 
 // The Hand back button shows when the window is ahead, the status the screen
 // SHOWS (moved on by steps waiting in the outbox) is still before the

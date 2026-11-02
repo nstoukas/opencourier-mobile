@@ -354,7 +354,9 @@ export type Order = {
   // restaurant. The job list (deliveries/in-progress) sends it.
   handBackUntil?: string | null;
   // The time above moved onto this phone's clock (see
-  // `utilities/handBackWindow.ts`). Not sent by the server.
+  // `utilities/handBackWindow.ts`). Not sent by the server. It is saved with
+  // the job list (queryPersistence), which is harmless: home refetches on
+  // focus and the server decides every hand back.
   handBackUntilOnPhone?: number | null;
 };
 
