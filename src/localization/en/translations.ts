@@ -243,6 +243,10 @@ export default {
     'Quickly find and join restaurant instances in Open Deli – your gateway to more delivery opportunities!',
   accept_now: 'Accept Now',
   decline: 'Decline',
+  // Spec 0019: the offer card.
+  offer_km_to_restaurant: '{{km}} km to the restaurant',
+  offer_km_to_customer: '{{km}} km to the customer',
+  offer_about_minutes: 'About {{minutes}} min',
   // Spec 0018: the map home.
   slide_to_accept: 'Slide to take this order',
   route_not_available: 'Route not available',

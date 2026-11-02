@@ -291,21 +291,6 @@ export const HomeScreen = ({ navigation }: Props) => {
           order={order}
           onAccept={offer => acceptOrderFn(offer.id)}
           onDecline={offer => declineOrderFn(offer.id)}
-          onCopyCustomer={offer =>
-            copyAddress(
-              offer.dropoffLocationFormattedAddress ??
-                offer.dropoffLocation?.formattedAddress,
-            )
-          }
-          onCopyRestaurant={offer =>
-            copyAddress(
-              offer.pickupLocationFormattedAddress ??
-                offer.pickupLocation?.formattedAddress,
-            )
-          }
-          toRestaurant={lines.toRestaurant}
-          toCustomer={lines.toCustomer}
-          routeUnavailable={routeUnavailable}
         />
       );
     }

@@ -64,8 +64,6 @@ describe('NewOrderCell (spec 0002, spec 0018, AC-7, AC-8, AC-9)', () => {
           autoAcceptOrders={false}
           onAccept={jest.fn()}
           onDecline={jest.fn()}
-          onCopyCustomer={jest.fn()}
-          onCopyRestaurant={jest.fn()}
           millisRemaining={null} // Expiry off: no deadline
           totalMillis={null}
           millisWaited={25000} // 25 seconds
@@ -95,8 +93,6 @@ describe('NewOrderCell (spec 0002, spec 0018, AC-7, AC-8, AC-9)', () => {
           autoAcceptOrders={false}
           onAccept={jest.fn()}
           onDecline={jest.fn()}
-          onCopyCustomer={jest.fn()}
-          onCopyRestaurant={jest.fn()}
           millisRemaining={null}
           totalMillis={null}
           millisWaited={180000} // 3 minutes
@@ -126,8 +122,6 @@ describe('NewOrderCell (spec 0002, spec 0018, AC-7, AC-8, AC-9)', () => {
           autoAcceptOrders={false}
           onAccept={jest.fn()}
           onDecline={jest.fn()}
-          onCopyCustomer={jest.fn()}
-          onCopyRestaurant={jest.fn()}
           millisRemaining={30000} // 30s left
           totalMillis={60000} // 60s total
           millisWaited={30000}
@@ -157,13 +151,9 @@ describe('NewOrderCell (spec 0002, spec 0018, AC-7, AC-8, AC-9)', () => {
           autoAcceptOrders={false}
           onAccept={jest.fn()}
           onDecline={jest.fn()}
-          onCopyCustomer={jest.fn()}
-          onCopyRestaurant={jest.fn()}
           millisRemaining={null}
           totalMillis={null}
           millisWaited={1000}
-          toRestaurant={{ km: '1.2', minutes: 4 }}
-          toCustomer={{ km: '2.9', minutes: 5 }}
         />,
       );
     });
@@ -191,8 +181,6 @@ describe('NewOrderCell (spec 0002, spec 0018, AC-7, AC-8, AC-9)', () => {
           autoAcceptOrders={false}
           onAccept={onAcceptMock}
           onDecline={onDeclineMock}
-          onCopyCustomer={jest.fn()}
-          onCopyRestaurant={jest.fn()}
         />,
       );
     });
@@ -239,8 +227,6 @@ describe('NewOrderCell (spec 0002, spec 0018, AC-7, AC-8, AC-9)', () => {
           autoAcceptOrders={false}
           onAccept={jest.fn()}
           onDecline={jest.fn()}
-          onCopyCustomer={jest.fn()}
-          onCopyRestaurant={jest.fn()}
           millisRemaining={30000}
           totalMillis={60000}
           millisWaited={30000}

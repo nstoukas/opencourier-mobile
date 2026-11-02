@@ -23,11 +23,10 @@ import { radius, typeScale } from '@app/styles/theme';
 import { Icon } from '@app/components/Icon/Icon';
 import { CheckFatIcon } from 'phosphor-react-native/src/icons/CheckFat';
 
-const BUTTON_WIDTH = SCREEN_WIDTH / 1.2;
+// Exported so a button beside a swipe can match its width (spec 0019).
+export const BUTTON_WIDTH = SCREEN_WIDTH / 1.2;
 const BUTTON_HEIGHT = 48;
 const BUTTON_PADDING = 7;
-const SWIPEABLE_DIMENSIONS = BUTTON_HEIGHT - 2 * BUTTON_PADDING;
-const H_SWIPE_RANGE = BUTTON_WIDTH - 2 * BUTTON_PADDING - SWIPEABLE_DIMENSIONS;
 
 interface Props {
   isSwiped: boolean;
@@ -37,6 +36,9 @@ interface Props {
   subtitle?: string;
   isLoading: boolean;
   style?: StyleProp<ViewStyle>;
+  // How tall the swipe is (48 by default; the offer card uses `control.offer`).
+  // The knob, how far it travels and the half way point all follow from it.
+  height?: number;
 }
 
 const ButtonSwipe: FunctionComponent<Props> = ({
@@ -47,7 +49,13 @@ const ButtonSwipe: FunctionComponent<Props> = ({
   title = 'Slide to Complete',
   subtitle = '',
   style = {},
+  height = BUTTON_HEIGHT,
 }: Props) => {
+  // The knob is a circle filling the height inside the padding; it travels the
+  // rest of the width (spec 0019: a taller swipe gets a thumb sized knob).
+  const knob = height - 2 * BUTTON_PADDING;
+  const swipeRange = BUTTON_WIDTH - 2 * BUTTON_PADDING - knob;
+  const halfWay = BUTTON_WIDTH / 2 - knob / 2;
   const X = useSharedValue(0);
 
   useEffect(() => {
@@ -64,20 +72,20 @@ const ButtonSwipe: FunctionComponent<Props> = ({
       let newValue;
 
       if (ctx.completed) {
-        newValue = H_SWIPE_RANGE + e.translationX;
+        newValue = swipeRange + e.translationX;
       } else {
         newValue = e.translationX;
       }
-      if (newValue >= 0 && newValue <= H_SWIPE_RANGE) {
+      if (newValue >= 0 && newValue <= swipeRange) {
         X.value = newValue;
       }
     },
     onEnd: () => {
-      if (X.value < BUTTON_WIDTH / 2 - SWIPEABLE_DIMENSIONS / 2) {
+      if (X.value < halfWay) {
         X.value = withTiming(0);
         runOnJS(onSwiped)(false);
       } else {
-        X.value = withTiming(H_SWIPE_RANGE);
+        X.value = withTiming(swipeRange);
         runOnJS(onSwiped)(true);
       }
     },
@@ -93,7 +101,7 @@ const ButtonSwipe: FunctionComponent<Props> = ({
       return {
         opacity: interpolate(
           X.value,
-          [0, H_SWIPE_RANGE],
+          [0, swipeRange],
           [1, 0],
           Extrapolate.CLAMP,
         ),
@@ -101,8 +109,8 @@ const ButtonSwipe: FunctionComponent<Props> = ({
           {
             translateX: interpolate(
               X.value,
-              [0, H_SWIPE_RANGE],
-              [0, BUTTON_WIDTH / 2 - SWIPEABLE_DIMENSIONS],
+              [0, swipeRange],
+              [0, BUTTON_WIDTH / 2 - knob],
               Extrapolate.CLAMP,
             ),
           },
@@ -112,7 +120,7 @@ const ButtonSwipe: FunctionComponent<Props> = ({
   };
 
   return (
-    <View style={[styles.swipeContainer, style]}>
+    <View style={[styles.swipeContainer, { height }, style]}>
       {isLoading ? (
         <View style={styles.activityIndicator}>
           <ActivityIndicator size="small" color={Colors.white} />
@@ -125,15 +133,27 @@ const ButtonSwipe: FunctionComponent<Props> = ({
             onGestureEvent={animatedGestureHandler}
             activeOffsetX={[-10, 10]}
             enabled={enabled}>
-            <Animated.View style={[styles.swipeable, AnimatedStyles.swipeable]}>
+            <Animated.View
+              style={[
+                styles.swipeable,
+                { width: knob, height: knob },
+                AnimatedStyles.swipeable,
+              ]}>
               <LinearGradient
-                style={[styles.containerGradient]}
+                style={[
+                  styles.containerGradient,
+                  { width: knob, height: knob },
+                ]}
                 colors={Colors.swipeButtonGradientArray}>
-                <View style={styles.containerCheckmark}>
+                <View
+                  style={[
+                    styles.containerCheckmark,
+                    { width: knob * 0.4, height: knob * 0.4 },
+                  ]}>
                   <Icon
                     icon={CheckFatIcon}
                     weight="fill"
-                    size={7}
+                    size={Math.round(knob * 0.22)}
                     tone="background"
                   />
                 </View>

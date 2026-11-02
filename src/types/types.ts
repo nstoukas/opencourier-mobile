@@ -1,3 +1,4 @@
+import { OfferTrip } from '@app/utilities/offerTrip';
 import { Point, Polygon } from 'geojson';
 import moment, { Moment } from 'moment';
 import {
@@ -342,6 +343,12 @@ export type Order = {
   // the offer list arrives (see `utilities/offerClock.ts`). Not sent by the
   // server.
   phoneClock?: OfferTimesOnPhone;
+  // Spec 0019: the ride the offer means, worked out by the backend from the
+  // co-op's routing; null figures are unknown. Offers only.
+  offerTrip?: OfferTrip;
+  // Spec 0019: the drop off street, or the city when the street would give
+  // the house away (the same as the offer push). Offers only.
+  dropoffArea?: string;
 };
 
 // An offer's times in milliseconds on the phone's own clock (like Date.now()).

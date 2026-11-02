@@ -1,6 +1,7 @@
 import { Colors } from '@app/styles/colors';
 import { StyleSheet } from 'react-native';
-import { radius, typeScale } from '@app/styles/theme';
+import { radius, space, typeScale } from '@app/styles/theme';
+import { BUTTON_WIDTH } from '../ButtonSwipe/ButtonSwipe';
 
 export const styles = StyleSheet.create({
   container: {
@@ -31,52 +32,9 @@ export const styles = StyleSheet.create({
   buttonTop: {
     marginBottom: 12,
   },
-  content: {
-    flexDirection: 'row',
-    marginVertical: 12,
-  },
-  containerLeft: {
-    alignItems: 'center',
-    marginRight: 8,
-  },
-  verticalLine: {
-    width: 3,
-    backgroundColor: Colors.gray7,
-    height: 173,
-    marginVertical: 16,
-  },
-  containerRight: {
-    flex: 1,
-  },
-  containerAddressButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
   textName: {
     fontWeight: '700',
     fontSize: typeScale.body.fontSize,
-  },
-  textAddress: {
-    fontSize: typeScale.body.fontSize,
-  },
-  containerText: {
-    flex: 1,
-  },
-  containerChats: {
-    width: 32,
-    height: 32,
-    backgroundColor: Colors.white,
-    borderRadius: radius.full,
-    justifyContent: 'center',
-    alignItems: 'center',
-    shadowColor: Colors.black1,
-    shadowRadius: 5,
-    shadowOffset: {
-      width: 0,
-      height: 0,
-    },
-    shadowOpacity: 0.6,
-    elevation: 3,
   },
   map: {
     width: 143,
@@ -101,5 +59,28 @@ export const styles = StyleSheet.create({
     top: 0,
     right: 0,
     bottom: 0,
+  },
+  // Spec 0019: the ride's two lines under the total.
+  textTrip: {
+    fontSize: typeScale.body.fontSize,
+    color: Colors.black3,
+    textAlign: 'center',
+    marginTop: space['1'],
+  },
+  // A restaurant or drop off line: icon, then the name or area.
+  place: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: space['2'],
+    marginBottom: space['2'],
+  },
+  textArea: {
+    fontSize: typeScale.body.fontSize,
+    color: Colors.black3,
+  },
+  // Decline matches the Accept swipe's width (spec 0019, AC-5).
+  buttonDecline: {
+    width: BUTTON_WIDTH,
+    alignSelf: 'center',
   },
 });

@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react';
-import { Animated } from 'react-native';
+import { Animated, Easing } from 'react-native';
 
 // The width of an offer's countdown bar (scope row 60).
 //
@@ -22,6 +22,9 @@ export const useCountdownBar = (
     const animation = Animated.timing(width, {
       toValue: fullWidth,
       duration: remaining,
+      // An even pace (spec 0019, AC-6): the default eases in and out, so the
+      // bar showed about 31 % gone when 38 % of the time was used (row 61).
+      easing: Easing.linear,
       useNativeDriver: false,
     });
     animation.start();

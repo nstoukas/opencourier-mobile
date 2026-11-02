@@ -1,27 +1,18 @@
 import React, { useState } from 'react';
-import {
-  StyleProp,
-  ViewStyle,
-  View,
-  Text,
-  TouchableOpacity,
-  Animated,
-} from 'react-native';
+import { StyleProp, ViewStyle, View, Text, Animated } from 'react-native';
 import { styles } from './NewOrderCell.styles';
 import { Order } from '@app/types/types';
 import { ButtonOrder, ButtonOrderType } from '../ButtonOrder/ButtonOrder';
 import { useTranslation } from 'react-i18next';
 import ButtonSwipe from '../ButtonSwipe/ButtonSwipe';
-import { RouteLines } from '../RouteLines/RouteLines';
-import { LegFigures } from '@app/utilities/routeLegs';
+import { offerTripLines } from '@app/utilities/offerTrip';
+import { control } from '@app/styles/theme';
 import { formatCurrencyFromCents } from '@app/utilities/currency';
 import { SCREEN_WIDTH } from '@app/utilities/constants';
 import { Paralelogram } from '../Paralelogram/Paralelogram';
 import { Colors } from '@app/styles/colors';
 import { useCountdownBar } from '@app/hooks/useCountdownBar';
-import { hitSlopFor } from '@app/utilities/touch';
 import { Icon } from '@app/components/Icon/Icon';
-import { CopyIcon } from 'phosphor-react-native/src/icons/Copy';
 import { HouseLineIcon } from 'phosphor-react-native/src/icons/HouseLine';
 import { StorefrontIcon } from 'phosphor-react-native/src/icons/Storefront';
 
@@ -36,8 +27,6 @@ type Props = {
   autoAcceptOrders: boolean;
   onAccept: (order: Order) => void;
   onDecline: (order: Order) => void;
-  onCopyCustomer: (order: Order) => void;
-  onCopyRestaurant: (order: Order) => void;
   // Time left before the server's deadline; null when the offer has no
   // deadline (Offer expiry off), and then no bar is drawn (spec 0002).
   millisRemaining?: number | null;
@@ -46,10 +35,6 @@ type Props = {
   // How long the offer has waited, for the "Waiting X min" line shown when
   // there is no deadline (AC-4).
   millisWaited?: number | null;
-  // Spec 0018 (AC-7): the distance lines, from the co-op's route.
-  toRestaurant?: LegFigures;
-  toCustomer?: LegFigures;
-  routeUnavailable?: boolean;
 };
 
 // "Waiting 3 min", or "Waiting less than 1 min" for a fresh offer.
@@ -69,16 +54,13 @@ export const NewOrderCell = ({
   onAccept,
   onDecline,
   autoAcceptOrders,
-  onCopyCustomer,
-  onCopyRestaurant,
   millisRemaining = null,
   totalMillis = null,
   millisWaited = null,
-  toRestaurant,
-  toCustomer,
-  routeUnavailable = false,
 }: Props) => {
   const { t } = useTranslation();
+  // Spec 0019 (AC-1, AC-3): the figures come with the offer from the backend.
+  const trip = offerTripLines(order.offerTrip, t);
   // A new key after each attempt draws the swipe fresh, so an accept that did
   // not go through (already answered, a refused claim) leaves no knob at the end.
   const [acceptAttempt, setAcceptAttempt] = useState(0);
@@ -108,55 +90,33 @@ export const NewOrderCell = ({
           {waitingText(millisWaited, t)}
         </Text>
       )}
+      {/* Spec 0019 (AC-3): the ride, then the minutes, then where from and
+          where to. No €/km, no items, no customer name, no full address. */}
+      {trip.distances !== '' && (
+        <Text style={styles.textTrip} testID="offer-trip-distances">
+          {trip.distances}
+        </Text>
+      )}
+      {trip.minutes !== '' && (
+        <Text style={styles.textTrip} testID="offer-trip-minutes">
+          {trip.minutes}
+        </Text>
+      )}
       <View style={styles.separator} />
-      <View style={styles.content}>
-        <View style={styles.containerLeft}>
-          <Icon icon={StorefrontIcon} weight="fill" size={30} tone="input" />
-          <View style={styles.verticalLine} />
-          <Icon icon={HouseLineIcon} size={32} tone="muted-foreground" />
-        </View>
-        <View style={styles.containerRight}>
-          <View style={styles.containerAddressButton}>
-            <View style={styles.containerText}>
-              <Text style={styles.textName}>
-                {order.pickupLocationFormattedAddress ??
-                  order.pickupLocation?.formattedAddress ??
-                  order.pickupName ??
-                  'N/A'}
-              </Text>
-            </View>
-            <TouchableOpacity
-              hitSlop={hitSlopFor(32)}
-              onPress={() => onCopyRestaurant(order)}>
-              <View style={styles.containerChats}>
-                <Icon icon={CopyIcon} weight="fill" size={16} />
-              </View>
-            </TouchableOpacity>
-          </View>
-          <RouteLines
-            toRestaurant={toRestaurant}
-            toCustomer={toCustomer}
-            unavailable={routeUnavailable}
-          />
-          <View style={styles.containerAddressButton}>
-            <View style={styles.containerText}>
-              <Text style={styles.textName}>
-                {order.dropoffLocationFormattedAddress ??
-                  order.dropoffLocation?.formattedAddress ??
-                  order.dropoffName ??
-                  'N/A'}
-              </Text>
-            </View>
-            <TouchableOpacity
-              hitSlop={hitSlopFor(32)}
-              onPress={() => onCopyCustomer(order)}>
-              <View style={styles.containerChats}>
-                <Icon icon={CopyIcon} weight="fill" size={16} />
-              </View>
-            </TouchableOpacity>
-          </View>
-        </View>
+      <View style={styles.place}>
+        <Icon icon={StorefrontIcon} weight="fill" size={24} tone="input" />
+        <Text style={styles.textName} testID="offer-restaurant">
+          {order.pickupBusinessName}
+        </Text>
       </View>
+      {order.dropoffArea ? (
+        <View style={styles.place}>
+          <Icon icon={HouseLineIcon} size={24} tone="muted-foreground" />
+          <Text style={styles.textArea} testID="offer-dropoff-area">
+            {order.dropoffArea}
+          </Text>
+        </View>
+      ) : null}
       <>
         {/* Spec 0018 (AC-9): Accept is a swipe, so a brush of the thumb cannot
             take an offer. A swipe let go early does nothing. With auto accept
@@ -164,6 +124,8 @@ export const NewOrderCell = ({
         <ButtonSwipe
           key={acceptAttempt}
           style={styles.buttonTop}
+          // Spec 0019 (AC-5): as tall as Decline, with a thumb sized knob.
+          height={control.offer}
           isSwiped={false}
           onSwiped={didSwipe => {
             if (didSwipe) {
@@ -177,6 +139,7 @@ export const NewOrderCell = ({
           isLoading={false}
         />
         <ButtonOrder
+          style={styles.buttonDecline}
           type={ButtonOrderType.decline}
           onPress={() => onDecline(order)}
           autoAcceptOrders={autoAcceptOrders}
