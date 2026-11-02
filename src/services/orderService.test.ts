@@ -440,4 +440,69 @@ describe('orderService & isOfferEndedError (spec 0002, AC-5)', () => {
       ).resolves.toEqual({ kind: 'none' });
     });
   });
+
+  describe('moveDropoffPin (spec 0016, AC-9)', () => {
+    it('posts to deliveries/:id/dropoff-point with latitude and longitude as numbers', async () => {
+      const mockPost = jest.fn().mockResolvedValue({
+        data: {
+          error: false,
+          result: { savedCustomerUpdated: true, distanceMetres: 141 },
+        },
+      });
+      const service = orderService({ post: mockPost } as unknown as UClient);
+
+      await service.moveDropoffPin({
+        id: 'del-456',
+        latitude: 39.3622,
+        longitude: 22.9425,
+      });
+
+      expect(mockPost).toHaveBeenCalledWith(
+        'deliveries/del-456/dropoff-point',
+        {
+          latitude: 39.3622,
+          longitude: 22.9425,
+        },
+      );
+      const payload = mockPost.mock.calls[0][1];
+      expect(typeof payload.latitude).toBe('number');
+      expect(typeof payload.longitude).toBe('number');
+    });
+
+    it('returns data.result from the server answer', async () => {
+      const serverResult = {
+        savedCustomerUpdated: false,
+        distanceMetres: 30,
+      };
+      const mockPost = jest.fn().mockResolvedValue({
+        data: {
+          error: false,
+          result: serverResult,
+        },
+      });
+      const service = orderService({ post: mockPost } as unknown as UClient);
+
+      const result = await service.moveDropoffPin({
+        id: 'del-789',
+        latitude: 39.37,
+        longitude: 22.95,
+      });
+
+      expect(result).toEqual(serverResult);
+    });
+
+    it('throws when client.post rejects', async () => {
+      const networkError = new AxiosError('Network error');
+      const mockPost = jest.fn().mockRejectedValue(networkError);
+      const service = orderService({ post: mockPost } as unknown as UClient);
+
+      await expect(
+        service.moveDropoffPin({
+          id: 'del-789',
+          latitude: 39.37,
+          longitude: 22.95,
+        }),
+      ).rejects.toThrow(networkError);
+    });
+  });
 });
