@@ -33,6 +33,8 @@ import { RouteLeg, RouteLegKind } from '@app/types/route';
 import { services } from '@app/services/service';
 import * as mapPreferences from '@app/services/mapPreferences';
 import * as ownPositionModule from '@app/services/ownPosition';
+import * as useSosModule from '@app/hooks/useSos';
+import { resetSosStoreForTests, startSos } from '@app/services/sosStore';
 import Geolocation from 'react-native-geolocation-service';
 
 let mockIsFocused = true;
@@ -176,6 +178,7 @@ describe('HomeScreen (spec 0018, AC-5 to AC-15)', () => {
   let getPickupPointsSpy: jest.SpyInstance;
 
   beforeEach(() => {
+    resetSosStoreForTests();
     jest.useFakeTimers();
     jest.clearAllMocks();
     mockIsFocused = true;
@@ -580,6 +583,73 @@ describe('HomeScreen (spec 0018, AC-5 to AC-15)', () => {
       renderHome();
 
       expect(Geolocation.getCurrentPosition).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('SOS pill and banner visibility (spec 0022, AC-1)', () => {
+    it('shows SOS pill when ONLINE with no jobs', () => {
+      mockUser!.status = UserStatus.Online;
+      mockHomeOrders.dataSourceInProgress = [];
+
+      const { getByTestId, queryByTestId } = renderHome();
+
+      expect(getByTestId('sos-hold-button')).toBeTruthy();
+      expect(queryByTestId('sos-active-banner')).toBeNull();
+    });
+
+    it('shows SOS pill when LAST_CALL with no jobs', () => {
+      mockUser!.status = UserStatus.LastCall;
+      mockHomeOrders.dataSourceInProgress = [];
+
+      const { getByTestId, queryByTestId } = renderHome();
+
+      expect(getByTestId('sos-hold-button')).toBeTruthy();
+      expect(queryByTestId('sos-active-banner')).toBeNull();
+    });
+
+    it('shows SOS pill when OFFLINE while holding a job', () => {
+      mockUser!.status = UserStatus.Offline;
+      mockHomeOrders.dataSourceInProgress = [mockJob];
+
+      const { getByTestId, queryByTestId } = renderHome();
+
+      expect(getByTestId('sos-hold-button')).toBeTruthy();
+      expect(queryByTestId('sos-active-banner')).toBeNull();
+    });
+
+    it('never shows SOS pill when OFFLINE with no job', () => {
+      mockUser!.status = UserStatus.Offline;
+      mockHomeOrders.dataSourceInProgress = [];
+
+      const { queryByTestId } = renderHome();
+
+      expect(queryByTestId('sos-hold-button')).toBeNull();
+      expect(queryByTestId('sos-active-banner')).toBeNull();
+    });
+
+    it('hides SOS pill and shows SOS active banner while rider SOS is shared, tapping banner opens Sos screen', async () => {
+      mockUser!.status = UserStatus.Online;
+      mockHomeOrders.dataSourceInProgress = [];
+
+      // Start an SOS for this courier
+      await act(async () => {
+        await startSos('courier-1', { clientId: 'c1', heldAt: 1000 });
+      });
+
+      const openSosScreenSpy = jest
+        .spyOn(useSosModule, 'openSosScreen')
+        .mockImplementation(() => {});
+
+      const { queryByTestId, getByTestId } = renderHome();
+
+      expect(queryByTestId('sos-hold-button')).toBeNull();
+      expect(getByTestId('sos-active-banner')).toBeTruthy();
+
+      // Tapping banner opens Sos screen
+      fireEvent.press(getByTestId('sos-active-banner'));
+      expect(openSosScreenSpy).toHaveBeenCalledTimes(1);
+
+      openSosScreenSpy.mockRestore();
     });
   });
 });

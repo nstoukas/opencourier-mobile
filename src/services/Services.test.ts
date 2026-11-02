@@ -20,4 +20,12 @@ describe('Services (spec 0018, review nit)', () => {
 
     expect(getPickedUpAt('del-101')).toBeUndefined();
   });
+
+  it('exposes sosService instance (spec 0022)', () => {
+    expect(services.sosService).toBeDefined();
+    expect(typeof services.sosService.start).toBe('function');
+    expect(typeof services.sosService.getActive).toBe('function');
+    expect(typeof services.sosService.sendPoints).toBe('function');
+    expect(typeof services.sosService.end).toBe('function');
+  });
 });

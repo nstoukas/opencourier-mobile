@@ -17,6 +17,7 @@ import { OrderStatus } from '@app/types/enums';
 import { TrackingMode, WATCH_OPTIONS } from '@app/utilities/locationTracking';
 import { QueryKeys } from '@app/utilities/queryKeys';
 import { stopOnlineService } from '@app/services/onlineService';
+import * as sosStore from '@app/services/sosStore';
 import useUser from '@app/hooks/useUser';
 import { getOwnPosition, setOwnPosition } from '@app/services/ownPosition';
 import { useLocationTracking } from './useLocationTracking';
@@ -849,6 +850,143 @@ describe('useLocationTracking (Row 67, Clauses 1, 2, 3, 4)', () => {
       });
 
       consoleLogSpy.mockRestore();
+    });
+  });
+
+  describe('Sos mode tracking and throttled ordinary location (spec 0022, AC-5, AC-13, decision 73.9)', () => {
+    it('in Sos mode runs exactly one watch at SOS options, clearing watch on mode change', async () => {
+      const { result, rerender } = renderHook(
+        ({ sosSharing }) => useLocationTracking(onlineUser, true, sosSharing),
+        {
+          wrapper: createWrapper(),
+          initialProps: { sosSharing: true },
+        },
+      );
+
+      expect(result.current).toBe(TrackingMode.Sos);
+      expect(Geolocation.watchPosition).toHaveBeenCalledTimes(1);
+      expect(Geolocation.watchPosition).toHaveBeenCalledWith(
+        expect.any(Function),
+        expect.any(Function),
+        {
+          ...WATCH_OPTIONS[TrackingMode.Sos],
+          showsBackgroundLocationIndicator: true,
+        },
+      );
+
+      // Transition out of Sos mode
+      rerender({ sosSharing: false });
+      expect(result.current).toBe(TrackingMode.Waiting);
+      // Cleared the old watch before starting the new one
+      expect(Geolocation.clearWatch).toHaveBeenCalledTimes(1);
+      expect(Geolocation.watchPosition).toHaveBeenCalledTimes(2);
+    });
+
+    it('each fix adds an SOS point with accuracy and phone time, but throttles setUserLocation according to ordinary mode', async () => {
+      const addSosPointSpy = jest
+        .spyOn(sosStore, 'addSosPoint')
+        .mockResolvedValue(undefined);
+
+      // Rider is ONLINE with 0 jobs -> ordinary mode is Waiting (cadence: 30 s and 100 m)
+      renderHook(() => useLocationTracking(onlineUser, true, true), {
+        wrapper: createWrapper(),
+      });
+
+      expect(watchCallback).toBeDefined();
+
+      const baseLat = 39.3622;
+      const baseLon = 22.9425;
+
+      // Fix 1: at t = 10000 -> First fix, must be forwarded as ordinary location
+      jest.spyOn(Date, 'now').mockReturnValue(10000);
+      act(() => {
+        watchCallback!({
+          coords: {
+            latitude: baseLat,
+            longitude: baseLon,
+            accuracy: 5.5,
+          },
+          timestamp: 10000,
+        });
+      });
+
+      expect(addSosPointSpy).toHaveBeenCalledTimes(1);
+      expect(addSosPointSpy).toHaveBeenLastCalledWith('rider-1', {
+        latitude: baseLat,
+        longitude: baseLon,
+        accuracyMetres: 5.5,
+        takenAt: 10000,
+      });
+      expect(mockSetUserLocation).toHaveBeenCalledTimes(1);
+      expect(mockSetUserLocation).toHaveBeenLastCalledWith({
+        latitude: baseLat,
+        longitude: baseLon,
+      });
+
+      // Fix 2: 5 s later (t = 15000), moved only 10 m (~0.00009 lat)
+      // addSosPoint MUST be called, but setUserLocation MUST NOT be called (throttled)
+      jest.spyOn(Date, 'now').mockReturnValue(15000);
+      act(() => {
+        watchCallback!({
+          coords: {
+            latitude: baseLat + 0.00009,
+            longitude: baseLon,
+            accuracy: 6.0,
+          },
+          timestamp: 15000,
+        });
+      });
+
+      expect(addSosPointSpy).toHaveBeenCalledTimes(2);
+      expect(addSosPointSpy).toHaveBeenLastCalledWith('rider-1', {
+        latitude: baseLat + 0.00009,
+        longitude: baseLon,
+        accuracyMetres: 6.0,
+        takenAt: 15000,
+      });
+      // setUserLocation still only called 1 time!
+      expect(mockSetUserLocation).toHaveBeenCalledTimes(1);
+
+      // Fix 3: 10 s later (t = 20000), moved another 10 m
+      jest.spyOn(Date, 'now').mockReturnValue(20000);
+      act(() => {
+        watchCallback!({
+          coords: {
+            latitude: baseLat + 0.00018,
+            longitude: baseLon,
+            accuracy: 5.0,
+          },
+          timestamp: 20000,
+        });
+      });
+
+      expect(addSosPointSpy).toHaveBeenCalledTimes(3);
+      // Still throttled!
+      expect(mockSetUserLocation).toHaveBeenCalledTimes(1);
+
+      // Fix 4: 35 s after first fix (t = 45000) and moved 150 m (~0.00135 lat)
+      // Both >= 30 s and >= 100 m satisfied -> forwarded!
+      jest.spyOn(Date, 'now').mockReturnValue(45000);
+      act(() => {
+        watchCallback!({
+          coords: {
+            latitude: baseLat + 0.00135,
+            longitude: baseLon,
+            accuracy: 4.5,
+          },
+          timestamp: 45000,
+        });
+      });
+
+      expect(addSosPointSpy).toHaveBeenCalledTimes(4);
+      expect(mockSetUserLocation).toHaveBeenCalledTimes(2);
+      expect(mockSetUserLocation).toHaveBeenLastCalledWith({
+        latitude: baseLat + 0.00135,
+        longitude: baseLon,
+      });
+
+      addSosPointSpy.mockRestore();
+      (Date.now as unknown as jest.SpyInstance).mockRestore();
     });
   });
 });

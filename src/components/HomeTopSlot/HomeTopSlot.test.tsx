@@ -30,4 +30,19 @@ describe('HomeTopSlot (spec 0018, AC-14)', () => {
     fireEvent.press(getByText('Online'));
     expect(onMenuMock).toHaveBeenCalledTimes(1);
   });
+
+  it('renders sosAction slot at the top row when provided (spec 0022, AC-1)', () => {
+    const { getByTestId } = render(
+      <HomeTopSlot
+        userStatus={UserStatus.Online}
+        connectionStatus="connected"
+        onMenu={jest.fn()}
+        sosAction={<View testID="test-sos-action" />}>
+        <View testID="child-banner" />
+      </HomeTopSlot>,
+    );
+
+    expect(getByTestId('test-sos-action')).toBeTruthy();
+    expect(getByTestId('child-banner')).toBeTruthy();
+  });
 });

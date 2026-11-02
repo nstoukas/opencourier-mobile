@@ -10,6 +10,7 @@ const mockUseLocationPermission = jest.fn(() => ({
 const mockUseLocationTracking = jest.fn();
 const mockUseArrivalDetection = jest.fn();
 const mockUseOfferPushRegistration = jest.fn();
+const mockUseSos = jest.fn((_courierId?: string) => false);
 const mockUseUser = jest.fn(() => ({
   user: { id: 'courier-1', name: 'Courier' },
 }));
@@ -21,6 +22,10 @@ jest.mock('@app/hooks/useLocationPermission', () => ({
 
 jest.mock('@app/hooks/useLocationTracking', () => ({
   useLocationTracking: (...args: any[]) => mockUseLocationTracking(...args),
+}));
+
+jest.mock('@app/hooks/useSos', () => ({
+  useSos: (courierId?: string) => mockUseSos(courierId),
 }));
 
 jest.mock('@app/hooks/useArrivalDetection', () => ({
@@ -93,6 +98,13 @@ jest.mock('@app/screens/DatePicker/DatePicker', () => {
   };
 });
 
+jest.mock('@app/screens/Sos/SosScreen', () => {
+  const { View } = require('react-native');
+  return {
+    SosScreen: () => <View testID="mock-sos-screen" />,
+  };
+});
+
 import { Router } from './router';
 
 describe('Router (Row 67, Ruling: one permission reader)', () => {
@@ -121,5 +133,22 @@ describe('Router (Row 67, Ruling: one permission reader)', () => {
     );
 
     expect(mockUseArrivalDetection).toHaveBeenCalledWith(undefined);
+  });
+
+  it('wires useSos and passes sosSharing to useLocationTracking (spec 0022, AC-5)', () => {
+    mockUseSos.mockReturnValue(true);
+
+    render(
+      <NavigationContainer>
+        <Router />
+      </NavigationContainer>,
+    );
+
+    expect(mockUseSos).toHaveBeenCalledWith('courier-1');
+    expect(mockUseLocationTracking).toHaveBeenCalledWith(
+      { id: 'courier-1', name: 'Courier' },
+      true,
+      true,
+    );
   });
 });

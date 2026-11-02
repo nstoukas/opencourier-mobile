@@ -10,6 +10,7 @@ import { DrawerScreens } from '@app/navigation/drawer/types';
 import { LOGOUT_OFFLINE_TIMEOUT_MS } from '@app/utilities/constants';
 import * as jobStepOutbox from '@app/services/jobStepOutbox';
 import * as queryPersistence from '@app/services/queryPersistence';
+import * as sosStore from '@app/services/sosStore';
 import i18n from '@app/localization/i18n';
 
 // Mock dependencies of SideMenu
@@ -314,6 +315,66 @@ describe('SideMenu logout (spec 0002, AC-6; spec 0009, AC-8, AC-11)', () => {
     expect(mockLogout).toHaveBeenCalledTimes(1);
     expect(resetQueriesSpy).toHaveBeenCalledTimes(1);
     expect(clearSavedQueriesSpy).toHaveBeenCalledTimes(1);
+  });
+
+  it('with a shared SOS shows "Your SOS is active" prompt first, and calls stopSosForLogout before services.logout only after "Log out anyway" (spec 0022, AC-12)', async () => {
+    jest.spyOn(jobStepOutbox, 'waitingCount').mockResolvedValue(0);
+    const stopSosSpy = jest
+      .spyOn(sosStore, 'stopSosForLogout')
+      .mockResolvedValue(undefined);
+    jest.spyOn(sosStore, 'loadSosRecord').mockResolvedValue({
+      clientId: 'c1',
+      heldAt: 1000,
+      points: [],
+    });
+
+    const executionOrder: string[] = [];
+    stopSosSpy.mockImplementation(async (id: string) => {
+      executionOrder.push(`stopSosForLogout:${id}`);
+    });
+    mockLogout.mockImplementation(() => {
+      executionOrder.push('logout');
+    });
+
+    const component = renderSideMenu();
+    const plainItems = component.root.findAllByType(SideMenuItemPlain);
+    const logoutItem = plainItems.find(
+      item => item.props.item === SideMenuItem.Logout,
+    );
+
+    act(() => {
+      logoutItem!.props.onPress(SideMenuItem.Logout);
+    });
+
+    await waitFor(() => {
+      expect(alertSpy).toHaveBeenCalledTimes(1);
+    });
+
+    expect(alertSpy.mock.calls[0][0]).toBe('Your SOS is active');
+    expect(alertSpy.mock.calls[0][1]).toBe(
+      'If you log out, your position stops being shared. The co-op still sees your SOS until they close it.',
+    );
+
+    const buttons = alertSpy.mock.calls[0][2];
+    const cancelBtn = buttons.find((b: any) => b.text === 'Cancel');
+    const confirmBtn = buttons.find((b: any) => b.text === 'Log out anyway');
+    expect(confirmBtn).toBeDefined();
+
+    // Cancel does not call stopSos or logout
+    act(() => {
+      cancelBtn.onPress?.();
+    });
+    expect(stopSosSpy).not.toHaveBeenCalled();
+    expect(mockLogout).not.toHaveBeenCalled();
+
+    // Confirm calls stopSosForLogout before services.logout
+    await act(async () => {
+      await confirmBtn.onPress();
+    });
+
+    expect(stopSosSpy).toHaveBeenCalledWith('courier-1');
+    expect(mockLogout).toHaveBeenCalledTimes(1);
+    expect(executionOrder).toEqual(['stopSosForLogout:courier-1', 'logout']);
   });
 });
 

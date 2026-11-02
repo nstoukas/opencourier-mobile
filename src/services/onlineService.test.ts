@@ -84,6 +84,28 @@ describe('onlineService (spec 0008, AC-3, AC-4)', () => {
       });
     });
 
+    it('creates channel and displays notification with SOS title and body on same channel and notification id when mode is Sos (spec 0022, AC-5)', async () => {
+      await showOnlineService(TrackingMode.Sos);
+
+      expect(notifee.createChannel).toHaveBeenCalledWith({
+        id: ONLINE_CHANNEL_ID,
+        name: 'Online status',
+        importance: AndroidImportance.LOW,
+      });
+
+      expect(notifee.displayNotification).toHaveBeenCalledWith({
+        id: ONLINE_NOTIFICATION_ID,
+        title: 'SOS active',
+        body: 'Your position is shared with the co-op.',
+        android: {
+          channelId: ONLINE_CHANNEL_ID,
+          asForegroundService: true,
+          ongoing: true,
+          pressAction: { id: 'default' },
+        },
+      });
+    });
+
     it('resolves true when show completes without a stop', async () => {
       const shownWaiting = await showOnlineService(TrackingMode.Waiting);
       expect(shownWaiting).toBe(true);
