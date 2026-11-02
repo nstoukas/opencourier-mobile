@@ -83,4 +83,16 @@ the error count is above `typecheck-baseline.json`, and lowers the file when the
   list's `serverNow`); during the window, before the restaurant, the card shows only the drop off area
   (`hidesCustomerDetails`, `dropoffAreaOf`, a copy of the backend rule that must stay the same).
 
+- Arrival detection and the two swipes (spec 0021): `useArrivalDetection` runs in the `ArrivalDetector` leaf in
+  `router.tsx` over every held job, from the in-memory `latestFix` (accuracy and the phone's `Date.now()`, never GPS
+  time). A fix counts within the co-op's `arrivalRadiusMetres` (from `config/contact`; none or 0 = off) at an accuracy of at
+  most max(radius, 30 m), at most 60 s old and taken after the job began heading to that stop. During the free hand back
+  window a pickup arrival is held in `heldArrivals` (AsyncStorage) and released at `handBackUntilOnPhone` + 3 s, never
+  while `isHandBackInFlight`. Steps only through `useOrder` (`imHere`, `pickedUp`, `delivered`): each swipe records a
+  missing arrival first, so the server's PICKED_UP shortcut is never used; `detected` is sent only on the arrived routes.
+- The job card shows one stop at a time (`InProgressCell`); the swipe and small actions are `JobFooter` in `HomeCard`'s
+  `footer` slot, outside its ScrollView. Notes stay one line (`JobNotesLine`), items open a sheet (`JobItemsLine`, ticks
+  never sent). Never show `pickupReadyAt` as the pickup time: it is the restaurant's planned ready time from the quote; the
+  card reads the rider's own swipe from `pickupTimes`.
+
 _Drafted by /audit from the repo, worth a quick human pass. Edit freely: once a line stops matching this draft, later runs treat it as curated and will flag rather than overwrite it._
