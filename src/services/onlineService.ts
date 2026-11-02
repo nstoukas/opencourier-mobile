@@ -18,8 +18,28 @@ export const ONLINE_CHANNEL_ID = 'online';
 // service runs.
 export const ONLINE_NOTIFICATION_ID = 'online-status';
 
-// The two modes that track; `off` never shows the sign.
-export type TrackingOnMode = TrackingMode.Waiting | TrackingMode.Job;
+// The modes that track; `off` never shows the sign.
+export type TrackingOnMode =
+  | TrackingMode.Waiting
+  | TrackingMode.Job
+  | TrackingMode.Sos;
+
+// The sign's words for each mode. During an SOS it says the position is
+// shared with the co-op (spec 0022, AC-5), whatever the rider's status.
+const SIGN_TEXT: Record<TrackingOnMode, { title: string; body: string }> = {
+  [TrackingMode.Waiting]: {
+    title: 'translations:online_service_title_waiting',
+    body: 'translations:online_service_body_waiting',
+  },
+  [TrackingMode.Job]: {
+    title: 'translations:online_service_title_job',
+    body: 'translations:online_service_body_job',
+  },
+  [TrackingMode.Sos]: {
+    title: 'translations:online_service_title_sos',
+    body: 'translations:online_service_body_sos',
+  },
+};
 
 // The mode the sign shows now, or null while it is stopped. Kept here so the
 // notification event handler, which has no screen state, can put the sign back.
@@ -50,19 +70,10 @@ export const showOnlineService = async (
   if (stops !== stopsAtStart) {
     return false;
   }
-  const onJob = mode === TrackingMode.Job;
   await notifee.displayNotification({
     id: ONLINE_NOTIFICATION_ID,
-    title: i18next.t(
-      onJob
-        ? 'translations:online_service_title_job'
-        : 'translations:online_service_title_waiting',
-    ),
-    body: i18next.t(
-      onJob
-        ? 'translations:online_service_body_job'
-        : 'translations:online_service_body_waiting',
-    ),
+    title: i18next.t(SIGN_TEXT[mode].title),
+    body: i18next.t(SIGN_TEXT[mode].body),
     android: {
       channelId: ONLINE_CHANNEL_ID,
       asForegroundService: true,

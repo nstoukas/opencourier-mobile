@@ -5,6 +5,7 @@ import userService, { UserService } from './userService';
 import instanceService, { InstanceService } from './instanceService';
 import earningsService, { EarningsService } from './earningsService';
 import routeService, { RouteService } from './routeService';
+import sosService, { SosService } from './sosService';
 import { setOwnPosition } from './ownPosition';
 import { setLatestFix } from './latestFix';
 import { clearHeldArrivals } from './heldArrivals';
@@ -20,6 +21,7 @@ export type Services = {
   instanceService: InstanceService;
   earningsService: EarningsService;
   routeService: RouteService;
+  sosService: SosService;
   notificationDeviceService: NotificationDeviceService;
   logout: () => void;
 };
@@ -32,6 +34,7 @@ const Services = (): Services => {
   const eService = earningsService(client);
   const dService = notificationDeviceService(client);
   const rService = routeService(client);
+  const sService = sosService(client);
 
   const logout = () => {
     client.defaults.headers.common.Authorization = undefined;
@@ -52,6 +55,7 @@ const Services = (): Services => {
     instanceService: iService,
     earningsService: eService,
     routeService: rService,
+    sosService: sService,
     notificationDeviceService: dService,
     logout,
   };

@@ -195,6 +195,38 @@ export default {
     'Your location is shared to get offers. Go offline to stop.',
   online_service_title_job: 'OpenCourier: delivery in progress',
   online_service_body_job: 'Your location is shared until this delivery ends.',
+  // SOS (spec 0022).
+  online_service_title_sos: 'SOS active',
+  online_service_body_sos: 'Your position is shared with the co-op.',
+  sos_button: 'SOS',
+  sos_button_hint: 'Hold for 3 seconds to call 112 and alert the co-op',
+  sos_active_banner: 'SOS active',
+  sos_active_banner_hint: 'Tap to open',
+  sos_title: 'SOS',
+  sos_alerted: 'The co-op has been alerted',
+  sos_alerting: 'Alerting the co-op…',
+  sos_no_signal: 'No signal: your position is saved and will be sent',
+  sos_sharing_note:
+    'Your position is shared with the co-op until you end this SOS.',
+  sos_no_location:
+    'Location is off for this app, so your position is not shared.',
+  sos_call_112: 'Call 112',
+  sos_call_112_hint: 'Opens the dialer with 112 typed. Tap call.',
+  sos_im_safe: "I'm safe",
+  sos_false_alarm: 'False alarm',
+  sos_confirm_safe_title: "You're safe?",
+  sos_confirm_safe_body:
+    'Sharing your position stops now. The co-op sees that you are safe.',
+  sos_confirm_false_alarm_title: 'False alarm?',
+  sos_confirm_false_alarm_body:
+    'Sharing your position stops now. The co-op sees it was a false alarm.',
+  sos_confirm_yes: 'Yes, end SOS',
+  sos_ended_by_coop: 'The co-op closed your SOS',
+  sos_dialer_failed: 'Could not open the dialer. Call 112 from your phone.',
+  sos_logout_title: 'Your SOS is active',
+  sos_logout_body:
+    'If you log out, your position stops being shared. The co-op still sees your SOS until they close it.',
+  sos_logout_confirm: 'Log out anyway',
   session_ended_title: 'Please log in again',
   session_ended_body:
     'Your login has expired, so the app logged you out. Log in again to get orders.',

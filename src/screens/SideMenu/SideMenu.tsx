@@ -22,6 +22,11 @@ import RNRestart from 'react-native-restart';
 import { OrderSetting } from '@app/types/enums';
 import { useLocationPermission } from '@app/hooks/useLocationPermission';
 import { waitingCount } from '@app/services/jobStepOutbox';
+import {
+  isSharing,
+  loadSosRecord,
+  stopSosForLogout,
+} from '@app/services/sosStore';
 import { clearSavedQueries } from '@app/services/queryPersistence';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import useUser from '@app/hooks/useUser';
@@ -167,6 +172,13 @@ export const SideMenu = ({ navigation }: Props) => {
     ]);
     // Nothing may keep ringing on a phone nobody is logged in on.
     await cancelAllOfferAlerts();
+    // An active SOS stops being shared (spec 0022, AC-12); a start the
+    // server has not had yet waits for this rider's next login.
+    if (user?.id) {
+      await stopSosForLogout(user.id).catch(error =>
+        console.log('Could not stop the SOS before logging out', error),
+      );
+    }
     services.logout();
     queryClient.resetQueries();
     // The deliveries and earnings kept on the phone for reading offline go
@@ -195,6 +207,26 @@ export const SideMenu = ({ navigation }: Props) => {
       Alert.alert(
         t('translations:logout_waiting_title'),
         t('translations:logout_waiting_body', { count: waiting }),
+      );
+      return;
+    }
+    // During an active SOS, logging out stops the sharing: say so first
+    // (spec 0022, AC-12). The co-op still sees the SOS until they close it.
+    const sos = user?.id
+      ? await loadSosRecord(user.id).catch(() => undefined)
+      : undefined;
+    if (isSharing(sos)) {
+      Alert.alert(
+        t('translations:sos_logout_title'),
+        t('translations:sos_logout_body'),
+        [
+          { text: t('translations:cancel'), style: 'cancel' },
+          {
+            text: t('translations:sos_logout_confirm'),
+            style: 'destructive',
+            onPress: onLogoutHandle,
+          },
+        ],
       );
       return;
     }

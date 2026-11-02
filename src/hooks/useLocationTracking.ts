@@ -9,10 +9,14 @@ import { track } from '@app/utilities/geo';
 import { setOwnPosition } from '@app/services/ownPosition';
 import { setLatestFix } from '@app/services/latestFix';
 import {
+  ForwardedFix,
   TrackingMode,
   WATCH_OPTIONS,
+  ordinaryModeFor,
+  shouldForwardOrdinaryFix,
   trackingModeFor,
 } from '@app/utilities/locationTracking';
+import { addSosPoint } from '@app/services/sosStore';
 import { User } from '@app/types/types';
 import {
   showOnlineService,
@@ -24,9 +28,14 @@ import {
 // Online or carrying a job, and stops the moment neither is true. Each fix is
 // sent to the server and written into the cached user, so the screens show it;
 // no data is fetched again because of it.
+// `sosSharing` (spec 0022): the rider's own SOS is active on the phone. The
+// same one watch then runs at SOS options, whatever the status, and each fix
+// is kept as an SOS point; the ordinary location still goes out only as often
+// as it would without the SOS (AC-13).
 export const useLocationTracking = (
   user: User | undefined,
   hasPermission: boolean,
+  sosSharing = false,
 ): TrackingMode => {
   const queryClient = useQueryClient();
   // Jobs the rider still carries: the same query (and cache) as the live
@@ -42,7 +51,19 @@ export const useLocationTracking = (
     user?.status,
     inProgressOrders?.length ?? 0,
     hasPermission,
+    sosSharing,
   );
+  // What dispatch would get without an SOS, read by the watch through a ref
+  // so a status change during an SOS does not restart the watch.
+  const ordinaryMode = ordinaryModeFor(
+    user?.status,
+    inProgressOrders?.length ?? 0,
+    hasPermission,
+  );
+  const ordinaryModeNow = useRef(ordinaryMode);
+  ordinaryModeNow.current = ordinaryMode;
+  const courierIdNow = useRef(user?.id);
+  courierIdNow.current = user?.id;
 
   useEffect(() => {
     if (mode === TrackingMode.Off) {
@@ -51,6 +72,8 @@ export const useLocationTracking = (
     // False once this watch is stopped, so a first fix that arrives late
     // (the one shot read waits up to 15 s) is dropped, never sent.
     let active = true;
+    // The last fix sent as the ordinary location during this watch.
+    let lastForwarded: ForwardedFix | undefined;
     const watchId = track((point, info) => {
       if (!active) {
         return;
@@ -62,6 +85,34 @@ export const useLocationTracking = (
       // The arrival check reads it with its accuracy and time (spec 0021).
       // Memory only: nothing more about the position is sent than before.
       setLatestFix({ latitude, longitude, ...info });
+      if (mode === TrackingMode.Sos) {
+        const courierId = courierIdNow.current;
+        // Kept on the phone and sent by the SOS sender, to the SOS only
+        // (spec 0022, AC-5, AC-13).
+        if (courierId) {
+          addSosPoint(courierId, {
+            latitude,
+            longitude,
+            ...(info.accuracyMetres !== null
+              ? { accuracyMetres: info.accuracyMetres }
+              : {}),
+            takenAt: info.at,
+          }).catch(error => console.log('Could not keep an SOS point', error));
+        }
+        // The ordinary location, no more often than without the SOS.
+        const now = Date.now();
+        if (
+          !shouldForwardOrdinaryFix(
+            ordinaryModeNow.current,
+            lastForwarded,
+            { latitude, longitude },
+            now,
+          )
+        ) {
+          return;
+        }
+        lastForwarded = { latitude, longitude, at: now };
+      }
       services.userService
         .setUserLocation({ latitude, longitude })
         // A lost fix is fine: the next one follows shortly.

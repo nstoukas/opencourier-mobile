@@ -17,10 +17,13 @@ export enum RootScreen {
   AddNoteModal = 'AddNoteModal',
   DeleteNoteModal = 'DeleteNoteModal',
   DatePickerScreen = 'DatePickerScreen',
+  // The rider's SOS (spec 0022): a root screen, so it survives any navigation.
+  Sos = 'Sos',
 }
 
 export type RootStackParamList = {
   Loading: undefined;
+  Sos: undefined;
   Onboarding: undefined;
   Main: undefined;
   SelectOrganizationModal: {

@@ -17,6 +17,8 @@ import {
 import useUser from '@app/hooks/useUser';
 import { useLocationTracking } from '@app/hooks/useLocationTracking';
 import { useArrivalDetection } from '@app/hooks/useArrivalDetection';
+import { useSos } from '@app/hooks/useSos';
+import { SosScreen } from '@app/screens/Sos/SosScreen';
 
 const RootStack = createNativeStackNavigator<RootStackParamList>();
 
@@ -43,8 +45,13 @@ export const Router = () => {
   //   />
   // }
 
-  // The one location watch: only while Online or on a job (row 67).
-  useLocationTracking(user, locationPermission);
+  // The rider's SOS (spec 0022): sends it, resumes it after a restart, and
+  // says whether the phone shares its position for it right now.
+  const sosSharing = useSos(user?.id);
+
+  // The one location watch: only while Online, on a job (row 67), or during
+  // the rider's own SOS (spec 0022), when it runs at SOS options.
+  useLocationTracking(user, locationPermission, sosSharing);
 
   return (
     <>
@@ -97,6 +104,13 @@ export const Router = () => {
               name={RootScreen.DatePickerScreen}
               component={DatePickerScreen}
               options={{ headerShown: false, presentation: 'transparentModal' }}
+            />
+            {/* Full screen over everything; Android Back leaves it while the
+                SOS stays active (spec 0022, AC-3). */}
+            <RootStack.Screen
+              name={RootScreen.Sos}
+              component={SosScreen}
+              options={{ headerShown: false, presentation: 'fullScreenModal' }}
             />
           </>
         )}

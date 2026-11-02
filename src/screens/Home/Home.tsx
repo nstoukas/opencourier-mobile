@@ -39,6 +39,10 @@ import { useDeliveryRoute } from '@app/hooks/useDeliveryRoute';
 import { usePickupPoints } from '@app/hooks/usePickupPoints';
 import { useNavigateTo } from '@app/hooks/useNavigateTo';
 import { useLocationPermission } from '@app/hooks/useLocationPermission';
+import { SosHoldButton } from '@app/components/SosHoldButton/SosHoldButton';
+import { SosActiveBanner } from '@app/components/SosActiveBanner/SosActiveBanner';
+import { beginSos, openSosScreen, useSosRecord } from '@app/hooks/useSos';
+import { isSharing } from '@app/services/sosStore';
 import { setOwnPosition, useOwnPosition } from '@app/services/ownPosition';
 import {
   getRestaurantLayerChoice,
@@ -96,6 +100,24 @@ export const HomeScreen = ({ navigation }: Props) => {
     declineOrderFn,
     acceptOrderFn,
   } = useHomeOrders();
+
+  // Spec 0022 (AC-1): the SOS pill shows while the rider is Online, on Last
+  // call, or holds a job, never Offline with no job. While their SOS is
+  // active it gives way to the "SOS active" banner.
+  const sosRecord = useSosRecord(user?.id);
+  const sosActive = isSharing(sosRecord);
+  const holdsJob = dataSourceInProgress.length > 0;
+  const showSosPill =
+    !!user && !sosActive && (userStatus !== UserStatus.Offline || holdsJob);
+  const onSosHeld = () => {
+    if (!user) {
+      return;
+    }
+    // The job held now, if any: the first of the in progress list.
+    beginSos(user.id, dataSourceInProgress[0]?.id).catch(error =>
+      console.log('Could not start the SOS', error),
+    );
+  };
 
   useFocusEffect(
     useCallback(() => {
@@ -367,7 +389,12 @@ export const HomeScreen = ({ navigation }: Props) => {
       <HomeTopSlot
         userStatus={userStatus}
         connectionStatus={connectionStatus}
-        onMenu={() => navigation.toggleDrawer()}>
+        onMenu={() => navigation.toggleDrawer()}
+        sosAction={
+          showSosPill ? <SosHoldButton onHeld={onSosHeld} /> : undefined
+        }>
+        {/* The rider's own SOS is active (spec 0022, AC-3). */}
+        {sosActive && <SosActiveBanner onPress={() => openSosScreen()} />}
         {/* Dispatch stopped for heat or a storm, or about to be (spec 0014). */}
         <DispatchStopBanner inFront={isFocused} />
         {/* Spec 0015: a job this rider held was cancelled. */}
