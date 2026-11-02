@@ -138,6 +138,21 @@ describe('useDeliveryRoute (spec 0018, AC-6)', () => {
     );
     expect(droppedOff.current.fetchStatus).toBe('idle');
     expect(mockGetDeliveryRoute).not.toHaveBeenCalled();
+
+    // 4. serverStatus is undefined
+    const { result: undefinedStatus } = renderHook(
+      () =>
+        useDeliveryRoute({
+          deliveryId: 'deliv-1',
+          serverStatus: undefined,
+          isJob: true,
+          waitingToSend: false,
+          inFront: true,
+        }),
+      { wrapper },
+    );
+    expect(undefinedStatus.current.fetchStatus).toBe('idle');
+    expect(mockGetDeliveryRoute).not.toHaveBeenCalled();
   });
 
   it('sets refetchInterval to 60000 only for a job in front with app active, false for an offer or in background', () => {

@@ -21,13 +21,13 @@ describe('HomeTopSlot (spec 0018, AC-14)', () => {
     );
 
     expect(getByTestId('home-top-slot')).toBeTruthy();
-    expect(getByText('online')).toBeTruthy();
+    expect(getByText('Online')).toBeTruthy();
     expect(getByTestId('connection-dot')).toBeTruthy();
     expect(getByTestId('mock-banner')).toBeTruthy();
     expect(getByText('Dispatch Stop Banner')).toBeTruthy();
 
     // Tapping profile badge opens menu
-    fireEvent.press(getByText('online'));
+    fireEvent.press(getByText('Online'));
     expect(onMenuMock).toHaveBeenCalledTimes(1);
   });
 });

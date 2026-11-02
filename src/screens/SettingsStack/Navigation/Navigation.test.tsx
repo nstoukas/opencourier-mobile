@@ -132,4 +132,54 @@ describe('Settings NavigationScreen (spec 0018, AC-12)', () => {
     fireEvent.press(backBtn);
     expect(mockNavigation.goBack).toHaveBeenCalledTimes(1);
   });
+
+  it('shows "Ask every time" as checked when saved app is not installed', async () => {
+    // Apple Maps is saved, but only Google Maps is installed
+    getNavigationAppSpy.mockResolvedValue(MapLinkingOptions.apple);
+    installedAppsSpy.mockResolvedValue([MapLinkingOptions.google]);
+
+    const { getByTestId } = render(
+      <NavigationScreen navigation={mockNavigation} route={{} as any} />,
+    );
+
+    await waitFor(() => {
+      expect(
+        getByTestId(`navigation-app-${MapLinkingOptions.google}`),
+      ).toBeTruthy();
+    });
+
+    // Google Maps is not selected
+    expect(
+      getByTestId(`navigation-app-${MapLinkingOptions.google}`).props
+        .accessibilityState,
+    ).toEqual({ checked: false });
+
+    // "Ask every time" is checked
+    expect(
+      getByTestId('navigation-app-ask').props.accessibilityState,
+    ).toEqual({ checked: true });
+  });
+
+  it('shows "No navigation app found on this phone. Install Google Maps or Waze." when no app is installed', async () => {
+    installedAppsSpy.mockResolvedValue([]);
+    getNavigationAppSpy.mockResolvedValue(null);
+
+    const { getByTestId, getByText } = render(
+      <NavigationScreen navigation={mockNavigation} route={{} as any} />,
+    );
+
+    await waitFor(() => {
+      expect(getByTestId('navigation-app-ask')).toBeTruthy();
+    });
+
+    expect(getByTestId('navigation-app-none')).toBeTruthy();
+    expect(
+      getByText(
+        'No navigation app found on this phone. Install Google Maps or Waze.',
+      ),
+    ).toBeTruthy();
+    expect(
+      getByTestId('navigation-app-ask').props.accessibilityState,
+    ).toEqual({ checked: true });
+  });
 });

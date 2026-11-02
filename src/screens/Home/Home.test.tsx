@@ -27,8 +27,10 @@ import { RouteLeg, RouteLegKind } from '@app/types/route';
 import { services } from '@app/services/service';
 import * as mapPreferences from '@app/services/mapPreferences';
 import * as ownPositionModule from '@app/services/ownPosition';
+import Geolocation from 'react-native-geolocation-service';
 
 let mockIsFocused = true;
+let mockLocationPermission = true;
 
 jest.mock('@react-navigation/native', () => {
   const actual = jest.requireActual('@react-navigation/native');
@@ -86,7 +88,7 @@ jest.mock('@app/hooks/useUser', () => () => ({
 
 jest.mock('@app/hooks/useLocationPermission', () => ({
   useLocationPermission: () => ({
-    locationPermission: true,
+    locationPermission: mockLocationPermission,
     requestLocationPermission: jest.fn(),
   }),
 }));
@@ -113,7 +115,6 @@ const mockJob: Order = {
 
 let mockHomeOrders = {
   dataSourceNew: [] as Order[],
-  dataSourceHistory: [] as Order[],
   dataSourceInProgress: [mockJob] as Order[],
   serverInProgress: [mockJob] as Order[],
   timeLeftForOffer: jest.fn().mockReturnValue(30000),
@@ -121,7 +122,6 @@ let mockHomeOrders = {
   waitedTimeForOffer: jest.fn().mockReturnValue(0),
   refetchNew: jest.fn(),
   refetchInProgress: jest.fn(),
-  refechHistory: jest.fn(),
   declineOrderFn: jest.fn(),
   acceptOrderFn: jest.fn(),
   isLoading: false,
@@ -173,6 +173,7 @@ describe('HomeScreen (spec 0018, AC-5 to AC-15)', () => {
     jest.useFakeTimers();
     jest.clearAllMocks();
     mockIsFocused = true;
+    mockLocationPermission = true;
     mockDispatchState = { current: null, next: null };
     mockJobContact = { dispatchPhoneNumber: '+302421012345' };
     testQueryClient = new QueryClient({
@@ -186,7 +187,6 @@ describe('HomeScreen (spec 0018, AC-5 to AC-15)', () => {
     } as User;
     mockHomeOrders = {
       dataSourceNew: [],
-      dataSourceHistory: [],
       dataSourceInProgress: [mockJob],
       serverInProgress: [mockJob],
       timeLeftForOffer: jest.fn().mockReturnValue(30000),
@@ -194,7 +194,6 @@ describe('HomeScreen (spec 0018, AC-5 to AC-15)', () => {
       waitedTimeForOffer: jest.fn().mockReturnValue(0),
       refetchNew: jest.fn(),
       refetchInProgress: jest.fn(),
-      refechHistory: jest.fn(),
       declineOrderFn: jest.fn(),
       acceptOrderFn: jest.fn(),
       isLoading: false,
@@ -493,6 +492,58 @@ describe('HomeScreen (spec 0018, AC-5 to AC-15)', () => {
       }).not.toThrow();
 
       errorSpy.mockRestore();
+    });
+  });
+
+  describe('one shot getCurrentPosition on focus (spec 0018 AC-5, review nit)', () => {
+    it('runs on focus only when rider is Offline with no job and has permission', () => {
+      mockUser!.status = UserStatus.Offline;
+      mockHomeOrders.dataSourceInProgress = [];
+      mockLocationPermission = true;
+
+      renderHome();
+
+      expect(Geolocation.getCurrentPosition).toHaveBeenCalledTimes(1);
+    });
+
+    it('does NOT run when rider is Online', () => {
+      mockUser!.status = UserStatus.Online;
+      mockHomeOrders.dataSourceInProgress = [];
+      mockLocationPermission = true;
+
+      renderHome();
+
+      expect(Geolocation.getCurrentPosition).not.toHaveBeenCalled();
+    });
+
+    it('does NOT run when rider is on Last call', () => {
+      mockUser!.status = UserStatus.LastCall;
+      mockHomeOrders.dataSourceInProgress = [];
+      mockLocationPermission = true;
+
+      renderHome();
+
+      expect(Geolocation.getCurrentPosition).not.toHaveBeenCalled();
+    });
+
+    it('does NOT run when rider is holding a job', () => {
+      mockUser!.status = UserStatus.Offline;
+      mockHomeOrders.dataSourceInProgress = [mockJob];
+      mockLocationPermission = true;
+
+      renderHome();
+
+      expect(Geolocation.getCurrentPosition).not.toHaveBeenCalled();
+    });
+
+    it('does NOT run when locationPermission is false', () => {
+      mockUser!.status = UserStatus.Offline;
+      mockHomeOrders.dataSourceInProgress = [];
+      mockLocationPermission = false;
+
+      renderHome();
+
+      expect(Geolocation.getCurrentPosition).not.toHaveBeenCalled();
     });
   });
 });

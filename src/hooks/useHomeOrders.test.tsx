@@ -62,6 +62,7 @@ jest.mock('./useUser', () => () => ({
 const mockAcceptOrder = jest.fn();
 const mockDeclineOrder = jest.fn();
 const mockGetNewOrders = jest.fn();
+const mockGetOrdersHistory = jest.fn();
 
 jest.mock('@app/services/service', () => ({
   services: {
@@ -69,8 +70,7 @@ jest.mock('@app/services/service', () => ({
       getNewOrders: () => mockGetNewOrders(),
       getInProgressOrders: () =>
         Promise.resolve({ data: { result: { data: [] } } }),
-      getOrdersHistory: () =>
-        Promise.resolve({ data: { result: { data: [] } } }),
+      getOrdersHistory: () => mockGetOrdersHistory(),
       acceptOrder: (id: string) => mockAcceptOrder(id),
       declineOrder: (id: string) => mockDeclineOrder(id),
     },
@@ -1391,6 +1391,30 @@ describe('useHomeOrders', () => {
       expect(hookResult?.serverInProgress).toBeDefined();
 
       invalidateSpy.mockRestore();
+      act(() => {
+        tree.unmount();
+      });
+    });
+
+    it('no longer queries the order history (no getOrdersHistory call) (spec 0018 AC-13)', async () => {
+      let hookResult: ReturnType<typeof useHomeOrders> | undefined;
+      let tree: renderer.ReactTestRenderer;
+      await act(async () => {
+        tree = renderer.create(
+          <QueryClientProvider client={queryClient}>
+            <HookHost
+              onRender={h => {
+                hookResult = h;
+              }}
+            />
+          </QueryClientProvider>,
+        );
+      });
+
+      expect(mockGetOrdersHistory).not.toHaveBeenCalled();
+      expect((hookResult as any)?.dataSourceHistory).toBeUndefined();
+      expect((hookResult as any)?.refechHistory).toBeUndefined();
+
       act(() => {
         tree.unmount();
       });

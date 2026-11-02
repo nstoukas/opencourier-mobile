@@ -197,20 +197,26 @@ describe('NewOrderCell (spec 0002, spec 0018, AC-7, AC-8, AC-9)', () => {
       );
     });
 
-    const swipe = component!.root.findByType(ButtonSwipe);
-    expect(swipe.props.title).toBe('Accept');
+    const swipeBefore = component!.root.findByType(ButtonSwipe);
+    expect(swipeBefore.props.title).toBe('Accept');
+    expect((swipeBefore as any)._fiber.key).toBe('0');
 
-    // Incomplete swipe (let go early)
+    // Incomplete swipe (half swipe / let go early) calls nothing and does not redraw
     act(() => {
-      swipe.props.onSwiped(false);
+      swipeBefore.props.onSwiped(false);
     });
     expect(onAcceptMock).not.toHaveBeenCalled();
+    const swipeAfterHalf = component!.root.findByType(ButtonSwipe);
+    expect((swipeAfterHalf as any)._fiber.key).toBe('0');
 
-    // Successful swipe
+    // Successful full swipe calls onAccept and draws a new instance of Accept swipe
     act(() => {
-      swipe.props.onSwiped(true);
+      swipeBefore.props.onSwiped(true);
     });
     expect(onAcceptMock).toHaveBeenCalledWith(dummyOrder);
+
+    const swipeAfterFull = component!.root.findByType(ButtonSwipe);
+    expect((swipeAfterFull as any)._fiber.key).toBe('1');
 
     // Decline button
     const declineBtn = component!.root.findByType(ButtonOrder);

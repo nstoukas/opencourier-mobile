@@ -1,5 +1,6 @@
 import React from 'react';
 import { Text } from 'react-native';
+import { ScrollView as RNGHScrollView } from 'react-native-gesture-handler';
 import { render, fireEvent } from '@testing-library/react-native';
 import '@app/localization/i18n';
 import { HomeCard, HomeCardMode } from './HomeCard';
@@ -86,6 +87,17 @@ describe('HomeCard (spec 0018, AC-8)', () => {
 
       expect(getByTestId('home-card-job')).toBeTruthy();
       expect(getByText('Job Cell Content')).toBeTruthy();
+    });
+
+    it('renders its scroll from react-native-gesture-handler (review fix)', () => {
+      const { UNSAFE_getByType } = render(
+        <HomeCard {...defaultProps} mode={HomeCardMode.Job}>
+          <Text>Job Cell Content</Text>
+        </HomeCard>,
+      );
+
+      const ghScroll = UNSAFE_getByType(RNGHScrollView);
+      expect(ghScroll).toBeTruthy();
     });
   });
 
