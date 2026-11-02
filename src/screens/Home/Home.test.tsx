@@ -287,6 +287,22 @@ describe('HomeScreen (spec 0018, AC-5 to AC-15)', () => {
       expect(UNSAFE_queryByType(InProgressCell)).toBeNull();
     });
 
+    it('renders NewOrderCell without onCopyCustomer, onCopyRestaurant, toRestaurant, toCustomer or routeUnavailable (Pin 6, spec 0019, AC-3)', () => {
+      mockHomeOrders.dataSourceNew = [mockOffer];
+      mockHomeOrders.dataSourceInProgress = [];
+      mockHomeOrders.serverInProgress = [];
+
+      const { UNSAFE_getByType } = renderHome();
+
+      const cell = UNSAFE_getByType(NewOrderCell);
+      expect(cell).toBeTruthy();
+      expect('onCopyCustomer' in cell.props).toBe(false);
+      expect('onCopyRestaurant' in cell.props).toBe(false);
+      expect('toRestaurant' in cell.props).toBe(false);
+      expect('toCustomer' in cell.props).toBe(false);
+      expect('routeUnavailable' in cell.props).toBe(false);
+    });
+
     it('a rider on auto accept sees no offer card', () => {
       mockUser!.deliverySetting = OrderSetting.auto_accept;
       mockHomeOrders.dataSourceNew = [mockOffer];

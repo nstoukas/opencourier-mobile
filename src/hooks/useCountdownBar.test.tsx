@@ -1,6 +1,6 @@
 import React from 'react';
 import renderer, { act } from 'react-test-renderer';
-import { Animated } from 'react-native';
+import { Animated, Easing } from 'react-native';
 import { useCountdownBar } from './useCountdownBar';
 
 function BarTestHost({
@@ -229,6 +229,33 @@ describe('useCountdownBar', () => {
       expect.objectContaining({
         toValue: 200,
         duration: 0,
+      }),
+    );
+
+    act(() => {
+      tree.unmount();
+    });
+  });
+
+  it('passes Easing.linear to Animated.timing for an even countdown pace (Pin 5, spec 0019, AC-6)', () => {
+    const timingSpy = jest.spyOn(Animated, 'timing');
+
+    let tree: renderer.ReactTestRenderer;
+    act(() => {
+      tree = renderer.create(
+        <BarTestHost
+          millisRemaining={45000}
+          totalMillis={60000}
+          fullWidth={200}
+        />,
+      );
+    });
+
+    expect(timingSpy).toHaveBeenCalledTimes(1);
+    expect(timingSpy).toHaveBeenCalledWith(
+      expect.any(Animated.Value),
+      expect.objectContaining({
+        easing: Easing.linear,
       }),
     );
 
