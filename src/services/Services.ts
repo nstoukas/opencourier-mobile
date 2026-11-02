@@ -4,6 +4,7 @@ import orderService, { OrderService } from './orderService';
 import userService, { UserService } from './userService';
 import instanceService, { InstanceService } from './instanceService';
 import earningsService, { EarningsService } from './earningsService';
+import routeService, { RouteService } from './routeService';
 import notificationDeviceService, {
   NotificationDeviceService,
 } from './notificationDeviceService';
@@ -14,6 +15,7 @@ export type Services = {
   commentService: CommentService;
   instanceService: InstanceService;
   earningsService: EarningsService;
+  routeService: RouteService;
   notificationDeviceService: NotificationDeviceService;
   logout: () => void;
 };
@@ -25,6 +27,7 @@ const Services = (): Services => {
   const iService = instanceService(client);
   const eService = earningsService(client);
   const dService = notificationDeviceService(client);
+  const rService = routeService(client);
 
   const logout = () => {
     client.defaults.headers.common.Authorization = undefined;
@@ -36,6 +39,7 @@ const Services = (): Services => {
     commentService: cService,
     instanceService: iService,
     earningsService: eService,
+    routeService: rService,
     notificationDeviceService: dService,
     logout,
   };

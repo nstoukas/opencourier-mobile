@@ -149,10 +149,17 @@ export const useHomeOrders = () => {
   const { mutate: acceptOrder } = useMutation({
     mutationFn: services.orderService.acceptOrder,
     // The second argument is the offer id we passed to `acceptOrder(id)`.
-    onSuccess: (_result, orderId) => {
+    onSuccess: async (_result, orderId) => {
       countdowns.forget(orderId);
       refetchNew();
-      refetchInProgress();
+      // The jobs first, then the user, in that order (as socket.tsx does, for
+      // row 68's tracking reason): a rider on Last call is set Offline by the
+      // server at this accept, and home shows the job and Offline together
+      // even when the live connection is down (spec 0018, AC-10).
+      await queryClient.invalidateQueries({
+        queryKey: [QueryKeys.inProgressOrders],
+      });
+      await queryClient.invalidateQueries({ queryKey: [QueryKeys.user] });
     },
     onError: (error, orderId) => {
       if (isOfferEndedError(error)) {
@@ -358,6 +365,9 @@ export const useHomeOrders = () => {
     dataSourceNew,
     dataSourceHistory,
     dataSourceInProgress,
+    // The jobs as the SERVER has them, without the outbox's waiting steps:
+    // the route is asked for the server's status (spec 0018, AC-6).
+    serverInProgress: inProgressOrders ?? [],
     // Milliseconds left before an offer's deadline, for the progress bar;
     // null when the offer has no deadline (no bar is shown).
     timeLeftForOffer: (orderId: string) => countdowns.timeLeft(orderId),

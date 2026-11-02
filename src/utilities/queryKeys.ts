@@ -15,4 +15,9 @@ export const QueryKeys = {
   jobContact: 'jobContact',
   // The rider's jobs cancelled after they accepted them (spec 0015); saved to disk too.
   cancelledJobs: 'cancelledJobs',
+  // The road route of the offer or job on home (spec 0018). Never saved to disk:
+  // it says where the rider is.
+  deliveryRoute: 'deliveryRoute',
+  // The restaurants' pickup points for the map's restaurant layer (spec 0018).
+  pickupPoints: 'pickupPoints',
 };

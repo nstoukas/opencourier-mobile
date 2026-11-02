@@ -13,13 +13,13 @@ import { BackNavButton } from '@app/components/BackNavButton/BackNavButton';
 import { QuickNote } from '@app/components/QuickNote/QuickNote';
 import { CustomerNotes } from '@app/types/types';
 import { Button, ButtonType } from '@app/components/Button/Button';
+import ButtonSwipe from '@app/components/ButtonSwipe/ButtonSwipe';
 import { useTranslation } from 'react-i18next';
 import { RootScreen } from '@app/navigation/types';
 import useOrder from '@app/hooks/useOrder';
 import { hitSlopFor } from '@app/utilities/touch';
 import { Icon } from '@app/components/Icon/Icon';
 import { PlusIcon } from 'phosphor-react-native/src/icons/Plus';
-import { CheckCircleIcon } from 'phosphor-react-native/src/icons/CheckCircle';
 
 type Props = MainScreenProp<MainScreens.MarkAsDelivered>;
 
@@ -137,10 +137,19 @@ export const MarkAsDelivered = ({ navigation, route }: Props) => {
     );
   };
 
-  const handleConfirm = async () => {
+  // Spec 0018 (AC-9): Delivered is a swipe. When the step is refused, the
+  // swipe comes back to the start (a new key draws it fresh) so the rider can
+  // try again.
+  const [swipeAttempt, setSwipeAttempt] = useState(0);
+  const handleConfirm = async (didSwipe: boolean) => {
+    if (!didSwipe) {
+      return;
+    }
     const note = selectedNotes.length > 0 ? selectedNotes[0] : '';
     if (await markAsDelivered(order, note)) {
       navigation.goBack();
+    } else {
+      setSwipeAttempt(attempt => attempt + 1);
     }
   };
 
@@ -164,14 +173,14 @@ export const MarkAsDelivered = ({ navigation, route }: Props) => {
           stickySectionHeadersEnabled={true}
         />
 
-        <Button
-          style={styles.buttonConfirm}
-          textStyle={styles.buttonTextStyle}
-          icon={CheckCircleIcon}
-          iconWeight="fill"
-          type={ButtonType.green}
+        <ButtonSwipe
+          key={swipeAttempt}
+          style={styles.swipeConfirm}
+          isSwiped={false}
+          onSwiped={handleConfirm}
+          enabled={true}
           title={t('translations:confirm_mark_as_delivered')}
-          onPress={handleConfirm}
+          isLoading={false}
         />
 
         <Button

@@ -61,4 +61,9 @@ export const styles = StyleSheet.create({
     fontWeight: '600',
     color: color.foreground,
   },
+  // Spec 0018: the swipe sits centred in the card, like Go online.
+  swipe: {
+    alignSelf: 'center',
+    marginTop: 10,
+  },
 });

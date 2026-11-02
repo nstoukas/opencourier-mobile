@@ -107,4 +107,9 @@ export const styles = StyleSheet.create({
     backgroundColor: Colors.gray1,
     flex: 1,
   },
+  // Spec 0018: the Delivered swipe, centred like the other swipes.
+  swipeConfirm: {
+    alignSelf: 'center',
+    marginTop: 12,
+  },
 });

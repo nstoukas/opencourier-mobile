@@ -1,48 +1,32 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import {
-  AppState,
-  FlatList,
-  Linking,
-  RefreshControl,
-  View,
-} from 'react-native';
+import { AppState, Linking, View } from 'react-native';
+import Geolocation from 'react-native-geolocation-service';
+import Clipboard from '@react-native-clipboard/clipboard';
+import ActionSheet from 'react-native-action-sheet';
+import { useTranslation } from 'react-i18next';
+import { useFocusEffect, useIsFocused } from '@react-navigation/native';
 import { styles } from './Home.styles';
-import { HomeHeader } from '@app/components/HomeHeader/HomeHeader';
 import { DispatchStopBanner } from '@app/components/DispatchStopBanner/DispatchStopBanner';
 import { CancelledJobCard } from '@app/components/CancelledJobCard/CancelledJobCard';
 import { RefusedSteps } from '@app/components/RefusedSteps/RefusedSteps';
-import {
-  Comment,
-  CourierTip,
-  HomeEmptyState,
-  HomeTabItem,
-  MapDestination,
-  Order,
-  UserStatus,
-} from '@app/types/types';
-import { HomeEmptyStateComponent } from '@app/components/HomeEmptyState/HomeEmptyState';
-import { DrawerScreenProp, DrawerScreens } from '@app/navigation/drawer/types';
-import { HistoryCell } from '@app/components/HistoryCell/HistoryCell';
 import { NewOrderCell } from '@app/components/NewOrderCell/NewOrderCell';
 import { InProgressCell } from '@app/components/InProgressCell/InProgressCell';
-import ActionSheet from 'react-native-action-sheet';
-import { MainScreens } from '@app/navigation/main/types';
-import Clipboard from '@react-native-clipboard/clipboard';
-import { useHomeOrders } from '@app/hooks/useHomeOrders';
-import { useTranslation } from 'react-i18next';
-import { ReportAnIncident } from '@app/components/ReportAnIncident/ReportAnIncident';
+import { RouteMap } from '@app/components/RouteMap/RouteMap';
+import { HomeTopSlot } from '@app/components/HomeTopSlot/HomeTopSlot';
+import { HomeCard, HomeCardMode } from '@app/components/HomeCard/HomeCard';
+import { Order, UserStatus } from '@app/types/types';
 import { OrderSetting, OrderStatus } from '@app/types/enums';
-import ButtonSwipe from '@app/components/ButtonSwipe/ButtonSwipe';
-import { SkeletonOrderHistoryCell } from '@app/components/SkeletonOrderHistoryCell/SkeletonOrderHistoryCell';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { RoutePoint } from '@app/types/route';
+import { DrawerScreenProp, DrawerScreens } from '@app/navigation/drawer/types';
+import { MainScreens } from '@app/navigation/main/types';
+import { RootScreen } from '@app/navigation/types';
+import { useHomeOrders } from '@app/hooks/useHomeOrders';
 import useUser from '@app/hooks/useUser';
-import { useFocusEffect, useIsFocused } from '@react-navigation/native';
 import { useConnectionStatus } from '@app/services/socket';
 import { prepareToGoOnline } from '@app/services/offerPush/goOnlineChecks';
 import { cancelOfferAlert } from '@app/services/offerPush/offerAlert';
 import { isHomeInFront } from '@app/navigation/navigationRef';
 import { color } from '@app/styles/theme';
-import { mapAppsFor, mapProbeUrl, mapRouteUrl } from '@app/utilities/mapLinks';
 import {
   CUSTOMER_SMS_PRESETS,
   smsUrl,
@@ -50,69 +34,73 @@ import {
 } from '@app/utilities/jobContact';
 import { useJobContact } from '@app/hooks/useJobContact';
 import { useMoveDropoffPin } from '@app/hooks/useMoveDropoffPin';
+import { useDeliveryRoute } from '@app/hooks/useDeliveryRoute';
+import { usePickupPoints } from '@app/hooks/usePickupPoints';
+import { useNavigateTo } from '@app/hooks/useNavigateTo';
+import { useLocationPermission } from '@app/hooks/useLocationPermission';
+import { setOwnPosition, useOwnPosition } from '@app/services/ownPosition';
+import {
+  getRestaurantLayerChoice,
+  setRestaurantLayerChoice,
+} from '@app/services/mapPreferences';
+import {
+  isBeforePickup,
+  legLines,
+  restaurantLayerOn,
+  visibleLegs,
+} from '@app/utilities/routeLegs';
 
 type Props = DrawerScreenProp<DrawerScreens.Home>;
 
-export const HomeScreen = ({ navigation }: Props) => {
-  const { bottom } = useSafeAreaInsets();
+type CardItem = { kind: 'offer' | 'job'; order: Order };
 
-  const [reportIncidentDismissed, setReportIncidentDismissed] =
-    useState<boolean>(false);
+// An offer's route is asked for at the server's offer status.
+const OFFER_STATUS = 'ASSIGNING_COURIER';
+
+const pointOf = (location?: {
+  latitude: number;
+  longitude: number;
+}): RoutePoint | undefined =>
+  location
+    ? { latitude: location.latitude, longitude: location.longitude }
+    : undefined;
+
+// Spec 0018: home is a full screen map with one card at the bottom holding
+// what the rider deals with now, and the banners on top.
+export const HomeScreen = ({ navigation }: Props) => {
   const { t } = useTranslation();
   const { user, isLoading, updateStatus } = useUser();
-  // Spec 0016: the rider moves a wrong drop off pin to where they stand.
   const { movePin, movingId } = useMoveDropoffPin();
   const connectionStatus = useConnectionStatus();
-  const [availableMapApps, setAvailableMapApps] = useState<string[]>([
-    t('translations:cancel'),
-  ]);
-  const [selectedTab, setSelectedTab] = useState<HomeTabItem>(HomeTabItem.New);
-  const [isSearching, setIsSearching] = useState<boolean>(false);
-  const [searchText, setSearchText] = useState<string>('');
-  const [dataSource, setDataSource] = useState<Order[]>([]);
-  // `?.` because Home can render for a moment with no user (logging out, or a session
-  // that just ended); `user!` crashed there.
-  const autoAcceptOrders = user?.deliverySetting === OrderSetting.auto_accept;
-
-  const [showMapActionSheet, setShowMapActionSheet] = useState<
-    { order: Order; destination: MapDestination } | undefined
-  >(undefined);
-  const [orderDeliveredNotif, setOrderDeliveredNotif] =
-    useState<boolean>(false);
-  const {
-    dataSourceNew,
-    dataSourceHistory,
-    dataSourceInProgress,
-    timeLeftForOffer,
-    totalTimeForOffer,
-    waitedTimeForOffer,
-    refetchNew,
-    refetchInProgress,
-    refechHistory,
-    declineOrderFn,
-    acceptOrderFn,
-    //TEMP upvote/downvote fix
-    isLoading: isLoadingOrders,
-  } = useHomeOrders();
-
-  // `useCallback` keeps the same function between renders, so this runs each
-  // time Home comes into view, not on every render (row 67: it fetched about
-  // twice a second and hit the server's limit).
-  useFocusEffect(
-    useCallback(() => {
-      refetchInProgress();
-      refechHistory();
-    }, [refetchInProgress, refechHistory]),
-  );
-
-  // AC-12: while this list is in front, an offer it shows needs no system
-  // alert as well. An alert posted while the phone was locked, or while
-  // another screen was in front, stops ringing once the rider is here.
-  // `useIsFocused` is true while this screen is the one in front; the offer
-  // screen can still be open over it (isHomeInFront checks that too).
+  const navigateTo = useNavigateTo();
+  const { locationPermission } = useLocationPermission();
   const isFocused = useIsFocused();
   const { data: jobContact } = useJobContact(isFocused);
   const dispatchPhoneNumber = jobContact?.dispatchPhoneNumber;
+  const userStatus = user?.status ?? UserStatus.Offline;
+  // `?.` because Home can render for a moment with no user (logging out).
+  const autoAcceptOrders = user?.deliverySetting === OrderSetting.auto_accept;
+
+  const {
+    dataSourceNew,
+    dataSourceInProgress,
+    serverInProgress,
+    timeLeftForOffer,
+    totalTimeForOffer,
+    waitedTimeForOffer,
+    refetchInProgress,
+    declineOrderFn,
+    acceptOrderFn,
+  } = useHomeOrders();
+
+  useFocusEffect(
+    useCallback(() => {
+      refetchInProgress();
+    }, [refetchInProgress]),
+  );
+
+  // While home is in front, an offer it shows needs no system alert as well
+  // (spec 0003, AC-12).
   useEffect(() => {
     if (!isFocused) {
       return;
@@ -131,147 +119,107 @@ export const HomeScreen = ({ navigation }: Props) => {
     return () => subscription.remove();
   }, [isFocused, dataSourceNew]);
 
-  const onProfilePress = () => {
-    navigation.toggleDrawer();
+  // AC-5: one read of the phone's own position when home comes into view, so
+  // the map starts where the rider is even while Offline (no watch runs then).
+  // It stays on the phone.
+  useFocusEffect(
+    useCallback(() => {
+      if (!locationPermission) {
+        return;
+      }
+      Geolocation.getCurrentPosition(
+        position =>
+          setOwnPosition({
+            latitude: position.coords.latitude,
+            longitude: position.coords.longitude,
+          }),
+        () => undefined,
+        { enableHighAccuracy: true, timeout: 15000, maximumAge: 10000 },
+      );
+    }, [locationPermission]),
+  );
+  const storedOwnPosition = useOwnPosition();
+  // Without the permission the phone has no position of its own to show.
+  const ownPosition = locationPermission ? storedOwnPosition : null;
+
+  // AC-8: offers first, then jobs. Riders on auto accept never see an offer
+  // card: their offers are claimed on arrival and come back as jobs.
+  const items = useMemo<CardItem[]>(
+    () => [
+      ...(autoAcceptOrders ? [] : dataSourceNew).map(order => ({
+        kind: 'offer' as const,
+        order,
+      })),
+      ...dataSourceInProgress.map(order => ({ kind: 'job' as const, order })),
+    ],
+    [autoAcceptOrders, dataSourceNew, dataSourceInProgress],
+  );
+  // Back to the first whenever the list changes (an offer ending, a 409 on
+  // accept, a job finishing), so the position never points past the end.
+  const listKey = items
+    .map(item => `${item.kind}:${item.order.id}:${item.order.offeredAt ?? ''}`)
+    .join('|');
+  const [index, setIndex] = useState(0);
+  useEffect(() => setIndex(0), [listKey]);
+  const shown: CardItem | undefined = items[Math.min(index, items.length - 1)];
+
+  // AC-6: the route, asked for the server's status of the shown delivery.
+  const serverJob =
+    shown?.kind === 'job'
+      ? serverInProgress.find(order => order.id === shown.order.id)
+      : undefined;
+  const serverStatus =
+    shown?.kind === 'offer' ? OFFER_STATUS : serverJob?.status;
+  const route = useDeliveryRoute({
+    deliveryId: shown?.order.id,
+    serverStatus,
+    isJob: shown?.kind === 'job',
+    waitingToSend: !!shown?.order.waitingToSend,
+    inFront: isFocused,
+  });
+  const legs = visibleLegs(route.data ?? [], ownPosition);
+  const lines = legLines(legs);
+  const routeUnavailable = route.isError && route.data === undefined;
+
+  // AC-11: the restaurant layer.
+  const [layerChoice, setLayerChoice] = useState<'on' | 'off' | null>(null);
+  useEffect(() => {
+    getRestaurantLayerChoice().then(setLayerChoice);
+  }, []);
+  const layerOn = restaurantLayerOn(layerChoice, user?.createdAt);
+  const pickupPoints = usePickupPoints(true).data ?? [];
+  const toggleLayer = () => {
+    const next = !layerOn;
+    setLayerChoice(next ? 'on' : 'off');
+    setRestaurantLayerChoice(next).catch(() => undefined);
   };
 
-  const emptyState = useMemo(() => {
-    switch (selectedTab) {
-      case HomeTabItem.New:
-        return user!.status === UserStatus.Online
-          ? HomeEmptyState.WaitingNewOrders
-          : HomeEmptyState.New;
-      case HomeTabItem.InProgress:
-        return HomeEmptyState.InProgress;
-      case HomeTabItem.History:
-        return HomeEmptyState.History;
-    }
-  }, [selectedTab, user!.status]);
+  const [cardHeight, setCardHeight] = useState(0);
 
-  const showEmptyState = useMemo(() => {
-    switch (selectedTab) {
-      case HomeTabItem.New:
-        return dataSourceNew.length === 0;
-      case HomeTabItem.InProgress:
-        return dataSourceInProgress.length === 0;
-      case HomeTabItem.History:
-        return dataSourceHistory.length === 0;
-    }
-  }, [selectedTab, dataSourceHistory, dataSourceNew, dataSourceInProgress]);
+  const confirmStatus = (newStatus: UserStatus) =>
+    navigation.navigate(RootScreen.UserStatusModal, {
+      status: newStatus,
+      onAccept: () => updateStatus(newStatus),
+      onCancel: () => undefined,
+    });
 
   const onGoOnline = async (didSwipe: boolean) => {
     if (!didSwipe) {
       return;
     }
-
     // The first time, ask for the alert permissions; every time, warn if the
     // phone is on silent (spec 0003, AC-8, AC-9). Either answer goes Online.
     await prepareToGoOnline();
     updateStatus(UserStatus.Online);
   };
 
-  const renderItem = ({ item }: { item: Order }) => {
-    switch (selectedTab) {
-      case HomeTabItem.New:
-        return (
-          <NewOrderCell
-            millisRemaining={timeLeftForOffer(item.id)}
-            totalMillis={totalTimeForOffer(item.id)}
-            millisWaited={waitedTimeForOffer(item.id)}
-            autoAcceptOrders={autoAcceptOrders}
-            order={item}
-            onAccept={order => acceptOrderFn(order.id)}
-            onDecline={order => declineOrderFn(order.id)}
-            onCopyCustomer={order =>
-              Clipboard.setString(
-                order.dropoffLocationFormattedAddress ??
-                  order.dropoffLocation?.formattedAddress ??
-                  '',
-              )
-            }
-            onCopyRestaurant={order =>
-              Clipboard.setString(
-                order.pickupLocationFormattedAddress ??
-                  order.pickupLocation?.formattedAddress ??
-                  '',
-              )
-            }
-          />
-        );
-      case HomeTabItem.InProgress:
-        //TODO: TEMP FIX
-        // if (item.dropoff.location === undefined) {
-        //   return <View />;
-        // }
-        return (
-          <InProgressCell
-            onMessageCustomer={order =>
-              Clipboard.setString(
-                order.dropoffLocationFormattedAddress ??
-                  order.dropoffLocation?.formattedAddress ??
-                  '',
-              )
-            }
-            onMessageRestaurant={order =>
-              Clipboard.setString(
-                order.pickupLocationFormattedAddress ??
-                  order.pickupLocation?.formattedAddress ??
-                  '',
-              )
-            }
-            onCallCustomer={order =>
-              openContactUrl(telUrl(order.dropoffPhoneNumber ?? ''))
-            }
-            onCallRestaurant={order =>
-              openContactUrl(telUrl(order.pickupPhoneNumber))
-            }
-            onTextCustomer={showCustomerMessages}
-            onCallDispatch={
-              dispatchPhoneNumber
-                ? () => openContactUrl(telUrl(dispatchPhoneNumber))
-                : undefined
-            }
-            order={item}
-            onRestaurantAddressPress={order =>
-              setShowMapActionSheet({
-                order: order,
-                destination: MapDestination.restaurant,
-              })
-            }
-            onCustomerAddressPress={order =>
-              setShowMapActionSheet({
-                order: order,
-                destination: MapDestination.customer,
-              })
-            }
-            onOrderItemsListForCustomer={() => {
-              navigation.navigate(MainScreens.ItemsCollected, {
-                customerName: item.dropoffName,
-                items: item.orderItems,
-              });
-            }}
-            onReportIssue={order =>
-              navigation.navigate(MainScreens.ReportIssue, { order: order })
-            }
-            onMovePin={movePin}
-            movingPin={movingId === item.id}
-          />
-        );
-      case HomeTabItem.History:
-        return <HistoryCell order={item} onPress={() => undefined} />;
-    }
-  };
-
-  // Row 72. Each contact opens the phone's own dialer or messages app with the number (and text)
-  // filled in; the rider presses call or send there. Nothing about it is recorded.
+  // Row 72: calls and texts open the phone's own apps; nothing is recorded.
   const openContactUrl = (url: string) => {
     Linking.openURL(url).catch(error =>
       console.log('Could not open the phone or messages app', error),
     );
   };
 
-  // The three preset messages, then Cancel. The cell only offers this while the customer's
-  // number is there and the job is not over.
   const showCustomerMessages = (order: Order) => {
     const phoneNumber = order.dropoffPhoneNumber;
     if (!phoneNumber) {
@@ -291,7 +239,6 @@ export const HomeScreen = ({ navigation }: Props) => {
       },
       (buttonIndex: number) => {
         const preset = CUSTOMER_SMS_PRESETS[buttonIndex];
-        // Cancel, or a tap outside the sheet, has no preset.
         if (preset !== undefined) {
           openContactUrl(smsUrl(phoneNumber, preset.body));
         }
@@ -299,178 +246,178 @@ export const HomeScreen = ({ navigation }: Props) => {
     );
   };
 
-  const onSelect = (buttonIndex: number) => {
-    const { order, destination } = showMapActionSheet ?? {
-      order: undefined,
-      destination: undefined,
-    };
-    if (
-      order !== undefined &&
-      order.pickupLocation !== undefined &&
-      order.dropoffLocation !== undefined &&
-      destination !== undefined
-    ) {
-      // Route to the place the rider tapped: the customer or the restaurant.
-      const point =
-        destination === MapDestination.customer
-          ? order.dropoffLocation
-          : order.pickupLocation;
-      const app = mapAppsFor().find(
-        option => availableMapApps[buttonIndex] === t(`translations:${option}`),
-      );
-      if (app !== undefined) {
-        Linking.openURL(mapRouteUrl(app, point)).catch(error =>
-          console.log('Could not open the map app', error),
-        );
-      }
+  // AC-12: Navigate goes to the restaurant before pickup, to the customer after.
+  const onNavigate = (order: Order) => {
+    const point = isBeforePickup(order.status)
+      ? order.pickupLocation
+      : order.dropoffLocation;
+    if (point) {
+      navigateTo(pointOf(point)!);
     }
-    setShowMapActionSheet(undefined);
+  };
+  // Tapping an address still opens the navigation app toward that place.
+  const navigateToRestaurant = (order: Order) => {
+    if (order.pickupLocation) {
+      navigateTo(pointOf(order.pickupLocation)!);
+    }
+  };
+  const navigateToCustomer = (order: Order) => {
+    if (order.dropoffLocation) {
+      navigateTo(pointOf(order.dropoffLocation)!);
+    }
   };
 
-  const showActionSheeet = (_order: Order) => {
-    ActionSheet.showActionSheetWithOptions(
-      {
-        options: availableMapApps,
-        cancelButtonIndex: Math.max(0, availableMapApps.length - 1),
-        tintColor: color.route,
-        cancelButtonTintColor: color.destructive,
-      },
-      onSelect,
+  const copyAddress = (address?: string | null) =>
+    Clipboard.setString(address ?? '');
+
+  const renderShown = () => {
+    if (!shown) {
+      return null;
+    }
+    const order = shown.order;
+    if (shown.kind === 'offer') {
+      return (
+        <NewOrderCell
+          key={`${order.id}-${order.offeredAt ?? ''}`}
+          millisRemaining={timeLeftForOffer(order.id)}
+          totalMillis={totalTimeForOffer(order.id)}
+          millisWaited={waitedTimeForOffer(order.id)}
+          autoAcceptOrders={autoAcceptOrders}
+          order={order}
+          onAccept={offer => acceptOrderFn(offer.id)}
+          onDecline={offer => declineOrderFn(offer.id)}
+          onCopyCustomer={offer =>
+            copyAddress(
+              offer.dropoffLocationFormattedAddress ??
+                offer.dropoffLocation?.formattedAddress,
+            )
+          }
+          onCopyRestaurant={offer =>
+            copyAddress(
+              offer.pickupLocationFormattedAddress ??
+                offer.pickupLocation?.formattedAddress,
+            )
+          }
+          toRestaurant={lines.toRestaurant}
+          toCustomer={lines.toCustomer}
+          routeUnavailable={routeUnavailable}
+        />
+      );
+    }
+    return (
+      <InProgressCell
+        key={order.id}
+        order={order}
+        onMessageCustomer={job =>
+          copyAddress(
+            job.dropoffLocationFormattedAddress ??
+              job.dropoffLocation?.formattedAddress,
+          )
+        }
+        onMessageRestaurant={job =>
+          copyAddress(
+            job.pickupLocationFormattedAddress ??
+              job.pickupLocation?.formattedAddress,
+          )
+        }
+        onCallCustomer={job =>
+          openContactUrl(telUrl(job.dropoffPhoneNumber ?? ''))
+        }
+        onCallRestaurant={job => openContactUrl(telUrl(job.pickupPhoneNumber))}
+        onTextCustomer={showCustomerMessages}
+        onCallDispatch={
+          dispatchPhoneNumber
+            ? () => openContactUrl(telUrl(dispatchPhoneNumber))
+            : undefined
+        }
+        onRestaurantAddressPress={navigateToRestaurant}
+        onCustomerAddressPress={navigateToCustomer}
+        onOrderItemsListForCustomer={() =>
+          navigation.navigate(MainScreens.ItemsCollected, {
+            customerName: order.dropoffName,
+            items: order.orderItems,
+          })
+        }
+        onReportIssue={job =>
+          navigation.navigate(MainScreens.ReportIssue, { order: job })
+        }
+        onMovePin={movePin}
+        movingPin={movingId === order.id}
+        toRestaurant={lines.toRestaurant}
+        toCustomer={lines.toCustomer}
+        routeUnavailable={routeUnavailable}
+        onNavigate={onNavigate}
+      />
     );
   };
 
-  const onRefresh = () => {
-    switch (selectedTab) {
-      case HomeTabItem.New:
-        user?.status == UserStatus.Online && refetchNew();
-        break;
-      case HomeTabItem.InProgress:
-        refetchInProgress();
-        break;
-      case HomeTabItem.History:
-        refechHistory();
-        break;
+  const cardMode = (): HomeCardMode => {
+    if (shown?.kind === 'offer') {
+      return HomeCardMode.Offer;
+    }
+    if (shown?.kind === 'job') {
+      return HomeCardMode.Job;
+    }
+    switch (userStatus) {
+      case UserStatus.Online:
+        return HomeCardMode.Online;
+      case UserStatus.LastCall:
+        return HomeCardMode.LastCall;
+      default:
+        return HomeCardMode.Offline;
     }
   };
 
-  const checkInstalledMapApps = async () => {
-    const maps: string[] = [];
-    for (const app of mapAppsFor()) {
-      if (await Linking.canOpenURL(mapProbeUrl(app))) {
-        maps.push(t(`translations:${app}`));
-      }
-    }
-    maps.push(t('translations:cancel'));
-    setAvailableMapApps(maps);
-  };
-
-  useEffect(() => {
-    switch (selectedTab) {
-      case HomeTabItem.New:
-        setDataSource(dataSourceNew);
-        break;
-      case HomeTabItem.InProgress:
-        setDataSource(dataSourceInProgress);
-        break;
-      case HomeTabItem.History:
-        setDataSource(dataSourceHistory);
-        break;
-    }
-  }, [selectedTab, dataSourceHistory, dataSourceNew, dataSourceInProgress]);
-
-  useEffect(() => {
-    (async () => {
-      // const accept = await getAutoAcceptOrdersStorage();
-      // setAutoAcceptOrders(accept);
-      checkInstalledMapApps();
-    })();
-  }, []);
-
-  const ListEmptyComponent = useCallback(() => {
-    if (isLoading) {
-      return <HistorySkeleton />;
-    } else {
-      return <HomeEmptyStateComponent state={emptyState} />;
-    }
-  }, [HistorySkeleton, emptyState, isLoading]);
-
-  const HistorySkeleton = useCallback(() => {
-    if (
-      selectedTab === HomeTabItem.History &&
-      dataSource.length === 0 &&
-      !isLoadingOrders
-    ) {
-      return (
-        <>
-          <SkeletonOrderHistoryCell />
-          <SkeletonOrderHistoryCell />
-          <SkeletonOrderHistoryCell />
-        </>
-      );
-    } else {
-      return null;
-    }
-  }, [dataSource.length, isLoadingOrders, selectedTab]);
+  const shownPickup =
+    shown?.order.status === OrderStatus.dropped_off
+      ? undefined
+      : pointOf(shown?.order.pickupLocation);
+  const shownDropoff =
+    shown?.order.status === OrderStatus.dropped_off
+      ? undefined
+      : pointOf(shown?.order.dropoffLocation);
 
   return (
     <View style={styles.container} testID="home-screen">
-      <HomeHeader
-        orderDeliveredNotification={orderDeliveredNotif}
-        onCloseOrderDeliveredNotification={() =>
-          setOrderDeliveredNotif(!orderDeliveredNotif)
-        }
-        userStatus={user!.status}
-        selectedTab={selectedTab}
-        onProfile={onProfilePress}
-        onSearch={setIsSearching}
-        onTabSelected={setSelectedTab}
-        newCount={dataSourceNew.length}
-        inProgressCount={dataSourceInProgress.length}
-        searchShown={isSearching}
-        searchText={searchText}
-        onSearchTextChange={setSearchText}
-        loadingNewOrders={selectedTab === HomeTabItem.New && isLoadingOrders}
+      <RouteMap
+        legs={legs}
+        pickup={shownPickup}
+        dropoff={shownDropoff}
+        ownPosition={ownPosition}
+        restaurantLayerOn={layerOn}
+        pickupPoints={pickupPoints}
+        onToggleRestaurantLayer={toggleLayer}
+        fitKey={`${shown?.order.id ?? 'none'}-${serverStatus ?? ''}`}
+        bottomInset={cardHeight}
+      />
+      <HomeTopSlot
+        userStatus={userStatus}
         connectionStatus={connectionStatus}
-      />
-      {/* Dispatch stopped for heat or a storm, or about to be (spec 0014). */}
-      <DispatchStopBanner inFront={isFocused} />
-      {/* Spec 0015: a job this rider held was cancelled; covers the screen until handled. */}
-      <CancelledJobCard inFront={isFocused} />
-      {/* Steps the co-op refused after they waited for signal (spec 0009). */}
-      <RefusedSteps courierId={user?.id} />
-      {selectedTab === HomeTabItem.History && !reportIncidentDismissed && (
-        <ReportAnIncident onDismiss={() => setReportIncidentDismissed(true)} />
-      )}
-
-      <FlatList
-        // Key each row by its delivery id and offer time, so a row (and its
-        // countdown bar) stays with its own offer when the list changes, and a
-        // new offer of the same delivery gets a fresh row.
-        keyExtractor={item => `${item.id}-${item.offeredAt ?? ''}`}
-        data={dataSource}
-        renderItem={renderItem}
-        ListEmptyComponent={ListEmptyComponent}
-        refreshControl={
-          <RefreshControl refreshing={isLoadingOrders} onRefresh={onRefresh} />
-        }
-      />
-
-      {user?.status !== UserStatus.Online && (
-        <ButtonSwipe
-          style={{ position: 'absolute', bottom: bottom + 16 }}
-          isSwiped={false}
-          onSwiped={onGoOnline}
-          enabled={true}
-          title={t('translations:go_online')}
-          subtitle={t('translations:slide_to_start')}
-          isLoading={isLoading ?? false}
-        />
-      )}
-
-      <>
-        {showMapActionSheet !== undefined &&
-          showActionSheeet(showMapActionSheet.order)}
-      </>
+        onMenu={() => navigation.toggleDrawer()}>
+        {/* Dispatch stopped for heat or a storm, or about to be (spec 0014). */}
+        <DispatchStopBanner inFront={isFocused} />
+        {/* Spec 0015: a job this rider held was cancelled. */}
+        <CancelledJobCard inFront={isFocused} />
+        {/* Steps the co-op refused after they waited for signal (spec 0009). */}
+        <RefusedSteps courierId={user?.id} />
+      </HomeTopSlot>
+      <HomeCard
+        mode={cardMode()}
+        pager={{
+          index: Math.min(index, Math.max(items.length - 1, 0)),
+          count: items.length,
+          onPrevious: () =>
+            setIndex(current => (current - 1 + items.length) % items.length),
+          onNext: () => setIndex(current => (current + 1) % items.length),
+        }}
+        isLoading={isLoading ?? false}
+        onGoOnline={onGoOnline}
+        onLastCall={() => confirmStatus(UserStatus.LastCall)}
+        onStayOnline={() => updateStatus(UserStatus.Online)}
+        onGoOffline={() => confirmStatus(UserStatus.Offline)}
+        onHeight={setCardHeight}>
+        {renderShown()}
+      </HomeCard>
     </View>
   );
 };

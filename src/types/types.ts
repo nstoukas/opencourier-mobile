@@ -18,12 +18,6 @@ export enum UserStatus {
   LastCall = 'LAST_CALL',
 }
 
-export enum HomeTabItem {
-  New = 'new',
-  InProgress = 'in_progress',
-  History = 'history',
-}
-
 export enum InstanceTabItem {
   Description = 'description',
   Rules = 'rules',
@@ -41,6 +35,8 @@ export enum SideMenuItem {
   AutoOrders = 'auto_accept_orders',
   Orders = 'orders',
   Earnings = 'earnings',
+  // Spec 0018: the delivery history, moved off home.
+  History = 'history',
   Payout = 'payout_method',
   Support = 'support',
   Settings = 'settings',

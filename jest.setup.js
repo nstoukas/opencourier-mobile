@@ -115,14 +115,26 @@ jest.mock('@react-native-firebase/messaging', () => {
 jest.mock('react-native-maps', () => {
   const React = require('react');
   const { View } = require('react-native');
-  const MockMapView = props => React.createElement(View, props);
+  // A forwardRef, so a screen's `mapRef.current.fitToCoordinates(...)` works
+  // under Jest (spec 0018); tests assert the calls on these jest.fn()s.
+  const MockMapView = React.forwardRef((props, ref) => {
+    React.useImperativeHandle(ref, () => ({
+      fitToCoordinates: MockMapView.fitToCoordinates,
+      animateToRegion: MockMapView.animateToRegion,
+    }));
+    return React.createElement(View, props);
+  });
+  MockMapView.fitToCoordinates = jest.fn();
+  MockMapView.animateToRegion = jest.fn();
   const MockMarker = props => React.createElement(View, props);
   const MockPolyline = props => React.createElement(View, props);
+  const MockCallout = props => React.createElement(View, props);
   return {
     __esModule: true,
     default: MockMapView,
     Marker: MockMarker,
     Polyline: MockPolyline,
+    Callout: MockCallout,
     PROVIDER_GOOGLE: 'google',
   };
 });

@@ -6,6 +6,7 @@ import { services } from '@app/services/service';
 import { QueryKeys } from '@app/utilities/queryKeys';
 import { filterInProgressOrdersForDisplay } from '@app/utilities/inProgressListFilter';
 import { track } from '@app/utilities/geo';
+import { setOwnPosition } from '@app/services/ownPosition';
 import {
   TrackingMode,
   WATCH_OPTIONS,
@@ -55,6 +56,8 @@ export const useLocationTracking = (
       }
       const latitude = point.coordinates[1];
       const longitude = point.coordinates[0];
+      // The map draws the rider from the phone's own newest fix (spec 0018).
+      setOwnPosition({ latitude, longitude });
       services.userService
         .setUserLocation({ latitude, longitude })
         // A lost fix is fine: the next one follows shortly.

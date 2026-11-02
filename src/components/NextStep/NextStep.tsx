@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   StyleProp,
   ViewStyle,
@@ -10,6 +10,7 @@ import { styles } from './NextStep.styles';
 import { useTranslation } from 'react-i18next';
 import { Order, ToastMessage, User } from '@app/types/types';
 import { Button, ButtonType } from '../Button/Button';
+import ButtonSwipe from '../ButtonSwipe/ButtonSwipe';
 import { Toast } from '../Toast/Toast';
 import { OrderStatus } from '@app/types/enums';
 import useOrder from '@app/hooks/useOrder';
@@ -19,7 +20,6 @@ import { Icon } from '@app/components/Icon/Icon';
 import { CaretCircleDoubleRightIcon } from 'phosphor-react-native/src/icons/CaretCircleDoubleRight';
 import { CaretRightIcon } from 'phosphor-react-native/src/icons/CaretRight';
 import { CheckCircleIcon } from 'phosphor-react-native/src/icons/CheckCircle';
-import { HamburgerIcon } from 'phosphor-react-native/src/icons/Hamburger';
 import { CloudArrowUpIcon } from 'phosphor-react-native/src/icons/CloudArrowUp';
 
 type Props = {
@@ -42,6 +42,20 @@ export const NextStep = ({
   // so nothing here waits for an answer. `order.status` is the status the
   // screen shows, already moved on by any step still waiting to be sent.
   const { confirmOrderItems, arrivedAtPickup, arrivedAtDropoff } = useOrder();
+
+  // Spec 0018: after a swipe's step has run, draw the swipe fresh (a new key).
+  // When the status moved on the key changes anyway; when the step was
+  // refused, or the rider came back from a screen without finishing, this
+  // brings the knob back to the start instead of leaving it at the end.
+  const [swipeAttempt, setSwipeAttempt] = useState(0);
+  const swipeKey = `${order.id}-${order.status}-${swipeAttempt}`;
+  const runSwipe = async (didSwipe: boolean, step: () => unknown) => {
+    if (!didSwipe) {
+      return;
+    }
+    await step();
+    setSwipeAttempt(attempt => attempt + 1);
+  };
 
   const userCell = () => {
     if (!order.orderItems) {
@@ -116,33 +130,45 @@ export const NextStep = ({
         </View>
       )}
       {showPrePickupActions && userCell()}
+      {/* Spec 0018 (AC-9): each main step is a swipe, so it cannot fire by
+          accident; let go early and nothing happens. The key is the delivery
+          and its status, so each new step starts with the knob at the start. */}
       {showArrivedAtPickupButton && (
-        <Button
-          style={{ marginHorizontal: 12, marginTop: 10 }}
-          type={ButtonType.green}
+        <ButtonSwipe
+          key={swipeKey}
+          style={styles.swipe}
+          isSwiped={false}
+          onSwiped={didSwipe =>
+            runSwipe(didSwipe, () => arrivedAtPickup(order))
+          }
+          enabled={true}
           title={t('translations:arrived_at_pickup')}
-          onPress={() => arrivedAtPickup(order)}
+          isLoading={false}
         />
       )}
       {showConfirmOrderItems && (
-        <Button
-          style={{ marginHorizontal: 12, marginTop: 10 }}
-          type={ButtonType.green}
-          icon={HamburgerIcon}
-          iconWeight="fill"
+        <ButtonSwipe
+          key={swipeKey}
+          style={styles.swipe}
+          isSwiped={false}
+          onSwiped={didSwipe =>
+            runSwipe(didSwipe, () => confirmOrderItems(order))
+          }
+          enabled={true}
           title={t('translations:confirm_items')}
-          onPress={() => confirmOrderItems(order)}
+          isLoading={false}
         />
       )}
       {showDeliveredActions && (
         <>
-          <Button
-            style={{ marginHorizontal: 12, marginTop: 10 }}
-            type={ButtonType.green}
-            icon={CheckCircleIcon}
-            iconWeight="fill"
-            title={t('translations:mark_as_delivered')}
-            onPress={onMarkAsDelivered}
+          <ButtonSwipe
+            key={swipeKey}
+            style={styles.swipe}
+            isSwiped={false}
+            onSwiped={didSwipe => runSwipe(didSwipe, onMarkAsDelivered)}
+            enabled={true}
+            title={t('translations:arrived_at_customer')}
+            isLoading={false}
           />
           <Button
             style={{ marginHorizontal: 12, marginTop: 10 }}

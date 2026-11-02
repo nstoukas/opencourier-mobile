@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import { StyleProp, Text, ViewStyle, View } from 'react-native';
 import { styles } from './InProgressCell.styles';
 import { Note, Order } from '@app/types/types';
@@ -6,17 +6,17 @@ import { useTranslation } from 'react-i18next';
 import { InProgressCellHeader } from '../InProgressCellHeader/InProgressCellHeader';
 import { InProgressAdress } from '../InProgressAddress/InProgressAddress';
 import { InProgressNotes } from '../InProgressNotes/InProgressNotes';
-import { InProgressMap } from '../InProgressMap/InProgressMap';
 import { NextStep } from '../NextStep/NextStep';
-import { getDistance } from '@app/utilities/geo';
 import { OrderStatus } from '@app/types/enums';
-import useUser from '@app/hooks/useUser';
 import { StorefrontIcon } from 'phosphor-react-native/src/icons/Storefront';
 import { HouseLineIcon } from 'phosphor-react-native/src/icons/HouseLine';
 import { HeadsetIcon } from 'phosphor-react-native/src/icons/Headset';
 import { Button, ButtonType } from '../Button/Button';
 import { isJobOver } from '@app/utilities/jobContact';
 import { MapPinIcon } from 'phosphor-react-native/src/icons/MapPin';
+import { NavigationArrowIcon } from 'phosphor-react-native/src/icons/NavigationArrow';
+import { RouteLines } from '../RouteLines/RouteLines';
+import { LegFigures } from '@app/utilities/routeLegs';
 
 type Props = {
   style?: StyleProp<ViewStyle>;
@@ -37,6 +37,12 @@ type Props = {
   onMovePin?: (order: Order) => void;
   // True while this delivery's pin move runs: the button spins and ignores taps.
   movingPin?: boolean;
+  // Spec 0018 (AC-7): the distance lines, from the co-op's route.
+  toRestaurant?: LegFigures;
+  toCustomer?: LegFigures;
+  routeUnavailable?: boolean;
+  // Spec 0018 (AC-12): opens the rider's navigation app toward the next stop.
+  onNavigate?: (order: Order) => void;
 };
 
 // Spec 0016 (AC-8): the pin can be moved while the shown status is "arrived at
@@ -60,31 +66,14 @@ export const InProgressCell = ({
   onReportIssue,
   onMovePin,
   movingPin,
+  toRestaurant,
+  toCustomer,
+  routeUnavailable = false,
+  onNavigate,
 }: Props) => {
   const { t } = useTranslation();
   const [topExpanded, setTopExpanded] = useState<boolean>(true);
   const [bottomExpanded, setBottomExpanded] = useState<boolean>(false);
-  const { user } = useUser();
-  const [distance, setDistance] = useState<number>(0); // meters
-  const [duration, setDuration] = useState<number>(0); // seconds
-
-  useEffect(() => {
-    if (
-      user!.currentLocation &&
-      order.pickupLocation &&
-      order.dropoffLocation
-    ) {
-      const coordinates = [
-        [user!.currentLocation.longitude, user!.currentLocation.latitude],
-        [order.pickupLocation.longitude, order.pickupLocation.latitude],
-        [order.dropoffLocation.longitude, order.dropoffLocation.latitude],
-      ];
-      getDistance(coordinates).then(({ duration, distance }) => {
-        setDuration(duration);
-        setDistance(distance);
-      });
-    }
-  }, [user!.currentLocation, order]);
 
   // No way to contact anyone once the job is over (row 72), counting a drop off still waiting
   // for signal (row 33 review). The customer's number is also gone before the rider holds the
@@ -96,6 +85,23 @@ export const InProgressCell = ({
   return (
     <View style={[styles.container, style]}>
       <View style={{ paddingHorizontal: 12, paddingTop: 12 }}>
+        {/* Spec 0018: the road ahead, and one tap to the rider's navigation app.
+            The full screen map behind home replaces the small map that was here. */}
+        <RouteLines
+          toRestaurant={toRestaurant}
+          toCustomer={toCustomer}
+          unavailable={routeUnavailable}
+        />
+        {onNavigate && !jobOver ? (
+          <Button
+            style={styles.dispatchButton}
+            type={ButtonType.white}
+            icon={NavigationArrowIcon}
+            iconWeight="fill"
+            title={t('translations:navigate')}
+            onPress={() => onNavigate(order)}
+          />
+        ) : null}
         <InProgressCellHeader
           title={order.dropoffName ?? 'N/A'}
           icon={StorefrontIcon}
@@ -119,16 +125,6 @@ export const InProgressCell = ({
                 onCopyAddress={() => onMessageRestaurant(order)}
                 expanded={topExpanded}
               />
-              {(order.status === OrderStatus.dispatched ||
-                order.status ===
-                  OrderStatus.courier_arrived_at_pickup_location) && (
-                <InProgressMap
-                  order={order}
-                  user={user!}
-                  distance={distance}
-                  duration={duration}
-                />
-              )}
               <InProgressNotes
                 order={order}
                 notes={order.pickupNotes ? [order.pickupNotes] : []}

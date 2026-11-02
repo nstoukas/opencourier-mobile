@@ -6,6 +6,8 @@ import { MainNavigationProp } from '../main/types';
 export enum DrawerScreens {
   Home = 'Home',
   Earnings = 'Earnings',
+  // Spec 0018: History left home's tabs for the side menu.
+  History = 'History',
   PaymentMethods = 'PaymentMethods',
   Settings = 'Settings',
 }
@@ -13,6 +15,7 @@ export enum DrawerScreens {
 export type DrawerStackParamList = {
   Home: undefined;
   Earnings: undefined;
+  History: undefined;
   PaymentMethods: undefined;
   Settings: undefined;
 };

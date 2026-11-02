@@ -36,47 +36,6 @@ export function track(
   );
 }
 
-// TODO: Add functionality to configure mode of transporation for getDistance
-export async function getDistance(coordinates: number[][]) {
-  const url =
-    'http://router.project-osrm.org/route/v1/driving/' + coordinates.join(';');
-  return await fetch(url)
-    .then(response => {
-      if (response.ok) {
-        return response.json();
-      } else {
-        console.log(response.body);
-      }
-    })
-    .then(json => {
-      console.log(json);
-      return {
-        duration: json.routes[0].duration,
-        distance: json.routes[0].distance,
-      };
-    })
-    .catch(function (error) {
-      if (error.response) {
-        // The request was made and the server responded with a status code
-        // that falls out of the range of 2xx
-        console.log(error.response.data);
-        console.log(error.response.status);
-        console.log(error.response.headers);
-      } else if (error.request) {
-        // The request was made but no response was received
-        // `error.request` is an instance of XMLHttpRequest in the browser and an instance of
-        // http.ClientRequest in node.js
-        console.log(error.request);
-      } else {
-        // Something happened in setting up the request that triggered an Error
-        console.log('Error', error.message);
-      }
-      console.log(error.config);
-      return { duration: 0, distance: 0 };
-    });
-}
-
-// A distance for a rider to read, in km with one decimal ("2.4 km").
 export function formatDistance(meters: number): string {
   const km = new Intl.NumberFormat(APP_LOCALE, {
     maximumFractionDigits: 1,

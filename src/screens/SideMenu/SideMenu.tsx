@@ -40,6 +40,7 @@ type Props = DrawerContentComponentProps;
 const section1 = [SideMenuItem.Location, SideMenuItem.AutoOrders];
 const section2 = [
   SideMenuItem.Orders,
+  SideMenuItem.History,
   SideMenuItem.Earnings,
   SideMenuItem.Payout,
   SideMenuItem.Support,
@@ -207,6 +208,9 @@ export const SideMenu = ({ navigation }: Props) => {
     switch (item) {
       case SideMenuItem.Orders:
         navigation.navigate(DrawerScreens.Home);
+        break;
+      case SideMenuItem.History:
+        navigation.navigate(DrawerScreens.History);
         break;
       case SideMenuItem.Earnings:
         navigation.navigate(DrawerScreens.Earnings);

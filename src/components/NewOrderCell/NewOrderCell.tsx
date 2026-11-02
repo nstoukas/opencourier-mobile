@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React from 'react';
 import {
   StyleProp,
   ViewStyle,
@@ -10,23 +10,19 @@ import {
 import { styles } from './NewOrderCell.styles';
 import { Order } from '@app/types/types';
 import { ButtonOrder, ButtonOrderType } from '../ButtonOrder/ButtonOrder';
-import Map from '../Map/Map';
 import { useTranslation } from 'react-i18next';
-import { formatDistance } from '@app/utilities/geo';
-import { secondsToMinutes } from '@app/utilities/dates';
-import { getDistance } from '@app/utilities/geo';
+import ButtonSwipe from '../ButtonSwipe/ButtonSwipe';
+import { RouteLines } from '../RouteLines/RouteLines';
+import { LegFigures } from '@app/utilities/routeLegs';
 import { formatCurrencyFromCents } from '@app/utilities/currency';
 import { SCREEN_WIDTH } from '@app/utilities/constants';
 import { Paralelogram } from '../Paralelogram/Paralelogram';
 import { Colors } from '@app/styles/colors';
-import useUser from '@app/hooks/useUser';
 import { useCountdownBar } from '@app/hooks/useCountdownBar';
 import { hitSlopFor } from '@app/utilities/touch';
 import { Icon } from '@app/components/Icon/Icon';
-import { ClockAfternoonIcon } from 'phosphor-react-native/src/icons/ClockAfternoon';
 import { CopyIcon } from 'phosphor-react-native/src/icons/Copy';
 import { HouseLineIcon } from 'phosphor-react-native/src/icons/HouseLine';
-import { PathIcon } from 'phosphor-react-native/src/icons/Path';
 import { StorefrontIcon } from 'phosphor-react-native/src/icons/Storefront';
 
 const PARALELOGRAM_WIDTH = 16;
@@ -50,6 +46,10 @@ type Props = {
   // How long the offer has waited, for the "Waiting X min" line shown when
   // there is no deadline (AC-4).
   millisWaited?: number | null;
+  // Spec 0018 (AC-7): the distance lines, from the co-op's route.
+  toRestaurant?: LegFigures;
+  toCustomer?: LegFigures;
+  routeUnavailable?: boolean;
 };
 
 // "Waiting 3 min", or "Waiting less than 1 min" for a fresh offer.
@@ -74,11 +74,11 @@ export const NewOrderCell = ({
   millisRemaining = null,
   totalMillis = null,
   millisWaited = null,
+  toRestaurant,
+  toCustomer,
+  routeUnavailable = false,
 }: Props) => {
   const { t } = useTranslation();
-  const { user } = useUser();
-  const [distance, setDistance] = useState<number>(0); // meters
-  const [duration, setDuration] = useState<number>(0); // seconds
   const numberOfParalelograms = Math.floor(SCREEN_WIDTH / PARALELOGRAM_WIDTH);
 
   // An offer with a deadline shows a countdown bar; one without shows how
@@ -94,24 +94,6 @@ export const NewOrderCell = ({
     const even = index % 2 === 0;
     return even ? Colors.gray8 : Colors.gray23;
   };
-
-  useEffect(() => {
-    if (
-      user!.currentLocation &&
-      order.pickupLocation &&
-      order.dropoffLocation
-    ) {
-      const coordinates = [
-        [user!.currentLocation.longitude, user!.currentLocation.latitude],
-        [order.pickupLocation.longitude, order.pickupLocation.latitude],
-        [order.dropoffLocation.longitude, order.dropoffLocation.latitude],
-      ];
-      getDistance(coordinates).then(({ duration, distance }) => {
-        setDuration(duration);
-        setDistance(distance);
-      });
-    }
-  }, [user, order]);
 
   return (
     <View style={[styles.container, style]}>
@@ -148,29 +130,11 @@ export const NewOrderCell = ({
               </View>
             </TouchableOpacity>
           </View>
-          <View style={styles.containerMap}>
-            {user && <Map order={order} user={user} />}
-            <View style={styles.containerAway}>
-              <View style={styles.containerTextAway}>
-                <Icon icon={PathIcon} size={26} tone="muted-foreground" />
-                <Text style={styles.textDistance}>
-                  {' '}
-                  {`${formatDistance(distance)} ${t('translations:away')}`}
-                </Text>
-              </View>
-              <View style={styles.containerTextAway}>
-                <Icon
-                  icon={ClockAfternoonIcon}
-                  weight="fill"
-                  size={26}
-                  tone="muted-foreground"
-                />
-                <Text style={styles.textDistance}>{`${secondsToMinutes(
-                  duration,
-                )} min ${t('translations:away')}`}</Text>
-              </View>
-            </View>
-          </View>
+          <RouteLines
+            toRestaurant={toRestaurant}
+            toCustomer={toCustomer}
+            unavailable={routeUnavailable}
+          />
           <View style={styles.containerAddressButton}>
             <View style={styles.containerText}>
               <Text style={styles.textName}>
@@ -191,13 +155,17 @@ export const NewOrderCell = ({
         </View>
       </View>
       <>
-        <ButtonOrder
-          millisRemaining={millisRemaining}
-          totalMillis={totalMillis}
+        {/* Spec 0018 (AC-9): Accept is a swipe, so a brush of the thumb cannot
+            take an offer. A swipe let go early does nothing. With auto accept
+            the offer is claimed on arrival and home never shows this card. */}
+        <ButtonSwipe
           style={styles.buttonTop}
-          type={ButtonOrderType.accept}
-          onPress={() => onAccept(order)}
-          autoAcceptOrders={autoAcceptOrders}
+          isSwiped={false}
+          onSwiped={didSwipe => didSwipe && onAccept(order)}
+          enabled={true}
+          title={t('translations:accept')}
+          subtitle={t('translations:slide_to_accept')}
+          isLoading={false}
         />
         <ButtonOrder
           type={ButtonOrderType.decline}
