@@ -7,6 +7,7 @@ import { QueryKeys } from '@app/utilities/queryKeys';
 import { filterInProgressOrdersForDisplay } from '@app/utilities/inProgressListFilter';
 import { track } from '@app/utilities/geo';
 import { setOwnPosition } from '@app/services/ownPosition';
+import { setLatestFix } from '@app/services/latestFix';
 import {
   TrackingMode,
   WATCH_OPTIONS,
@@ -50,7 +51,7 @@ export const useLocationTracking = (
     // False once this watch is stopped, so a first fix that arrives late
     // (the one shot read waits up to 15 s) is dropped, never sent.
     let active = true;
-    const watchId = track(point => {
+    const watchId = track((point, info) => {
       if (!active) {
         return;
       }
@@ -58,6 +59,9 @@ export const useLocationTracking = (
       const longitude = point.coordinates[0];
       // The map draws the rider from the phone's own newest fix (spec 0018).
       setOwnPosition({ latitude, longitude });
+      // The arrival check reads it with its accuracy and time (spec 0021).
+      // Memory only: nothing more about the position is sent than before.
+      setLatestFix({ latitude, longitude, ...info });
       services.userService
         .setUserLocation({ latitude, longitude })
         // A lost fix is fine: the next one follows shortly.

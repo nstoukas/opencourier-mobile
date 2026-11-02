@@ -40,6 +40,9 @@ type Props = {
   mode: HomeCardMode;
   // The offer or job cell, for those two modes.
   children?: ReactNode;
+  // Spec 0021 (AC-9): drawn below the part that scrolls, so a job's swipe is
+  // always in the same place and never scrolls away.
+  footer?: ReactNode;
   // "1 of N" when there is more than one offer or job.
   pager?: Pager;
   isLoading: boolean;
@@ -57,6 +60,7 @@ type Props = {
 export const HomeCard = ({
   mode,
   children,
+  footer,
   pager,
   isLoading,
   onGoOnline,
@@ -157,9 +161,12 @@ export const HomeCard = ({
         </View>
       )}
       {mode === HomeCardMode.Offer || mode === HomeCardMode.Job ? (
-        <ScrollView style={styles.scroll} nestedScrollEnabled>
-          {children}
-        </ScrollView>
+        <>
+          <ScrollView style={styles.scroll} nestedScrollEnabled>
+            {children}
+          </ScrollView>
+          {footer}
+        </>
       ) : (
         <View style={styles.idle}>{idle()}</View>
       )}

@@ -16,6 +16,7 @@ import {
 } from '@app/hooks/useLocationPermission';
 import useUser from '@app/hooks/useUser';
 import { useLocationTracking } from '@app/hooks/useLocationTracking';
+import { useArrivalDetection } from '@app/hooks/useArrivalDetection';
 
 const RootStack = createNativeStackNavigator<RootStackParamList>();
 
@@ -38,6 +39,9 @@ export const Router = () => {
 
   // The one location watch: only while Online or on a job (row 67).
   useLocationTracking(user, locationPermission);
+  // Arrival at the restaurant and the customer, noticed from that watch's
+  // fixes on the phone (spec 0021).
+  useArrivalDetection(user?.id);
 
   return (
     <RootStack.Navigator>

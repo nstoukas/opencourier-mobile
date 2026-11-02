@@ -23,6 +23,9 @@ export type OutboxItem = {
   state: 'waiting' | 'refused';
   // A note the rider wrote with the step (the delivered screen's note).
   note?: string;
+  // Spec 0021 (AC-4): true when the app noticed this arrival by itself (an
+  // arrived step only). The server only writes it into the event's message.
+  detected?: boolean;
   // The restaurant, copied at the tap, to name the delivery on a refusal card.
   restaurantName: string;
 };

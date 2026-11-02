@@ -945,7 +945,10 @@ describe('InProgressCell (spec 0007, decision 65.10)', () => {
         });
 
         it('hides Navigate button when job is over (dropped_off or canceled)', () => {
-          for (const status of [OrderStatus.dropped_off, OrderStatus.canceled]) {
+          for (const status of [
+            OrderStatus.dropped_off,
+            OrderStatus.canceled,
+          ]) {
             const { queryByText, unmount } = render(
               <InProgressCell
                 order={{ ...baseOrder, status } as Order}
@@ -971,12 +974,18 @@ describe('InProgressCell (spec 0007, decision 65.10)', () => {
 
           expect(
             getByText(
-              i18n.t('translations:route_to_restaurant', { km: '1.2', minutes: 4 }),
+              i18n.t('translations:route_to_restaurant', {
+                km: '1.2',
+                minutes: 4,
+              }),
             ),
           ).toBeTruthy();
           expect(
             getByText(
-              i18n.t('translations:route_to_customer', { km: '2.9', minutes: 5 }),
+              i18n.t('translations:route_to_customer', {
+                km: '2.9',
+                minutes: 5,
+              }),
             ),
           ).toBeTruthy();
         });
@@ -1099,7 +1108,12 @@ describe('InProgressCell (spec 0007, decision 65.10)', () => {
             dropoffPhoneNumber: '+306912345678',
             dropoffSellerNotes: 'Secret customer note',
             dropOffLocationNotes: [
-              { id: 'loc-1', note: 'Secret location note', upvotes: 0, downvotes: 0 } as any,
+              {
+                id: 'loc-1',
+                note: 'Secret location note',
+                upvotes: 0,
+                downvotes: 0,
+              } as any,
             ],
           } as unknown as Order;
 

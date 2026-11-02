@@ -9,6 +9,16 @@ import { QueryKeys } from '@app/utilities/queryKeys';
 export type JobContact = {
   // null when no dispatch number is set: the job screen then shows no dispatch button.
   dispatchPhoneNumber: string | null;
+  // Spec 0021: metres from a stop the app counts as arrived; 0 switches detection off.
+  // Missing from an answer saved by an older app version: detection is then off.
+  arrivalRadiusMetres?: number;
+};
+
+// The one request for it, shared by every reader of the same query.
+export const fetchJobContact = async (): Promise<JobContact> => {
+  const { data } = await client.get('config/contact');
+  // Every response is wrapped by the backend as { error, result }.
+  return data.result;
 };
 
 const TEN_MINUTES = 10 * 60_000;
@@ -25,11 +35,7 @@ export const useJobContact = (inFront: boolean = true) => {
   );
   const query = useQuery({
     queryKey: [QueryKeys.jobContact],
-    queryFn: async (): Promise<JobContact> => {
-      const { data } = await client.get('config/contact');
-      // Every response is wrapped by the backend as { error, result }.
-      return data.result;
-    },
+    queryFn: fetchJobContact,
     // false stops the timer; it starts again when both come back.
     refetchInterval: inFront && appActive ? TEN_MINUTES : false,
   });

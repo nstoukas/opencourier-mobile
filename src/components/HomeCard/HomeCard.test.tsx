@@ -55,7 +55,9 @@ describe('HomeCard (spec 0018, AC-8)', () => {
 
       expect(getByTestId('home-card-last_call')).toBeTruthy();
       expect(getByTestId('home-card-last-call')).toBeTruthy();
-      expect(getByText(i18n.t('translations:last_call_explained'))).toBeTruthy();
+      expect(
+        getByText(i18n.t('translations:last_call_explained')),
+      ).toBeTruthy();
 
       const stayOnlineBtn = getByText(i18n.t('translations:stay_online'));
       const goOfflineBtn = getByText(i18n.t('translations:go_offline'));

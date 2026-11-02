@@ -193,12 +193,25 @@ const orderService = (client: UClient): OrderService => {
   };
 
   const sendJobStep = async (
-    item: { deliveryId: string; step: JobStep; note?: string },
+    item: {
+      deliveryId: string;
+      step: JobStep;
+      note?: string;
+      detected?: boolean;
+    },
     tapAgeMs: number,
   ): Promise<StepAnswer> => {
     const body: Record<string, unknown> = { tapAgeMs };
     if (item.note) {
       body.note = item.note;
+    }
+    // Spec 0021: only the two arrived routes take `detected`, and only `true`
+    // is ever sent (left out, the server counts the arrival as tapped).
+    if (
+      item.detected === true &&
+      (item.step === 'arrived_at_pickup' || item.step === 'arrived_at_dropoff')
+    ) {
+      body.detected = true;
     }
     try {
       const { data } = await client.post(

@@ -5,6 +5,8 @@ import { useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { services } from '@app/services/service';
 import { dropWaitingSteps } from '@app/services/jobStepOutbox';
+import { dropHeldArrival } from '@app/services/heldArrivals';
+import { endHandBack, startHandBack } from '@app/services/handBackInFlight';
 import { Order } from '@app/types/types';
 import { QueryKeys } from '@app/utilities/queryKeys';
 import { handBackSecondsLeft } from '@app/utilities/handBackWindow';
@@ -53,12 +55,18 @@ export const useHandBack = (courierId: string | undefined) => {
       }
       sendingRef.current = true;
       setHandingBackId(order.id);
+      // A held arrival (spec 0021, AC-12) is not released while this runs.
+      startHandBack(order.id);
       try {
         await services.orderService.handBack(order.id);
-        // The order is no longer this rider's: none of its steps may go out.
+        // The order is no longer this rider's: none of its steps may go out,
+        // and its held arrival (if any) is dropped with them.
         if (courierId) {
           await dropWaitingSteps(courierId, order.id).catch(error =>
             console.log('Could not drop the handed back job steps', error),
+          );
+          await dropHeldArrival(courierId, order.id).catch(error =>
+            console.log('Could not drop the held arrival', error),
           );
         }
         // The job leaves home now, not when the refetch lands.
@@ -82,6 +90,7 @@ export const useHandBack = (courierId: string | undefined) => {
             : serverMessage(error) ?? t('translations:hand_back_failed'),
         );
       } finally {
+        endHandBack(order.id);
         sendingRef.current = false;
         setHandingBackId(null);
       }

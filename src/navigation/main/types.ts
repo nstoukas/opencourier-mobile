@@ -1,4 +1,4 @@
-import { Order, OrderItem } from '@app/types/types';
+import { Order } from '@app/types/types';
 import {
   CompositeNavigationProp,
   NavigationProp,
@@ -9,8 +9,6 @@ import type { RootStackParamList } from '../types';
 
 export enum MainScreens {
   Drawer = 'Drawer',
-  ItemsCollected = 'ItemsCollected',
-  MarkAsDelivered = 'MarkAsDelivered',
   PayoutActivity = 'PayoutActivity',
   Licences = 'Licences',
   LanguageScreen = 'LanguageScreen',
@@ -28,13 +26,6 @@ export enum MainScreens {
 
 export type MainStackParamList = {
   Drawer: undefined;
-  ItemsCollected: {
-    customerName: string;
-    items: OrderItem[];
-  };
-  MarkAsDelivered: {
-    order: Order;
-  };
   PayoutActivity: undefined;
   Licences: undefined;
   LanguageScreen: undefined;

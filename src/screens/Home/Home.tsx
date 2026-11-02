@@ -1,7 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { AppState, Linking, View } from 'react-native';
 import Geolocation from 'react-native-geolocation-service';
-import Clipboard from '@react-native-clipboard/clipboard';
 import ActionSheet from 'react-native-action-sheet';
 import { useTranslation } from 'react-i18next';
 import { useFocusEffect, useIsFocused } from '@react-navigation/native';
@@ -11,6 +10,7 @@ import { CancelledJobCard } from '@app/components/CancelledJobCard/CancelledJobC
 import { RefusedSteps } from '@app/components/RefusedSteps/RefusedSteps';
 import { NewOrderCell } from '@app/components/NewOrderCell/NewOrderCell';
 import { InProgressCell } from '@app/components/InProgressCell/InProgressCell';
+import { JobFooter } from '@app/components/JobFooter/JobFooter';
 import { RouteMap } from '@app/components/RouteMap/RouteMap';
 import { HomeTopSlot } from '@app/components/HomeTopSlot/HomeTopSlot';
 import { HomeCard, HomeCardMode } from '@app/components/HomeCard/HomeCard';
@@ -35,10 +35,6 @@ import {
 import { useJobContact } from '@app/hooks/useJobContact';
 import { useMoveDropoffPin } from '@app/hooks/useMoveDropoffPin';
 import { useHandBack } from '@app/hooks/useHandBack';
-import {
-  dropoffAreaOf,
-  hidesCustomerDetails,
-} from '@app/utilities/handBackWindow';
 import { useDeliveryRoute } from '@app/hooks/useDeliveryRoute';
 import { usePickupPoints } from '@app/hooks/usePickupPoints';
 import { useNavigateTo } from '@app/hooks/useNavigateTo';
@@ -267,21 +263,6 @@ export const HomeScreen = ({ navigation }: Props) => {
       navigateTo(pointOf(point)!);
     }
   };
-  // Tapping an address still opens the navigation app toward that place.
-  const navigateToRestaurant = (order: Order) => {
-    if (order.pickupLocation) {
-      navigateTo(pointOf(order.pickupLocation)!);
-    }
-  };
-  const navigateToCustomer = (order: Order) => {
-    if (order.dropoffLocation) {
-      navigateTo(pointOf(order.dropoffLocation)!);
-    }
-  };
-
-  const copyAddress = (address?: string | null) =>
-    Clipboard.setString(address ?? '');
-
   const renderShown = () => {
     if (!shown) {
       return null;
@@ -305,48 +286,39 @@ export const HomeScreen = ({ navigation }: Props) => {
       <InProgressCell
         key={order.id}
         order={order}
-        onMessageCustomer={job =>
-          copyAddress(
-            job.dropoffLocationFormattedAddress ??
-              job.dropoffLocation?.formattedAddress,
-          )
-        }
-        onMessageRestaurant={job =>
-          copyAddress(
-            job.pickupLocationFormattedAddress ??
-              job.pickupLocation?.formattedAddress,
-          )
-        }
         onCallCustomer={job =>
           openContactUrl(telUrl(job.dropoffPhoneNumber ?? ''))
         }
         onCallRestaurant={job => openContactUrl(telUrl(job.pickupPhoneNumber))}
         onTextCustomer={showCustomerMessages}
-        onCallDispatch={
-          dispatchPhoneNumber
-            ? () => openContactUrl(telUrl(dispatchPhoneNumber))
-            : undefined
-        }
-        onRestaurantAddressPress={navigateToRestaurant}
-        onCustomerAddressPress={navigateToCustomer}
-        onOrderItemsListForCustomer={() =>
-          navigation.navigate(MainScreens.ItemsCollected, {
-            // The area, not the name, during the free hand back (71.10).
-            customerName: hidesCustomerDetails(order, Date.now())
-              ? dropoffAreaOf(order.dropoffLocation) || 'N/A'
-              : order.dropoffName,
-            items: order.orderItems,
-          })
-        }
-        onReportIssue={job =>
-          navigation.navigate(MainScreens.ReportIssue, { order: job })
-        }
         onMovePin={movePin}
         movingPin={movingId === order.id}
         toRestaurant={lines.toRestaurant}
         toCustomer={lines.toCustomer}
         routeUnavailable={routeUnavailable}
         onNavigate={onNavigate}
+      />
+    );
+  };
+
+  // Spec 0021 (AC-9): the job's swipe and small actions, pinned below the card.
+  const renderFooter = () => {
+    if (shown?.kind !== 'job') {
+      return null;
+    }
+    const order = shown.order;
+    return (
+      <JobFooter
+        key={order.id}
+        order={order}
+        onReportIssue={job =>
+          navigation.navigate(MainScreens.ReportIssue, { order: job })
+        }
+        onCallDispatch={
+          dispatchPhoneNumber
+            ? () => openContactUrl(telUrl(dispatchPhoneNumber))
+            : undefined
+        }
         onHandBack={handBack}
         handingBack={handingBackId === order.id}
       />
@@ -417,7 +389,8 @@ export const HomeScreen = ({ navigation }: Props) => {
         onLastCall={() => confirmStatus(UserStatus.LastCall)}
         onStayOnline={() => updateStatus(UserStatus.Online)}
         onGoOffline={() => confirmStatus(UserStatus.Offline)}
-        onHeight={setCardHeight}>
+        onHeight={setCardHeight}
+        footer={renderFooter()}>
         {renderShown()}
       </HomeCard>
     </View>

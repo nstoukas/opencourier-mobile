@@ -6,6 +6,8 @@ import instanceService, { InstanceService } from './instanceService';
 import earningsService, { EarningsService } from './earningsService';
 import routeService, { RouteService } from './routeService';
 import { setOwnPosition } from './ownPosition';
+import { setLatestFix } from './latestFix';
+import { clearHeldArrivals } from './heldArrivals';
 import notificationDeviceService, {
   NotificationDeviceService,
 } from './notificationDeviceService';
@@ -34,6 +36,11 @@ const Services = (): Services => {
     client.defaults.headers.common.Authorization = undefined;
     // The next rider on this phone never sees the last one's position (spec 0018).
     setOwnPosition(null);
+    // Nor inherits a fix or a held arrival from them (spec 0021).
+    setLatestFix(null);
+    clearHeldArrivals().catch(error =>
+      console.log('Could not clear held arrivals', error),
+    );
   };
 
   return {

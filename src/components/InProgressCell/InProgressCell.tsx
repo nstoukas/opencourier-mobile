@@ -1,60 +1,55 @@
-import React, { useState } from 'react';
-import { StyleProp, Text, ViewStyle, View } from 'react-native';
-import { styles } from './InProgressCell.styles';
-import { Note, Order } from '@app/types/types';
-import { useTranslation } from 'react-i18next';
-import { InProgressCellHeader } from '../InProgressCellHeader/InProgressCellHeader';
-import { InProgressAdress } from '../InProgressAddress/InProgressAddress';
-import { InProgressNotes } from '../InProgressNotes/InProgressNotes';
-import { NextStep } from '../NextStep/NextStep';
-import { OrderStatus } from '@app/types/enums';
-import { StorefrontIcon } from 'phosphor-react-native/src/icons/Storefront';
-import { HouseLineIcon } from 'phosphor-react-native/src/icons/HouseLine';
-import { HeadsetIcon } from 'phosphor-react-native/src/icons/Headset';
-import { Button, ButtonType } from '../Button/Button';
-import { isJobOver } from '@app/utilities/jobContact';
-import { MapPinIcon } from 'phosphor-react-native/src/icons/MapPin';
-import { NavigationArrowIcon } from 'phosphor-react-native/src/icons/NavigationArrow';
-import { ArrowUUpLeftIcon } from 'phosphor-react-native/src/icons/ArrowUUpLeft';
-import { RouteLines } from '../RouteLines/RouteLines';
-import { LegFigures } from '@app/utilities/routeLegs';
+import React from 'react';
 import {
-  canHandBack,
-  dropoffAreaOf,
-  hidesCustomerDetails,
-} from '@app/utilities/handBackWindow';
+  StyleProp,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+  ViewStyle,
+} from 'react-native';
+import { useTranslation } from 'react-i18next';
+import { Order } from '@app/types/types';
+import { OrderStatus } from '@app/types/enums';
+import { Icon } from '@app/components/Icon/Icon';
+import { Button, ButtonType } from '@app/components/Button/Button';
+import { StageStrip } from '@app/components/StageStrip/StageStrip';
+import { JobNotesLine } from '@app/components/JobNotesLine/JobNotesLine';
+import { JobItemsLine } from '@app/components/JobItemsLine/JobItemsLine';
+import { PhoneIcon } from 'phosphor-react-native/src/icons/Phone';
+import { ChatTextIcon } from 'phosphor-react-native/src/icons/ChatText';
+import { NavigationArrowIcon } from 'phosphor-react-native/src/icons/NavigationArrow';
+import { MapPinIcon } from 'phosphor-react-native/src/icons/MapPin';
+import { isJobOver } from '@app/utilities/jobContact';
+import { LegFigures } from '@app/utilities/routeLegs';
+import { hidesCustomerDetails } from '@app/utilities/handBackWindow';
 import { useHandBackCountdown } from '@app/hooks/useHandBack';
+import {
+  cardStageOf,
+  firstNameOf,
+  notesFor,
+  orderCodeOf,
+} from '@app/utilities/jobCard';
+import { color, control, radius, space, typeScale } from '@app/styles/theme';
 
 type Props = {
   style?: StyleProp<ViewStyle>;
   order: Order;
-  onCustomerAddressPress: (order: Order) => void;
-  onRestaurantAddressPress: (order: Order) => void;
-  onMessageRestaurant: (order: Order) => void;
   onCallRestaurant: (order: Order) => void;
-  onMessageCustomer: (order: Order) => void;
   onCallCustomer: (order: Order) => void;
-  // Opens the preset messages for the customer (row 72); left out, no message button.
+  // Opens the preset messages for the customer (row 72); left out, no message icon.
   onTextCustomer?: (order: Order) => void;
-  // Left out when the co-op has set no dispatch number: the button is not shown (row 72).
-  onCallDispatch?: () => void;
-  onOrderItemsListForCustomer: () => void;
-  onReportIssue: (order: Order) => void;
+  // Spec 0018 (AC-12): opens the rider's navigation app toward the next stop.
+  onNavigate?: (order: Order) => void;
   // Spec 0016: "Pin wrong? Set it where I stand". Left out, no button.
   onMovePin?: (order: Order) => void;
   // True while this delivery's pin move runs: the button spins and ignores taps.
   movingPin?: boolean;
-  // Spec 0018 (AC-7): the distance lines, from the co-op's route.
+  // Spec 0018 (AC-7): each leg's km, from the co-op's route.
   toRestaurant?: LegFigures;
   toCustomer?: LegFigures;
+  // The route could not be had (OSRM down, no signal): the card says so
+  // instead of the km (spec 0018, AC-6).
   routeUnavailable?: boolean;
-  // Spec 0018 (AC-12): opens the rider's navigation app toward the next stop.
-  onNavigate?: (order: Order) => void;
-  // Spec 0020 (AC-9): gives the order back inside the free window (asks
-  // first). Left out, no Hand back button.
-  onHandBack?: (order: Order) => void;
-  // True while this delivery's hand back is being sent: the button spins.
-  handingBack?: boolean;
 };
 
 // Spec 0016 (AC-8): the pin can be moved while the shown status is "arrived at
@@ -63,222 +58,283 @@ export const canMoveDropoffPin = (order: Order): boolean =>
   order.status === OrderStatus.courier_arrived_at_dropoff_location &&
   !order.dropoffPointCorrectedAt;
 
+// The time of day a step happened, as the rider's phone shows times.
+const timeOf = (iso: string | null | undefined): string => {
+  if (!iso) {
+    return '';
+  }
+  const date = new Date(iso);
+  return Number.isNaN(date.getTime())
+    ? ''
+    : date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+};
+
+type IconActionProps = {
+  icon: React.ComponentProps<typeof Icon>['icon'];
+  label: string;
+  onPress: () => void;
+  testID: string;
+};
+
+// A round icon button, 48 px so it works with gloves (spec 0021, AC-8), and
+// never bigger than the address beside it.
+const IconAction = ({ icon, label, onPress, testID }: IconActionProps) => (
+  <TouchableOpacity
+    style={styles.iconAction}
+    onPress={onPress}
+    accessibilityRole="button"
+    accessibilityLabel={label}
+    testID={testID}>
+    <Icon icon={icon} size={22} />
+  </TouchableOpacity>
+);
+
+// The job card (spec 0021, AC-6 to AC-8, AC-14): one stop at a time, the
+// person at that stop leading. At the restaurant, the order code and the
+// customer's first name (the bag's label); at the door, the customer's name,
+// address, floor and doorbell. Notes and items are one line each. The swipe
+// and the small actions are not here: they sit in the card's pinned footer
+// (`JobFooter`), so they never scroll away.
 export const InProgressCell = ({
   style,
   order,
-  onCustomerAddressPress,
-  onRestaurantAddressPress,
-  onMessageCustomer,
-  onMessageRestaurant,
-  onCallCustomer,
   onCallRestaurant,
+  onCallCustomer,
   onTextCustomer,
-  onCallDispatch,
-  onOrderItemsListForCustomer,
-  onReportIssue,
+  onNavigate,
   onMovePin,
   movingPin,
   toRestaurant,
   toCustomer,
   routeUnavailable = false,
-  onNavigate,
-  onHandBack,
-  handingBack,
 }: Props) => {
   const { t } = useTranslation();
-  const [topExpanded, setTopExpanded] = useState<boolean>(true);
-  const [bottomExpanded, setBottomExpanded] = useState<boolean>(false);
+  const stage = cardStageOf(order.status);
 
-  // No way to contact anyone once the job is over (row 72), counting a drop off still waiting
-  // for signal (row 33 review). The customer's number is also gone before the rider holds the
-  // delivery (row 33), so the customer's buttons need the number too.
+  // No way to contact anyone once the job is over (row 72), counting a drop off
+  // still waiting for signal. The customer's number only comes while the rider
+  // holds the delivery (row 33), so each button also needs its number.
   const jobOver = isJobOver(order.status);
   const canReachCustomer = !!order.dropoffPhoneNumber && !jobOver;
   const canReachRestaurant = !!order.pickupPhoneNumber && !jobOver;
 
-  // Spec 0020: the free hand back window. The card is drawn again each second
-  // while it is open, so the countdown moves and everything below changes back
-  // the moment it ends.
-  const handBackSeconds = useHandBackCountdown(order.handBackUntilOnPhone);
-  // Only before the restaurant, by the status shown (row 71 review).
-  const inHandBackWindow =
-    handBackSeconds > 0 && hidesCustomerDetails(order, Date.now());
-  const showHandBack = !!onHandBack && canHandBack(order, Date.now());
-  // Decision 71.10: during the window the card shows only the drop off area,
-  // as the offer card does, never the customer's name or full address, so a
-  // rider who gives the order back has seen no more than the offer showed.
-  const dropoffArea = dropoffAreaOf(order.dropoffLocation) || 'N/A';
-  const restaurantName = order.pickupBusinessName || order.pickupName || 'N/A';
+  // Drawn again each second while the free hand back window is open, so the
+  // customer's first name appears the moment it ends (decision 71.10).
+  useHandBackCountdown(order.handBackUntilOnPhone);
+  const hideCustomer = hidesCustomerDetails(order, Date.now());
+
+  const restaurantName = order.pickupBusinessName || order.pickupName || '';
+  const restaurantAddress =
+    order.pickupLocationFormattedAddress ??
+    order.pickupLocation?.formattedAddress ??
+    '';
+  const customerAddress =
+    order.dropoffLocationFormattedAddress ??
+    order.dropoffLocation?.formattedAddress ??
+    '';
+  const firstName = firstNameOf(order.dropoffName);
+  const floorAndBell = [
+    order.dropoffFloor
+      ? t('translations:dropoff_floor', { floor: order.dropoffFloor })
+      : '',
+    order.dropoffDoorbell
+      ? t('translations:dropoff_doorbell', { doorbell: order.dropoffDoorbell })
+      : '',
+  ]
+    .filter(Boolean)
+    .join(' · ');
 
   return (
-    <View style={[styles.container, style]}>
-      <View style={{ paddingHorizontal: 12, paddingTop: 12 }}>
-        {/* Spec 0018: the road ahead, and one tap to the rider's navigation app.
-            The full screen map behind home replaces the small map that was here. */}
-        <RouteLines
-          toRestaurant={toRestaurant}
-          toCustomer={toCustomer}
-          unavailable={routeUnavailable}
-        />
-        {onNavigate && !jobOver ? (
-          <Button
-            style={styles.dispatchButton}
-            type={ButtonType.white}
-            icon={NavigationArrowIcon}
-            iconWeight="fill"
-            title={t('translations:navigate')}
-            onPress={() => onNavigate(order)}
-          />
-        ) : null}
-        {showHandBack ? (
-          <Button
-            style={styles.dispatchButton}
-            type={ButtonType.white}
-            icon={ArrowUUpLeftIcon}
-            title={t('translations:hand_back_button', {
-              seconds: handBackSeconds,
-            })}
-            isLoading={handingBack}
-            disabled={handingBack}
-            onPress={() => onHandBack?.(order)}
-          />
-        ) : null}
-        <InProgressCellHeader
-          title={inHandBackWindow ? restaurantName : order.dropoffName ?? 'N/A'}
-          icon={StorefrontIcon}
-          expanded={topExpanded}
-          onExpandedPress={() => setTopExpanded(!topExpanded)}
-          finished={order.status === OrderStatus.picked_up}
-        />
-        <View style={styles.containerContentRestaurant}>
-          <View style={styles.containerLeft}>
-            <View style={styles.verticalLine} />
-          </View>
-          <View style={styles.containerInfo}>
-            <View style={[styles.colapsable]}>
-              <InProgressAdress
-                order={order}
-                customerOrRestaurant="restaurant"
-                onAddressPress={() => onRestaurantAddressPress(order)}
-                onCall={
-                  canReachRestaurant ? () => onCallRestaurant(order) : undefined
-                }
-                onCopyAddress={() => onMessageRestaurant(order)}
-                expanded={topExpanded}
-              />
-              <InProgressNotes
-                order={order}
-                notes={order.pickupNotes ? [order.pickupNotes] : []}
-                headerTitle={t('translations:restaurant_notes')}
-                expanded={topExpanded}
-                noteCreationDisabled={true}
-              />
-              <InProgressNotes
-                order={order}
-                notes={order.pickupLocationNotes}
-                headerTitle={t('translations:location_courier_notes')}
-                expanded={topExpanded}
-                noteCreationDisabled={false}
-                type="merchant"
-              />
-            </View>
-          </View>
-        </View>
-        <InProgressCellHeader
-          title={
-            inHandBackWindow ? dropoffArea : order.dropoffBusinessName ?? 'N/A'
-          }
-          icon={HouseLineIcon}
-          expanded={bottomExpanded}
-          onExpandedPress={() => setBottomExpanded(!bottomExpanded)}
-          finished={order.status === OrderStatus.dropped_off}
-        />
-        <View style={styles.containerContentRestaurant}>
-          <View style={styles.containerLeft} />
-          <View style={styles.containerInfo}>
-            {/* During the free hand back the area in the title above is all
-                that shows of the customer (decision 71.10). */}
-            {inHandBackWindow ? null : (
-              <View style={[styles.colapsable]}>
-                <InProgressAdress
-                  order={order}
-                  customerOrRestaurant="customer"
-                  onAddressPress={() => onCustomerAddressPress(order)}
-                  onCall={
-                    canReachCustomer ? () => onCallCustomer(order) : undefined
-                  }
-                  onText={
-                    canReachCustomer && onTextCustomer
-                      ? () => onTextCustomer(order)
-                      : undefined
-                  }
-                  onCopyAddress={() => onMessageCustomer(order)}
-                  expanded={bottomExpanded}
-                />
-                {/* Spec 0016 (AC-7): floor and doorbell on their own lines, above the notes. */}
-                {order.dropoffFloor ? (
-                  <Text style={styles.dropoffDetail}>
-                    {t('translations:dropoff_floor', {
-                      floor: order.dropoffFloor,
-                    })}
-                  </Text>
-                ) : null}
-                {order.dropoffDoorbell ? (
-                  <Text style={styles.dropoffDetail}>
-                    {t('translations:dropoff_doorbell', {
-                      doorbell: order.dropoffDoorbell,
-                    })}
-                  </Text>
-                ) : null}
-                {onMovePin && canMoveDropoffPin(order) ? (
-                  <Button
-                    style={styles.movePinButton}
-                    type={ButtonType.white}
-                    icon={MapPinIcon}
-                    title={t('translations:pin_wrong_button')}
-                    isLoading={movingPin}
-                    disabled={movingPin}
-                    onPress={() => onMovePin(order)}
-                  />
-                ) : null}
-                <InProgressNotes
-                  order={order}
-                  notes={
-                    order.dropoffSellerNotes ? [order.dropoffSellerNotes] : []
-                  }
-                  headerTitle={t('translations:customer_notes')}
-                  expanded={bottomExpanded}
-                  noteCreationDisabled={true}
-                />
-                <InProgressNotes
-                  order={order}
-                  notes={order.dropOffLocationNotes}
-                  headerTitle={t('translations:location_courier_notes')}
-                  expanded={bottomExpanded}
-                  noteCreationDisabled={false}
-                  type="location"
-                />
-              </View>
-            )}
-          </View>
-        </View>
-      </View>
-      {onCallDispatch && !jobOver ? (
-        <Button
-          style={styles.dispatchButton}
-          type={ButtonType.white}
-          icon={HeadsetIcon}
-          iconWeight="fill"
-          title={t('translations:call_dispatch')}
-          onPress={onCallDispatch}
-        />
-      ) : null}
-      <NextStep
-        order={order}
-        customerTitle={inHandBackWindow ? dropoffArea : undefined}
-        onOrderItemsListForCustomer={() => onOrderItemsListForCustomer()}
-        onReportIssue={() => onReportIssue(order)}
+    <View style={[styles.container, style]} testID={`job-card-${stage}`}>
+      <StageStrip
+        stage={stage}
+        toRestaurant={toRestaurant}
+        toCustomer={toCustomer}
       />
+      {routeUnavailable && !toRestaurant && !toCustomer ? (
+        <Text style={styles.secondary} testID="route-unavailable">
+          {t('translations:route_not_available')}
+        </Text>
+      ) : null}
+
+      {stage === 'pickup' ? (
+        <View style={styles.hero}>
+          <View style={styles.codeRow}>
+            <Text
+              style={styles.code}
+              accessibilityLabel={t('translations:order_code_label', {
+                code: orderCodeOf(order.id),
+              })}
+              testID="job-order-code">
+              {`#${orderCodeOf(order.id)}`}
+            </Text>
+            {!hideCustomer && firstName ? (
+              <Text style={styles.forName} testID="job-first-name">
+                {t('translations:order_for', { name: firstName })}
+              </Text>
+            ) : null}
+          </View>
+          <Text style={styles.secondary} numberOfLines={2}>
+            {[restaurantName, restaurantAddress].filter(Boolean).join(' · ')}
+          </Text>
+          <View style={styles.actions}>
+            {canReachRestaurant ? (
+              <IconAction
+                icon={PhoneIcon}
+                label={t('translations:call_restaurant')}
+                onPress={() => onCallRestaurant(order)}
+                testID="job-call-restaurant"
+              />
+            ) : null}
+            {onNavigate && !jobOver ? (
+              <IconAction
+                icon={NavigationArrowIcon}
+                label={t('translations:navigate')}
+                onPress={() => onNavigate(order)}
+                testID="job-navigate"
+              />
+            ) : null}
+          </View>
+          <JobItemsLine deliveryId={order.id} items={order.orderItems} />
+          <JobNotesLine notes={notesFor(order, 'pickup')} />
+        </View>
+      ) : (
+        <View style={styles.hero}>
+          <Text style={styles.name} testID="job-customer-name">
+            {order.dropoffName}
+          </Text>
+          {customerAddress ? (
+            <Text style={styles.address}>{customerAddress}</Text>
+          ) : null}
+          {floorAndBell ? (
+            <Text style={styles.address} testID="job-floor-bell">
+              {floorAndBell}
+            </Text>
+          ) : null}
+          <View style={styles.actions}>
+            {canReachCustomer ? (
+              <IconAction
+                icon={PhoneIcon}
+                label={t('translations:call_customer')}
+                onPress={() => onCallCustomer(order)}
+                testID="job-call-customer"
+              />
+            ) : null}
+            {canReachCustomer && onTextCustomer ? (
+              <IconAction
+                icon={ChatTextIcon}
+                label={t('translations:text_customer')}
+                onPress={() => onTextCustomer(order)}
+                testID="job-text-customer"
+              />
+            ) : null}
+            {onNavigate && !jobOver ? (
+              <IconAction
+                icon={NavigationArrowIcon}
+                label={t('translations:navigate')}
+                onPress={() => onNavigate(order)}
+                testID="job-navigate"
+              />
+            ) : null}
+          </View>
+          <JobNotesLine notes={notesFor(order, 'dropoff')} />
+          {onMovePin && canMoveDropoffPin(order) ? (
+            <Button
+              style={styles.movePin}
+              type={ButtonType.white}
+              icon={MapPinIcon}
+              title={t('translations:pin_wrong_button')}
+              isLoading={movingPin}
+              disabled={movingPin}
+              onPress={() => onMovePin(order)}
+            />
+          ) : null}
+          <View style={styles.restaurantLine} testID="job-restaurant-line">
+            <Text style={styles.secondary} numberOfLines={1}>
+              {order.pickupReadyAt
+                ? t('translations:picked_up_at', {
+                    restaurant: restaurantName,
+                    time: timeOf(order.pickupReadyAt),
+                  })
+                : restaurantName}
+            </Text>
+            {canReachRestaurant ? (
+              <IconAction
+                icon={PhoneIcon}
+                label={t('translations:call_restaurant')}
+                onPress={() => onCallRestaurant(order)}
+                testID="job-call-restaurant"
+              />
+            ) : null}
+          </View>
+        </View>
+      )}
     </View>
   );
 };
+
+const styles = StyleSheet.create({
+  container: {
+    paddingHorizontal: space['4'],
+    paddingTop: space['2'],
+    gap: space['3'],
+  },
+  hero: {
+    gap: space['1'],
+  },
+  codeRow: {
+    flexDirection: 'row',
+    alignItems: 'baseline',
+    flexWrap: 'wrap',
+    columnGap: space['3'],
+  },
+  code: {
+    ...typeScale.h1,
+    color: color.foreground,
+    fontVariant: ['tabular-nums'],
+  },
+  forName: {
+    ...typeScale.h3,
+    color: color.foreground,
+  },
+  name: {
+    ...typeScale.h2,
+    color: color.foreground,
+  },
+  address: {
+    ...typeScale.lead,
+    color: color.foreground,
+  },
+  secondary: {
+    ...typeScale['body-sm'],
+    color: color['muted-foreground'],
+    flexShrink: 1,
+  },
+  actions: {
+    flexDirection: 'row',
+    gap: space['2'],
+    marginVertical: space['1'],
+  },
+  iconAction: {
+    width: control.xl,
+    height: control.xl,
+    borderRadius: radius.full,
+    borderWidth: 1,
+    borderColor: color.border,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  movePin: {
+    marginTop: space['1'],
+  },
+  restaurantLine: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: space['2'],
+    marginTop: space['2'],
+    borderTopWidth: 1,
+    borderTopColor: color.border,
+    paddingTop: space['2'],
+  },
+});

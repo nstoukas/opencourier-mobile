@@ -3,20 +3,33 @@ import { Point } from 'geojson';
 import Geolocation from 'react-native-geolocation-service';
 import { WatchOptions } from './locationTracking';
 
+// What else the phone knows about a fix (spec 0021): how accurate it rated it,
+// in metres (null when it gave no figure), and when it was handled on the
+// phone's own clock (`Date.now()`, never the GPS timestamp).
+export type FixInfo = { accuracyMetres: number | null; at: number };
+
 // Starts one location watch with these options and returns its id (stop it
 // with Geolocation.clearWatch). The first fix is asked for at once, so the
 // server has a position before the phone has moved.
 export function track(
-  onUpdate: (point: Point) => void,
+  onUpdate: (point: Point, info: FixInfo) => void,
   options: WatchOptions,
 ): number {
   const toPoint = (latitude: number, longitude: number): Point => ({
     type: 'Point',
     coordinates: [longitude, latitude],
   });
+  // `Geolocation.GeoPosition` is the library's type for one fix.
+  const handle = (position: Geolocation.GeoPosition) =>
+    onUpdate(toPoint(position.coords.latitude, position.coords.longitude), {
+      accuracyMetres:
+        typeof position.coords.accuracy === 'number'
+          ? position.coords.accuracy
+          : null,
+      at: Date.now(),
+    });
   Geolocation.getCurrentPosition(
-    position =>
-      onUpdate(toPoint(position.coords.latitude, position.coords.longitude)),
+    handle,
     error => console.error('Location error: ', error),
     // See https://developer.mozilla.org/en-US/docs/Web/API/Geolocation/getCurrentPosition for
     // details on options. The first read is always high accuracy, on purpose:
@@ -24,8 +37,7 @@ export function track(
     { enableHighAccuracy: true, timeout: 15000, maximumAge: 10000 },
   );
   return Geolocation.watchPosition(
-    position =>
-      onUpdate(toPoint(position.coords.latitude, position.coords.longitude)),
+    handle,
     error => console.error('Location error: ', error),
     {
       ...options,

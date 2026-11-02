@@ -84,12 +84,6 @@ export type UserServiceResponse = {
   error: boolean;
 };
 
-export type MarkAsDeliveredParams = {
-  order: Order;
-  photos: string[];
-  tags: string[];
-};
-
 export type NewCommentParams = {
   note: string;
   deliveryId: string;
