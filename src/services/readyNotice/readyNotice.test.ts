@@ -218,6 +218,25 @@ describe('showReadyNotice (spec 0023, AC-6)', () => {
       expect(ids).toEqual(['ready-del-1', 'ready-del-2']);
     });
 
+    it('a copy that failed to post leaves the other copy free to try', async () => {
+      (notifee.displayNotification as jest.Mock).mockImplementationOnce(() =>
+        Promise.reject(new Error('notifee: no permission')),
+      );
+      // The first copy fails, and says so.
+      await expect(showReadyNotice(delay, NOW)).rejects.toThrow(
+        'notifee: no permission',
+      );
+      // The second, identical copy is not taken for a repeat: it posts.
+      await showReadyNotice(delay, NOW);
+      const ids = (notifee.displayNotification as jest.Mock).mock.calls.map(
+        ([n]) => n.id,
+      );
+      expect(ids).toEqual(['ready-del-1', 'ready-del-1']);
+      // Once that copy posted, a third is a repeat.
+      await showReadyNotice(delay, NOW);
+      expect(posted()).toBe(2);
+    });
+
     it('resetReadyNoticeForTests forgets what was shown', async () => {
       await showReadyNotice(delay, NOW);
       resetReadyNoticeForTests();
