@@ -36,6 +36,7 @@ import * as ownPositionModule from '@app/services/ownPosition';
 import * as useSosModule from '@app/hooks/useSos';
 import { resetSosStoreForTests, startSos } from '@app/services/sosStore';
 import Geolocation from 'react-native-geolocation-service';
+import * as shiftsApi from '@app/services/shifts/shiftsApi';
 
 let mockIsFocused = true;
 let mockLocationPermission = true;
@@ -650,6 +651,46 @@ describe('HomeScreen (spec 0018, AC-5 to AC-15)', () => {
       expect(openSosScreenSpy).toHaveBeenCalledTimes(1);
 
       openSosScreenSpy.mockRestore();
+    });
+  });
+  describe('Shift banner on Home (spec 0027, AC-1, AC-8)', () => {
+    let fetchShiftsSpy: jest.SpyInstance;
+
+    beforeEach(() => {
+      fetchShiftsSpy = jest.spyOn(shiftsApi, 'fetchShifts').mockResolvedValue({
+        serverNow: new Date().toISOString(),
+        occurrences: [],
+        myBookings: [],
+        clockOffsetMs: 0,
+      });
+    });
+
+    afterEach(() => {
+      fetchShiftsSpy.mockRestore();
+    });
+
+    it('shows "FREE (no shift)" while the co-op runs shifts', async () => {
+      mockJobContact = {
+        dispatchPhoneNumber: '+302421012345',
+        shiftsEnabled: true,
+      };
+      const { findByTestId, getByText } = renderHome();
+      expect(await findByTestId('shift-banner')).toBeTruthy();
+      expect(getByText('FREE (no shift)')).toBeTruthy();
+      expect(fetchShiftsSpy).toHaveBeenCalled();
+    });
+
+    it('shows no banner and reads no schedule while shifts are off or unknown', () => {
+      for (const contact of [
+        { dispatchPhoneNumber: '+302421012345', shiftsEnabled: false },
+        { dispatchPhoneNumber: '+302421012345' },
+      ]) {
+        mockJobContact = contact;
+        const { queryByTestId, unmount } = renderHome();
+        expect(queryByTestId('shift-banner')).toBeNull();
+        unmount();
+      }
+      expect(fetchShiftsSpy).not.toHaveBeenCalled();
     });
   });
 });
