@@ -42,7 +42,8 @@ const text = (data: Record<string, unknown>, key: string): string => {
   return typeof value === 'string' ? value : '';
 };
 
-// A whole number sent as text, or null for '' or anything else.
+// A finite number sent as text (the server sends whole numbers), or null for
+// '' or anything else.
 const numberOf = (value: string): number | null => {
   if (value === '') {
     return null;

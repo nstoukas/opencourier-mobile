@@ -8,6 +8,7 @@
 
 import notifee, {
   AndroidImportance,
+  AndroidStyle,
   AndroidVisibility,
   // `type` imports only the TypeScript description, no code.
   type Notification,
@@ -110,17 +111,25 @@ export const offerAlertLines = (
   };
 };
 
-// The notification's one line body: the alert's lines joined, unknown ones
-// left out, e.g. "1.2 km to the restaurant · 2.9 km to the customer · About
-// 9 min · Pizza Roma to Iasonos".
+// The alert's lines that have something in them, in the card's order. The
+// notification and the full screen both read this one list, so their order
+// can never drift apart (row 100 review).
+export const offerAlertLineList = (
+  offer: Pick<OfferAlertData, 'restaurantName' | 'dropoffArea' | 'trip'>,
+): string[] => {
+  const lines = offerAlertLines(offer);
+  return [lines.distances, lines.minutes, lines.place].filter(
+    line => line !== '',
+  );
+};
+
+// The notification's one line body: the alert's lines joined, e.g. "1.2 km
+// to the restaurant · 2.9 km to the customer · About 9 min · Pizza Roma to
+// Iasonos". A collapsed notification cuts it short, so the expanded alert
+// shows the same lines one per row (`BIGTEXT` in showOfferAlert).
 export const offerSummary = (
   offer: Pick<OfferAlertData, 'restaurantName' | 'dropoffArea' | 'trip'>,
-): string => {
-  const lines = offerAlertLines(offer);
-  return [lines.distances, lines.minutes, lines.place]
-    .filter(part => part !== '')
-    .join(' · ');
-};
+): string => offerAlertLineList(offer).join(' · ');
 
 export type AlertStyle = 'full-screen' | 'heads-up';
 
@@ -163,6 +172,12 @@ export const showOfferAlert = async (
         ? OFFERS_INSISTENT_CHANNEL_ID
         : OFFERS_CHANNEL_ID,
       importance: AndroidImportance.HIGH,
+      // Expanded, every line shows on its own row; collapsed, Android cuts
+      // the one line body after about the second km (row 100 review).
+      style: {
+        type: AndroidStyle.BIGTEXT,
+        text: offerAlertLineList(offer).join('\n'),
+      },
       // PUBLIC, or the lock screen hides the text and the buttons. Only the
       // offer card's facts are in it (AC-10).
       visibility: AndroidVisibility.PUBLIC,

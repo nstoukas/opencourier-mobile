@@ -27,6 +27,8 @@ jest.mock('@app/services/offerPush/offerAlert', () => ({
   displayedOfferAlerts: jest.fn(),
   offerAlertLines: jest.requireActual('@app/services/offerPush/offerAlert')
     .offerAlertLines,
+  offerAlertLineList: jest.requireActual('@app/services/offerPush/offerAlert')
+    .offerAlertLineList,
   payText: jest.fn(() => '€6.50'),
 }));
 
