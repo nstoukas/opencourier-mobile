@@ -36,6 +36,8 @@ export enum SideMenuItem {
   Earnings = 'earnings',
   // Spec 0018: the delivery history, moved off home.
   History = 'history',
+  // Spec 0027: booking shifts, only while the co-op runs them.
+  Shifts = 'shifts',
   Payout = 'payout_method',
   Support = 'support',
   Settings = 'settings',

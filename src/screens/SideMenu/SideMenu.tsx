@@ -30,6 +30,7 @@ import {
 import { clearSavedQueries } from '@app/services/queryPersistence';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import useUser from '@app/hooks/useUser';
+import { useJobContact } from '@app/hooks/useJobContact';
 import { useQueryClient } from '@tanstack/react-query';
 import { LOGOUT_OFFLINE_TIMEOUT_MS } from '@app/utilities/constants';
 import { services } from '@app/services/service';
@@ -53,9 +54,25 @@ const section2 = [
   SideMenuItem.Logout,
 ];
 
+// Spec 0027: Shifts sits after History, only while the co-op runs shifts.
+const section2WithShifts = [
+  SideMenuItem.Orders,
+  SideMenuItem.History,
+  SideMenuItem.Shifts,
+  SideMenuItem.Earnings,
+  SideMenuItem.Payout,
+  SideMenuItem.Support,
+  SideMenuItem.Settings,
+  SideMenuItem.Logout,
+];
+
 export const SideMenu = ({ navigation }: Props) => {
   const { t } = useTranslation();
   const { user } = useUser();
+  // The last co-op switch the app read (Home keeps it fresh); the menu itself never polls.
+  const { data: jobContact } = useJobContact(false);
+  const menuItems =
+    jobContact?.shiftsEnabled === true ? section2WithShifts : section2;
   const { requestLocationPermission, locationPermission } =
     useLocationPermission();
 
@@ -244,6 +261,9 @@ export const SideMenu = ({ navigation }: Props) => {
       case SideMenuItem.History:
         navigation.navigate(DrawerScreens.History);
         break;
+      case SideMenuItem.Shifts:
+        navigation.navigate(DrawerScreens.Shifts);
+        break;
       case SideMenuItem.Earnings:
         navigation.navigate(DrawerScreens.Earnings);
         break;
@@ -324,7 +344,7 @@ export const SideMenu = ({ navigation }: Props) => {
           );
         })}
         <View style={styles.separator} />
-        {section2.map(item => {
+        {menuItems.map(item => {
           return (
             <SideMenuItemPlain
               hideArrow={item === SideMenuItem.Logout}
