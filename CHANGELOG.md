@@ -11,6 +11,18 @@ has the full reasoning and verification notes.
 
 ## Added
 
+### The offer alert shows what the card shows (row 100): `bd9f219` to `4d2e58a`
+No native rebuild needed. Needs the backend's row 100.
+- **Same figures, same order, same words.** The alert and the full screen offer read "1.8 km to the
+  restaurant · 1.0 km to the customer", "About 6 min", then "R73 Kitchen to Volos", from the card's own
+  formatter. With routing down they show the money and the place, as the card does; the quote's single km
+  is never shown.
+- **Readable on the lock screen.** The expanded notification shows one line per row (big text style). On
+  Android notifee reads the text as HTML, so the lines are escaped: a restaurant's name can never add
+  markup to a rider's lock screen.
+- Tests by a fresh Claude subagent while agy was out of quota; put back by hand. Reviewed by Fable
+  (changes requested, fixed in `c1522f0` and `4d2e58a`). Verified on the emulator.
+
 ### SOS: hold 3 s to call 112 and alert the co-op (row 73, spec 0022): `53772f5` to `6ec125e`
 No native rebuild needed. Needs the backend's row 73.
 - **The pill.** A red SOS pill sits at the top of Home whenever the rider is online or holds a job.
