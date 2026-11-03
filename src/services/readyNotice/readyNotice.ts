@@ -41,7 +41,6 @@ export const showReadyNotice = async (
   if (lastShown.get(update.deliveryId) === key) {
     return;
   }
-  lastShown.set(update.deliveryId, key);
   await ensureReadyChannel();
   const text = readyNoticeText(update, now, i18next.t.bind(i18next) as never);
   await notifee.displayNotification({
@@ -55,6 +54,8 @@ export const showReadyNotice = async (
     },
     ios: { sound: 'default' },
   });
+  // Marked only once posted: a copy that failed to post leaves the other copy free to try.
+  lastShown.set(update.deliveryId, key);
 };
 
 // For tests only: forget which changes were shown.
