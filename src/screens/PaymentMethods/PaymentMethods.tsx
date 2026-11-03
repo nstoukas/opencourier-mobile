@@ -1,11 +1,6 @@
 import React, { useState } from 'react';
-import {
-  View,
-  SafeAreaView,
-  Text,
-  KeyboardAvoidingView,
-  ScrollView,
-} from 'react-native';
+import { View, Text, KeyboardAvoidingView, ScrollView } from 'react-native';
+import { ScreenSafeArea } from '@app/components/ScreenSafeArea/ScreenSafeArea';
 import { DrawerScreenProp, DrawerScreens } from '@app/navigation/drawer/types';
 import { styles } from './PaymentMethods.styles';
 import LinearGradient from 'react-native-linear-gradient';
@@ -39,7 +34,7 @@ export const PaymentMethods = ({ navigation }: Props) => {
         style={[styles.gradient, { height: top + 100 }]}
         colors={Colors.offlineGradientArray}
       />
-      <SafeAreaView style={styles.safe}>
+      <ScreenSafeArea style={styles.safe}>
         <View style={styles.navHeader}>
           <BackNavButton onPress={() => navigation.toggleDrawer()} />
           <Text style={styles.title}>{t('translations:payment_methods')}</Text>
@@ -114,7 +109,7 @@ export const PaymentMethods = ({ navigation }: Props) => {
             />
           </KeyboardAvoidingView>
         </ScrollView>
-      </SafeAreaView>
+      </ScreenSafeArea>
     </View>
   );
 };

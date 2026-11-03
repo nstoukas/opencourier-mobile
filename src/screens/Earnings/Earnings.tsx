@@ -1,13 +1,13 @@
 import React, { useMemo, useState } from 'react';
 import {
   View,
-  SafeAreaView,
   Text,
   FlatList,
   Image,
   RefreshControl,
   ActivityIndicator,
 } from 'react-native';
+import { ScreenSafeArea } from '@app/components/ScreenSafeArea/ScreenSafeArea';
 import { styles } from './Earnings.styles';
 import { DrawerScreenProp, DrawerScreens } from '@app/navigation/drawer/types';
 import { BackNavButton } from '@app/components/BackNavButton/BackNavButton';
@@ -188,7 +188,7 @@ export const Earnings = ({ navigation }: Props) => {
         style={[styles.gradient, { height: top + 100 }]}
         colors={Colors.offlineGradientArray}
       />
-      <SafeAreaView style={styles.safe}>
+      <ScreenSafeArea style={styles.safe}>
         <View style={styles.navHeader}>
           <BackNavButton onPress={() => navigation.toggleDrawer()} />
           <Text style={styles.title}>{t('translations:earnings')}</Text>
@@ -239,7 +239,7 @@ export const Earnings = ({ navigation }: Props) => {
             }
           />
         )}
-      </SafeAreaView>
+      </ScreenSafeArea>
     </View>
   );
 };

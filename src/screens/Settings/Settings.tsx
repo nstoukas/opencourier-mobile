@@ -1,11 +1,6 @@
 import React, { ReactElement, useEffect, useState } from 'react';
-import {
-  View,
-  SafeAreaView,
-  Text,
-  SectionListData,
-  SectionList,
-} from 'react-native';
+import { View, Text, SectionListData, SectionList } from 'react-native';
+import { ScreenSafeArea } from '@app/components/ScreenSafeArea/ScreenSafeArea';
 import { styles } from './Settings.styles';
 import { BackNavButton } from '@app/components/BackNavButton/BackNavButton';
 import { DrawerScreenProp, DrawerScreens } from '@app/navigation/drawer/types';
@@ -216,7 +211,7 @@ export const SettingsScreen = ({ navigation }: Props) => {
 
   return (
     <View style={styles.container}>
-      <SafeAreaView style={styles.safe}>
+      <ScreenSafeArea style={styles.safe}>
         <View style={styles.navHeader}>
           <BackNavButton onPress={() => navigation.toggleDrawer()} />
           <Text style={styles.title}>{t('translations:settings')}</Text>
@@ -240,7 +235,7 @@ export const SettingsScreen = ({ navigation }: Props) => {
           stickySectionHeadersEnabled={true}
           keyExtractor={(item, index) => index.toString()}
         />
-      </SafeAreaView>
+      </ScreenSafeArea>
     </View>
   );
 };

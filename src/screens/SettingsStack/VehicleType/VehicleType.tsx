@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { View, SafeAreaView, Text, FlatList } from 'react-native';
+import { View, Text, FlatList } from 'react-native';
+import { ScreenSafeArea } from '@app/components/ScreenSafeArea/ScreenSafeArea';
 import { styles } from './VehicleType.styles';
 import { MainScreenProp, MainScreens } from '@app/navigation/main/types';
 import { BackNavButton } from '@app/components/BackNavButton/BackNavButton';
@@ -48,7 +49,7 @@ export const VehicleTypeScreen = ({ navigation }: Props) => {
 
   return (
     <View style={styles.container}>
-      <SafeAreaView style={styles.safe}>
+      <ScreenSafeArea style={styles.safe}>
         <View style={styles.navHeader}>
           <BackNavButton onPress={() => navigation.goBack()} />
           <Text style={styles.title}>{t('translations:vehicle_type')}</Text>
@@ -60,7 +61,7 @@ export const VehicleTypeScreen = ({ navigation }: Props) => {
           data={vehicles}
           renderItem={renderItem}
         />
-      </SafeAreaView>
+      </ScreenSafeArea>
     </View>
   );
 };

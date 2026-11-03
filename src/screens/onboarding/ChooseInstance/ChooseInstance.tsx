@@ -2,12 +2,12 @@ import React, { useEffect, useState, useCallback } from 'react';
 import {
   View,
   Image,
-  SafeAreaView,
   Text,
   ScrollView,
   KeyboardAvoidingView,
   Platform,
 } from 'react-native';
+import { ScreenSafeArea } from '@app/components/ScreenSafeArea/ScreenSafeArea';
 import { Images } from '@app/utilities/images';
 import {
   OnboardingScreen,
@@ -161,7 +161,7 @@ export const ChooseInstanceScreen = ({ navigation, route }: Props) => {
   return (
     <View style={styles.container}>
       <Image source={Images.NoiseBG} style={styles.background} />
-      <SafeAreaView style={styles.safeArea}>
+      <ScreenSafeArea style={styles.safeArea}>
         <View style={styles.header}>
           <BackNavButton onPress={handleBack} />
         </View>
@@ -227,7 +227,7 @@ export const ChooseInstanceScreen = ({ navigation, route }: Props) => {
                 })}
           </View>
         </KeyboardAvoidingView>
-      </SafeAreaView>
+      </ScreenSafeArea>
     </View>
   );
 };

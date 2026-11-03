@@ -1,13 +1,13 @@
 import React from 'react';
 import {
   View,
-  SafeAreaView,
   Text,
   FlatList,
   TouchableOpacity,
   ActivityIndicator,
   RefreshControl,
 } from 'react-native';
+import { ScreenSafeArea } from '@app/components/ScreenSafeArea/ScreenSafeArea';
 import moment from 'moment';
 import { styles } from './EarningsDay.styles';
 import { MainScreenProp, MainScreens } from '@app/navigation/main/types';
@@ -103,7 +103,7 @@ export const EarningsDay = ({ navigation, route }: Props) => {
         style={[styles.gradient, { height: top + 100 }]}
         colors={Colors.offlineGradientArray}
       />
-      <SafeAreaView style={styles.safe}>
+      <ScreenSafeArea style={styles.safe}>
         <View style={styles.navHeader}>
           <BackNavButton onPress={() => navigation.goBack()} />
           <Text style={styles.title}>
@@ -143,7 +143,7 @@ export const EarningsDay = ({ navigation, route }: Props) => {
             }
           />
         )}
-      </SafeAreaView>
+      </ScreenSafeArea>
     </View>
   );
 };

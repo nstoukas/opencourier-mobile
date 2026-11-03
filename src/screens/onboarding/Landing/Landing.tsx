@@ -10,11 +10,11 @@ import {
   View,
   Image,
   Text,
-  SafeAreaView,
   ImageSourcePropType,
   Platform,
   PermissionsAndroid,
 } from 'react-native';
+import { ScreenSafeArea } from '@app/components/ScreenSafeArea/ScreenSafeArea';
 import { Images } from '@app/utilities/images';
 import PagerView from 'react-native-pager-view';
 import { Button, ButtonType } from '@app/components/Button/Button';
@@ -215,7 +215,7 @@ export const LandingScreen = ({ navigation }: Props) => {
   return (
     <View style={styles.container} testID="landing-screen">
       <Image source={Images.NoiseBG} style={styles.background} />
-      <SafeAreaView style={styles.safeArea}>
+      <ScreenSafeArea style={styles.safeArea}>
         <Image source={Images.OpenDeli} style={[styles.imageOpenDeli]} />
         <View style={styles.pagerViewContainer}>
           <PagerView
@@ -264,7 +264,7 @@ export const LandingScreen = ({ navigation }: Props) => {
             onPress={onContinue}
           />
         </View>
-      </SafeAreaView>
+      </ScreenSafeArea>
     </View>
   );
 };

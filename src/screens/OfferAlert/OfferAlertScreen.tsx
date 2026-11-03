@@ -9,13 +9,8 @@
 // buttons, so an offer is answered at most once from this phone.
 
 import React, { useEffect, useRef, useState } from 'react';
-import {
-  SafeAreaView,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View,
-} from 'react-native';
+import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { ScreenSafeArea } from '@app/components/ScreenSafeArea/ScreenSafeArea';
 import notifee from '@notifee/react-native';
 import { useTranslation } from 'react-i18next';
 import { Colors } from '@app/styles/colors';
@@ -132,12 +127,12 @@ export const OfferAlertScreen = () => {
   };
 
   if (offer === undefined) {
-    return <SafeAreaView style={styles.container} />;
+    return <ScreenSafeArea style={styles.container} />;
   }
 
   if (offer === null) {
     return (
-      <SafeAreaView style={styles.container}>
+      <ScreenSafeArea style={styles.container}>
         <View style={styles.card}>
           <Text style={styles.title}>{t('translations:offer_has_ended')}</Text>
         </View>
@@ -146,7 +141,7 @@ export const OfferAlertScreen = () => {
             {t('translations:offer_alert_close')}
           </Text>
         </TouchableOpacity>
-      </SafeAreaView>
+      </ScreenSafeArea>
     );
   }
 
@@ -157,7 +152,7 @@ export const OfferAlertScreen = () => {
       : Math.max(0, Math.ceil((offer.deadlineAt - now) / 1000));
 
   return (
-    <SafeAreaView style={styles.container}>
+    <ScreenSafeArea style={styles.container}>
       <View style={styles.card}>
         <Text style={styles.pay}>{payText(offer)}</Text>
         {/* The card's lines in the card's order (row 100); unknown ones left out. */}
@@ -191,7 +186,7 @@ export const OfferAlertScreen = () => {
           {t('translations:offer_alert_open_app')}
         </Text>
       </TouchableOpacity>
-    </SafeAreaView>
+    </ScreenSafeArea>
   );
 };
 

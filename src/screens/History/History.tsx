@@ -1,12 +1,6 @@
 import React, { useState } from 'react';
-import {
-  FlatList,
-  RefreshControl,
-  SafeAreaView,
-  StyleSheet,
-  Text,
-  View,
-} from 'react-native';
+import { FlatList, RefreshControl, StyleSheet, Text, View } from 'react-native';
+import { ScreenSafeArea } from '@app/components/ScreenSafeArea/ScreenSafeArea';
 import { useQuery } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { services } from '@app/services/service';
@@ -40,7 +34,7 @@ export const HistoryScreen = ({ navigation }: Props) => {
 
   return (
     <View style={styles.container} testID="history-screen">
-      <SafeAreaView style={styles.safe}>
+      <ScreenSafeArea style={styles.safe}>
         <View style={styles.navHeader}>
           <BackNavButton onPress={() => navigation.toggleDrawer()} />
           <Text style={styles.title}>{t('translations:history')}</Text>
@@ -74,7 +68,7 @@ export const HistoryScreen = ({ navigation }: Props) => {
             />
           }
         />
-      </SafeAreaView>
+      </ScreenSafeArea>
     </View>
   );
 };

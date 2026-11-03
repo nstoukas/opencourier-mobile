@@ -1,5 +1,6 @@
 import React from 'react';
-import { View, SafeAreaView, Text } from 'react-native';
+import { View, Text } from 'react-native';
+import { ScreenSafeArea } from '@app/components/ScreenSafeArea/ScreenSafeArea';
 import { styles } from './PayoutActivity.styles';
 import { MainScreenProp, MainScreens } from '@app/navigation/main/types';
 import LinearGradient from 'react-native-linear-gradient';
@@ -19,13 +20,13 @@ export const PayoutActivity = ({ navigation }: Props) => {
         style={[styles.gradient, { height: top + 100 }]}
         colors={Colors.offlineGradientArray}
       />
-      <SafeAreaView style={styles.safe}>
+      <ScreenSafeArea style={styles.safe}>
         <View style={styles.navHeader}>
           <BackNavButton onPress={() => navigation.goBack()} />
           <Text style={styles.title}>Payout Activity</Text>
         </View>
         <NoPayoutActivity />
-      </SafeAreaView>
+      </ScreenSafeArea>
     </View>
   );
 };

@@ -2,12 +2,12 @@ import React, { useEffect, useState } from 'react';
 import {
   View,
   Image,
-  SafeAreaView,
   Text,
   ScrollView,
   Linking,
   TouchableOpacity,
 } from 'react-native';
+import { ScreenSafeArea } from '@app/components/ScreenSafeArea/ScreenSafeArea';
 import Markdown from 'react-native-markdown-display';
 import { Images } from '@app/utilities/images';
 import {
@@ -119,7 +119,7 @@ export const InstanceDetails = ({ navigation, route }: Props) => {
   return (
     <View style={styles.container}>
       <Image source={Images.NoiseBG} style={styles.background} />
-      <SafeAreaView style={styles.safeArea}>
+      <ScreenSafeArea style={styles.safeArea}>
         <View style={styles.header}>
           <BackNavButton onPress={handleBack} />
           {instance?.details.imageUrl && (
@@ -219,7 +219,7 @@ export const InstanceDetails = ({ navigation, route }: Props) => {
             />
           </>
         )}
-      </SafeAreaView>
+      </ScreenSafeArea>
     </View>
   );
 };

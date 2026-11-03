@@ -1,11 +1,6 @@
 import React, { useState } from 'react';
-import {
-  View,
-  SafeAreaView,
-  Text,
-  FlatList,
-  TouchableOpacity,
-} from 'react-native';
+import { View, Text, FlatList, TouchableOpacity } from 'react-native';
+import { ScreenSafeArea } from '@app/components/ScreenSafeArea/ScreenSafeArea';
 import { styles } from './OperatingArea.styles';
 import { MainScreenProp, MainScreens } from '@app/navigation/main/types';
 import { BackNavButton } from '@app/components/BackNavButton/BackNavButton';
@@ -42,7 +37,7 @@ export const OperatingArea = ({ navigation }: Props) => {
 
   return (
     <View style={styles.container}>
-      <SafeAreaView style={styles.safe}>
+      <ScreenSafeArea style={styles.safe}>
         <View style={styles.navHeader}>
           <BackNavButton onPress={() => navigation.goBack()} />
           <Text style={styles.title}>{t('translations:operating_area')}</Text>
@@ -60,7 +55,7 @@ export const OperatingArea = ({ navigation }: Props) => {
           data={areas}
           renderItem={renderItem}
         />
-      </SafeAreaView>
+      </ScreenSafeArea>
     </View>
   );
 };

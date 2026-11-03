@@ -1,11 +1,6 @@
 import React, { useEffect, useState } from 'react';
-import {
-  View,
-  SafeAreaView,
-  Text,
-  FlatList,
-  TouchableOpacity,
-} from 'react-native';
+import { View, Text, FlatList, TouchableOpacity } from 'react-native';
+import { ScreenSafeArea } from '@app/components/ScreenSafeArea/ScreenSafeArea';
 import { styles } from './ShiftAvailabilityScreen.styles';
 import { MainScreenProp, MainScreens } from '@app/navigation/main/types';
 import { BackNavButton } from '@app/components/BackNavButton/BackNavButton';
@@ -386,7 +381,7 @@ export const ShiftAvailabilityScreen = ({ navigation }: Props) => {
 
   return (
     <View style={styles.container}>
-      <SafeAreaView style={styles.safe}>
+      <ScreenSafeArea style={styles.safe}>
         <View style={styles.navHeader}>
           <BackNavButton onPress={() => navigation.goBack()} />
           <Text style={styles.title}>
@@ -431,7 +426,7 @@ export const ShiftAvailabilityScreen = ({ navigation }: Props) => {
           onConfirm={setSelectedPickerDate}
           onCancel={() => undefined}
         />
-      </SafeAreaView>
+      </ScreenSafeArea>
     </View>
   );
 };

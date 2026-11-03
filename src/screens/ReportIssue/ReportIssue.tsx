@@ -2,7 +2,6 @@ import React, { useState } from 'react';
 import {
   View,
   Image,
-  SafeAreaView,
   Text,
   FlatList,
   TouchableOpacity,
@@ -11,6 +10,7 @@ import {
   KeyboardAvoidingView,
   Platform,
 } from 'react-native';
+import { ScreenSafeArea } from '@app/components/ScreenSafeArea/ScreenSafeArea';
 import axios from 'axios';
 import { Images } from '@app/utilities/images';
 import { styles } from './ReportIssue.styles';
@@ -126,7 +126,7 @@ export const ReportIssue = ({ navigation, route }: Props) => {
         style={[styles.gradient, { height: top + 100 }]}
         colors={Colors.onlineGradientArray}
       />
-      <SafeAreaView style={styles.safe}>
+      <ScreenSafeArea style={styles.safe}>
         {!didSelectIssue && (
           <>
             <View style={styles.navHeader}>
@@ -147,7 +147,7 @@ export const ReportIssue = ({ navigation, route }: Props) => {
 
               {/* A bare "Other" tells the admin nothing, so Send waits for a note. */}
               {writingNote && (
-                // React Native's SafeAreaView pads the bottom only on iOS, so Android adds
+                // ScreenSafeArea pads the bottom only on iOS, so Android adds
                 // the inset itself to keep Send report clear of the gesture bar.
                 <View
                   style={[
@@ -200,7 +200,7 @@ export const ReportIssue = ({ navigation, route }: Props) => {
             />
           </View>
         )}
-      </SafeAreaView>
+      </ScreenSafeArea>
     </View>
   );
 };

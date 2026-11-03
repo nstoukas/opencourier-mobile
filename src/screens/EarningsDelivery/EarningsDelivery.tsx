@@ -1,12 +1,12 @@
 import React from 'react';
 import {
   View,
-  SafeAreaView,
   Text,
   ScrollView,
   ActivityIndicator,
   RefreshControl,
 } from 'react-native';
+import { ScreenSafeArea } from '@app/components/ScreenSafeArea/ScreenSafeArea';
 import moment from 'moment';
 import { styles } from './EarningsDelivery.styles';
 import { MainScreenProp, MainScreens } from '@app/navigation/main/types';
@@ -138,7 +138,7 @@ export const EarningsDelivery = ({ navigation, route }: Props) => {
         style={[styles.gradient, { height: top + 100 }]}
         colors={Colors.offlineGradientArray}
       />
-      <SafeAreaView style={styles.safe}>
+      <ScreenSafeArea style={styles.safe}>
         <View style={styles.navHeader}>
           <BackNavButton onPress={() => navigation.goBack()} />
           <Text style={styles.title}>{t('translations:delivery_details')}</Text>
@@ -149,7 +149,7 @@ export const EarningsDelivery = ({ navigation, route }: Props) => {
           }>
           {body()}
         </ScrollView>
-      </SafeAreaView>
+      </ScreenSafeArea>
     </View>
   );
 };

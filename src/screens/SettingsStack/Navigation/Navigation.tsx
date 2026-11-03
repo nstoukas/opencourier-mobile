@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
-import { View, SafeAreaView, Text, TouchableOpacity } from 'react-native';
+import { View, Text, TouchableOpacity } from 'react-native';
+import { ScreenSafeArea } from '@app/components/ScreenSafeArea/ScreenSafeArea';
 import { styles } from './Navigation.styles';
 import { MainScreenProp, MainScreens } from '@app/navigation/main/types';
 import { BackNavButton } from '@app/components/BackNavButton/BackNavButton';
@@ -64,7 +65,7 @@ export const NavigationScreen = ({ navigation }: Props) => {
 
   return (
     <View style={styles.container}>
-      <SafeAreaView style={styles.safe}>
+      <ScreenSafeArea style={styles.safe}>
         <View style={styles.navHeader}>
           <BackNavButton onPress={() => navigation.goBack()} />
           <Text style={styles.title}>{t('translations:navigation')}</Text>
@@ -81,7 +82,7 @@ export const NavigationScreen = ({ navigation }: Props) => {
           {installed.map(app => option(app, t(`translations:${app}`), app))}
           {option('ask', t('translations:navigation_app_ask'), null)}
         </View>
-      </SafeAreaView>
+      </ScreenSafeArea>
     </View>
   );
 };

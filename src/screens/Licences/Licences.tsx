@@ -1,12 +1,6 @@
 import React, { useEffect, useState } from 'react';
-import {
-  View,
-  SafeAreaView,
-  Text,
-  TouchableOpacity,
-  FlatList,
-  Linking,
-} from 'react-native';
+import { View, Text, TouchableOpacity, FlatList, Linking } from 'react-native';
+import { ScreenSafeArea } from '@app/components/ScreenSafeArea/ScreenSafeArea';
 import { styles } from './Licences.styles';
 import { BackNavButton } from '@app/components/BackNavButton/BackNavButton';
 import { MainScreenProp, MainScreens } from '@app/navigation/main/types';
@@ -89,7 +83,7 @@ export const LicencesScreen = ({ navigation }: Props) => {
 
   return (
     <View style={styles.container}>
-      <SafeAreaView style={styles.safe}>
+      <ScreenSafeArea style={styles.safe}>
         <View style={styles.navHeader}>
           <BackNavButton onPress={() => navigation.goBack()} />
           <Text style={styles.title}>Licenses</Text>
@@ -100,7 +94,7 @@ export const LicencesScreen = ({ navigation }: Props) => {
           renderItem={renderItem}
           keyExtractor={(item, index) => index.toString()}
         />
-      </SafeAreaView>
+      </ScreenSafeArea>
     </View>
   );
 };
