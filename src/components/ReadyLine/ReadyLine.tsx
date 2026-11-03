@@ -16,7 +16,10 @@ type Props = {
 // pickup. Its own component with its own tick, so the rest of the card does not redraw every 30 s.
 export const ReadyLine = ({ foodReadyAt, readyAtOnPhone }: Props) => {
   const { t } = useTranslation();
-  const [now, setNow] = useState(() => Date.now());
+  // A counter the timer bumps to redraw; the time itself is read on every draw, so a new ready time
+  // (the refetch after a delay) or a return to the app never shows a minute up to 30 s old (row 21
+  // review).
+  const [, setTick] = useState(0);
 
   useEffect(() => {
     // Nothing to count down once the food is ready, or for an order with no ready time.
@@ -27,11 +30,18 @@ export const ReadyLine = ({ foodReadyAt, readyAtOnPhone }: Props) => {
     ) {
       return;
     }
-    const timer = setInterval(() => setNow(Date.now()), READY_LINE_TICK_MS);
+    const timer = setInterval(
+      () => setTick(tick => tick + 1),
+      READY_LINE_TICK_MS,
+    );
     return () => clearInterval(timer);
   }, [foodReadyAt, readyAtOnPhone]);
 
-  const line = readyLine({ foodReadyAt, readyAtOnPhone }, now, t as never);
+  const line = readyLine(
+    { foodReadyAt, readyAtOnPhone },
+    Date.now(),
+    t as never,
+  );
   if (line === '') {
     return null;
   }

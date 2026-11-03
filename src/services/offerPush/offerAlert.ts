@@ -17,6 +17,7 @@ import { Platform } from 'react-native';
 import i18next from 'i18next';
 import { formatCurrencyFromCents } from '@app/utilities/currency';
 import { offerTripLines } from '@app/utilities/offerTrip';
+import { escapeHtml } from '@app/utilities/escapeHtml';
 import {
   OfferAlertData,
   StoredOfferAlert,
@@ -135,8 +136,6 @@ export const offerSummary = (
 // line break must be <br> (a '\n' shows as a space), and a restaurant's name
 // must not be able to add markup ("<b>" was swallowed on the emulator), so
 // &, < and > are written as entities.
-const escapeHtml = (line: string): string =>
-  line.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 
 export type AlertStyle = 'full-screen' | 'heads-up';
 

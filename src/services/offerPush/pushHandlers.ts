@@ -60,7 +60,10 @@ export const onRemoteMessage = async (
   if (message.data?.type === 'JOB_READY_UPDATED') {
     const update = parseJobReadyUpdate(message.data);
     if (update && (await AsyncStorage.getItem('token'))) {
-      await showReadyNotice(update);
+      // A notice that cannot be posted (no permission) must not stop the refetch.
+      await showReadyNotice(update).catch(error =>
+        console.log('Could not show the ready notice', error),
+      );
       queryClient.invalidateQueries({ queryKey: [QueryKeys.inProgressOrders] });
     }
     return;
