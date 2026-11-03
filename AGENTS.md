@@ -100,4 +100,9 @@ the error count is above `typecheck-baseline.json`, and lowers the file when the
   because the server answers a new start with the rider's still active SOS. Screens read the newest. Every age sent is capped
   at 7 days. While the newest is shared the phone sends no accept and auto accept skips offers (decision 73.10).
 
+- notifee reads an Android notification's body and big text as HTML: a '\n' shows as a space (use `<br>`), and any
+  text from outside the app (a restaurant's name) must be HTML escaped or its tags are swallowed (row 100, `offerAlert.ts`).
+  iOS shows the body as plain text, so escape on Android only. The offer alert's lines come from the card's own
+  `offerTripLines` through `offerAlertLineList`; never word an offer twice.
+
 _Drafted by /audit from the repo, worth a quick human pass. Edit freely: once a line stops matching this draft, later runs treat it as curated and will flag rather than overwrite it._
