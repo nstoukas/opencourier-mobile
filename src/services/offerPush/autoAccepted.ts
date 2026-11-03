@@ -5,6 +5,7 @@
 // It plays at the notification volume, through an ordinary notifee
 // notification: no native sound code. A rider's own tap plays nothing new.
 
+import { notificationText } from '@app/utilities/notificationText';
 import notifee, {
   AndroidImportance,
   AndroidVisibility,
@@ -47,9 +48,12 @@ export const announceAutoAccept = async (
     await ensureAutoAcceptedChannel();
     await notifee.displayNotification({
       id: `auto-accepted-${deliveryId}`,
-      title: i18next.t('translations:auto_accepted_title', {
-        restaurant: restaurantName,
-      }),
+      // The restaurant's name is outside text: escaped on Android (row 105).
+      title: notificationText(
+        i18next.t('translations:auto_accepted_title', {
+          restaurant: restaurantName,
+        }),
+      ),
       android: {
         channelId: AUTO_ACCEPTED_CHANNEL_ID,
         importance: AndroidImportance.HIGH,

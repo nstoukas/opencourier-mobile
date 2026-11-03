@@ -1,6 +1,7 @@
 // Spec 0015. A job this rider held was cancelled after they accepted it: the app raises an alert of
 // its own once per job, shows a full screen card with the pay and what to do with the food, and,
 // after a pickup, records what happened to the food. Nothing here decides pay: the server pays.
+import { notificationText } from '@app/utilities/notificationText';
 import { Platform } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import notifee, {
@@ -165,11 +166,14 @@ export const alertNewCancelledJobs = async (
     await notifee.displayNotification({
       id: `cancelled-${job.id}`,
       title: i18next.t('translations:cancelled_title'),
+      // The restaurant's name is outside text: escaped on Android (row 105).
       body: job.pickupBusinessName
-        ? i18next.t('translations:cancelled_body', {
-            restaurant: job.pickupBusinessName,
-            by: cancelledByText(job.cancelledBy ?? 'COOP'),
-          })
+        ? notificationText(
+            i18next.t('translations:cancelled_body', {
+              restaurant: job.pickupBusinessName,
+              by: cancelledByText(job.cancelledBy ?? 'COOP'),
+            }),
+          )
         : i18next.t('translations:cancelled_body_unknown'),
       android: {
         channelId: CANCELLED_JOBS_CHANNEL_ID,
