@@ -4,8 +4,15 @@ import notifee, {
   AndroidVisibility,
 } from '@notifee/react-native';
 import '@app/localization/i18n';
-import { JobReadyUpdate } from '@app/utilities/readySignals';
-import { READY_CHANNEL_ID, showReadyNotice } from './readyNotice';
+import {
+  JobReadyUpdate,
+  parseJobReadyUpdate,
+} from '@app/utilities/readySignals';
+import {
+  READY_CHANNEL_ID,
+  resetReadyNoticeForTests,
+  showReadyNotice,
+} from './readyNotice';
 
 // Spec 0023 (AC-6): the notice a rider gets when the restaurant moves the
 // ready time or marks the food ready.
@@ -23,6 +30,8 @@ describe('showReadyNotice (spec 0023, AC-6)', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
+    // The notice remembers each job's last change (row 21 review); start each test with none.
+    resetReadyNoticeForTests();
     Platform.OS = 'android';
   });
 
@@ -54,6 +63,8 @@ describe('showReadyNotice (spec 0023, AC-6)', () => {
         importance: AndroidImportance.HIGH,
         pressAction: { id: 'default' },
       },
+      // The phone's default sound on iOS too (row 21 review).
+      ios: { sound: 'default' },
     });
   });
 
@@ -76,7 +87,15 @@ describe('showReadyNotice (spec 0023, AC-6)', () => {
 
   it('a second change for the same job reuses the same id, so it replaces the first', async () => {
     await showReadyNotice(delay, NOW);
-    await showReadyNotice({ ...delay, delayMinutes: 5 }, NOW);
+    // A real second change: the ready time moves 5 min further.
+    await showReadyNotice(
+      {
+        ...delay,
+        readyAt: new Date(NOW + 17 * 60 * 1000).toISOString(),
+        delayMinutes: 5,
+      },
+      NOW,
+    );
     const ids = (notifee.displayNotification as jest.Mock).mock.calls.map(
       ([n]) => n.id,
     );
@@ -116,5 +135,94 @@ describe('showReadyNotice (spec 0023, AC-6)', () => {
         body: 'Tom & Jerry <b>Grill</b>: food ready',
       }),
     );
+  });
+
+  it("sets the iOS sound to the phone's default", async () => {
+    Platform.OS = 'ios';
+    await showReadyNotice(delay, NOW);
+    expect(notifee.displayNotification).toHaveBeenCalledWith(
+      expect.objectContaining({ ios: { sound: 'default' } }),
+    );
+  });
+
+  // Row 21 review: the backend sends every change both over the live connection and by push, so
+  // the same change can reach showReadyNotice twice; the rider is told once.
+  describe('once per change', () => {
+    const posted = () =>
+      (notifee.displayNotification as jest.Mock).mock.calls.length;
+
+    it('the same job with the same readyAt and foodReadyAt a second time posts nothing', async () => {
+      await showReadyNotice(delay, NOW);
+      await showReadyNotice(delay, NOW);
+      expect(posted()).toBe(1);
+      // The repeat makes no channel either: it stops before anything is posted.
+      expect(notifee.createChannel).toHaveBeenCalledTimes(1);
+    });
+
+    it('the live message and the push for one change post once (both wire shapes)', async () => {
+      const readyAt = '2026-11-03T12:12:00.000Z';
+      // The live event carries typed values; the push carries text, '' for null.
+      const live = parseJobReadyUpdate({
+        deliveryId: 'del-1',
+        restaurantName: 'R73 Kitchen',
+        readyAt,
+        foodReadyAt: null,
+        delayMinutes: 10,
+      });
+      const push = parseJobReadyUpdate({
+        type: 'JOB_READY_UPDATED',
+        deliveryId: 'del-1',
+        restaurantName: 'R73 Kitchen',
+        readyAt,
+        foodReadyAt: '',
+        delayMinutes: '10',
+      });
+      await showReadyNotice(live!, NOW);
+      await showReadyNotice(push!, NOW);
+      expect(posted()).toBe(1);
+    });
+
+    it('a different readyAt for the same job posts again', async () => {
+      await showReadyNotice(delay, NOW);
+      await showReadyNotice(
+        { ...delay, readyAt: new Date(NOW + 22 * 60 * 1000).toISOString() },
+        NOW,
+      );
+      expect(posted()).toBe(2);
+    });
+
+    it('foodReadyAt newly set, with the same readyAt, posts again', async () => {
+      await showReadyNotice(delay, NOW);
+      await showReadyNotice(
+        {
+          ...delay,
+          foodReadyAt: '2026-11-03T12:05:00.000Z',
+          delayMinutes: null,
+        },
+        NOW,
+      );
+      expect(posted()).toBe(2);
+      expect(notifee.displayNotification).toHaveBeenLastCalledWith(
+        expect.objectContaining({ body: 'R73 Kitchen: food ready' }),
+      );
+    });
+
+    it('another job is independent: the same times for a second job still post', async () => {
+      await showReadyNotice(delay, NOW);
+      await showReadyNotice({ ...delay, deliveryId: 'del-2' }, NOW);
+      // And a repeat for the first job, after the second, is still a repeat.
+      await showReadyNotice(delay, NOW);
+      const ids = (notifee.displayNotification as jest.Mock).mock.calls.map(
+        ([n]) => n.id,
+      );
+      expect(ids).toEqual(['ready-del-1', 'ready-del-2']);
+    });
+
+    it('resetReadyNoticeForTests forgets what was shown', async () => {
+      await showReadyNotice(delay, NOW);
+      resetReadyNoticeForTests();
+      await showReadyNotice(delay, NOW);
+      expect(posted()).toBe(2);
+    });
   });
 });

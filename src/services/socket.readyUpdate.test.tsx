@@ -9,6 +9,7 @@ import '@app/localization/i18n';
 import { UserStatus } from '@app/types/types';
 import { QueryKeys } from '@app/utilities/queryKeys';
 import { JOB_READY_UPDATED_EVENT } from './liveConnection';
+import { resetReadyNoticeForTests } from './readyNotice/readyNotice';
 
 jest.mock('@react-native-async-storage/async-storage', () =>
   require('@react-native-async-storage/async-storage/jest/async-storage-mock'),
@@ -77,6 +78,8 @@ describe('SocketProvider JOB_READY_UPDATED (spec 0023, AC-6)', () => {
 
   beforeEach(async () => {
     jest.clearAllMocks();
+    // The real notice remembers each job's last change (row 21 review); start each test with none.
+    resetReadyNoticeForTests();
     Platform.OS = 'android';
     mockLatestSocket = null;
     await AsyncStorage.setItem('token', 'courier-jwt-token');

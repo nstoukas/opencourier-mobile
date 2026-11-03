@@ -131,4 +131,47 @@ describe('ReadyLine (spec 0023, AC-7)', () => {
     expect(clearSpy).toHaveBeenCalled();
     clearSpy.mockRestore();
   });
+
+  // Row 21 review: the time is read at each draw, so a new ready time between ticks (the refetch
+  // after a delay) is counted from the clock as it is now, not from the last tick.
+  it('a new ready time between ticks is counted from the current clock', () => {
+    const screen = render(
+      <ReadyLine foodReadyAt={null} readyAtOnPhone={START + 10 * MINUTE} />,
+    );
+    expect(lineText(screen)).toBe('Preparing, ~10 min');
+
+    // 20 s on, less than a tick: nothing has redrawn yet.
+    act(() => {
+      jest.advanceTimersByTime(20 * SECOND);
+    });
+    const now = Date.now();
+    expect(now).toBe(START + 20 * SECOND);
+
+    // The refetch brings a ready time 3 min from now: exactly ~3 min, at once.
+    screen.rerender(
+      <ReadyLine foodReadyAt={null} readyAtOnPhone={now + 3 * MINUTE} />,
+    );
+    expect(lineText(screen)).toBe('Preparing, ~3 min');
+  });
+
+  it('with no prop change, keeps the first value for 29 s and moves on at 30 s', () => {
+    // 3 min 15 s left: ~4 min. At 29 s, 2 min 46 s would be ~3, but nothing redraws until the tick.
+    const screen = render(
+      <ReadyLine
+        foodReadyAt={null}
+        readyAtOnPhone={START + 3 * MINUTE + 15 * SECOND}
+      />,
+    );
+    expect(lineText(screen)).toBe('Preparing, ~4 min');
+
+    act(() => {
+      jest.advanceTimersByTime(29 * SECOND);
+    });
+    expect(lineText(screen)).toBe('Preparing, ~4 min');
+
+    act(() => {
+      jest.advanceTimersByTime(1 * SECOND);
+    });
+    expect(lineText(screen)).toBe('Preparing, ~3 min');
+  });
 });

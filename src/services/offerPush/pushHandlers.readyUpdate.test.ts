@@ -110,4 +110,24 @@ describe('onRemoteMessage JOB_READY_UPDATED (spec 0023, AC-6)', () => {
     expect(invalidateSpy).not.toHaveBeenCalled();
     expect(showOfferAlert).not.toHaveBeenCalled();
   });
+
+  // Row 21 review: a notice that cannot be posted (notifee throws, no permission) must not stop the
+  // held jobs being refetched, and must not reject into Firebase's handler.
+  it('still refetches the in progress jobs, and does not throw, when the notice fails', async () => {
+    const logSpy = jest.spyOn(console, 'log').mockImplementation(() => {});
+    (showReadyNotice as jest.Mock).mockImplementationOnce(() =>
+      Promise.reject(new Error('notifee: no permission')),
+    );
+
+    await expect(
+      onRemoteMessage(push(pushData), 'background'),
+    ).resolves.toBeUndefined();
+
+    expect(showReadyNotice).toHaveBeenCalledTimes(1);
+    expect(invalidateSpy).toHaveBeenCalledTimes(1);
+    expect(invalidateSpy).toHaveBeenCalledWith({
+      queryKey: [QueryKeys.inProgressOrders],
+    });
+    logSpy.mockRestore();
+  });
 });
