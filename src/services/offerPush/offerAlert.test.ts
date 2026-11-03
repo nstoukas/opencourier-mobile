@@ -1,5 +1,6 @@
 import notifee, {
   AndroidImportance,
+  AndroidStyle,
   AndroidVisibility,
 } from '@notifee/react-native';
 import { Platform } from 'react-native';
@@ -10,6 +11,7 @@ import {
   cancelOfferAlert,
   displayedOfferAlerts,
   ensureOfferChannels,
+  offerAlertLineList,
   offerAlertLines,
   offerSummary,
   OFFERS_CHANNEL_ID,
@@ -413,6 +415,159 @@ describe('offerAlert (spec 0003, AC-3, AC-6, AC-7, Decisions 58.13, 58.15)', () 
           trip.minutes === '' ? PLACE : `${DISTANCES} · ${MINUTES} · ${PLACE}`,
         );
       }
+    });
+
+    // Row 100 review: one ordered list of the alert's lines, read by the
+    // notification body, the expanded notification and the full screen.
+    describe('offerAlertLineList, the one source of the order', () => {
+      const trips = [
+        { toPickupMetres: 1834, toDropoffMetres: 1012, minutes: 6 },
+        { toPickupMetres: 1834, toDropoffMetres: null, minutes: null },
+        { toPickupMetres: null, toDropoffMetres: 1012, minutes: 6 },
+        { toPickupMetres: null, toDropoffMetres: null, minutes: 6 },
+        noTrip,
+      ];
+
+      it('lists the known lines in the card order, unknown ones left out', () => {
+        expect(offerAlertLineList(baseOffer)).toEqual([
+          DISTANCES,
+          MINUTES,
+          PLACE,
+        ]);
+        expect(
+          offerAlertLineList({
+            ...baseOffer,
+            trip: {
+              toPickupMetres: 1834,
+              toDropoffMetres: null,
+              minutes: null,
+            },
+          }),
+        ).toEqual(['1.8 km to the restaurant', PLACE]);
+        expect(offerAlertLineList({ ...baseOffer, trip: noTrip })).toEqual([
+          PLACE,
+        ]);
+      });
+
+      it.each(trips)(
+        'offerSummary is offerAlertLineList joined with " · " (%o)',
+        trip => {
+          for (const dropoffArea of ['Iasonos', '']) {
+            const offer = { ...baseOffer, trip, dropoffArea };
+            expect(offerSummary(offer)).toBe(
+              offerAlertLineList(offer).join(' · '),
+            );
+          }
+        },
+      );
+    });
+
+    // Row 100 review: a collapsed notification cuts its one line body, so the
+    // expanded one (Android BIGTEXT) shows each line on its own row. notifee
+    // reads Android notification text as HTML: rows are split by <br>, and a
+    // restaurant's name must not be able to add markup.
+    describe('the expanded notification on Android (BIGTEXT, HTML)', () => {
+      const escaped = (line: string) =>
+        line.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+      const shownWith = async (offer: OfferAlertData) => {
+        (notifee.displayNotification as jest.Mock).mockClear();
+        await showOfferAlert(offer, Date.now(), 'full-screen');
+        expect(notifee.displayNotification).toHaveBeenCalledTimes(1);
+        return (notifee.displayNotification as jest.Mock).mock.calls[0][0];
+      };
+
+      it('all figures known: BIGTEXT with the three lines joined by <br>, in the card order', async () => {
+        const call = await shownWith(baseOffer);
+
+        expect(call.android.style).toEqual({
+          type: AndroidStyle.BIGTEXT,
+          text: `${DISTANCES}<br>${MINUTES}<br>${PLACE}`,
+        });
+        expect(call.android.style.text).not.toContain('\n');
+      });
+
+      it('unknown lines are left out of the expanded text', async () => {
+        const pickupOnly = await shownWith({
+          ...baseOffer,
+          trip: { toPickupMetres: 1834, toDropoffMetres: null, minutes: null },
+        });
+        expect(pickupOnly.android.style.text).toBe(
+          `1.8 km to the restaurant<br>${PLACE}`,
+        );
+
+        const minutesOnly = await shownWith({
+          ...baseOffer,
+          trip: { toPickupMetres: null, toDropoffMetres: null, minutes: 6 },
+        });
+        expect(minutesOnly.android.style.text).toBe(`${MINUTES}<br>${PLACE}`);
+      });
+
+      it('routing down: the expanded text is the place line only', async () => {
+        const call = await shownWith({ ...baseOffer, trip: noTrip });
+
+        expect(call.android.style.type).toBe(AndroidStyle.BIGTEXT);
+        expect(call.android.style.text).toBe(PLACE);
+      });
+
+      it('each line is HTML escaped (&, <, >), so a name cannot add markup', async () => {
+        const offer = {
+          ...baseOffer,
+          restaurantName: '<b>Bold</b> & Co',
+          dropoffArea: 'A>B',
+        };
+        const call = await shownWith(offer);
+
+        expect(call.android.style.text).toBe(
+          `${DISTANCES}<br>${MINUTES}<br>&lt;b&gt;Bold&lt;/b&gt; &amp; Co to A&gt;B`,
+        );
+        expect(call.android.style.text).toBe(
+          offerAlertLineList(offer).map(escaped).join('<br>'),
+        );
+        expect(call.android.style.text).not.toContain('<b>');
+      });
+
+      it('the one line body is the summary, HTML escaped', async () => {
+        const offer = {
+          ...baseOffer,
+          restaurantName: '<b>Bold</b> & Co',
+        };
+        const call = await shownWith(offer);
+
+        expect(call.body).toBe(
+          `${DISTANCES} · ${MINUTES} · &lt;b&gt;Bold&lt;/b&gt; &amp; Co to Iasonos`,
+        );
+        expect(call.body).toBe(escaped(offerSummary(offer)));
+        expect(call.body).not.toContain('<b>');
+      });
+
+      it('a name with no markup is sent unchanged', async () => {
+        const call = await shownWith(baseOffer);
+
+        expect(call.body).toBe(`${DISTANCES} · ${MINUTES} · ${PLACE}`);
+      });
+    });
+
+    describe('on iOS the body is plain text', () => {
+      beforeEach(() => {
+        Platform.OS = 'ios';
+      });
+
+      it('the body is the plain summary, not escaped', async () => {
+        const offer = {
+          ...baseOffer,
+          restaurantName: '<b>Bold</b> & Co',
+        };
+        await showOfferAlert(offer, Date.now(), 'full-screen');
+
+        const call = (notifee.displayNotification as jest.Mock).mock
+          .calls[0][0];
+        expect(call.body).toBe(
+          `${DISTANCES} · ${MINUTES} · <b>Bold</b> & Co to Iasonos`,
+        );
+        expect(call.body).toBe(offerSummary(offer));
+        expect(call.body).not.toContain('&lt;');
+        expect(call.body).not.toContain('&amp;');
+      });
     });
   });
 });

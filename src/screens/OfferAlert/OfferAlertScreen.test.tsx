@@ -6,6 +6,7 @@ import '@app/localization/i18n';
 import { OfferAlertScreen } from './OfferAlertScreen';
 import {
   displayedOfferAlerts,
+  offerAlertLineList,
   payText,
 } from '@app/services/offerPush/offerAlert';
 import { answerOffer } from '@app/services/offerPush/answerOffer';
@@ -27,8 +28,11 @@ jest.mock('@app/services/offerPush/offerAlert', () => ({
   displayedOfferAlerts: jest.fn(),
   offerAlertLines: jest.requireActual('@app/services/offerPush/offerAlert')
     .offerAlertLines,
-  offerAlertLineList: jest.requireActual('@app/services/offerPush/offerAlert')
-    .offerAlertLineList,
+  // A jest.fn around the real list, so one test can hand the screen its own
+  // list and check the screen draws exactly that (row 100 review).
+  offerAlertLineList: jest.fn(
+    jest.requireActual('@app/services/offerPush/offerAlert').offerAlertLineList,
+  ),
   payText: jest.fn(() => '€6.50'),
 }));
 
@@ -692,6 +696,44 @@ describe('OfferAlertScreen (spec 0003, AC-4, AC-5, Decision 58.14, Commit 50f9d9
       expect(texts.slice(0, 4)).toEqual(['€6.50', DISTANCES, MINUTES, PLACE]);
       // Then the time line; the offer's facts stop there.
       expect(texts[4]).toBe('Waiting for your answer');
+    });
+
+    it('draws exactly the lines offerAlertLineList gives, in its order (the one source)', async () => {
+      const realLineList = jest.requireActual(
+        '@app/services/offerPush/offerAlert',
+      ).offerAlertLineList;
+      // A list no other code could produce: if the screen drew the lines from
+      // anywhere else, or reordered them, these would not appear as given.
+      (offerAlertLineList as jest.Mock).mockImplementation(() => [
+        'Third written first',
+        'First written second',
+      ]);
+      try {
+        const texts = await screenTexts(toNotificationData(offer, null));
+
+        expect(offerAlertLineList).toHaveBeenCalled();
+        expect(texts.slice(0, 4)).toEqual([
+          '€6.50',
+          'Third written first',
+          'First written second',
+          'Waiting for your answer',
+        ]);
+        expect(texts).not.toContain(DISTANCES);
+        expect(texts).not.toContain(PLACE);
+      } finally {
+        (offerAlertLineList as jest.Mock).mockImplementation(realLineList);
+      }
+    });
+
+    it('draws the real offerAlertLineList of the offer, line for line', async () => {
+      const texts = await screenTexts(toNotificationData(offer, null));
+      const lines = jest
+        .requireActual('@app/services/offerPush/offerAlert')
+        .offerAlertLineList(offer);
+
+      expect(lines).toHaveLength(3);
+      expect(texts.slice(1, 1 + lines.length)).toEqual(lines);
+      expect(texts[1 + lines.length]).toBe('Waiting for your answer');
     });
 
     it('with routing down shows the total and the place only, like the card', async () => {
