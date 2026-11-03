@@ -27,7 +27,7 @@ import {
 } from '@app/services/offerPush/offerMessage';
 import {
   displayedOfferAlerts,
-  offerSummary,
+  offerAlertLines,
   payText,
 } from '@app/services/offerPush/offerAlert';
 import { answerOffer, OfferAnswer } from '@app/services/offerPush/answerOffer';
@@ -150,6 +150,7 @@ export const OfferAlertScreen = () => {
     );
   }
 
+  const lines = offerAlertLines(offer);
   const secondsLeft =
     offer.deadlineAt === null
       ? null
@@ -159,7 +160,14 @@ export const OfferAlertScreen = () => {
     <SafeAreaView style={styles.container}>
       <View style={styles.card}>
         <Text style={styles.pay}>{payText(offer)}</Text>
-        <Text style={styles.summary}>{offerSummary(offer)}</Text>
+        {/* The card's lines in the card's order (row 100); unknown ones left out. */}
+        {[lines.distances, lines.minutes, lines.place]
+          .filter(line => line !== '')
+          .map(line => (
+            <Text key={line} style={styles.summary}>
+              {line}
+            </Text>
+          ))}
         <Text style={styles.time}>
           {secondsLeft === null
             ? t('translations:offer_alert_no_deadline')

@@ -493,8 +493,6 @@ export default {
   // Offer alerts on the phone (row 58, spec 0003).
   offer_alert_title: 'New offer: {{pay}}',
   offer_alert_body_area: '{{restaurant}} to {{area}}',
-  offer_alert_distance: '{{km}} km',
-  offer_alert_minutes: '{{minutes}} min',
   offer_alert_channel: 'New offers',
   offer_alert_channel_insistent: 'Offers still waiting',
   offer_alert_channel_notices: 'Offer notices',

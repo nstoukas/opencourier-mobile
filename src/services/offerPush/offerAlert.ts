@@ -15,6 +15,7 @@ import notifee, {
 import { Platform } from 'react-native';
 import i18next from 'i18next';
 import { formatCurrencyFromCents } from '@app/utilities/currency';
+import { offerTripLines } from '@app/utilities/offerTrip';
 import {
   OfferAlertData,
   StoredOfferAlert,
@@ -82,32 +83,43 @@ export const ensureOfferChannels = async () => {
 export const payText = (offer: { payTotal: number; currencyCode: string }) =>
   formatCurrencyFromCents(offer.payTotal, offer.currencyCode || undefined);
 
-// "Pizza Roma to Iasonos · 2.4 km · 12 min", leaving out what is unknown.
+// The alert's lines, in the offer card's order and words (row 100, spec 0019's
+// AC-3): "1.2 km to the restaurant · 2.9 km to the customer", "About 9 min",
+// then "Pizza Roma to Iasonos". A line whose figures are unknown is ''.
+export const offerAlertLines = (
+  offer: Pick<OfferAlertData, 'restaurantName' | 'dropoffArea' | 'trip'>,
+): { distances: string; minutes: string; place: string } => {
+  // `i18next.t` read through a looser type, the one offerTripLines takes.
+  const trip = offerTripLines(
+    offer.trip,
+    i18next.t.bind(i18next) as (
+      key: string,
+      options?: Record<string, unknown>,
+    ) => string,
+  );
+  return {
+    distances: trip.distances,
+    minutes: trip.minutes,
+    place:
+      offer.dropoffArea !== ''
+        ? i18next.t('translations:offer_alert_body_area', {
+            restaurant: offer.restaurantName,
+            area: offer.dropoffArea,
+          })
+        : offer.restaurantName,
+  };
+};
+
+// The notification's one line body: the alert's lines joined, unknown ones
+// left out, e.g. "1.2 km to the restaurant · 2.9 km to the customer · About
+// 9 min · Pizza Roma to Iasonos".
 export const offerSummary = (
-  offer: Pick<
-    OfferAlertData,
-    'restaurantName' | 'dropoffArea' | 'distanceKm' | 'minutes'
-  >,
+  offer: Pick<OfferAlertData, 'restaurantName' | 'dropoffArea' | 'trip'>,
 ): string => {
-  const parts = [
-    offer.dropoffArea !== ''
-      ? i18next.t('translations:offer_alert_body_area', {
-          restaurant: offer.restaurantName,
-          area: offer.dropoffArea,
-        })
-      : offer.restaurantName,
-  ];
-  if (offer.distanceKm !== '') {
-    parts.push(
-      i18next.t('translations:offer_alert_distance', { km: offer.distanceKm }),
-    );
-  }
-  if (offer.minutes !== '') {
-    parts.push(
-      i18next.t('translations:offer_alert_minutes', { minutes: offer.minutes }),
-    );
-  }
-  return parts.filter(part => part !== '').join(' · ');
+  const lines = offerAlertLines(offer);
+  return [lines.distances, lines.minutes, lines.place]
+    .filter(part => part !== '')
+    .join(' · ');
 };
 
 export type AlertStyle = 'full-screen' | 'heads-up';

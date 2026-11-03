@@ -7,6 +7,8 @@
 // offer card's facts only. A push never carries the customer's name, phone,
 // house number, notes or items (AC-10), and this file reads nothing else.
 
+import { OfferTrip } from '@app/utilities/offerTrip';
+
 export type OfferAlertData = {
   deliveryId: string;
   // The server's own text for when this offer was made: with `deliveryId` it
@@ -19,8 +21,11 @@ export type OfferAlertData = {
   currencyCode: string;
   restaurantName: string;
   dropoffArea: string; // a street or a town, never a house number
-  distanceKm: string; // already formatted by the server, e.g. "2.4"
-  minutes: string; // empty: the push does not send it yet (spec 0019, decision 70.4)
+  // The offer card's trip (row 100): metres to the restaurant and on to the
+  // customer, and the minutes for both; null when unknown, so the alert shows
+  // exactly what the card shows. The server still sends the quote's single
+  // `distanceKm` for apps older than row 100; this app never shows it.
+  trip: OfferTrip;
   insistent: boolean; // the server's 2 minute re send (AC-7)
 };
 
@@ -36,6 +41,25 @@ const text = (data: Record<string, unknown>, key: string): string => {
   const value = data[key];
   return typeof value === 'string' ? value : '';
 };
+
+// A whole number sent as text, or null for '' or anything else.
+const numberOf = (value: string): number | null => {
+  if (value === '') {
+    return null;
+  }
+  const n = Number(value);
+  return Number.isFinite(n) ? n : null;
+};
+
+// The trip figures, from a push or from the alert's own stored data.
+const tripOf = (data: Record<string, unknown>): OfferTrip => ({
+  toPickupMetres: numberOf(text(data, 'toPickupMetres')),
+  toDropoffMetres: numberOf(text(data, 'toDropoffMetres')),
+  minutes: numberOf(text(data, 'minutes')),
+});
+
+const textOf = (value: number | null): string =>
+  value === null ? '' : String(value);
 
 const timeOf = (value: string): number | null => {
   if (value === '') {
@@ -80,8 +104,7 @@ export const parseOfferMessage = (data: RawData): OfferMessage | null => {
       currencyCode: text(data, 'currencyCode'),
       restaurantName: text(data, 'restaurantName'),
       dropoffArea: text(data, 'dropoffArea'),
-      distanceKm: text(data, 'distanceKm'),
-      minutes: text(data, 'minutes'),
+      trip: tripOf(data),
       insistent: text(data, 'insistent') === '1',
     },
   };
@@ -108,8 +131,9 @@ export const toNotificationData = (
   currencyCode: offer.currencyCode,
   restaurantName: offer.restaurantName,
   dropoffArea: offer.dropoffArea,
-  distanceKm: offer.distanceKm,
-  minutes: offer.minutes,
+  toPickupMetres: textOf(offer.trip.toPickupMetres),
+  toDropoffMetres: textOf(offer.trip.toDropoffMetres),
+  minutes: textOf(offer.trip.minutes),
   insistent: offer.insistent ? '1' : '',
 });
 
@@ -136,8 +160,7 @@ export const fromNotificationData = (
     currencyCode: text(data, 'currencyCode'),
     restaurantName: text(data, 'restaurantName'),
     dropoffArea: text(data, 'dropoffArea'),
-    distanceKm: text(data, 'distanceKm'),
-    minutes: text(data, 'minutes'),
+    trip: tripOf(data),
     insistent: text(data, 'insistent') === '1',
   };
 };
