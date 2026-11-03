@@ -4,10 +4,7 @@ import notifee, {
   AndroidVisibility,
 } from '@notifee/react-native';
 import '@app/localization/i18n';
-import {
-  announceAutoAccept,
-  AUTO_ACCEPTED_CHANNEL_ID,
-} from './autoAccepted';
+import { announceAutoAccept, AUTO_ACCEPTED_CHANNEL_ID } from './autoAccepted';
 
 describe('announceAutoAccept (spec 0020, AC-12)', () => {
   const originalOS = Platform.OS;
@@ -88,6 +85,32 @@ describe('announceAutoAccept (spec 0020, AC-12)', () => {
         id: 'auto-accepted-del-ios-1',
         title: 'Order accepted automatically: Creperie',
         ios: { sound: 'default' },
+      }),
+    );
+  });
+
+  // Row 105: notifee reads an Android notification's title as HTML, so the restaurant's name is
+  // escaped there and shows exactly as typed; iOS shows plain text, so it is left alone.
+  it('escapes the restaurant name in the title on Android (row 105)', async () => {
+    Platform.OS = 'android';
+    await announceAutoAccept('del-html-android', '<b>Bold</b> & Co');
+
+    expect(notifee.displayNotification).toHaveBeenCalledWith(
+      expect.objectContaining({
+        id: 'auto-accepted-del-html-android',
+        title: 'Order accepted automatically: &lt;b&gt;Bold&lt;/b&gt; &amp; Co',
+      }),
+    );
+  });
+
+  it('leaves the restaurant name plain in the title on iOS (row 105)', async () => {
+    Platform.OS = 'ios';
+    await announceAutoAccept('del-html-ios', '<b>Bold</b> & Co');
+
+    expect(notifee.displayNotification).toHaveBeenCalledWith(
+      expect.objectContaining({
+        id: 'auto-accepted-del-html-ios',
+        title: 'Order accepted automatically: <b>Bold</b> & Co',
       }),
     );
   });
