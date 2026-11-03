@@ -6,7 +6,6 @@ import '@app/localization/i18n';
 import { OfferAlertScreen } from './OfferAlertScreen';
 import {
   displayedOfferAlerts,
-  offerSummary,
   payText,
 } from '@app/services/offerPush/offerAlert';
 import { answerOffer } from '@app/services/offerPush/answerOffer';
@@ -14,10 +13,20 @@ import {
   closeAlertScreen,
   openAppFromAlert,
 } from '@app/services/offerPush/phone';
+import {
+  OfferAlertData,
+  toNotificationData,
+} from '@app/services/offerPush/offerMessage';
+import { NewOrderCell } from '@app/components/NewOrderCell/NewOrderCell';
+import { Order } from '@app/types/types';
+import { OfferTrip } from '@app/utilities/offerTrip';
 
+// The alert's lines are the real ones (row 100): what the screen shows is
+// what the card shows, so they are not mocked.
 jest.mock('@app/services/offerPush/offerAlert', () => ({
   displayedOfferAlerts: jest.fn(),
-  offerSummary: jest.fn(() => 'Pizza Roma to Iasonos · 2.4 km · 12 min'),
+  offerAlertLines: jest.requireActual('@app/services/offerPush/offerAlert')
+    .offerAlertLines,
   payText: jest.fn(() => '€6.50'),
 }));
 
@@ -48,8 +57,9 @@ describe('OfferAlertScreen (spec 0003, AC-4, AC-5, Decision 58.14, Commit 50f9d9
     currencyCode: 'EUR',
     restaurantName: 'Pizza Roma',
     dropoffArea: 'Iasonos',
-    distanceKm: '2.4',
-    minutes: '12',
+    toPickupMetres: '1834',
+    toDropoffMetres: '1012',
+    minutes: '6',
     insistent: '',
   };
 
@@ -88,7 +98,7 @@ describe('OfferAlertScreen (spec 0003, AC-4, AC-5, Decision 58.14, Commit 50f9d9
     // Check that pay and summary are rendered
     const texts = root.findAllByType('Text' as any).map(t => t.props.children);
     expect(texts).toContain('€6.50');
-    expect(texts).toContain('Pizza Roma to Iasonos · 2.4 km · 12 min');
+    expect(texts).toContain('Pizza Roma to Iasonos');
     expect(texts).toContain('Accept');
     expect(texts).toContain('Decline');
 
@@ -121,7 +131,7 @@ describe('OfferAlertScreen (spec 0003, AC-4, AC-5, Decision 58.14, Commit 50f9d9
     const texts = root.findAllByType('Text' as any).map(t => t.props.children);
     // Finds the real offer and displays its details rather than showing "ended"
     expect(texts).toContain('€6.50');
-    expect(texts).toContain('Pizza Roma to Iasonos · 2.4 km · 12 min');
+    expect(texts).toContain('Pizza Roma to Iasonos');
 
     tree.unmount();
   });
@@ -138,6 +148,7 @@ describe('OfferAlertScreen (spec 0003, AC-4, AC-5, Decision 58.14, Commit 50f9d9
       ...validOfferData,
       deliveryId: 'del-screen-2',
       restaurantName: 'Burger Queen',
+      dropoffArea: 'Ermou',
       payTotal: '850',
     };
 
@@ -148,11 +159,6 @@ describe('OfferAlertScreen (spec 0003, AC-4, AC-5, Decision 58.14, Commit 50f9d9
 
     (payText as jest.Mock).mockImplementation((data: any) =>
       data?.deliveryId === 'del-screen-2' ? '€8.50' : '€6.50',
-    );
-    (offerSummary as jest.Mock).mockImplementation((data: any) =>
-      data?.deliveryId === 'del-screen-2'
-        ? 'Burger Queen to Ermou · 1.5 km · 8 min'
-        : 'Pizza Roma to Iasonos · 2.4 km · 12 min',
     );
 
     let tree!: renderer.ReactTestRenderer;
@@ -176,7 +182,7 @@ describe('OfferAlertScreen (spec 0003, AC-4, AC-5, Decision 58.14, Commit 50f9d9
     // Screen now shows that alert's offer (offer 2, not offer 1)
     texts = tree.root.findAllByType('Text' as any).map(t => t.props.children);
     expect(texts).toContain('€8.50');
-    expect(texts).toContain('Burger Queen to Ermou · 1.5 km · 8 min');
+    expect(texts).toContain('Burger Queen to Ermou');
     expect(texts).not.toContain('€6.50');
 
     // Buttons work again for offer 2
@@ -431,16 +437,12 @@ describe('OfferAlertScreen (spec 0003, AC-4, AC-5, Decision 58.14, Commit 50f9d9
       ...validOfferData,
       deliveryId: 'del-screen-B',
       restaurantName: 'Burger Queen',
+      dropoffArea: 'Ermou',
       payTotal: '850',
     };
 
     (payText as jest.Mock).mockImplementation((data: any) =>
       data?.deliveryId === 'del-screen-B' ? '€8.50' : '€6.50',
-    );
-    (offerSummary as jest.Mock).mockImplementation((data: any) =>
-      data?.deliveryId === 'del-screen-B'
-        ? 'Burger Queen to Ermou · 1.5 km · 8 min'
-        : 'Pizza Roma to Iasonos · 2.4 km · 12 min',
     );
 
     // Initial notification points to B (stale, alert no longer displayed)
@@ -470,7 +472,7 @@ describe('OfferAlertScreen (spec 0003, AC-4, AC-5, Decision 58.14, Commit 50f9d9
       .findAllByType('Text' as any)
       .map(t => t.props.children);
     expect(texts).toContain('€6.50');
-    expect(texts).toContain('Pizza Roma to Iasonos · 2.4 km · 12 min');
+    expect(texts).toContain('Pizza Roma to Iasonos');
     expect(texts).not.toContain('€8.50');
     expect(texts).not.toContain('This offer has ended');
 
@@ -483,7 +485,7 @@ describe('OfferAlertScreen (spec 0003, AC-4, AC-5, Decision 58.14, Commit 50f9d9
     // Still shows offer A after the 1s tick
     texts = tree.root.findAllByType('Text' as any).map(t => t.props.children);
     expect(texts).toContain('€6.50');
-    expect(texts).toContain('Pizza Roma to Iasonos · 2.4 km · 12 min');
+    expect(texts).toContain('Pizza Roma to Iasonos');
     expect(texts).not.toContain('This offer has ended');
 
     tree.unmount();
@@ -500,16 +502,12 @@ describe('OfferAlertScreen (spec 0003, AC-4, AC-5, Decision 58.14, Commit 50f9d9
       ...validOfferData,
       deliveryId: 'del-screen-B',
       restaurantName: 'Burger Queen',
+      dropoffArea: 'Ermou',
       payTotal: '850',
     };
 
     (payText as jest.Mock).mockImplementation((data: any) =>
       data?.deliveryId === 'del-screen-B' ? '€8.50' : '€6.50',
-    );
-    (offerSummary as jest.Mock).mockImplementation((data: any) =>
-      data?.deliveryId === 'del-screen-B'
-        ? 'Burger Queen to Ermou · 1.5 km · 8 min'
-        : 'Pizza Roma to Iasonos · 2.4 km · 12 min',
     );
 
     // Initial notification is for offer A (the tapped one)
@@ -543,9 +541,9 @@ describe('OfferAlertScreen (spec 0003, AC-4, AC-5, Decision 58.14, Commit 50f9d9
       .findAllByType('Text' as any)
       .map(t => t.props.children);
     expect(texts).toContain('€6.50');
-    expect(texts).toContain('Pizza Roma to Iasonos · 2.4 km · 12 min');
+    expect(texts).toContain('Pizza Roma to Iasonos');
     expect(texts).not.toContain('€8.50');
-    expect(texts).not.toContain('Burger Queen to Ermou · 1.5 km · 8 min');
+    expect(texts).not.toContain('Burger Queen to Ermou');
 
     tree.unmount();
   });
@@ -555,6 +553,7 @@ describe('OfferAlertScreen (spec 0003, AC-4, AC-5, Decision 58.14, Commit 50f9d9
       ...validOfferData,
       deliveryId: 'del-screen-B',
       restaurantName: 'Burger Queen',
+      dropoffArea: 'Ermou',
       payTotal: '850',
     };
 
@@ -633,5 +632,240 @@ describe('OfferAlertScreen (spec 0003, AC-4, AC-5, Decision 58.14, Commit 50f9d9
     expect(declineStyle.height).toBe(100);
 
     tree.unmount();
+  });
+
+  // Row 100 (decision 100.2, spec 0019 AC-3): the full screen alert shows the
+  // card's total, then the card's lines in the card's order, and nothing else
+  // about the offer.
+  describe('says what the offer card says (row 100)', () => {
+    const DISTANCES = '1.8 km to the restaurant · 1.0 km to the customer';
+    const MINUTES = 'About 6 min';
+    const PLACE = 'Pizza Roma to Iasonos';
+
+    const offer: OfferAlertData = {
+      deliveryId: 'del-card-1',
+      offeredAt: '2026-10-26T10:00:00.000Z',
+      msLeftAtSend: null,
+      payTotal: 650,
+      currencyCode: 'EUR',
+      restaurantName: 'Pizza Roma',
+      dropoffArea: 'Iasonos',
+      trip: { toPickupMetres: 1834, toDropoffMetres: 1012, minutes: 6 },
+      insistent: false,
+    };
+
+    beforeEach(() => {
+      // The real total, as the card formats it.
+      (payText as jest.Mock).mockImplementation(
+        jest.requireActual('@app/services/offerPush/offerAlert').payText,
+      );
+    });
+
+    // Every Text on the alert screen, top to bottom.
+    const screenTexts = async (
+      data: Record<string, string>,
+    ): Promise<string[]> => {
+      (notifee.getInitialNotification as jest.Mock).mockResolvedValue({
+        notification: { id: data.deliveryId, data },
+      });
+      (displayedOfferAlerts as jest.Mock).mockResolvedValue([
+        { notificationId: data.deliveryId, data },
+      ]);
+      let tree!: renderer.ReactTestRenderer;
+      await act(async () => {
+        tree = renderer.create(<OfferAlertScreen />);
+        await Promise.resolve();
+      });
+      const texts = tree.root
+        .findAllByType('Text' as any)
+        .map(node => node.props.children)
+        .filter((child): child is string => typeof child === 'string');
+      tree.unmount();
+      return texts;
+    };
+
+    it('shows the total, then the distances, the minutes and the place, in that order', async () => {
+      const texts = await screenTexts(toNotificationData(offer, null));
+
+      expect(texts.slice(0, 4)).toEqual(['€6.50', DISTANCES, MINUTES, PLACE]);
+      // Then the time line; the offer's facts stop there.
+      expect(texts[4]).toBe('Waiting for your answer');
+    });
+
+    it('with routing down shows the total and the place only, like the card', async () => {
+      const texts = await screenTexts(
+        toNotificationData(
+          {
+            ...offer,
+            trip: {
+              toPickupMetres: null,
+              toDropoffMetres: null,
+              minutes: null,
+            },
+          },
+          null,
+        ),
+      );
+
+      expect(texts.slice(0, 3)).toEqual([
+        '€6.50',
+        PLACE,
+        'Waiting for your answer',
+      ]);
+      expect(texts.some(text => /km/.test(text))).toBe(false);
+      expect(texts.some(text => /About/.test(text))).toBe(false);
+    });
+
+    it('with one leg unknown shows only the known leg, and no minutes line when minutes is null', async () => {
+      const texts = await screenTexts(
+        toNotificationData(
+          {
+            ...offer,
+            trip: {
+              toPickupMetres: 1834,
+              toDropoffMetres: null,
+              minutes: null,
+            },
+          },
+          null,
+        ),
+      );
+
+      expect(texts.slice(0, 4)).toEqual([
+        '€6.50',
+        '1.8 km to the restaurant',
+        PLACE,
+        'Waiting for your answer',
+      ]);
+    });
+
+    it("never shows €/km, items, the customer's name or the quote's km", async () => {
+      const texts = await screenTexts({
+        ...toNotificationData(offer, null),
+        // Things the card never shows, even if they reached the alert's data.
+        distanceKm: '3.7',
+        customerName: 'Secret Customer',
+        orderItems: '2x Souvlaki',
+        items: '2x Souvlaki',
+        customerNotes: 'Door code 1234',
+      });
+
+      const all = texts.join('\n');
+      expect(all).not.toMatch(/\/\s*km/);
+      expect(all).not.toContain('3.7');
+      expect(all).not.toContain('Secret Customer');
+      expect(all).not.toContain('Souvlaki');
+      expect(all).not.toContain('Door code');
+      // The total is the only money on the screen.
+      expect(texts.filter(text => text.includes('€'))).toEqual(['€6.50']);
+    });
+
+    it("with routing down never falls back to the quote's km", async () => {
+      const texts = await screenTexts({
+        ...toNotificationData(
+          {
+            ...offer,
+            trip: {
+              toPickupMetres: null,
+              toDropoffMetres: null,
+              minutes: null,
+            },
+          },
+          null,
+        ),
+        distanceKm: '3.7',
+      });
+
+      expect(texts.slice(0, 3)).toEqual([
+        '€6.50',
+        PLACE,
+        'Waiting for your answer',
+      ]);
+      expect(texts.some(text => /km/.test(text))).toBe(false);
+    });
+
+    // The card (NewOrderCell) for the same trip: its total and its two trip
+    // lines, by testID, in the order it draws them.
+    const cardTexts = (trip: OfferTrip) => {
+      const order = {
+        id: 'order-card-1',
+        currencyCode: 'EUR',
+        totalCompensation: 650,
+        pickupBusinessName: 'Pizza Roma',
+        dropoffArea: 'Iasonos',
+        offerTrip: trip,
+      } as unknown as Order;
+      let tree!: renderer.ReactTestRenderer;
+      act(() => {
+        tree = renderer.create(
+          <NewOrderCell
+            order={order}
+            autoAcceptOrders={false}
+            onAccept={jest.fn()}
+            onDecline={jest.fn()}
+            millisRemaining={null}
+            totalMillis={null}
+            millisWaited={null}
+          />,
+        );
+      });
+      const total = tree.root.findAllByType('Text' as any)[0].props.children;
+      const lines = ['offer-trip-distances', 'offer-trip-minutes'].flatMap(
+        testID =>
+          tree.root
+            .findAllByType('Text' as any)
+            .filter(node => node.props.testID === testID)
+            .map(node => node.props.children as string),
+      );
+      act(() => tree.unmount());
+      return { total, lines };
+    };
+
+    it.each<[string, OfferTrip]>([
+      [
+        'all known',
+        { toPickupMetres: 1834, toDropoffMetres: 1012, minutes: 6 },
+      ],
+      [
+        'halves that round up',
+        { toPickupMetres: 1450, toDropoffMetres: 1850, minutes: 12 },
+      ],
+      ['short legs', { toPickupMetres: 49, toDropoffMetres: 50, minutes: 1 }],
+      [
+        'routing down',
+        { toPickupMetres: null, toDropoffMetres: null, minutes: null },
+      ],
+      [
+        'the restaurant leg only',
+        { toPickupMetres: 1450, toDropoffMetres: null, minutes: null },
+      ],
+      [
+        'the customer leg and minutes',
+        { toPickupMetres: null, toDropoffMetres: 2850, minutes: 9 },
+      ],
+    ])(
+      'uses the same words as the card for the same trip: %s',
+      async (_name, trip) => {
+        const card = cardTexts(trip);
+        // The card really drew its lines (one per known group), so the
+        // comparison below is not two empty lists.
+        expect(card.lines).toHaveLength(
+          (trip.toPickupMetres !== null || trip.toDropoffMetres !== null
+            ? 1
+            : 0) + (trip.minutes !== null ? 1 : 0),
+        );
+        expect(card.total).toBe('€6.50');
+        const texts = await screenTexts(
+          toNotificationData({ ...offer, trip }, null),
+        );
+
+        // The total first, as on the card.
+        expect(texts[0]).toBe(card.total);
+        // Then exactly the card's trip lines, in the card's order, then the place.
+        const placeAt = texts.indexOf(PLACE);
+        expect(placeAt).toBeGreaterThan(0);
+        expect(texts.slice(1, placeAt)).toEqual(card.lines);
+      },
+    );
   });
 });

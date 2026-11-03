@@ -10,11 +10,13 @@ import {
   cancelOfferAlert,
   displayedOfferAlerts,
   ensureOfferChannels,
+  offerAlertLines,
+  offerSummary,
   OFFERS_CHANNEL_ID,
   OFFERS_INSISTENT_CHANNEL_ID,
   showOfferAlert,
 } from './offerAlert';
-import { OfferAlertData } from './offerMessage';
+import { OfferAlertData, parseOfferMessage } from './offerMessage';
 
 describe('offerAlert (spec 0003, AC-3, AC-6, AC-7, Decisions 58.13, 58.15)', () => {
   const originalOS = Platform.OS;
@@ -36,8 +38,7 @@ describe('offerAlert (spec 0003, AC-3, AC-6, AC-7, Decisions 58.13, 58.15)', () 
     currencyCode: 'EUR',
     restaurantName: 'Pizza Roma',
     dropoffArea: 'Iasonos',
-    distanceKm: '2.4',
-    minutes: '12',
+    trip: { toPickupMetres: 1834, toDropoffMetres: 1012, minutes: 6 },
     insistent: false,
   };
 
@@ -262,5 +263,156 @@ describe('offerAlert (spec 0003, AC-3, AC-6, AC-7, Decisions 58.13, 58.15)', () 
     expect(notifee.cancelNotification).toHaveBeenCalledWith('del-1');
     expect(notifee.cancelNotification).toHaveBeenCalledWith('del-2');
     expect(notifee.cancelNotification).not.toHaveBeenCalledWith('other-notif');
+  });
+  // Row 100 (decision 100.2, spec 0019 AC-3): the alert words the trip like
+  // the offer card, in the card's order: the two km, the minutes, then where
+  // from and where to. Unknown figures are left out, as on the card.
+  describe('the alert says what the card says (row 100)', () => {
+    const DISTANCES = '1.8 km to the restaurant · 1.0 km to the customer';
+    const MINUTES = 'About 6 min';
+    const PLACE = 'Pizza Roma to Iasonos';
+    const noTrip = {
+      toPickupMetres: null,
+      toDropoffMetres: null,
+      minutes: null,
+    };
+
+    it('offerAlertLines: all figures known gives the card lines', () => {
+      expect(offerAlertLines(baseOffer)).toEqual({
+        distances: DISTANCES,
+        minutes: MINUTES,
+        place: PLACE,
+      });
+    });
+
+    it('offerSummary: all figures known, in the card order', () => {
+      expect(offerSummary(baseOffer)).toBe(
+        `${DISTANCES} · ${MINUTES} · ${PLACE}`,
+      );
+    });
+
+    it('routing down (all null): only the restaurant and the area', () => {
+      const offer = { ...baseOffer, trip: noTrip };
+      expect(offerAlertLines(offer)).toEqual({
+        distances: '',
+        minutes: '',
+        place: PLACE,
+      });
+      expect(offerSummary(offer)).toBe(PLACE);
+    });
+
+    it('one leg unknown: only the known leg, and no minutes when minutes is null', () => {
+      const pickupOnly = {
+        ...baseOffer,
+        trip: { toPickupMetres: 1834, toDropoffMetres: null, minutes: null },
+      };
+      expect(offerAlertLines(pickupOnly)).toEqual({
+        distances: '1.8 km to the restaurant',
+        minutes: '',
+        place: PLACE,
+      });
+      expect(offerSummary(pickupOnly)).toBe(
+        `1.8 km to the restaurant · ${PLACE}`,
+      );
+
+      const dropoffOnly = {
+        ...baseOffer,
+        trip: { toPickupMetres: null, toDropoffMetres: 1012, minutes: 6 },
+      };
+      expect(offerAlertLines(dropoffOnly)).toEqual({
+        distances: '1.0 km to the customer',
+        minutes: MINUTES,
+        place: PLACE,
+      });
+      expect(offerSummary(dropoffOnly)).toBe(
+        `1.0 km to the customer · ${MINUTES} · ${PLACE}`,
+      );
+    });
+
+    it('minutes known, both legs unknown: minutes then the place', () => {
+      const offer = {
+        ...baseOffer,
+        trip: { toPickupMetres: null, toDropoffMetres: null, minutes: 6 },
+      };
+      expect(offerSummary(offer)).toBe(`${MINUTES} · ${PLACE}`);
+    });
+
+    it('an empty area gives the restaurant alone', () => {
+      expect(offerAlertLines({ ...baseOffer, dropoffArea: '' }).place).toBe(
+        'Pizza Roma',
+      );
+      expect(
+        offerSummary({ ...baseOffer, dropoffArea: '', trip: noTrip }),
+      ).toBe('Pizza Roma');
+      expect(offerSummary({ ...baseOffer, dropoffArea: '' })).toBe(
+        `${DISTANCES} · ${MINUTES} · Pizza Roma`,
+      );
+    });
+
+    it('shows no €/km, items or customer name', () => {
+      const summary = offerSummary(baseOffer);
+      expect(summary).not.toMatch(/\/\s*km/);
+      expect(summary).not.toContain('€');
+      expect(summary).not.toMatch(/item/i);
+      expect(summary).not.toMatch(/customer name/i);
+    });
+
+    it('showOfferAlert: the body is the card lines in order, the title carries the total', async () => {
+      await showOfferAlert(baseOffer, Date.now(), 'full-screen');
+
+      const call = (notifee.displayNotification as jest.Mock).mock.calls[0][0];
+      expect(call.title).toBe('New offer: €5.50');
+      expect(call.body).toBe(`${DISTANCES} · ${MINUTES} · ${PLACE}`);
+    });
+
+    it('showOfferAlert with routing down: the body is the restaurant and area only', async () => {
+      await showOfferAlert(
+        { ...baseOffer, trip: noTrip },
+        Date.now(),
+        'heads-up',
+      );
+
+      const call = (notifee.displayNotification as jest.Mock).mock.calls[0][0];
+      expect(call.title).toBe('New offer: €5.50');
+      expect(call.body).toBe(PLACE);
+    });
+
+    it("a push with the quote's distanceKm never shows it, with or without the trip", async () => {
+      const push = {
+        type: 'NEW_DELIVERY_OFFER',
+        deliveryId: 'del-legacy-km',
+        offeredAt: '2026-10-26T10:00:00.000Z',
+        offerExpiresAt: '',
+        serverNow: '',
+        payTotal: '550',
+        currencyCode: 'EUR',
+        restaurantName: 'Pizza Roma',
+        dropoffArea: 'Iasonos',
+        distanceKm: '3.7',
+        insistent: '0',
+      };
+
+      for (const trip of [
+        { toPickupMetres: '', toDropoffMetres: '', minutes: '' },
+        { toPickupMetres: '1834', toDropoffMetres: '1012', minutes: '6' },
+      ]) {
+        (notifee.displayNotification as jest.Mock).mockClear();
+        const parsed = parseOfferMessage({ ...push, ...trip });
+        if (parsed?.kind !== 'offer') {
+          throw new Error('not an offer');
+        }
+        await showOfferAlert(parsed.offer, Date.now(), 'full-screen');
+
+        const call = (notifee.displayNotification as jest.Mock).mock
+          .calls[0][0];
+        const shown = `${call.title} ${call.body}`;
+        expect(shown).not.toContain('3.7');
+        expect(shown).not.toContain('3700');
+        expect(JSON.stringify(call.data)).not.toContain('3.7');
+        expect(call.body).toBe(
+          trip.minutes === '' ? PLACE : `${DISTANCES} · ${MINUTES} · ${PLACE}`,
+        );
+      }
+    });
   });
 });
