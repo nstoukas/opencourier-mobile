@@ -11,6 +11,13 @@ has the full reasoning and verification notes.
 
 ## Added
 
+### Every notification shows a restaurant's name as typed (row 105): `042f347`, `6d7197f`
+On Android the notification library reads a title and body as HTML, so a restaurant named `<b>Bold</b> & Co`
+lost its tags (row 100 found it on the offer alert). The cancelled job notice and the auto accept notice now
+escape the name through one helper (`notificationText`, Android only). Tests by a fresh Claude subagent, with a
+scan that fails if a notice carrying a restaurant's name is posted unescaped; reviewed by Fable (approve with
+nits); both notices seen on the emulator.
+
 ### Screen titles clear of the status bar (row 104): `20cbebf` to the Report Issue fix
 22 screens wrapped their content in React Native's own SafeAreaView, which keeps clear of the system bars only
 on iOS, so on Android their titles and back buttons sat under the status bar. One `ScreenSafeArea` wrapper
