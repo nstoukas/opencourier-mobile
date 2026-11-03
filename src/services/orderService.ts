@@ -138,20 +138,34 @@ const orderService = (client: UClient): OrderService => {
     const receivedAt = Date.now();
     const phoneNow = sentAt + (receivedAt - sentAt) / 2;
     const orders: Order[] = data.result.data;
-    // Only a job inside its free hand back window has an end to move; the
-    // others are returned as they came.
-    return orders.map(order =>
-      order.handBackUntil
-        ? {
-            ...order,
-            handBackUntilOnPhone: handBackUntilOnPhone(
-              order.handBackUntil,
-              data.result.serverNow,
-              phoneNow,
-            ),
-          }
-        : order,
-    );
+    // A job inside its free hand back window has its end moved onto the
+    // phone's clock, and a job with a ready time (spec 0023) its ready time;
+    // the same sum for both (`handBackUntilOnPhone` turns any server time into
+    // phone time). The others are returned as they came.
+    return orders.map(order => {
+      let shown = order;
+      if (order.handBackUntil) {
+        shown = {
+          ...shown,
+          handBackUntilOnPhone: handBackUntilOnPhone(
+            order.handBackUntil,
+            data.result.serverNow,
+            phoneNow,
+          ),
+        };
+      }
+      if (order.readyAt) {
+        shown = {
+          ...shown,
+          readyAtOnPhone: handBackUntilOnPhone(
+            order.readyAt,
+            data.result.serverNow,
+            phoneNow,
+          ),
+        };
+      }
+      return shown;
+    });
   };
 
   const getOrdersHistory = async (): Promise<Order[]> => {

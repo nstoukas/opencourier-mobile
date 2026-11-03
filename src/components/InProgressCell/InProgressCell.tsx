@@ -15,6 +15,7 @@ import { Button, ButtonType } from '@app/components/Button/Button';
 import { StageStrip } from '@app/components/StageStrip/StageStrip';
 import { JobNotesLine } from '@app/components/JobNotesLine/JobNotesLine';
 import { JobItemsLine } from '@app/components/JobItemsLine/JobItemsLine';
+import { ReadyLine } from '@app/components/ReadyLine/ReadyLine';
 import { PhoneIcon } from 'phosphor-react-native/src/icons/Phone';
 import { ChatTextIcon } from 'phosphor-react-native/src/icons/ChatText';
 import { NavigationArrowIcon } from 'phosphor-react-native/src/icons/NavigationArrow';
@@ -173,6 +174,12 @@ export const InProgressCell = ({
               </Text>
             ) : null}
           </View>
+          {/* Spec 0023 (AC-7): is the food ready yet? Only on the way to the
+              restaurant and while waiting there. */}
+          <ReadyLine
+            foodReadyAt={order.foodReadyAt}
+            readyAtOnPhone={order.readyAtOnPhone}
+          />
           <Text style={styles.secondary} numberOfLines={2}>
             {[restaurantName, restaurantAddress].filter(Boolean).join(' · ')}
           </Text>

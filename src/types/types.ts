@@ -358,6 +358,12 @@ export type Order = {
   // the job list (queryPersistence), which is harmless: home refetches on
   // focus and the server decides every hand back.
   handBackUntilOnPhone?: number | null;
+  // Spec 0023: the restaurant's ready promise and when it marked the food ready, as ISO text on the
+  // server's clock (null on orders made before ready times existed).
+  readyAt?: string | null;
+  foodReadyAt?: string | null;
+  // `readyAt` moved onto this phone's clock when the job list arrived. Not sent by the server.
+  readyAtOnPhone?: number | null;
 };
 
 // An offer's times in milliseconds on the phone's own clock (like Date.now()).

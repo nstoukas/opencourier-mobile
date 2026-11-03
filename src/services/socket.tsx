@@ -1,3 +1,5 @@
+import { parseJobReadyUpdate } from '@app/utilities/readySignals';
+import { showReadyNotice } from '@app/services/readyNotice/readyNotice';
 import useUser from '@app/hooks/useUser';
 import { services } from '@app/services/service';
 import { QueryKeys } from '@app/utilities/queryKeys';
@@ -104,6 +106,21 @@ const SocketProvider = ({ children }: Props) => {
           .then(() =>
             queryClient.invalidateQueries({ queryKey: [QueryKeys.user] }),
           );
+      },
+      // Spec 0023 (AC-6): the restaurant moved a held job's ready time or
+      // marked the food ready. A notice from the message itself, then the
+      // held jobs only (not the offers, history or the rider).
+      onJobReadyUpdated: (message: unknown) => {
+        const update = parseJobReadyUpdate(message);
+        if (!update) {
+          return;
+        }
+        showReadyNotice(update).catch(error =>
+          console.log('Could not show the ready notice', error),
+        );
+        queryClient.invalidateQueries({
+          queryKey: [QueryKeys.inProgressOrders],
+        });
       },
       // After any (re)connect, fetch what may have been sent while away.
       onConnected: () =>

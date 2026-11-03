@@ -6,6 +6,8 @@
 // Push never decides anything. It only shows, replaces or removes an alert
 // about an offer the server has already made, ended or recorded.
 
+import { parseJobReadyUpdate } from '@app/utilities/readySignals';
+import { showReadyNotice } from '@app/services/readyNotice/readyNotice';
 import { AppState } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 // `type` brings in only the TypeScript description of these, no code.
@@ -50,6 +52,16 @@ export const onRemoteMessage = async (
     ) {
       await alertNewCancelledJobs([{ id: deliveryId, pickupBusinessName: '' }]);
       queryClient.invalidateQueries({ queryKey: [QueryKeys.cancelledJobs] });
+    }
+    return;
+  }
+  // Spec 0023 (AC-6): a held job's ready time changed. The push carries the
+  // same fields as the live message, so the notice is worded from it.
+  if (message.data?.type === 'JOB_READY_UPDATED') {
+    const update = parseJobReadyUpdate(message.data);
+    if (update && (await AsyncStorage.getItem('token'))) {
+      await showReadyNotice(update);
+      queryClient.invalidateQueries({ queryKey: [QueryKeys.inProgressOrders] });
     }
     return;
   }

@@ -22,6 +22,8 @@ export const DELIVERY_STATUS_UPDATED_EVENT = 'DELIVERY_STATUS_UPDATED';
 // An offer this rider held ended on the server (spec 0002): it expired, the
 // rider went Offline, or an admin gave it to another rider.
 export const OFFER_ENDED_EVENT = 'OFFER_ENDED';
+// The restaurant moved a held job's ready time or marked the food ready (spec 0023).
+export const JOB_READY_UPDATED_EVENT = 'JOB_READY_UPDATED';
 
 // What the backend sends with OFFER_ENDED (backend `OfferEndedMessage`).
 export type OfferEndedMessage = {
@@ -92,6 +94,8 @@ export type LiveConnectionHandlers = {
   // An offer ended on the server; null when the message named no delivery.
   // Optional (the `?`) so a caller that shows no offers can leave it out.
   onOfferEnded?: (deliveryId: string | null) => void;
+  // A held job's ready time changed (spec 0023); the raw message, read by `parseJobReadyUpdate`.
+  onJobReadyUpdated?: (message: unknown) => void;
   // Runs on every (re)connect, so anything sent while the phone was away is
   // fetched again.
   onConnected: () => void;
@@ -145,6 +149,9 @@ export class LiveConnection {
     );
     socket.on(OFFER_ENDED_EVENT, (message: unknown) =>
       this.handlers.onOfferEnded?.(endedDeliveryId(message)),
+    );
+    socket.on(JOB_READY_UPDATED_EVENT, (message: unknown) =>
+      this.handlers.onJobReadyUpdated?.(message),
     );
   }
 
