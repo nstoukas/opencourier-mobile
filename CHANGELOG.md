@@ -11,6 +11,19 @@ has the full reasoning and verification notes.
 
 ## Added
 
+### Shifts: book, drop, swap, and a banner on home (row 78, spec 0027): `e76fbc8` to `5cc4115`
+- **The switch.** With the co-op's Shifts switch on, the side menu has Shifts.
+- **The Shifts screen.** Your shifts, with Drop (asks first), Offer swap and Withdraw swap. The next 14 days,
+  with Book, Take swap or Full, and the places left.
+- **The banner.** Home's top says "ON SHIFT until 23:00" or "FREE (no shift)" and redraws itself at the next
+  start or end.
+- **The reminder.** The phone schedules a local reminder 30 minutes before each shift, and cancels it when the
+  shift is dropped or swapped away, when Shifts go off, and at logout.
+- Every time shown is the server's Athens text; the schedule is kept on the phone for a restart with no signal.
+- Tests by a fresh Claude subagent while agy was out of quota: 1405 pass; put back by hand. Reviewed by Fable
+  (fixes in `babd27e`). Seen on the emulator: the banner, booking (its reminder scheduled) and dropping (the
+  reminder cancelled).
+
 ### Every notification shows a restaurant's name as typed (row 105): `042f347`, `6d7197f`
 On Android the notification library reads a title and body as HTML, so a restaurant named `<b>Bold</b> & Co`
 lost its tags (row 100 found it on the offer alert). The cancelled job notice and the auto accept notice now
