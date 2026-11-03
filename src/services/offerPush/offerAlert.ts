@@ -131,6 +131,13 @@ export const offerSummary = (
   offer: Pick<OfferAlertData, 'restaurantName' | 'dropoffArea' | 'trip'>,
 ): string => offerAlertLineList(offer).join(' · ');
 
+// On Android notifee reads the body and a BIGTEXT style's text as HTML: a
+// line break must be <br> (a '\n' shows as a space), and a restaurant's name
+// must not be able to add markup ("<b>" was swallowed on the emulator), so
+// &, < and > are written as entities.
+const escapeHtml = (line: string): string =>
+  line.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+
 export type AlertStyle = 'full-screen' | 'heads-up';
 
 // Posts (or replaces) the alert for one offer. `receivedAt` is when the push
@@ -165,7 +172,12 @@ export const showOfferAlert = async (
     title: i18next.t('translations:offer_alert_title', {
       pay: payText(offer),
     }),
-    body: offerSummary(offer),
+    // Android reads the body as HTML too, so it is escaped there; iOS shows it
+    // as plain text, where an entity would show as typed.
+    body:
+      Platform.OS === 'android'
+        ? escapeHtml(offerSummary(offer))
+        : offerSummary(offer),
     data: toNotificationData(offer, deadlineAt),
     android: {
       channelId: offer.insistent
@@ -176,7 +188,7 @@ export const showOfferAlert = async (
       // the one line body after about the second km (row 100 review).
       style: {
         type: AndroidStyle.BIGTEXT,
-        text: offerAlertLineList(offer).join('\n'),
+        text: offerAlertLineList(offer).map(escapeHtml).join('<br>'),
       },
       // PUBLIC, or the lock screen hides the text and the buttons. Only the
       // offer card's facts are in it (AC-10).
