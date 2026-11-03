@@ -25,6 +25,10 @@ import { RootScreen } from '@app/navigation/types';
 // co-op setting: it decides no pay and no assignment.
 export const SOS_SEND_EVERY_MS = 5000;
 
+// How long to wait before asking the server again whether this rider has an
+// active SOS, when the launch check got no answer (no signal at launch).
+export const SOS_ACTIVE_CHECK_RETRY_MS = 15000;
+
 // The EU emergency number (decision 73.3). Android lets no app call an
 // emergency number itself, so the dialer opens with it typed and the rider
 // taps Call. `tel:` needs no permission.
@@ -116,15 +120,17 @@ export const useSos = (courierId: string | undefined): boolean => {
       .catch(error => console.log('Could not send the SOS', error));
   }, [courierId]);
 
-  // At once when the SOS starts, reaches the server, or is ended by the rider.
+  // At once when an SOS starts (a new hold after an ended one included),
+  // reaches the server, or is ended by the rider.
   const exists = !!record;
+  const clientId = record?.clientId;
   const incidentId = record?.incidentId;
   const endKind = record?.end?.kind;
   useEffect(() => {
     if (exists) {
       send();
     }
-  }, [exists, incidentId, endKind, send]);
+  }, [exists, clientId, incidentId, endKind, send]);
 
   // Then every 5 s while anything of it is left on the phone.
   useEffect(() => {
@@ -135,13 +141,16 @@ export const useSos = (courierId: string | undefined): boolean => {
     return () => clearInterval(timer);
   }, [exists, send]);
 
-  // After a launch or a login (AC-12).
+  // After a launch or a login (AC-12). When the server cannot be asked (no
+  // signal at launch), it is asked again every 15 s until it answers, so
+  // sharing resumes once signal returns (row 73 review).
   useEffect(() => {
     if (!courierId) {
       return;
     }
     let cancelled = false;
-    (async () => {
+    let retry: ReturnType<typeof setTimeout> | undefined;
+    const check = async (): Promise<void> => {
       const kept = await loadSosRecord(courierId);
       if (kept) {
         if (!cancelled && isSharing(kept)) {
@@ -161,11 +170,21 @@ export const useSos = (courierId: string | undefined): boolean => {
       if (!cancelled) {
         openSosScreen();
       }
-    })().catch(error =>
-      console.log('Could not check for an active SOS', error),
-    );
+    };
+    const attempt = () => {
+      check().catch(error => {
+        console.log('Could not check for an active SOS', error);
+        if (!cancelled) {
+          retry = setTimeout(attempt, SOS_ACTIVE_CHECK_RETRY_MS);
+        }
+      });
+    };
+    attempt();
     return () => {
       cancelled = true;
+      if (retry) {
+        clearTimeout(retry);
+      }
     };
   }, [courierId]);
 

@@ -1,8 +1,9 @@
 import {
+  SosRecord,
   clearSos,
   dropSentSosPoints,
   dropSosDelivery,
-  loadSosRecord,
+  loadSosRecords,
   markSosStarted,
 } from './sosStore';
 import { SOS_NOT_ACTIVE_CODE, SosAnswer, SosService } from './sosService';
@@ -14,6 +15,16 @@ import { SOS_NOT_ACTIVE_CODE, SosAnswer, SosService } from './sosService';
 
 // The most positions in one request (the server refuses more).
 export const SOS_POINTS_PER_REQUEST = 120;
+
+// The oldest age the server takes for a tap or a position: 7 days. An older
+// one is sent as 7 days rather than refused, so a start kept a week without
+// signal still reaches the co-op instead of being tried forever (row 73
+// review). The server puts no point before the SOS's start anyway.
+export const SOS_MAX_AGE_MS = 7 * 24 * 60 * 60 * 1000;
+
+// How long ago `then` was by the phone's clock, within what the server takes.
+const ageOf = (now: number, then: number): number =>
+  Math.min(SOS_MAX_AGE_MS, Math.max(0, now - then));
 
 // What one send round ended with:
 // - 'idle': nothing to send, or everything went;
@@ -89,6 +100,11 @@ export const sendSos = (
   return sending;
 };
 
+// Every SOS kept for this rider, oldest first. One that is ended goes all the
+// way (start, positions, end) before the next one's start, so the server
+// never takes a new start while the last one is still active (it would answer
+// with that one). A round that must wait stops there; the outcome is the
+// newest SOS's.
 const round = async (
   courierId: string,
   api: SosService,
@@ -96,10 +112,38 @@ const round = async (
   now: () => number,
 ): Promise<SosSendOutcome> => {
   const loggedIn = () => currentCourierId() === courierId;
+  const clientIds = (await loadSosRecords(courierId)).map(
+    record => record.clientId,
+  );
+  let outcome: SosSendOutcome = 'idle';
+  for (const clientId of clientIds) {
+    if (!loggedIn()) {
+      return 'idle';
+    }
+    outcome = await sendOne(courierId, clientId, api, loggedIn, now);
+    if (outcome === 'noSignal' || outcome === 'retry') {
+      return outcome;
+    }
+  }
+  return outcome;
+};
+
+// The start, positions and end of the one SOS with this clientId.
+const sendOne = async (
+  courierId: string,
+  clientId: string,
+  api: SosService,
+  loggedIn: () => boolean,
+  now: () => number,
+): Promise<SosSendOutcome> => {
+  const find = async (): Promise<SosRecord | undefined> =>
+    (await loadSosRecords(courierId)).find(
+      record => record.clientId === clientId,
+    );
 
   // ---- The start ----
   for (;;) {
-    const record = await loadSosRecord(courierId);
+    const record = await find();
     if (!record || !loggedIn()) {
       return 'idle';
     }
@@ -108,7 +152,7 @@ const round = async (
     }
     const answer = await api.start({
       clientId: record.clientId,
-      tapAgeMs: Math.max(0, now() - record.heldAt),
+      tapAgeMs: ageOf(now(), record.heldAt),
       ...(record.deliveryId ? { deliveryId: record.deliveryId } : {}),
     });
     if (answer.kind === 'ok') {
@@ -116,16 +160,16 @@ const round = async (
       // A retried start whose SOS an admin has since closed: nothing is
       // shared for it any more, unless the rider's own end still waits.
       if (incident.state !== 'ACTIVE' && !record.end) {
-        await clearSos(courierId);
+        await clearSos(courierId, clientId);
         return 'endedByCoop';
       }
-      await markSosStarted(courierId, record.clientId, incident.id);
+      await markSosStarted(courierId, clientId, incident.id);
       break;
     }
     if (answer.kind === 'error' && !isTryAgain(answer) && record.deliveryId) {
       // The job is no longer the rider's (404) or the server will not take
       // it: the SOS itself must still go, so send it again without the job.
-      await dropSosDelivery(courierId);
+      await dropSosDelivery(courierId, clientId);
       continue;
     }
     // Never dropped: an SOS start waits until the server has it.
@@ -134,7 +178,7 @@ const round = async (
 
   // ---- The positions ----
   for (;;) {
-    const record = await loadSosRecord(courierId);
+    const record = await find();
     if (!record?.incidentId || !loggedIn()) {
       return 'idle';
     }
@@ -151,11 +195,11 @@ const round = async (
         ...(point.accuracyMetres !== undefined
           ? { accuracyMetres: point.accuracyMetres }
           : {}),
-        ageMs: Math.max(0, sentAt - point.takenAt),
+        ageMs: ageOf(sentAt, point.takenAt),
       })),
     );
     if (answer.kind === 'ok') {
-      await dropSentSosPoints(courierId, batch.length);
+      await dropSentSosPoints(courierId, clientId, batch);
       continue;
     }
     if (answer.kind === 'none' || isTryAgain(answer)) {
@@ -166,35 +210,35 @@ const round = async (
       answer.httpStatus === 404;
     if (notActive && !record.end) {
       // Ended by the co-op (or gone): stop, drop what waits (AC-6).
-      await clearSos(courierId);
+      await clearSos(courierId, clientId);
       return 'endedByCoop';
     }
     if (notActive) {
       // The rider's own end already landed: these can no longer be stored.
-      await dropSentSosPoints(courierId, record.points.length);
+      await dropSentSosPoints(courierId, clientId, record.points);
       break;
     }
     // A 400: the server refused this batch as a whole; it is dropped, never
     // sent again (spec 0022, API table).
-    await dropSentSosPoints(courierId, batch.length);
+    await dropSentSosPoints(courierId, clientId, batch);
   }
 
   // ---- The rider's end ----
-  const record = await loadSosRecord(courierId);
+  const record = await find();
   if (!record?.incidentId || !record.end || !loggedIn()) {
     return 'idle';
   }
   const answer = await api.end(
     record.incidentId,
     record.end.kind,
-    Math.max(0, now() - record.end.tappedAt),
+    ageOf(now(), record.end.tappedAt),
   );
   if (answer.kind === 'none' || isTryAgain(answer)) {
     return waitOutcome(answer);
   }
   // Taken (or a repeat), already closed by an admin (409), or gone (404):
   // either way nothing is left to send.
-  await clearSos(courierId);
+  await clearSos(courierId, clientId);
   return 'ended';
 };
 

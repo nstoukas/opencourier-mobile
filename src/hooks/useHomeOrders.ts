@@ -28,6 +28,8 @@ import {
 } from '@app/services/offerPush/offerAlert';
 import { playOfferSound } from '@app/services/offerPush/phone';
 import { announceAutoAccept } from '@app/services/offerPush/autoAccepted';
+import { useSosRecord } from '@app/hooks/useSos';
+import { isSharing } from '@app/services/sosStore';
 import { isHomeInFront } from '@app/navigation/navigationRef';
 
 // What one accept carries (spec 0020, AC-11). `automatic` is true only when
@@ -211,6 +213,13 @@ export const useHomeOrders = () => {
   ]);
 
   const { user } = useUser();
+  // While the rider's SOS is shared they take no job (decision 73.10): the
+  // server refuses the accept, so the phone does not send one. Auto accept
+  // skips the offer and it expires as usual (spec 0022, AC-7). A ref, so the
+  // offers effect below reads the latest value without rerunning on it.
+  const sosSharing = isSharing(useSosRecord(user?.id));
+  const sosSharingRef = useRef(sosSharing);
+  sosSharingRef.current = sosSharing;
   // The job steps tapped but not yet sent (spec 0009).
   const outboxItems = useOutboxItems();
 
@@ -261,6 +270,10 @@ export const useHomeOrders = () => {
   };
 
   const acceptOrderFn = (orderId: string) => {
+    if (sosSharingRef.current) {
+      Alert.alert(i18next.t('translations:sos_no_accept'));
+      return;
+    }
     // Only the first accept or decline for an offer is sent.
     if (answeredFromAlert(orderId) || !countdowns.claim(orderId)) {
       return;
@@ -293,7 +306,7 @@ export const useHomeOrders = () => {
       // so by itself (spec 0020, AC-11). The server never accepts on the
       // rider's behalf. Only ordinary offers exist, so every offer here is
       // one (AC-13); add ons (row 81) must be skipped here once they exist.
-      if (autoAccept) {
+      if (autoAccept && !sosSharingRef.current) {
         for (const order of offers) {
           if (
             !answeredFromAlert(order.id) &&

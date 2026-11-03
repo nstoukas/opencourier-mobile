@@ -222,6 +222,7 @@ export default {
     'Sharing your position stops now. The co-op sees it was a false alarm.',
   sos_confirm_yes: 'Yes, end SOS',
   sos_ended_by_coop: 'The co-op closed your SOS',
+  sos_no_accept: "You can't take a job during an SOS. Tap I'm safe first.",
   sos_dialer_failed: 'Could not open the dialer. Call 112 from your phone.',
   sos_logout_title: 'Your SOS is active',
   sos_logout_body:
