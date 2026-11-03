@@ -11,6 +11,13 @@ has the full reasoning and verification notes.
 
 ## Added
 
+### Drinks and sides first on the pickup checklist (row 103, spec 0028): `ea395c7` to `ce12144`
+- The items line reads "3 items · 2 drinks, 1 side". The sheet lists drinks, then sides, then the rest, with a
+  small Drink or Side pill, and ticks stay with their item. An order with no marks looks as before, and the
+  swipe never waits on the checklist.
+- Tests by a fresh Claude subagent while agy was out of quota: 1433 pass; put back by hand. Reviewed by Fable.
+  Seen on the emulator with a marked order.
+
 ### Shifts: book, drop, swap, and a banner on home (row 78, spec 0027): `e76fbc8` to `5cc4115`
 - **The switch.** With the co-op's Shifts switch on, the side menu has Shifts.
 - **The Shifts screen.** Your shifts, with Drop (asks first), Offer swap and Withdraw swap. The next 14 days,
