@@ -623,6 +623,13 @@ export default {
   picked_up_at: '{{restaurant}} · picked up {{time}}',
   items_count: '{{count}} item',
   items_count_plural: '{{count}} items',
+  // Spec 0028: drinks and sides on the pickup checklist.
+  items_drinks: '{{count}} drink',
+  items_drinks_plural: '{{count}} drinks',
+  items_sides: '{{count}} side',
+  items_sides_plural: '{{count}} sides',
+  item_kind_drink: 'Drink',
+  item_kind_side: 'Side',
   items_title: 'Items in the order',
   notes_title: 'Notes',
   notes_open: 'Open {{count}} note',

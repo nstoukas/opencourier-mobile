@@ -267,6 +267,8 @@ export type OrderItem = {
   price: number;
   weight: number;
   vatPercentage: number;
+  // Spec 0028: a drink or a side, marked by the restaurant; absent means neither.
+  kind?: 'DRINK' | 'SIDE';
 };
 
 export type Order = {
