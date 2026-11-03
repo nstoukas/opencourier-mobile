@@ -7,14 +7,19 @@ import { navigationRef } from '@app/navigation/navigationRef';
 import { RootScreen } from '@app/navigation/types';
 import {
   clearSos,
+  endSos,
   getSosRecord,
+  isSharing,
   loadSosRecord,
+  loadSosRecords,
+  markSosStarted,
   resetSosStoreForTests,
   startSos,
 } from '@app/services/sosStore';
 import * as sosSenderModule from '@app/services/sosSender';
 import {
   EMERGENCY_DIAL_URL,
+  SOS_ACTIVE_CHECK_RETRY_MS,
   SOS_SEND_EVERY_MS,
   beginSos,
   dialEmergency,
@@ -274,7 +279,7 @@ describe('useSos & beginSos (spec 0022, AC-3, AC-12)', () => {
 
       // Once the record is gone, no more rounds
       await act(async () => {
-        await clearSos('rider-1');
+        await clearSos('rider-1', 'c1');
       });
 
       act(() => {
@@ -308,6 +313,154 @@ describe('useSos & beginSos (spec 0022, AC-3, AC-12)', () => {
 
       expect(alertSpy).toHaveBeenCalledWith('The co-op closed your SOS');
       sendSosSpy.mockRestore();
+    });
+  });
+
+  // Row 73 review fix (AC-4): a hold after "I'm safe" whose end is still
+  // unsent starts a new SOS, which is shared.
+  describe('a new hold while the last end waits for signal', () => {
+    it('beginSos makes a new shared SOS with a new clientId and keeps the ended one; useSos shares again', async () => {
+      const sendSosSpy = jest
+        .spyOn(sosSenderModule, 'sendSos')
+        .mockResolvedValue('noSignal');
+      await startSos('rider-1', { clientId: 'c-old', heldAt: 1000 });
+      await markSosStarted('rider-1', 'c-old', 'inc-old');
+      await endSos('rider-1', { kind: 'safe', tappedAt: 2000 });
+
+      const { result } = renderHook(() => useSos('rider-1'));
+      expect(result.current).toBe(false);
+
+      await act(async () => {
+        await beginSos('rider-1', undefined);
+      });
+
+      const shown = getSosRecord('rider-1');
+      expect(shown?.clientId).not.toBe('c-old');
+      expect(shown?.incidentId).toBeUndefined();
+      expect(isSharing(shown)).toBe(true);
+      expect(result.current).toBe(true);
+      const all = await loadSosRecords('rider-1');
+      expect(all).toHaveLength(2);
+      expect(all[0].clientId).toBe('c-old');
+      expect(all[0].end?.kind).toBe('safe');
+      expect(openURLSpy).toHaveBeenCalledWith('tel:112');
+      sendSosSpy.mockRestore();
+    });
+
+    it('a hold while an SOS is still shared makes no second record', async () => {
+      await startSos('rider-1', { clientId: 'c-live', heldAt: 1000 });
+
+      await beginSos('rider-1', undefined);
+
+      const all = await loadSosRecords('rider-1');
+      expect(all.map(record => record.clientId)).toEqual(['c-live']);
+    });
+  });
+
+  // Row 73 review fix (AC-12): the launch check is retried every 15 s when
+  // the server cannot be asked.
+  describe('launch check retry when GET sos/active fails', () => {
+    const flush = async () => {
+      await act(async () => {
+        for (let i = 0; i < 10; i++) {
+          await Promise.resolve();
+        }
+      });
+    };
+    const advance = async (ms: number) => {
+      await act(async () => {
+        jest.advanceTimersByTime(ms);
+      });
+      await flush();
+    };
+
+    it('is 15 s', () => {
+      expect(SOS_ACTIVE_CHECK_RETRY_MS).toBe(15000);
+    });
+
+    it('asks again after 15 s (not before), keeps asking until it answers, and resumes an active SOS found on a retry', async () => {
+      const sendSosSpy = jest
+        .spyOn(sosSenderModule, 'sendSos')
+        .mockResolvedValue('idle');
+      const getActive = services.sosService.getActive as jest.Mock;
+      getActive
+        .mockRejectedValueOnce(new Error('no signal'))
+        .mockRejectedValueOnce(new Error('no signal'))
+        .mockResolvedValueOnce({
+          id: 'inc-found',
+          state: 'ACTIVE',
+          deliveryId: null,
+          startedAt: '2026-11-03T00:00:00.000Z',
+        });
+
+      const { result } = renderHook(() => useSos('rider-1'));
+      await flush();
+      expect(getActive).toHaveBeenCalledTimes(1);
+
+      await advance(SOS_ACTIVE_CHECK_RETRY_MS - 1);
+      expect(getActive).toHaveBeenCalledTimes(1);
+      await advance(1);
+      expect(getActive).toHaveBeenCalledTimes(2);
+      expect(navigateSpy).not.toHaveBeenCalled();
+
+      await advance(SOS_ACTIVE_CHECK_RETRY_MS);
+      expect(getActive).toHaveBeenCalledTimes(3);
+      expect((await loadSosRecord('rider-1'))?.incidentId).toBe('inc-found');
+      expect(navigateSpy).toHaveBeenCalledWith(RootScreen.Sos);
+      expect(result.current).toBe(true);
+
+      // It answered: no more checks.
+      await advance(SOS_ACTIVE_CHECK_RETRY_MS * 3);
+      expect(getActive).toHaveBeenCalledTimes(3);
+      sendSosSpy.mockRestore();
+    });
+
+    it('stops asking once the server answers with no active SOS', async () => {
+      const getActive = services.sosService.getActive as jest.Mock;
+      getActive
+        .mockRejectedValueOnce(new Error('no signal'))
+        .mockResolvedValueOnce(null);
+
+      renderHook(() => useSos('rider-1'));
+      await flush();
+      await advance(SOS_ACTIVE_CHECK_RETRY_MS);
+      expect(getActive).toHaveBeenCalledTimes(2);
+
+      await advance(SOS_ACTIVE_CHECK_RETRY_MS * 3);
+      expect(getActive).toHaveBeenCalledTimes(2);
+      expect(navigateSpy).not.toHaveBeenCalled();
+    });
+
+    it('does not retry after unmount', async () => {
+      const getActive = services.sosService.getActive as jest.Mock;
+      getActive.mockRejectedValue(new Error('no signal'));
+
+      const { unmount } = renderHook(() => useSos('rider-1'));
+      await flush();
+      expect(getActive).toHaveBeenCalledTimes(1);
+
+      unmount();
+      await advance(SOS_ACTIVE_CHECK_RETRY_MS * 3);
+      expect(getActive).toHaveBeenCalledTimes(1);
+      getActive.mockReset();
+    });
+
+    it('does not retry after logout (courierId becomes undefined)', async () => {
+      const getActive = services.sosService.getActive as jest.Mock;
+      getActive.mockRejectedValue(new Error('no signal'));
+
+      const { rerender } = renderHook(
+        ({ courierId }: { courierId: string | undefined }) => useSos(courierId),
+        { initialProps: { courierId: 'rider-1' as string | undefined } },
+      );
+      await flush();
+      expect(getActive).toHaveBeenCalledTimes(1);
+
+      rerender({ courierId: undefined });
+      await advance(SOS_ACTIVE_CHECK_RETRY_MS * 3);
+      expect(getActive).toHaveBeenCalledTimes(1);
+      expect(navigateSpy).not.toHaveBeenCalled();
+      getActive.mockReset();
     });
   });
 });

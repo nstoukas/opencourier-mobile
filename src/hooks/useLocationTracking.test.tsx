@@ -1,6 +1,5 @@
 import React from 'react';
 import {
-  render,
   renderHook,
   act,
   cleanup,
@@ -11,14 +10,12 @@ import notifee from '@notifee/react-native';
 import '@app/localization/i18n';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import Geolocation from 'react-native-geolocation-service';
-import { Polyline } from 'react-native-maps';
-import { Order, User, UserStatus } from '@app/types/types';
+import { User, UserStatus } from '@app/types/types';
 import { OrderStatus } from '@app/types/enums';
 import { TrackingMode, WATCH_OPTIONS } from '@app/utilities/locationTracking';
 import { QueryKeys } from '@app/utilities/queryKeys';
 import { stopOnlineService } from '@app/services/onlineService';
 import * as sosStore from '@app/services/sosStore';
-import useUser from '@app/hooks/useUser';
 import { getOwnPosition, setOwnPosition } from '@app/services/ownPosition';
 import { useLocationTracking } from './useLocationTracking';
 
@@ -987,6 +984,55 @@ describe('useLocationTracking (Row 67, Clauses 1, 2, 3, 4)', () => {
 
       addSosPointSpy.mockRestore();
       (Date.now as unknown as jest.SpyInstance).mockRestore();
+    });
+
+    it("a throttled fix writes neither setUserLocation nor the user cache's currentLocation (AC-13)", async () => {
+      const addSosPointSpy = jest
+        .spyOn(sosStore, 'addSosPoint')
+        .mockResolvedValue(undefined);
+      const startUser: User = {
+        id: 'rider-1',
+        status: UserStatus.Online,
+        currentLocation: { latitude: 39.0, longitude: 22.0 },
+      } as User;
+      mockGetUser.mockResolvedValue(startUser);
+      queryClient.setQueryData([QueryKeys.user], startUser);
+
+      renderHook(() => useLocationTracking(onlineUser, true, true), {
+        wrapper: createWrapper(),
+      });
+      expect(watchCallback).toBeDefined();
+
+      // The first fix goes out as the ordinary location, cache included.
+      const nowSpy = jest.spyOn(Date, 'now').mockReturnValue(10000);
+      act(() => {
+        watchCallback!({
+          coords: { latitude: 39.3622, longitude: 22.9425, accuracy: 5 },
+          timestamp: 10000,
+        });
+      });
+      expect(mockSetUserLocation).toHaveBeenCalledTimes(1);
+      expect(
+        queryClient.getQueryData<User>([QueryKeys.user])?.currentLocation,
+      ).toEqual({ latitude: 39.3622, longitude: 22.9425 });
+
+      // 5 s and about 10 m later: an SOS point, but throttled as ordinary.
+      nowSpy.mockReturnValue(15000);
+      act(() => {
+        watchCallback!({
+          coords: { latitude: 39.36229, longitude: 22.9425, accuracy: 5 },
+          timestamp: 15000,
+        });
+      });
+
+      expect(addSosPointSpy).toHaveBeenCalledTimes(2);
+      expect(mockSetUserLocation).toHaveBeenCalledTimes(1);
+      expect(
+        queryClient.getQueryData<User>([QueryKeys.user])?.currentLocation,
+      ).toEqual({ latitude: 39.3622, longitude: 22.9425 });
+
+      addSosPointSpy.mockRestore();
+      nowSpy.mockRestore();
     });
   });
 });
