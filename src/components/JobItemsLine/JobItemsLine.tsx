@@ -9,7 +9,7 @@ import { CaretRightIcon } from 'phosphor-react-native/src/icons/CaretRight';
 import { JobSheet } from '@app/components/JobSheet/JobSheet';
 import { OrderItem } from '@app/types/types';
 import { itemsDrinksFirst, kindCounts } from '@app/utilities/itemKinds';
-import { color, control, space, typeScale } from '@app/styles/theme';
+import { color, control, radius, space, typeScale } from '@app/styles/theme';
 
 // Ticks per delivery, in memory only: they are never sent (value 5) and never
 // block the "Picked up" swipe. Kept outside the component so moving between
@@ -87,7 +87,8 @@ export const JobItemsLine = ({ deliveryId, items }: Props) => {
                       ? `${item.quantity} × ${item.name}`
                       : item.name}
                   </Text>
-                  {item.kind ? (
+                  {/* Only the two known marks; anything else shows no pill (row 103 tests). */}
+                  {item.kind === 'DRINK' || item.kind === 'SIDE' ? (
                     <Text style={styles.kind} testID={`job-item-kind-${index}`}>
                       {t(
                         item.kind === 'DRINK'
@@ -145,7 +146,7 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: color['primary-foreground'],
     backgroundColor: color.primary,
-    borderRadius: 999,
+    borderRadius: radius.full,
     paddingHorizontal: space['2'],
     overflow: 'hidden',
   },
