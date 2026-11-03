@@ -1,10 +1,15 @@
 import React from 'react';
+import { Alert } from 'react-native';
 import renderer, { act } from 'react-test-renderer';
+import { waitFor } from '@testing-library/react-native';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { SideMenuItem } from '@app/types/types';
 import { DrawerScreens } from '@app/navigation/drawer/types';
 import { useJobContact } from '@app/hooks/useJobContact';
 import '@app/localization/i18n';
+import { services } from '@app/services/service';
+import { syncShiftReminders } from '@app/services/shifts/shiftReminder';
+import * as jobStepOutbox from '@app/services/jobStepOutbox';
 
 // The same native and hook mocks as SideMenu.test.tsx, plus the co-op's switch (useJobContact).
 jest.mock('@react-native-async-storage/async-storage', () =>
@@ -56,6 +61,10 @@ jest.mock('@app/hooks/useInstance', () => () => ({
 
 jest.mock('@app/hooks/useJobContact', () => ({
   useJobContact: jest.fn(),
+}));
+
+jest.mock('@app/services/shifts/shiftReminder', () => ({
+  syncShiftReminders: jest.fn(() => Promise.resolve()),
 }));
 
 import { SideMenu } from './SideMenu';
@@ -148,5 +157,91 @@ describe('SideMenu Shifts item (spec 0027, AC-1, AC-10)', () => {
     contact({ dispatchPhoneNumber: null, shiftsEnabled: true });
     items();
     expect(useJobContact).toHaveBeenCalledWith(false);
+  });
+  describe('logout cancels the shift reminders (row 78 review)', () => {
+    const logOut = async () => {
+      const alertSpy = jest.spyOn(Alert, 'alert').mockImplementation(() => {});
+      jest.spyOn(jobStepOutbox, 'waitingCount').mockResolvedValue(0);
+      const order: string[] = [];
+      (syncShiftReminders as jest.Mock).mockImplementation(
+        (bookings: unknown[], offset: number) => {
+          order.push(`sync:${JSON.stringify(bookings)}:${offset}`);
+          return Promise.resolve();
+        },
+      );
+      (services.logout as jest.Mock).mockImplementation(() => {
+        order.push('logout');
+      });
+      let component: renderer.ReactTestRenderer;
+      act(() => {
+        component = renderer.create(
+          <QueryClientProvider client={queryClient}>
+            <SideMenu {...({ navigation } as any)} />
+          </QueryClientProvider>,
+        );
+      });
+      const logoutItem = component!.root
+        .findAllByType(SideMenuItemPlain)
+        .find(item => item.props.item === SideMenuItem.Logout);
+      act(() => {
+        logoutItem!.props.onPress(SideMenuItem.Logout);
+      });
+      await waitFor(() => expect(alertSpy).toHaveBeenCalledTimes(1));
+      const yes = (alertSpy.mock.calls[0][2] as any[]).find(
+        button => button.text === 'Yes',
+      );
+      await act(async () => {
+        await yes.onPress();
+      });
+      alertSpy.mockRestore();
+      return order;
+    };
+
+    afterEach(() => {
+      jest.restoreAllMocks();
+    });
+
+    it('with Shifts on, logging out syncs the reminders with [] (cancels them all) before the session ends', async () => {
+      contact({ dispatchPhoneNumber: null, shiftsEnabled: true });
+      const order = await logOut();
+      expect(syncShiftReminders).toHaveBeenCalledWith([], 0);
+      expect(order).toEqual(['sync:[]:0', 'logout']);
+    });
+
+    it('with Shifts off too: a reminder left from before is still cancelled', async () => {
+      contact({ dispatchPhoneNumber: null, shiftsEnabled: false });
+      const order = await logOut();
+      expect(syncShiftReminders).toHaveBeenCalledWith([], 0);
+      expect(order.indexOf('sync:[]:0')).toBeLessThan(order.indexOf('logout'));
+    });
+
+    it('a failed cancel does not stop the logout', async () => {
+      contact({ dispatchPhoneNumber: null, shiftsEnabled: true });
+      (syncShiftReminders as jest.Mock).mockRejectedValue(new Error('notifee'));
+      const alertSpy = jest.spyOn(Alert, 'alert').mockImplementation(() => {});
+      jest.spyOn(jobStepOutbox, 'waitingCount').mockResolvedValue(0);
+      let component: renderer.ReactTestRenderer;
+      act(() => {
+        component = renderer.create(
+          <QueryClientProvider client={queryClient}>
+            <SideMenu {...({ navigation } as any)} />
+          </QueryClientProvider>,
+        );
+      });
+      act(() => {
+        component!.root
+          .findAllByType(SideMenuItemPlain)
+          .find(item => item.props.item === SideMenuItem.Logout)!
+          .props.onPress(SideMenuItem.Logout);
+      });
+      await waitFor(() => expect(alertSpy).toHaveBeenCalledTimes(1));
+      const yes = (alertSpy.mock.calls[0][2] as any[]).find(
+        button => button.text === 'Yes',
+      );
+      await act(async () => {
+        await yes.onPress();
+      });
+      expect(services.logout).toHaveBeenCalledTimes(1);
+    });
   });
 });

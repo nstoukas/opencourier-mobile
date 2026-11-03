@@ -18,6 +18,13 @@ import type {
 } from '@app/services/shifts/shiftsApi';
 import { ShiftsScreen } from './Shifts';
 
+// The screen asks whether it is in front (the drawer keeps it mounted), as Home does.
+let mockIsFocused = true;
+jest.mock('@react-navigation/native', () => ({
+  ...jest.requireActual('@react-navigation/native'),
+  useIsFocused: () => mockIsFocused,
+}));
+
 jest.mock('@app/hooks/useShifts', () => ({
   useShifts: jest.fn(),
 }));
@@ -98,6 +105,7 @@ describe('ShiftsScreen (spec 0027, AC-10)', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
+    mockIsFocused = true;
     queryClient = new QueryClient({
       // gcTime Infinity schedules no garbage collection timer, so Jest can exit when the file is done.
       defaultOptions: {
@@ -135,6 +143,20 @@ describe('ShiftsScreen (spec 0027, AC-10)', () => {
     expect(
       row('my-shift-mine-1').getByText('You can drop it until 07:00 today.'),
     ).toBeTruthy();
+  });
+
+  it('polls only while in front: passes its own focus to useShifts (row 78 review)', () => {
+    show([], []);
+    const { rerender } = renderScreen();
+    expect(useShifts).toHaveBeenLastCalledWith(true);
+    mockIsFocused = false;
+    rerender(
+      <QueryClientProvider client={queryClient}>
+        <ShiftsScreen navigation={navigation} route={{} as any} />
+      </QueryClientProvider>,
+    );
+    expect(useShifts).toHaveBeenLastCalledWith(false);
+    expect(useShifts).not.toHaveBeenCalledWith(undefined);
   });
 
   it('shows the empty sentences when there is nothing', () => {

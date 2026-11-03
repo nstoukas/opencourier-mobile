@@ -122,6 +122,55 @@ describe('useShifts (spec 0027, AC-1, AC-9)', () => {
     expect(getsOf('shifts')).toBe(0);
   });
 
+  it('with Shifts on, no reminder sync before the schedule has been read, and one once it arrives (row 78 review)', async () => {
+    let answer: (value: unknown) => void = () => {};
+    shiftsAnswer = () =>
+      new Promise(resolve => {
+        answer = resolve;
+      });
+    const { result } = renderHook(() => useShifts(true), { wrapper });
+    await waitFor(() => expect(result.current.shiftsOn).toBe(true));
+    await waitFor(() => expect(getsOf('shifts')).toBe(1));
+    await act(async () => {
+      await new Promise(resolve => setTimeout(resolve, 20));
+    });
+    // Nothing known yet: in particular no sync with [] that would cancel every reminder.
+    expect(syncShiftReminders).not.toHaveBeenCalled();
+
+    await act(async () => {
+      answer({ data: { result: schedule } });
+    });
+    await waitFor(() => expect(syncShiftReminders).toHaveBeenCalledTimes(1));
+    expect(syncShiftReminders).toHaveBeenCalledWith(
+      [myBooking],
+      result.current.data!.clockOffsetMs,
+    );
+  });
+
+  it('with Shifts on, a failed first read keeps the reminders (no sync at all)', async () => {
+    shiftsAnswer = () => Promise.reject(new AxiosError('Network Error'));
+    const { result } = renderHook(() => useShifts(true), { wrapper });
+    await waitFor(() => expect(result.current.error).toBeTruthy());
+    await act(async () => {
+      await new Promise(resolve => setTimeout(resolve, 20));
+    });
+    expect(result.current.shiftsOn).toBe(true);
+    expect(syncShiftReminders).not.toHaveBeenCalled();
+  });
+
+  it('with Shifts off, syncs [] with offset 0 even with an old schedule in the cache', async () => {
+    queryClient.setQueryData([QueryKeys.shifts], {
+      ...schedule,
+      clockOffsetMs: 1234,
+    });
+    contact = { dispatchPhoneNumber: null, shiftsEnabled: false };
+    renderHook(() => useShifts(true), { wrapper });
+    await waitFor(() => expect(syncShiftReminders).toHaveBeenCalled());
+    for (const call of (syncShiftReminders as jest.Mock).mock.calls) {
+      expect(call).toEqual([[], 0]);
+    }
+  });
+
   it('while contact has not answered yet: no schedule request and no reminder sync', async () => {
     contact = new Promise<never>(() => {});
     const { result } = renderHook(() => useShifts(true), { wrapper });

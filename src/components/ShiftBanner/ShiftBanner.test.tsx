@@ -77,13 +77,15 @@ describe('ShiftBanner (spec 0027, AC-8)', () => {
     expect(screen.queryByText(/ON SHIFT/)).toBeNull();
   });
 
-  it('reads "FREE (no shift)" with Shifts on and no data yet', () => {
+  it('shows nothing with Shifts on and no schedule read yet, rather than a FREE that may be wrong (row 78 review)', () => {
     (useShifts as jest.Mock).mockReturnValue({
       shiftsOn: true,
       data: undefined,
     });
-    render(<ShiftBanner />);
-    expect(screen.getByText('FREE (no shift)')).toBeTruthy();
+    const { toJSON } = render(<ShiftBanner />);
+    expect(toJSON()).toBeNull();
+    expect(screen.queryByText('FREE (no shift)')).toBeNull();
+    expect(screen.queryByTestId('shift-banner')).toBeNull();
   });
 
   it('reads "ON SHIFT until {endTime}" during a booking, with the server\'s text', () => {
