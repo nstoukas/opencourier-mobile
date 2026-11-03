@@ -37,7 +37,7 @@ describe('JobItemsLine (spec 0021, AC-7)', () => {
   });
 
   it('renders compact line with items count and opens sheet on press', () => {
-    const { getByTestId, getByText } = render(
+    const { getByTestId, getByText, queryByText } = render(
       <JobItemsLine deliveryId="del-1" items={sampleItems} />,
     );
 
@@ -51,7 +51,9 @@ describe('JobItemsLine (spec 0021, AC-7)', () => {
 
     expect(getByTestId('job-items-sheet')).toBeTruthy();
     expect(getByText('2 × Cheeseburger')).toBeTruthy();
-    expect(getByText('Large')).toBeTruthy();
+    // Spec 0028: with more than one line sent, the size is the order's, not the
+    // first line's, so the sheet no longer shows it.
+    expect(queryByText('Large')).toBeNull();
     expect(getByText('French Fries')).toBeTruthy();
   });
 
