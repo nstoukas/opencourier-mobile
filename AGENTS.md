@@ -95,4 +95,9 @@ the error count is above `typecheck-baseline.json`, and lowers the file when the
   never sent). Never show `pickupReadyAt` as the pickup time: it is the restaurant's planned ready time from the quote; the
   card reads the rider's own swipe from `pickupTimes`.
 
+- The SOS store (`src/services/sosStore.ts`, spec 0022) keeps a list per rider, oldest first: at most the newest is shared,
+  the others are ended and only wait to be sent. `sosSender` sends each one whole (start, points, end) before the next start,
+  because the server answers a new start with the rider's still active SOS. Screens read the newest. Every age sent is capped
+  at 7 days. While the newest is shared the phone sends no accept and auto accept skips offers (decision 73.10).
+
 _Drafted by /audit from the repo, worth a quick human pass. Edit freely: once a line stops matching this draft, later runs treat it as curated and will flag rather than overwrite it._

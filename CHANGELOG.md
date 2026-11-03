@@ -11,6 +11,27 @@ has the full reasoning and verification notes.
 
 ## Added
 
+### SOS: hold 3 s to call 112 and alert the co-op (row 73, spec 0022): `53772f5` to `6ec125e`
+No native rebuild needed. Needs the backend's row 73.
+- **The pill.** A red SOS pill sits at the top of Home whenever the rider is online or holds a job.
+  A 3 s hold (a ring fills; letting go earlier does nothing) opens the dialer with 112 typed (Android
+  lets no app call an emergency number itself) and the SOS screen under it.
+- **The co-op is told, even with no signal.** The SOS is written to the phone first and sent from
+  there: the start, then positions every 5 s (also with the dialer or another app in front, under a
+  standing "SOS active" notification), then the rider's "I'm safe" or "False alarm". Each keeps its
+  true time. A hold after an "I'm safe" that is still waiting for signal starts a new SOS, sent after
+  the first one ends.
+- **Back and restart.** Home shows a red "SOS active" banner in place of the pill; a force stop or a
+  new login reopens the SOS screen and resumes sharing (asking the server again every 15 s if it
+  cannot be reached at launch). Logging out asks first and keeps anything not yet sent.
+- **No job during an SOS.** Accept answers "You can't take a job during an SOS. Tap I'm safe first.",
+  and auto accept skips offers, so the offer simply expires.
+- **Value 5.** Positions go to the SOS only, sharing stops the moment it ends, and dispatch gets no
+  finer location than the rider's ordinary mode gives it.
+- Tests by agy (`e5268fa`, `b3658ac`) and, while agy was out of quota, by a fresh Claude subagent
+  (`6ec125e`): 1201 pass; put back by hand each round. Reviewed by Fable (changes requested, its
+  major fixed in `6ba2272`). Verified live on the emulator.
+
 ### Real earnings, down to each delivery — `2da05fd`
 - The Earnings screen used to show hard-coded test data. It now reads the backend's
   courier earnings endpoints.
