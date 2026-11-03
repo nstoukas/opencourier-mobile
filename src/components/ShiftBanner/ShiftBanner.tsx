@@ -40,7 +40,8 @@ export const ShiftBanner = ({ inFront = true }: Props) => {
     return () => clearTimeout(timer);
   }, [nextChange, serverNow]);
 
-  if (!shiftsOn) {
+  // Off, or not read yet: say nothing rather than a FREE that may be wrong (row 78 review).
+  if (!shiftsOn || !data) {
     return null;
   }
   return (

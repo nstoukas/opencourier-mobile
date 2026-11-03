@@ -47,15 +47,22 @@ export const useShifts = (inFront: boolean = true) => {
     }
   }, [error, queryClient]);
 
-  // The reminders follow the bookings; with shifts off there are none.
+  // The reminders follow the bookings; with shifts off there are none. Before the schedule has been read
+  // nothing is known, so nothing is cancelled (row 78 review): a failed first read keeps the reminders.
   useEffect(() => {
     if (!contact) {
       return;
     }
-    void syncShiftReminders(
-      shiftsOn ? data?.myBookings ?? [] : [],
-      data?.clockOffsetMs ?? 0,
-    ).catch(() => undefined);
+    if (!shiftsOn) {
+      void syncShiftReminders([], 0).catch(() => undefined);
+      return;
+    }
+    if (!data) {
+      return;
+    }
+    void syncShiftReminders(data.myBookings, data.clockOffsetMs).catch(
+      () => undefined,
+    );
   }, [contact, shiftsOn, data]);
 
   return { ...query, shiftsOn };

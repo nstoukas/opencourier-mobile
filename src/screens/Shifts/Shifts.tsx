@@ -9,6 +9,7 @@ import {
 } from 'react-native';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
+import { useIsFocused } from '@react-navigation/native';
 import { ScreenSafeArea } from '@app/components/ScreenSafeArea/ScreenSafeArea';
 import { BackNavButton } from '@app/components/BackNavButton/BackNavButton';
 import { Button, ButtonType } from '@app/components/Button/Button';
@@ -39,7 +40,9 @@ type ShiftRequest =
 export const ShiftsScreen = ({ navigation }: Props) => {
   const { t } = useTranslation();
   const queryClient = useQueryClient();
-  const { data, isFetching, isLoading, refetch } = useShifts(true);
+  // The drawer keeps this screen mounted: it polls only while in front (row 78 review).
+  const isFocused = useIsFocused();
+  const { data, isFetching, isLoading, refetch } = useShifts(isFocused);
   const [message, setMessage] = useState<string | null>(null);
 
   const mutation = useMutation({

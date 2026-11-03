@@ -31,6 +31,7 @@ import { clearSavedQueries } from '@app/services/queryPersistence';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import useUser from '@app/hooks/useUser';
 import { useJobContact } from '@app/hooks/useJobContact';
+import { syncShiftReminders } from '@app/services/shifts/shiftReminder';
 import { useQueryClient } from '@tanstack/react-query';
 import { LOGOUT_OFFLINE_TIMEOUT_MS } from '@app/utilities/constants';
 import { services } from '@app/services/service';
@@ -189,6 +190,8 @@ export const SideMenu = ({ navigation }: Props) => {
     ]);
     // Nothing may keep ringing on a phone nobody is logged in on.
     await cancelAllOfferAlerts();
+    // Nor remind anyone of this rider's shifts (spec 0027, row 78 review).
+    await syncShiftReminders([], 0).catch(() => undefined);
     // An active SOS stops being shared (spec 0022, AC-12); a start the
     // server has not had yet waits for this rider's next login.
     if (user?.id) {
