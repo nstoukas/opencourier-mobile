@@ -11,6 +11,13 @@ has the full reasoning and verification notes.
 
 ## Added
 
+### Screen titles clear of the status bar (row 104): `20cbebf` to the Report Issue fix
+22 screens wrapped their content in React Native's own SafeAreaView, which keeps clear of the system bars only
+on iOS, so on Android their titles and back buttons sat under the status bar. One `ScreenSafeArea` wrapper
+(react-native-safe-area-context) now pads the top on Android and keeps iOS exactly as it was. Tests by a fresh
+Claude subagent (`aaa4ac8`, including a guard that no file goes back to React Native's SafeAreaView); reviewed
+by Fable (approve with nits). Seen on the emulator on 12 screens.
+
 ### The offer alert shows what the card shows (row 100): `bd9f219` to `4d2e58a`
 No native rebuild needed. Needs the backend's row 100.
 - **Same figures, same order, same words.** The alert and the full screen offer read "1.8 km to the
