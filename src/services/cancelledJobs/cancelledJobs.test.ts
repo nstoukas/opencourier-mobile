@@ -463,5 +463,45 @@ describe('cancelledJobs service (spec 0015, AC-7, AC-8, AC-12, decisions 32.9, 3
         }),
       );
     });
+
+    // Row 105: notifee reads an Android notification's body as HTML, so a restaurant's name is
+    // escaped there and shows exactly as typed; iOS shows plain text, so it is left alone.
+    it('escapes the restaurant name in the body on Android (row 105)', async () => {
+      Platform.OS = 'android';
+      await alertNewCancelledJobs([
+        {
+          id: 'del-html-android',
+          pickupBusinessName: '<b>Bold</b> & Co',
+          cancelledBy: 'COOP',
+        },
+      ]);
+
+      const call = (notifee.displayNotification as jest.Mock).mock.calls.find(
+        args => args[0]?.id === 'cancelled-del-html-android',
+      );
+      expect(call).toBeDefined();
+      expect(call[0].body).toContain('&lt;b&gt;Bold&lt;/b&gt; &amp; Co');
+      expect(call[0].body).toBe(
+        '&lt;b&gt;Bold&lt;/b&gt; &amp; Co: cancelled by the co-op.',
+      );
+      expect(call[0].body).not.toContain('<b>');
+    });
+
+    it('leaves the restaurant name plain in the body on iOS (row 105)', async () => {
+      Platform.OS = 'ios';
+      await alertNewCancelledJobs([
+        {
+          id: 'del-html-ios',
+          pickupBusinessName: '<b>Bold</b> & Co',
+          cancelledBy: 'COOP',
+        },
+      ]);
+
+      const call = (notifee.displayNotification as jest.Mock).mock.calls.find(
+        args => args[0]?.id === 'cancelled-del-html-ios',
+      );
+      expect(call).toBeDefined();
+      expect(call[0].body).toBe('<b>Bold</b> & Co: cancelled by the co-op.');
+    });
   });
 });

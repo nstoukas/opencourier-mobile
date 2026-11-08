@@ -20,4 +20,7 @@ export const QueryKeys = {
   deliveryRoute: 'deliveryRoute',
   // The restaurants' pickup points for the map's restaurant layer (spec 0018).
   pickupPoints: 'pickupPoints',
+  // The shift schedule and this rider's bookings (spec 0027); saved to disk, so the banner survives a
+  // restart with no signal.
+  shifts: 'shifts',
 };

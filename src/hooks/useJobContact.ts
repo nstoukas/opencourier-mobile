@@ -12,6 +12,10 @@ export type JobContact = {
   // Spec 0021: metres from a stop the app counts as arrived; 0 switches detection off.
   // Missing from an answer saved by an older app version: detection is then off.
   arrivalRadiusMetres?: number;
+  // Spec 0027: whether the co-op runs shifts, and the hours before a shift's start it may still be
+  // dropped. Missing from an answer saved by an older app version: shifts then stay hidden.
+  shiftsEnabled?: boolean;
+  shiftDropNoticeHours?: number;
 };
 
 // The one request for it, shared by every reader of the same query.

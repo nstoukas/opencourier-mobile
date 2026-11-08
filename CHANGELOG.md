@@ -11,6 +11,33 @@ has the full reasoning and verification notes.
 
 ## Added
 
+### Drinks and sides first on the pickup checklist (row 103, spec 0028): `ea395c7` to `ce12144`
+- The items line reads "3 items · 2 drinks, 1 side". The sheet lists drinks, then sides, then the rest, with a
+  small Drink or Side pill, and ticks stay with their item. An order with no marks looks as before, and the
+  swipe never waits on the checklist.
+- Tests by a fresh Claude subagent while agy was out of quota: 1433 pass; put back by hand. Reviewed by Fable.
+  Seen on the emulator with a marked order.
+
+### Shifts: book, drop, swap, and a banner on home (row 78, spec 0027): `e76fbc8` to `5cc4115`
+- **The switch.** With the co-op's Shifts switch on, the side menu has Shifts.
+- **The Shifts screen.** Your shifts, with Drop (asks first), Offer swap and Withdraw swap. The next 14 days,
+  with Book, Take swap or Full, and the places left.
+- **The banner.** Home's top says "ON SHIFT until 23:00" or "FREE (no shift)" and redraws itself at the next
+  start or end.
+- **The reminder.** The phone schedules a local reminder 30 minutes before each shift, and cancels it when the
+  shift is dropped or swapped away, when Shifts go off, and at logout.
+- Every time shown is the server's Athens text; the schedule is kept on the phone for a restart with no signal.
+- Tests by a fresh Claude subagent while agy was out of quota: 1405 pass; put back by hand. Reviewed by Fable
+  (fixes in `babd27e`). Seen on the emulator: the banner, booking (its reminder scheduled) and dropping (the
+  reminder cancelled).
+
+### Every notification shows a restaurant's name as typed (row 105): `042f347`, `6d7197f`
+On Android the notification library reads a title and body as HTML, so a restaurant named `<b>Bold</b> & Co`
+lost its tags (row 100 found it on the offer alert). The cancelled job notice and the auto accept notice now
+escape the name through one helper (`notificationText`, Android only). Tests by a fresh Claude subagent, with a
+scan that fails if a notice carrying a restaurant's name is posted unescaped; reviewed by Fable (approve with
+nits); both notices seen on the emulator.
+
 ### Screen titles clear of the status bar (row 104): `20cbebf` to the Report Issue fix
 22 screens wrapped their content in React Native's own SafeAreaView, which keeps clear of the system bars only
 on iOS, so on Android their titles and back buttons sat under the status bar. One `ScreenSafeArea` wrapper

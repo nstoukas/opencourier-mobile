@@ -6,6 +6,7 @@ import { useTranslation } from 'react-i18next';
 import { useFocusEffect, useIsFocused } from '@react-navigation/native';
 import { styles } from './Home.styles';
 import { DispatchStopBanner } from '@app/components/DispatchStopBanner/DispatchStopBanner';
+import { ShiftBanner } from '@app/components/ShiftBanner/ShiftBanner';
 import { CancelledJobCard } from '@app/components/CancelledJobCard/CancelledJobCard';
 import { RefusedSteps } from '@app/components/RefusedSteps/RefusedSteps';
 import { NewOrderCell } from '@app/components/NewOrderCell/NewOrderCell';
@@ -395,6 +396,8 @@ export const HomeScreen = ({ navigation }: Props) => {
         }>
         {/* The rider's own SOS is active (spec 0022, AC-3). */}
         {sosActive && <SosActiveBanner onPress={() => openSosScreen()} />}
+        {/* On shift or free, while the co-op runs shifts (spec 0027). */}
+        <ShiftBanner inFront={isFocused} />
         {/* Dispatch stopped for heat or a storm, or about to be (spec 0014). */}
         <DispatchStopBanner inFront={isFocused} />
         {/* Spec 0015: a job this rider held was cancelled. */}

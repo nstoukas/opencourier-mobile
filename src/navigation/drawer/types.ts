@@ -8,6 +8,8 @@ export enum DrawerScreens {
   Earnings = 'Earnings',
   // Spec 0018: History left home's tabs for the side menu.
   History = 'History',
+  // Spec 0027: booking shifts, shown only while the co-op runs them.
+  Shifts = 'Shifts',
   PaymentMethods = 'PaymentMethods',
   Settings = 'Settings',
 }
@@ -16,6 +18,7 @@ export type DrawerStackParamList = {
   Home: undefined;
   Earnings: undefined;
   History: undefined;
+  Shifts: undefined;
   PaymentMethods: undefined;
   Settings: undefined;
 };

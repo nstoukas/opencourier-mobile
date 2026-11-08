@@ -20,6 +20,8 @@ const KEPT_QUERIES = new Set<string>([
   QueryKeys.jobContact,
   // A cancelled job's card must survive a restart with no signal (spec 0015, AC-12).
   QueryKeys.cancelledJobs,
+  // The shift banner and reminders must survive a restart with no signal (spec 0027).
+  QueryKeys.shifts,
 ]);
 
 // Kept whenever it holds data. Not "status is success": a refetch that fails

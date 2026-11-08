@@ -36,6 +36,8 @@ export enum SideMenuItem {
   Earnings = 'earnings',
   // Spec 0018: the delivery history, moved off home.
   History = 'history',
+  // Spec 0027: booking shifts, only while the co-op runs them.
+  Shifts = 'shifts',
   Payout = 'payout_method',
   Support = 'support',
   Settings = 'settings',
@@ -265,6 +267,8 @@ export type OrderItem = {
   price: number;
   weight: number;
   vatPercentage: number;
+  // Spec 0028: a drink or a side, marked by the restaurant; absent means neither.
+  kind?: 'DRINK' | 'SIDE';
 };
 
 export type Order = {

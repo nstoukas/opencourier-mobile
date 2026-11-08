@@ -30,6 +30,8 @@ import {
 import { clearSavedQueries } from '@app/services/queryPersistence';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import useUser from '@app/hooks/useUser';
+import { useJobContact } from '@app/hooks/useJobContact';
+import { syncShiftReminders } from '@app/services/shifts/shiftReminder';
 import { useQueryClient } from '@tanstack/react-query';
 import { LOGOUT_OFFLINE_TIMEOUT_MS } from '@app/utilities/constants';
 import { services } from '@app/services/service';
@@ -53,9 +55,25 @@ const section2 = [
   SideMenuItem.Logout,
 ];
 
+// Spec 0027: Shifts sits after History, only while the co-op runs shifts.
+const section2WithShifts = [
+  SideMenuItem.Orders,
+  SideMenuItem.History,
+  SideMenuItem.Shifts,
+  SideMenuItem.Earnings,
+  SideMenuItem.Payout,
+  SideMenuItem.Support,
+  SideMenuItem.Settings,
+  SideMenuItem.Logout,
+];
+
 export const SideMenu = ({ navigation }: Props) => {
   const { t } = useTranslation();
   const { user } = useUser();
+  // The last co-op switch the app read (Home keeps it fresh); the menu itself never polls.
+  const { data: jobContact } = useJobContact(false);
+  const menuItems =
+    jobContact?.shiftsEnabled === true ? section2WithShifts : section2;
   const { requestLocationPermission, locationPermission } =
     useLocationPermission();
 
@@ -172,6 +190,8 @@ export const SideMenu = ({ navigation }: Props) => {
     ]);
     // Nothing may keep ringing on a phone nobody is logged in on.
     await cancelAllOfferAlerts();
+    // Nor remind anyone of this rider's shifts (spec 0027, row 78 review).
+    await syncShiftReminders([], 0).catch(() => undefined);
     // An active SOS stops being shared (spec 0022, AC-12); a start the
     // server has not had yet waits for this rider's next login.
     if (user?.id) {
@@ -243,6 +263,9 @@ export const SideMenu = ({ navigation }: Props) => {
         break;
       case SideMenuItem.History:
         navigation.navigate(DrawerScreens.History);
+        break;
+      case SideMenuItem.Shifts:
+        navigation.navigate(DrawerScreens.Shifts);
         break;
       case SideMenuItem.Earnings:
         navigation.navigate(DrawerScreens.Earnings);
@@ -324,7 +347,7 @@ export const SideMenu = ({ navigation }: Props) => {
           );
         })}
         <View style={styles.separator} />
-        {section2.map(item => {
+        {menuItems.map(item => {
           return (
             <SideMenuItemPlain
               hideArrow={item === SideMenuItem.Logout}
