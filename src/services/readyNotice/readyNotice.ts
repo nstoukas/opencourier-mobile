@@ -41,21 +41,30 @@ export const showReadyNotice = async (
   if (lastShown.get(update.deliveryId) === key) {
     return;
   }
-  await ensureReadyChannel();
-  const text = readyNoticeText(update, now, i18next.t.bind(i18next) as never);
-  await notifee.displayNotification({
-    id: `ready-${update.deliveryId}`,
-    title: i18next.t('translations:ready_notice_title'),
-    body: Platform.OS === 'android' ? escapeHtml(text) : text,
-    android: {
-      channelId: READY_CHANNEL_ID,
-      importance: AndroidImportance.HIGH,
-      pressAction: { id: 'default' },
-    },
-    ios: { sound: 'default' },
-  });
-  // Marked only once posted: a copy that failed to post leaves the other copy free to try.
+  // Marked before the first await (agy review): the live message and the push can arrive together, and
+  // a mark made after the await would let both past the check above. A copy that fails to post gives
+  // the mark back, so the other copy can still try.
   lastShown.set(update.deliveryId, key);
+  try {
+    await ensureReadyChannel();
+    const text = readyNoticeText(update, now, i18next.t.bind(i18next));
+    await notifee.displayNotification({
+      id: `ready-${update.deliveryId}`,
+      title: i18next.t('translations:ready_notice_title'),
+      body: Platform.OS === 'android' ? escapeHtml(text) : text,
+      android: {
+        channelId: READY_CHANNEL_ID,
+        importance: AndroidImportance.HIGH,
+        pressAction: { id: 'default' },
+      },
+      ios: { sound: 'default' },
+    });
+  } catch (error) {
+    if (lastShown.get(update.deliveryId) === key) {
+      lastShown.delete(update.deliveryId);
+    }
+    throw error;
+  }
 };
 
 // For tests only: forget which changes were shown.

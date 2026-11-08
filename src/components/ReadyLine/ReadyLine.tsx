@@ -40,7 +40,7 @@ export const ReadyLine = ({ foodReadyAt, readyAtOnPhone }: Props) => {
   const line = readyLine(
     { foodReadyAt, readyAtOnPhone },
     Date.now(),
-    t as never,
+    t,
   );
   if (line === '') {
     return null;
