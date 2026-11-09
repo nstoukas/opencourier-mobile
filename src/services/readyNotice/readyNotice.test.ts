@@ -159,7 +159,7 @@ describe('showReadyNotice (spec 0023, AC-6)', () => {
       expect(notifee.createChannel).toHaveBeenCalledTimes(1);
     });
 
-    it('the live message and the push for one change post once (both wire shapes)', async () => {
+    it('the live message and the push for one change arriving together (Promise.all of showReadyNotice with both wire shapes) post one notification', async () => {
       const readyAt = '2026-11-03T12:12:00.000Z';
       // The live event carries typed values; the push carries text, '' for null.
       const live = parseJobReadyUpdate({
@@ -177,8 +177,10 @@ describe('showReadyNotice (spec 0023, AC-6)', () => {
         foodReadyAt: '',
         delayMinutes: '10',
       });
-      await showReadyNotice(live!, NOW);
-      await showReadyNotice(push!, NOW);
+      await Promise.all([
+        showReadyNotice(live!, NOW),
+        showReadyNotice(push!, NOW),
+      ]);
       expect(posted()).toBe(1);
     });
 
@@ -218,15 +220,15 @@ describe('showReadyNotice (spec 0023, AC-6)', () => {
       expect(ids).toEqual(['ready-del-1', 'ready-del-2']);
     });
 
-    it('a copy that failed to post leaves the other copy free to try', async () => {
+    it('when displayNotification rejects the mark is given back so a later copy of the same change posts, and the rejection still reaches the caller', async () => {
       (notifee.displayNotification as jest.Mock).mockImplementationOnce(() =>
         Promise.reject(new Error('notifee: no permission')),
       );
-      // The first copy fails, and says so.
+      // The first copy fails, and the rejection still reaches the caller.
       await expect(showReadyNotice(delay, NOW)).rejects.toThrow(
         'notifee: no permission',
       );
-      // The second, identical copy is not taken for a repeat: it posts.
+      // The mark was given back on rejection, so a later copy of the same change posts.
       await showReadyNotice(delay, NOW);
       const ids = (notifee.displayNotification as jest.Mock).mock.calls.map(
         ([n]) => n.id,
@@ -234,6 +236,42 @@ describe('showReadyNotice (spec 0023, AC-6)', () => {
       expect(ids).toEqual(['ready-del-1', 'ready-del-1']);
       // Once that copy posted, a third is a repeat.
       await showReadyNotice(delay, NOW);
+      expect(posted()).toBe(2);
+    });
+
+    it('a failed post does not wipe a mark for a newer change on the same delivery that arrived meanwhile', async () => {
+      let rejectFirstPost!: (err: Error) => void;
+      const firstPostDeferred = new Promise((_, reject) => {
+        rejectFirstPost = reject;
+      });
+
+      // The first post hangs on displayNotification until we reject it.
+      (notifee.displayNotification as jest.Mock).mockImplementationOnce(
+        () => firstPostDeferred,
+      );
+
+      // 1. The first change starts posting and records its mark.
+      const firstPostPromise = showReadyNotice(delay, NOW);
+
+      // 2. Meanwhile, a newer change for the same delivery arrives and posts successfully.
+      const newerChange: JobReadyUpdate = {
+        ...delay,
+        foodReadyAt: '2026-11-03T12:05:00.000Z',
+        delayMinutes: null,
+      };
+      await showReadyNotice(newerChange, NOW);
+      expect(posted()).toBe(2);
+      expect(notifee.displayNotification).toHaveBeenLastCalledWith(
+        expect.objectContaining({ body: 'R73 Kitchen: food ready' }),
+      );
+
+      // 3. The first post now fails, and its rejection reaches the caller.
+      rejectFirstPost(new Error('notifee: display failed'));
+      await expect(firstPostPromise).rejects.toThrow('notifee: display failed');
+
+      // 4. A duplicate copy of newerChange (e.g. push following live event) arrives.
+      // Its mark was not wiped by the first post's failure, so it does not post again.
+      await showReadyNotice(newerChange, NOW);
       expect(posted()).toBe(2);
     });
 
