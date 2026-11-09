@@ -105,74 +105,47 @@ describe('waitClock (spec 0033, AC-5, AC-6)', () => {
   });
 
   describe('canLeaveWait', () => {
-    const arrived = 100_000;
-    const limitMinutes = 10;
-    const limitMs = limitMinutes * 60_000; // 600,000 ms
+    const leaveFrom = 700_000;
 
-    const baseOrder: Order = {
+    const baseOrder = {
       status: OrderStatus.courier_arrived_at_pickup_location,
-      arrivedAtOnPhone: arrived,
-      waitLimitMinutes: limitMinutes,
-    } as Order;
+      leaveFromOnPhone: leaveFrom,
+    } as unknown as Order;
 
-    it('appears exactly at the limit, not before', () => {
-      // 1 ms before the limit -> false
-      expect(canLeaveWait(baseOrder, arrived + limitMs - 1)).toBe(false);
+    it('appears exactly at leaveFromOnPhone, false before', () => {
+      // 1 ms before leaveFromOnPhone -> false
+      expect(canLeaveWait(baseOrder, leaveFrom - 1)).toBe(false);
 
-      // 1 second before the limit -> false
-      expect(canLeaveWait(baseOrder, arrived + limitMs - 1000)).toBe(false);
+      // 1 second before leaveFromOnPhone -> false
+      expect(canLeaveWait(baseOrder, leaveFrom - 1000)).toBe(false);
 
-      // Exactly at the limit -> true
-      expect(canLeaveWait(baseOrder, arrived + limitMs)).toBe(true);
+      // Exactly at leaveFromOnPhone -> true
+      expect(canLeaveWait(baseOrder, leaveFrom)).toBe(true);
 
-      // Past the limit -> true
-      expect(canLeaveWait(baseOrder, arrived + limitMs + 5000)).toBe(true);
+      // Past leaveFromOnPhone -> true
+      expect(canLeaveWait(baseOrder, leaveFrom + 5000)).toBe(true);
     });
 
-    it('refuses while order.waitingToSend is true even if past the limit', () => {
+    it('refuses while order.waitingToSend is true even if past leaveFromOnPhone', () => {
       const waitingToSendOrder: Order = {
         ...baseOrder,
         waitingToSend: true,
       };
-      expect(
-        canLeaveWait(waitingToSendOrder, arrived + limitMs + 10_000),
-      ).toBe(false);
+      expect(canLeaveWait(waitingToSendOrder, leaveFrom + 10_000)).toBe(false);
     });
 
-    it('refuses when waitLimitMinutes is missing or 0', () => {
-      const noLimitOrder: Order = {
+    it('refuses when leaveFromOnPhone is missing, null, or undefined', () => {
+      const undefinedLeaveOrder: Order = {
         ...baseOrder,
-        waitLimitMinutes: undefined,
+        leaveFromOnPhone: undefined,
       };
-      expect(canLeaveWait(noLimitOrder, arrived + limitMs + 10_000)).toBe(
-        false,
-      );
+      expect(canLeaveWait(undefinedLeaveOrder, leaveFrom + 10_000)).toBe(false);
 
-      const zeroLimitOrder: Order = {
+      const nullLeaveOrder: Order = {
         ...baseOrder,
-        waitLimitMinutes: 0,
+        leaveFromOnPhone: null,
       };
-      expect(canLeaveWait(zeroLimitOrder, arrived + limitMs + 10_000)).toBe(
-        false,
-      );
-    });
-
-    it('refuses when arrivedAtOnPhone is null or undefined', () => {
-      const nullArrivalOrder: Order = {
-        ...baseOrder,
-        arrivedAtOnPhone: null,
-      };
-      expect(canLeaveWait(nullArrivalOrder, arrived + limitMs + 10_000)).toBe(
-        false,
-      );
-
-      const undefinedArrivalOrder: Order = {
-        ...baseOrder,
-        arrivedAtOnPhone: undefined,
-      };
-      expect(
-        canLeaveWait(undefinedArrivalOrder, arrived + limitMs + 10_000),
-      ).toBe(false);
+      expect(canLeaveWait(nullLeaveOrder, leaveFrom + 10_000)).toBe(false);
     });
 
     it('refuses for any status other than courier_arrived_at_pickup_location', () => {
@@ -190,7 +163,7 @@ describe('waitClock (spec 0033, AC-5, AC-6)', () => {
           ...baseOrder,
           status,
         };
-        expect(canLeaveWait(order, arrived + limitMs + 10_000)).toBe(false);
+        expect(canLeaveWait(order, leaveFrom + 10_000)).toBe(false);
       }
     });
   });

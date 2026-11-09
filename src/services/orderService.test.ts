@@ -1026,10 +1026,12 @@ describe('orderService & isOfferEndedError (spec 0002, AC-5)', () => {
     });
   });
 
-  describe('getInProgressOrders attaches arrivedAtOnPhone and waitLimitMinutes (spec 0033, AC-5)', () => {
-    it('corrects arrivedAt using serverNow and midpoint so wait duration matches server even with wrong phone clock', async () => {
+  describe('getInProgressOrders moves arrivedAt, leaveFrom and paidFrom onto phone clock (spec 0033, AC-5)', () => {
+    it('moves arrivedAt, leaveFrom, and paidFrom onto the phone clock using serverNow and midpoint even with wrong phone clock', async () => {
       const serverNow = '2026-11-09T12:10:00.000Z';
       const arrivedAt = '2026-11-09T12:00:00.000Z'; // 10 minutes (600,000 ms) ago on server
+      const leaveFrom = '2026-11-09T12:15:00.000Z'; // 5 minutes (300,000 ms) in future on server
+      const paidFrom = '2026-11-09T12:08:00.000Z'; // 2 minutes (120,000 ms) ago on server
 
       // Scenario A: Phone clock is accurate
       let phoneTimeAccurate = new Date(serverNow).getTime();
@@ -1043,10 +1045,15 @@ describe('orderService & isOfferEndedError (spec 0002, AC-5)', () => {
           data: {
             result: {
               serverNow,
-              waitLimitMinutes: 10,
               data: [
-                { id: 'del-wait-1', arrivedAt },
-                { id: 'del-no-arrival', arrivedAt: null },
+                { id: 'del-wait-1', arrivedAt, leaveFrom, paidFrom },
+                {
+                  id: 'del-wait-no-pay',
+                  arrivedAt,
+                  leaveFrom: null,
+                  paidFrom: null,
+                },
+                { id: 'del-no-arrival', arrivedAt: null, leaveFrom, paidFrom },
               ],
             },
           },
@@ -1057,28 +1064,45 @@ describe('orderService & isOfferEndedError (spec 0002, AC-5)', () => {
 
       try {
         const ordersAccurate = await service.getInProgressOrders();
-        expect(ordersAccurate).toHaveLength(2);
+        expect(ordersAccurate).toHaveLength(3);
 
-        // waitLimitMinutes attached from response
-        expect(ordersAccurate[0].waitLimitMinutes).toBe(10);
-        expect(ordersAccurate[1].waitLimitMinutes).toBe(10);
-
-        // midpoint = 12:10:01
-        // server arrivedAt was 10 minutes before serverNow (-600,000 ms)
-        // arrivedAtOnPhone = midpoint - 600,000
         const midpointAccurate = new Date(serverNow).getTime() + 1000;
+        // arrivedAtOnPhone = midpoint - 600,000
         expect(ordersAccurate[0].arrivedAtOnPhone).toBe(
           midpointAccurate - 600_000,
         );
+        // leaveFromOnPhone = midpoint + 300,000
+        expect(ordersAccurate[0].leaveFromOnPhone).toBe(
+          midpointAccurate + 300_000,
+        );
+        // paidFromOnPhone = midpoint - 120,000
+        expect(ordersAccurate[0].paidFromOnPhone).toBe(
+          midpointAccurate - 120_000,
+        );
 
-        // Elapsed waiting time on the phone clock:
-        const elapsedAccurate =
-          midpointAccurate - ordersAccurate[0].arrivedAtOnPhone!;
-        expect(elapsedAccurate).toBe(600_000); // exactly 10 minutes
+        // Relative intervals on phone match server exactly:
+        expect(midpointAccurate - ordersAccurate[0].arrivedAtOnPhone!).toBe(
+          600_000,
+        );
+        expect(ordersAccurate[0].leaveFromOnPhone! - midpointAccurate).toBe(
+          300_000,
+        );
+        expect(midpointAccurate - ordersAccurate[0].paidFromOnPhone!).toBe(
+          120_000,
+        );
 
-        // Order without arrivedAt has no arrivedAtOnPhone
-        expect(ordersAccurate[1].arrivedAt).toBeNull();
-        expect(ordersAccurate[1].arrivedAtOnPhone).toBeUndefined();
+        // When arrivedAt is present but leaveFrom/paidFrom are null, onPhone maps to null:
+        expect(ordersAccurate[1].arrivedAtOnPhone).toBe(
+          midpointAccurate - 600_000,
+        );
+        expect(ordersAccurate[1].leaveFromOnPhone).toBeNull();
+        expect(ordersAccurate[1].paidFromOnPhone).toBeNull();
+
+        // Order without arrivedAt has no arrivedAtOnPhone, leaveFromOnPhone, or paidFromOnPhone:
+        expect(ordersAccurate[2].arrivedAt).toBeNull();
+        expect(ordersAccurate[2].arrivedAtOnPhone).toBeUndefined();
+        expect(ordersAccurate[2].leaveFromOnPhone).toBeUndefined();
+        expect(ordersAccurate[2].paidFromOnPhone).toBeUndefined();
 
         // Scenario B: Phone clock is 5 minutes in the past (12:05 instead of 12:10)
         let phoneTimeSlow = new Date(serverNow).getTime() - 5 * 60 * 1000;
@@ -1090,8 +1114,7 @@ describe('orderService & isOfferEndedError (spec 0002, AC-5)', () => {
             data: {
               result: {
                 serverNow,
-                waitLimitMinutes: 10,
-                data: [{ id: 'del-wait-1', arrivedAt }],
+                data: [{ id: 'del-wait-1', arrivedAt, leaveFrom, paidFrom }],
               },
             },
           };
@@ -1101,21 +1124,23 @@ describe('orderService & isOfferEndedError (spec 0002, AC-5)', () => {
         const midpointSlow =
           new Date(serverNow).getTime() - 5 * 60 * 1000 + 1000;
         expect(ordersSlow[0].arrivedAtOnPhone).toBe(midpointSlow - 600_000);
+        expect(ordersSlow[0].leaveFromOnPhone).toBe(midpointSlow + 300_000);
+        expect(ordersSlow[0].paidFromOnPhone).toBe(midpointSlow - 120_000);
 
-        // Key assertion: elapsed waiting time relative to phone clock is STILL exactly 10 minutes!
-        const elapsedSlow = midpointSlow - ordersSlow[0].arrivedAtOnPhone!;
-        expect(elapsedSlow).toBe(600_000);
+        // Key assertion: intervals relative to phone clock STILL match server:
+        expect(midpointSlow - ordersSlow[0].arrivedAtOnPhone!).toBe(600_000);
+        expect(ordersSlow[0].leaveFromOnPhone! - midpointSlow).toBe(300_000);
+        expect(midpointSlow - ordersSlow[0].paidFromOnPhone!).toBe(120_000);
       } finally {
         dateSpy.mockRestore();
       }
     });
 
-    it('does not attach arrivedAtOnPhone when arrivedAt is missing', async () => {
+    it('does not attach arrivedAtOnPhone, leaveFromOnPhone, or paidFromOnPhone when arrivedAt is missing', async () => {
       const mockGet = jest.fn().mockResolvedValue({
         data: {
           result: {
             serverNow: '2026-11-09T12:00:00.000Z',
-            waitLimitMinutes: 15,
             data: [{ id: 'del-no-arrival' }],
           },
         },
@@ -1124,8 +1149,9 @@ describe('orderService & isOfferEndedError (spec 0002, AC-5)', () => {
       const service = orderService({ get: mockGet } as unknown as UClient);
       const orders = await service.getInProgressOrders();
 
-      expect(orders[0].waitLimitMinutes).toBe(15);
       expect(orders[0].arrivedAtOnPhone).toBeUndefined();
+      expect(orders[0].leaveFromOnPhone).toBeUndefined();
+      expect(orders[0].paidFromOnPhone).toBeUndefined();
     });
   });
 });

@@ -212,7 +212,6 @@ describe('inProgressOrdersAsShown (spec 0009, AC-2)', () => {
     const baseOrder: Partial<Order> = {
       id: 'del-wait',
       status: OrderStatus.dispatched,
-      waitLimitMinutes: 10,
     };
 
     it("gives arrivedAtOnPhone from the arrived_at_pickup step's tappedAt when the server has none", () => {
@@ -298,9 +297,13 @@ describe('inProgressOrdersAsShown (spec 0009, AC-2)', () => {
       expect(result[0].waitingToSend).toBeUndefined();
     });
 
-    it("ignores a sent step (removed from outbox) or non-waiting step", () => {
+    it('ignores a sent step (removed from outbox) or non-waiting step', () => {
       // Once sent, the step is removed from the outbox
-      const resultSent = inProgressOrdersAsShown([baseOrder as Order], [], 'c1');
+      const resultSent = inProgressOrdersAsShown(
+        [baseOrder as Order],
+        [],
+        'c1',
+      );
       expect(resultSent).toHaveLength(1);
       expect(resultSent[0].arrivedAtOnPhone).toBeUndefined();
       expect(resultSent[0].waitingToSend).toBeUndefined();
@@ -328,10 +331,48 @@ describe('inProgressOrdersAsShown (spec 0009, AC-2)', () => {
       expect(resultRefused[0].waitingToSend).toBeUndefined();
     });
 
+    it("with a queued dispatched step ahead of the arrival step, counts from the arrival step's tappedAt, not the first step's", () => {
+      const dispatchedTappedAt = 10_000;
+      const arrivalTappedAt = 25_000;
+      const outboxItems: OutboxItem[] = [
+        {
+          id: 'step-dispatched',
+          courierId: 'c1',
+          deliveryId: 'del-wait',
+          step: 'dispatched',
+          tappedAt: dispatchedTappedAt,
+          state: 'waiting',
+          restaurantName: 'Test Tavern',
+        },
+        {
+          id: 'step-arrival',
+          courierId: 'c1',
+          deliveryId: 'del-wait',
+          step: 'arrived_at_pickup',
+          tappedAt: arrivalTappedAt,
+          state: 'waiting',
+          restaurantName: 'Test Tavern',
+        },
+      ];
+
+      const result = inProgressOrdersAsShown(
+        [baseOrder as Order],
+        outboxItems,
+        'c1',
+      );
+
+      expect(result).toHaveLength(1);
+      // Clock must count from the arrival step's tappedAt, not the first step's
+      expect(result[0].arrivedAtOnPhone).toBe(arrivalTappedAt);
+      expect(result[0].status).toBe(
+        OrderStatus.courier_arrived_at_pickup_location,
+      );
+      expect(result[0].waitingToSend).toBe(true);
+    });
+
     it('clock shows with that provisional time and Leave stays hidden', () => {
       const tappedAt = 50_000;
-      const limitMinutes = 10;
-      const limitMs = limitMinutes * 60_000;
+      const leaveFromOnPhone = 100_000;
 
       const outboxItems: OutboxItem[] = [
         {
@@ -349,7 +390,7 @@ describe('inProgressOrdersAsShown (spec 0009, AC-2)', () => {
         [
           {
             ...baseOrder,
-            waitLimitMinutes: limitMinutes,
+            leaveFromOnPhone,
           } as Order,
         ],
         outboxItems,
@@ -360,8 +401,8 @@ describe('inProgressOrdersAsShown (spec 0009, AC-2)', () => {
       // Clock shows because isWaitingAtPickup is true with the provisional arrivedAtOnPhone
       expect(isWaitingAtPickup(shownOrder)).toBe(true);
 
-      // Leave stays hidden because waitingToSend is true, even well past the limit
-      const wellPastLimitTime = tappedAt + limitMs + 30_000;
+      // Leave stays hidden because waitingToSend is true, even well past leaveFromOnPhone
+      const wellPastLimitTime = leaveFromOnPhone + 30_000;
       expect(canLeaveWait(shownOrder, wellPastLimitTime)).toBe(false);
     });
   });

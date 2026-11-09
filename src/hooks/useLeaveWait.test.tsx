@@ -26,8 +26,8 @@ describe('useLeaveWait & useWaitClock (spec 0033, AC-5, AC-6)', () => {
     status: OrderStatus.courier_arrived_at_pickup_location,
     pickupBusinessName: 'Test Tavern',
     arrivedAtOnPhone: 100_000,
-    waitLimitMinutes: 10,
-  } as Order;
+    leaveFromOnPhone: 200_000,
+  } as unknown as Order;
 
   const createWrapper = () => {
     queryClient = new QueryClient({

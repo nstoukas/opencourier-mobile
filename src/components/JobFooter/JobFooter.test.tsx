@@ -434,6 +434,44 @@ describe('JobFooter (spec 0021, AC-3, AC-5, AC-9, AC-12)', () => {
       expect(getByTestId('job-wait-clock').props.children).toBe('Waiting 6:13');
     });
 
+    it('shows "Waiting 6:12 · paid from 12:15" with paidFromOnPhone and just "Waiting 6:12" without', () => {
+      const now = 100_000;
+      jest.setSystemTime(now);
+
+      const arrivedAtOnPhone = now - (6 * 60 + 12) * 1000;
+      // 12:15 local time
+      const paidFromOnPhone = new Date('2026-11-09T12:15:00').getTime();
+
+      const orderWithPaid = {
+        ...baseOrder,
+        status: OrderStatus.courier_arrived_at_pickup_location,
+        arrivedAtOnPhone,
+        paidFromOnPhone,
+      } as unknown as Order;
+
+      const { getByTestId, rerender } = render(
+        <JobFooter order={orderWithPaid} onReportIssue={jest.fn()} />,
+      );
+
+      // With paidFromOnPhone: formats with formatShift (HH:mm)
+      expect(getByTestId('job-wait-clock').props.children).toBe(
+        'Waiting 6:12 · paid from 12:15',
+      );
+
+      // Without paidFromOnPhone (null or undefined): reads just "Waiting 6:12"
+      const orderWithoutPaid = {
+        ...baseOrder,
+        status: OrderStatus.courier_arrived_at_pickup_location,
+        arrivedAtOnPhone,
+        paidFromOnPhone: null,
+      } as unknown as Order;
+
+      rerender(
+        <JobFooter order={orderWithoutPaid} onReportIssue={jest.fn()} />,
+      );
+      expect(getByTestId('job-wait-clock').props.children).toBe('Waiting 6:12');
+    });
+
     it('hides waiting clock when not at pickup arrival even if arrivedAtOnPhone is set', () => {
       const arrivedAtOnPhone = Date.now() - 60_000;
 
@@ -501,18 +539,15 @@ describe('JobFooter (spec 0021, AC-3, AC-5, AC-9, AC-12)', () => {
       jest.useRealTimers();
     });
 
-    it('appears exactly at the limit, not before and not without a limit', () => {
+    it('appears exactly at leaveFromOnPhone, not before and not without leaveFromOnPhone', () => {
       const now = 200_000;
-      const limitMinutes = 10;
-      const limitMs = limitMinutes * 60_000;
       const onLeaveWait = jest.fn();
 
-      // Before the limit (9 minutes 59 seconds in)
+      // Before leaveFromOnPhone (1 second in the future)
       const orderBefore = {
         ...baseOrder,
         status: OrderStatus.courier_arrived_at_pickup_location,
-        arrivedAtOnPhone: now - (limitMs - 1000),
-        waitLimitMinutes: limitMinutes,
+        leaveFromOnPhone: now + 1000,
       } as unknown as Order;
 
       const { queryByTestId, rerender } = render(
@@ -524,12 +559,11 @@ describe('JobFooter (spec 0021, AC-3, AC-5, AC-9, AC-12)', () => {
       );
       expect(queryByTestId('job-action-leave-wait')).toBeNull();
 
-      // Exactly at the limit (10 minutes in)
+      // Exactly at leaveFromOnPhone
       const orderAtLimit = {
         ...baseOrder,
         status: OrderStatus.courier_arrived_at_pickup_location,
-        arrivedAtOnPhone: now - limitMs,
-        waitLimitMinutes: limitMinutes,
+        leaveFromOnPhone: now,
       } as unknown as Order;
 
       rerender(
@@ -545,11 +579,11 @@ describe('JobFooter (spec 0021, AC-3, AC-5, AC-9, AC-12)', () => {
       fireEvent.press(leaveButton!);
       expect(onLeaveWait).toHaveBeenCalledWith(orderAtLimit);
 
-      // Without a limit: waitLimitMinutes is missing
+      // Without leaveFromOnPhone (null or undefined)
       const orderNoLimit = {
         ...baseOrder,
         status: OrderStatus.courier_arrived_at_pickup_location,
-        arrivedAtOnPhone: now - limitMs * 2,
+        leaveFromOnPhone: null,
       } as unknown as Order;
 
       rerender(
@@ -562,18 +596,16 @@ describe('JobFooter (spec 0021, AC-3, AC-5, AC-9, AC-12)', () => {
       expect(queryByTestId('job-action-leave-wait')).toBeNull();
     });
 
-    it('appears on a clock tick as fake timers cross the limit, with no prop change', () => {
+    it('appears on a clock tick as fake timers cross leaveFromOnPhone, with no prop change', () => {
       const now = 200_000;
-      const limitMinutes = 10;
-      const limitMs = limitMinutes * 60_000;
       const onLeaveWait = jest.fn();
 
-      // 1 second before the limit (9 min 59 sec in)
+      // Waiting at pickup, 1 second before leaveFromOnPhone
       const order = {
         ...baseOrder,
         status: OrderStatus.courier_arrived_at_pickup_location,
-        arrivedAtOnPhone: now - (limitMs - 1000),
-        waitLimitMinutes: limitMinutes,
+        arrivedAtOnPhone: now - 300_000,
+        leaveFromOnPhone: now + 1000,
       } as unknown as Order;
 
       const { queryByTestId } = render(
@@ -587,7 +619,7 @@ describe('JobFooter (spec 0021, AC-3, AC-5, AC-9, AC-12)', () => {
       // Before crossing the threshold, Leave is hidden
       expect(queryByTestId('job-action-leave-wait')).toBeNull();
 
-      // Advance 1 second across the limit
+      // Advance 1 second across leaveFromOnPhone
       act(() => {
         jest.advanceTimersByTime(1000);
       });
@@ -599,13 +631,12 @@ describe('JobFooter (spec 0021, AC-3, AC-5, AC-9, AC-12)', () => {
       expect(onLeaveWait).toHaveBeenCalledWith(order);
     });
 
-    it('hides Leave button while order.waitingToSend is true even if past limit', () => {
+    it('hides Leave button while order.waitingToSend is true even if past leaveFromOnPhone', () => {
       const now = 200_000;
       const orderWaitingToSend = {
         ...baseOrder,
         status: OrderStatus.courier_arrived_at_pickup_location,
-        arrivedAtOnPhone: now - 600_000,
-        waitLimitMinutes: 10,
+        leaveFromOnPhone: now - 10_000,
         waitingToSend: true,
       } as unknown as Order;
 
@@ -625,8 +656,7 @@ describe('JobFooter (spec 0021, AC-3, AC-5, AC-9, AC-12)', () => {
       const orderAtLimit = {
         ...baseOrder,
         status: OrderStatus.courier_arrived_at_pickup_location,
-        arrivedAtOnPhone: now - 600_000,
-        waitLimitMinutes: 10,
+        leaveFromOnPhone: now - 10_000,
       } as unknown as Order;
 
       const { getByTestId } = render(
@@ -644,13 +674,12 @@ describe('JobFooter (spec 0021, AC-3, AC-5, AC-9, AC-12)', () => {
       });
     });
 
-    it('hides Leave button when onLeaveWait prop is omitted even if limit has passed', () => {
+    it('hides Leave button when onLeaveWait prop is omitted even if leaveFromOnPhone has passed', () => {
       const now = 200_000;
       const orderAtLimit = {
         ...baseOrder,
         status: OrderStatus.courier_arrived_at_pickup_location,
-        arrivedAtOnPhone: now - 600_000,
-        waitLimitMinutes: 10,
+        leaveFromOnPhone: now - 10_000,
       } as unknown as Order;
 
       const { queryByTestId } = render(

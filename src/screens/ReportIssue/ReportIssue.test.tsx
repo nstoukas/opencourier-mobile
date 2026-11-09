@@ -114,6 +114,109 @@ describe('ReportIssue screen (decision 66.11)', () => {
         reason: DeliveryIssueReason.OrderHanded,
       });
     });
+
+    it('sends FOOD_NOT_READY when Marked ready but not ready row is pressed on order with foodReadyAt', async () => {
+      (services.orderService.reportIssue as jest.Mock).mockResolvedValue({
+        data: {},
+      });
+
+      const orderWithFoodReady = {
+        ...mockOrder,
+        foodReadyAt: '2026-11-09T12:00:00.000Z',
+      };
+
+      render(
+        <ReportIssue
+          {...defaultProps}
+          route={{ params: { order: orderWithFoodReady } }}
+        />,
+      );
+
+      await act(async () => {
+        fireEvent.press(
+          screen.getByText(i18n.t('translations:food_not_ready')),
+        );
+      });
+
+      expect(services.orderService.reportIssue).toHaveBeenCalledTimes(1);
+      expect(services.orderService.reportIssue).toHaveBeenCalledWith({
+        id: 'test-order-456',
+        reason: DeliveryIssueReason.FoodNotReady,
+      });
+      expect(DeliveryIssueReason.FoodNotReady).toBe('FOOD_NOT_READY');
+    });
+  });
+
+  describe('Marked Ready But Not Ready issue option (spec 0033, AC-9, decision 23.16)', () => {
+    it('lists Marked Ready But Not Ready only when order.foodReadyAt is set, and omits it when missing or null', () => {
+      // Case 1: foodReadyAt missing/undefined
+      const { unmount } = render(<ReportIssue {...defaultProps} />);
+      expect(
+        screen.queryByText(i18n.t('translations:food_not_ready')),
+      ).toBeNull();
+      unmount();
+
+      // Case 2: foodReadyAt is null
+      const orderNull = { ...mockOrder, foodReadyAt: null };
+      const { unmount: unmountNull } = render(
+        <ReportIssue
+          {...defaultProps}
+          route={{ params: { order: orderNull } }}
+        />,
+      );
+      expect(
+        screen.queryByText(i18n.t('translations:food_not_ready')),
+      ).toBeNull();
+      unmountNull();
+
+      // Case 3: foodReadyAt is set
+      const orderWithFoodReady = {
+        ...mockOrder,
+        foodReadyAt: '2026-11-09T12:00:00.000Z',
+      };
+      render(
+        <ReportIssue
+          {...defaultProps}
+          route={{ params: { order: orderWithFoodReady } }}
+        />,
+      );
+      expect(
+        screen.getByText(i18n.t('translations:food_not_ready')),
+      ).toBeTruthy();
+    });
+
+    it('sends FOOD_NOT_READY and shows thank you view on resolution', async () => {
+      (services.orderService.reportIssue as jest.Mock).mockResolvedValue({
+        data: {},
+      });
+
+      const orderWithFoodReady = {
+        ...mockOrder,
+        foodReadyAt: '2026-11-09T12:00:00.000Z',
+      };
+
+      render(
+        <ReportIssue
+          {...defaultProps}
+          route={{ params: { order: orderWithFoodReady } }}
+        />,
+      );
+
+      await act(async () => {
+        fireEvent.press(
+          screen.getByText(i18n.t('translations:food_not_ready')),
+        );
+      });
+
+      expect(services.orderService.reportIssue).toHaveBeenCalledWith({
+        id: 'test-order-456',
+        reason: DeliveryIssueReason.FoodNotReady,
+      });
+
+      expect(
+        screen.getByText(i18n.t('translations:thanks_for_report')),
+      ).toBeTruthy();
+    });
   });
 
   describe('Clause 3: Thank you view appears ONLY after reportIssue resolves', () => {
