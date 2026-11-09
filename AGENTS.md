@@ -105,4 +105,6 @@ the error count is above `typecheck-baseline.json`, and lowers the file when the
   iOS shows the body as plain text, so escape on Android only. The offer alert's lines come from the card's own
   `offerTripLines` through `offerAlertLineList`; never word an offer twice.
 
+- The waiting card at the pickup (spec 0033) only compares the clock to `leaveFrom` and `paidFrom`, which the server sends with each job and `getInProgressOrders` moves onto the phone's clock. The rule lives in the backend, so never work these times out on the phone. Leave is online only, like the hand back. While the arrival waits in the outbox the clock counts from the tap, and Leave stays hidden.
+
 _Drafted by /audit from the repo, worth a quick human pass. Edit freely: once a line stops matching this draft, later runs treat it as curated and will flag rather than overwrite it._
