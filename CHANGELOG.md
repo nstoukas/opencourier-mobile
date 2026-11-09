@@ -8,6 +8,8 @@ Everything below sits on top of upstream `main` on the branch `feat/courier-earn
 has the full reasoning and verification notes.
 
 ---
+Scope row 23 (restaurant delay pay and leaving a late order, spec 0033) was built on the branch `feat/wait-pay` and merged in on 9 November, behind `waitPayEnabled`, off by default. At the restaurant the job card shows "Waiting 6:12", counting up each second, and when the wait will start earning ("paid from 12:15"), counting from the tap while there is no signal. Leave appears once the time the server gave has come, asks first, is online only, and turns the swipe off while it is sent. Report Issue offers "Marked Ready But Not Ready" once the restaurant has marked the food ready. Earnings show a Waiting row, a delivered order's detail shows its waiting amount, and a left order's detail no longer reads as a delivery.
+
 
 ## Added
 
