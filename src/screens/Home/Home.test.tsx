@@ -29,6 +29,7 @@ import { useDispatchState } from '@app/hooks/useDispatchState';
 import { useJobContact } from '@app/hooks/useJobContact';
 import { CUSTOMER_SMS_PRESETS, smsUrl } from '@app/utilities/jobContact';
 import { DrawerScreens } from '@app/navigation/drawer/types';
+import { MainScreens } from '@app/navigation/main/types';
 import { RouteLeg, RouteLegKind } from '@app/types/route';
 import { services } from '@app/services/service';
 import * as mapPreferences from '@app/services/mapPreferences';
@@ -492,6 +493,34 @@ describe('HomeScreen (spec 0018, AC-5 to AC-15)', () => {
         footer.props.onCallDispatch!();
       });
       expect(openURLSpy).toHaveBeenCalledWith('tel:+302421012345');
+    });
+
+    it('wires onReportProduct to navigate to ReportProduct screen with the order (spec 0032, AC-9)', async () => {
+      const { UNSAFE_getByType } = renderHome();
+
+      const footer = UNSAFE_getByType(JobFooter);
+      expect(footer.props.onReportProduct).toBeDefined();
+
+      await act(async () => {
+        footer.props.onReportProduct!(mockJob);
+      });
+      expect(mockNav.navigate).toHaveBeenCalledWith(MainScreens.ReportProduct, {
+        order: mockJob,
+      });
+    });
+
+    it('wires onReportIssue to navigate to ReportIssue screen with the order', async () => {
+      const { UNSAFE_getByType } = renderHome();
+
+      const footer = UNSAFE_getByType(JobFooter);
+      expect(footer.props.onReportIssue).toBeDefined();
+
+      await act(async () => {
+        footer.props.onReportIssue!(mockJob);
+      });
+      expect(mockNav.navigate).toHaveBeenCalledWith(MainScreens.ReportIssue, {
+        order: mockJob,
+      });
     });
 
     it('shows preset messages via ActionSheet for onTextCustomer', async () => {

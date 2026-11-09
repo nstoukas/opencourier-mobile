@@ -130,6 +130,72 @@ describe('JobFooter (spec 0021, AC-3, AC-5, AC-9, AC-12)', () => {
     });
   });
 
+  describe('Report product button (spec 0032, AC-9)', () => {
+    it('shows Report a product action when status is courier_arrived_at_dropoff_location and onReportProduct is provided', () => {
+      const onReportProduct = jest.fn();
+      const { getByTestId } = render(
+        <JobFooter
+          order={{
+            ...baseOrder,
+            status: OrderStatus.courier_arrived_at_dropoff_location,
+          }}
+          onReportIssue={jest.fn()}
+          onReportProduct={onReportProduct}
+        />,
+      );
+
+      const reportProductButton = getByTestId('job-action-report-product');
+      expect(reportProductButton).toBeTruthy();
+
+      fireEvent.press(reportProductButton);
+      expect(onReportProduct).toHaveBeenCalledTimes(1);
+      expect(onReportProduct).toHaveBeenCalledWith(
+        expect.objectContaining({ id: 'del-footer-1' }),
+      );
+    });
+
+    it('hides Report a product action when onReportProduct is omitted, even at dropoff arrival', () => {
+      const { queryByTestId } = render(
+        <JobFooter
+          order={{
+            ...baseOrder,
+            status: OrderStatus.courier_arrived_at_dropoff_location,
+          }}
+          onReportIssue={jest.fn()}
+        />,
+      );
+
+      expect(queryByTestId('job-action-report-product')).toBeNull();
+    });
+
+    it('hides Report a product action at all other statuses even when onReportProduct is provided', () => {
+      const onReportProduct = jest.fn();
+      const nonDropoffStatuses = [
+        OrderStatus.dispatched,
+        OrderStatus.courier_arrived_at_pickup_location,
+        OrderStatus.picked_up,
+        OrderStatus.dropped_off,
+        OrderStatus.canceled,
+      ];
+
+      for (const status of nonDropoffStatuses) {
+        const { queryByTestId, unmount } = render(
+          <JobFooter
+            order={{
+              ...baseOrder,
+              status,
+            }}
+            onReportIssue={jest.fn()}
+            onReportProduct={onReportProduct}
+          />,
+        );
+
+        expect(queryByTestId('job-action-report-product')).toBeNull();
+        unmount();
+      }
+    });
+  });
+
   describe('Call dispatch button (AC-9, row 72)', () => {
     it('shows Call dispatch button when onCallDispatch is provided', () => {
       const onCallDispatch = jest.fn();
@@ -252,6 +318,7 @@ describe('JobFooter (spec 0021, AC-3, AC-5, AC-9, AC-12)', () => {
         <JobFooter
           order={{ ...baseOrder, status: OrderStatus.dropped_off }}
           onReportIssue={jest.fn()}
+          onReportProduct={jest.fn()}
           onCallDispatch={jest.fn()}
           onHandBack={jest.fn()}
         />,
@@ -260,6 +327,7 @@ describe('JobFooter (spec 0021, AC-3, AC-5, AC-9, AC-12)', () => {
       expect(queryByTestId('job-action-here')).toBeNull();
       expect(queryByTestId('job-action-hand-back')).toBeNull();
       expect(queryByTestId('job-action-dispatch')).toBeNull();
+      expect(queryByTestId('job-action-report-product')).toBeNull();
       expect(queryByTestId('job-action-report')).toBeNull();
       expect(UNSAFE_queryByType(ButtonSwipe)).toBeNull();
     });

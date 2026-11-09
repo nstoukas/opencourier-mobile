@@ -906,4 +906,100 @@ describe('orderService & isOfferEndedError (spec 0002, AC-5)', () => {
       expect(orders[1].handBackUntilOnPhone).toBeUndefined();
     });
   });
+
+  describe('reportProduct (spec 0032, AC-1, AC-2, AC-9)', () => {
+    it('posts to deliveries/:id/product-reports with kind, itemName, and note, excluding id from body', async () => {
+      const mockPost = jest.fn().mockResolvedValue({
+        data: {
+          error: false,
+          result: { id: 'report-1' },
+        },
+      });
+      const client = { post: mockPost } as unknown as UClient;
+      const service = orderService(client);
+
+      const response = await service.reportProduct({
+        id: 'del-123',
+        kind: 'WRONG_ITEM',
+        itemName: 'Chicken Gyros',
+        note: 'Customer got pork instead',
+      });
+
+      expect(mockPost).toHaveBeenCalledTimes(1);
+      expect(mockPost).toHaveBeenCalledWith(
+        'deliveries/del-123/product-reports',
+        {
+          kind: 'WRONG_ITEM',
+          itemName: 'Chicken Gyros',
+          note: 'Customer got pork instead',
+        },
+      );
+      // Ensures id is stripped from the post body
+      expect(mockPost.mock.calls[0][1]).not.toHaveProperty('id');
+      expect(response).toEqual({
+        data: {
+          error: false,
+          result: { id: 'report-1' },
+        },
+      });
+    });
+
+    it('posts with MISSING_ITEM and itemName when note is omitted', async () => {
+      const mockPost = jest.fn().mockResolvedValue({ data: { error: false } });
+      const client = { post: mockPost } as unknown as UClient;
+      const service = orderService(client);
+
+      await service.reportProduct({
+        id: 'del-456',
+        kind: 'MISSING_ITEM',
+        itemName: 'Coca Cola',
+      });
+
+      expect(mockPost).toHaveBeenCalledWith(
+        'deliveries/del-456/product-reports',
+        {
+          kind: 'MISSING_ITEM',
+          itemName: 'Coca Cola',
+        },
+      );
+      expect(mockPost.mock.calls[0][1]).not.toHaveProperty('id');
+      expect(mockPost.mock.calls[0][1]).not.toHaveProperty('note');
+    });
+
+    it('posts with note when itemName is omitted (e.g. Something else)', async () => {
+      const mockPost = jest.fn().mockResolvedValue({ data: { error: false } });
+      const client = { post: mockPost } as unknown as UClient;
+      const service = orderService(client);
+
+      await service.reportProduct({
+        id: 'del-789',
+        kind: 'WRONG_ITEM',
+        note: 'Extra sauce was charged but missing completely',
+      });
+
+      expect(mockPost).toHaveBeenCalledWith(
+        'deliveries/del-789/product-reports',
+        {
+          kind: 'WRONG_ITEM',
+          note: 'Extra sauce was charged but missing completely',
+        },
+      );
+      expect(mockPost.mock.calls[0][1]).not.toHaveProperty('id');
+      expect(mockPost.mock.calls[0][1]).not.toHaveProperty('itemName');
+    });
+
+    it('propagates axios rejection on error or network failure', async () => {
+      const networkError = new AxiosError('Network error');
+      const mockPost = jest.fn().mockRejectedValue(networkError);
+      const service = orderService({ post: mockPost } as unknown as UClient);
+
+      await expect(
+        service.reportProduct({
+          id: 'del-fail',
+          kind: 'WRONG_ITEM',
+          itemName: 'Fries',
+        }),
+      ).rejects.toThrow(networkError);
+    });
+  });
 });
