@@ -11,6 +11,12 @@ has the full reasoning and verification notes.
 
 ## Added
 
+### Ready signals on the job card (row 21, spec 0023): `62523f8` to `8a3bb33`
+- The job card shows "Preparing, ~8 min" or "Ready" until pickup, and a notice says when the restaurant delays or marks the food ready. The time is corrected for the phone's clock.
+- A live message and a push for the same change post one notice (agy's cross family review found the race).
+- The shared `escapeHtml` is used by both the offer alert and the ready notice.
+- Tests by a fresh Claude subagent, then agy; 1501 pass; put backs by hand. Reviewed by Fable and agy.
+
 ### Drinks and sides first on the pickup checklist (row 103, spec 0028): `ea395c7` to `ce12144`
 - The items line reads "3 items · 2 drinks, 1 side". The sheet lists drinks, then sides, then the rest, with a
   small Drink or Side pill, and ticks stay with their item. An order with no marks looks as before, and the
