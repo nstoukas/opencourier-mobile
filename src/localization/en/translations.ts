@@ -215,11 +215,11 @@ export default {
   online_service_channel: 'Online status',
   online_sign_hidden_title: 'Notifications are off',
   online_sign_hidden_body:
-    'While you are Online your location is shared to get offers. Android will not show the "OpenCourier is online" sign while notifications are off for this app.',
+    'While you are working, dispatch can see where you are, only to give out jobs, and no history is kept. Android will not show the "OpenCourier is online" sign while notifications are off for this app.',
   online_sign_hidden_turn_on: 'Turn on notifications',
   online_service_title_waiting: 'OpenCourier is online',
   online_service_body_waiting:
-    'Your location is shared to get offers. Go offline to stop.',
+    'Dispatch can see where you are while you work, only to give out jobs. No history is kept. Go offline to stop.',
   online_service_title_job: 'OpenCourier: delivery in progress',
   online_service_body_job: 'Your location is shared until this delivery ends.',
   // SOS (spec 0022).
