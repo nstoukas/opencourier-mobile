@@ -362,4 +362,209 @@ describe('JobFooter (spec 0021, AC-3, AC-5, AC-9, AC-12)', () => {
       ).toBeTruthy();
     });
   });
+
+  describe('Waiting clock (spec 0033, AC-5)', () => {
+    beforeEach(() => {
+      jest.useFakeTimers();
+    });
+
+    afterEach(() => {
+      jest.useRealTimers();
+    });
+
+    it('shows waiting clock text only at pickup with an arrival timestamp, and counts up each second', () => {
+      const now = 100_000;
+      jest.setSystemTime(now);
+
+      // 6 minutes and 12 seconds ago (372,000 ms)
+      const arrivedAtOnPhone = now - (6 * 60 + 12) * 1000;
+      const orderWaiting = {
+        ...baseOrder,
+        status: OrderStatus.courier_arrived_at_pickup_location,
+        arrivedAtOnPhone,
+      } as unknown as Order;
+
+      const { getByTestId } = render(
+        <JobFooter order={orderWaiting} onReportIssue={jest.fn()} />,
+      );
+
+      const clock = getByTestId('job-wait-clock');
+      expect(clock).toBeTruthy();
+      expect(clock.props.children).toBe('Waiting 6:12');
+
+      // Advances 1 second -> "Waiting 6:13"
+      act(() => {
+        jest.advanceTimersByTime(1000);
+      });
+      expect(getByTestId('job-wait-clock').props.children).toBe('Waiting 6:13');
+    });
+
+    it('hides waiting clock when not at pickup arrival even if arrivedAtOnPhone is set', () => {
+      const arrivedAtOnPhone = Date.now() - 60_000;
+
+      // Status dispatched
+      const { queryByTestId: queryDispatched, rerender } = render(
+        <JobFooter
+          order={{
+            ...baseOrder,
+            status: OrderStatus.dispatched,
+            arrivedAtOnPhone,
+          }}
+          onReportIssue={jest.fn()}
+        />,
+      );
+      expect(queryDispatched('job-wait-clock')).toBeNull();
+
+      // Status picked_up
+      rerender(
+        <JobFooter
+          order={{
+            ...baseOrder,
+            status: OrderStatus.picked_up,
+            arrivedAtOnPhone,
+          }}
+          onReportIssue={jest.fn()}
+        />,
+      );
+      expect(queryDispatched('job-wait-clock')).toBeNull();
+    });
+
+    it('hides waiting clock at pickup arrival when arrivedAtOnPhone is null or undefined', () => {
+      const { queryByTestId, rerender } = render(
+        <JobFooter
+          order={{
+            ...baseOrder,
+            status: OrderStatus.courier_arrived_at_pickup_location,
+            arrivedAtOnPhone: null,
+          }}
+          onReportIssue={jest.fn()}
+        />,
+      );
+      expect(queryByTestId('job-wait-clock')).toBeNull();
+
+      rerender(
+        <JobFooter
+          order={{
+            ...baseOrder,
+            status: OrderStatus.courier_arrived_at_pickup_location,
+            arrivedAtOnPhone: undefined,
+          }}
+          onReportIssue={jest.fn()}
+        />,
+      );
+      expect(queryByTestId('job-wait-clock')).toBeNull();
+    });
+  });
+
+  describe('Leave wait action (spec 0033, AC-6)', () => {
+    beforeEach(() => {
+      jest.useFakeTimers();
+      jest.setSystemTime(200_000);
+    });
+
+    afterEach(() => {
+      jest.useRealTimers();
+    });
+
+    it('appears exactly at the limit, not before and not without a limit', () => {
+      const now = 200_000;
+      const limitMinutes = 10;
+      const limitMs = limitMinutes * 60_000;
+      const onLeaveWait = jest.fn();
+
+      // Before the limit (9 minutes 59 seconds in)
+      const orderBefore = {
+        ...baseOrder,
+        status: OrderStatus.courier_arrived_at_pickup_location,
+        arrivedAtOnPhone: now - (limitMs - 1000),
+        waitLimitMinutes: limitMinutes,
+      } as unknown as Order;
+
+      const { queryByTestId, rerender } = render(
+        <JobFooter
+          order={orderBefore}
+          onReportIssue={jest.fn()}
+          onLeaveWait={onLeaveWait}
+        />,
+      );
+      expect(queryByTestId('job-action-leave-wait')).toBeNull();
+
+      // Exactly at the limit (10 minutes in)
+      const orderAtLimit = {
+        ...baseOrder,
+        status: OrderStatus.courier_arrived_at_pickup_location,
+        arrivedAtOnPhone: now - limitMs,
+        waitLimitMinutes: limitMinutes,
+      } as unknown as Order;
+
+      rerender(
+        <JobFooter
+          order={orderAtLimit}
+          onReportIssue={jest.fn()}
+          onLeaveWait={onLeaveWait}
+        />,
+      );
+
+      const leaveButton = queryByTestId('job-action-leave-wait');
+      expect(leaveButton).toBeTruthy();
+      fireEvent.press(leaveButton!);
+      expect(onLeaveWait).toHaveBeenCalledWith(orderAtLimit);
+
+      // Without a limit: waitLimitMinutes is missing
+      const orderNoLimit = {
+        ...baseOrder,
+        status: OrderStatus.courier_arrived_at_pickup_location,
+        arrivedAtOnPhone: now - limitMs * 2,
+      } as unknown as Order;
+
+      rerender(
+        <JobFooter
+          order={orderNoLimit}
+          onReportIssue={jest.fn()}
+          onLeaveWait={onLeaveWait}
+        />,
+      );
+      expect(queryByTestId('job-action-leave-wait')).toBeNull();
+    });
+
+    it('disables Leave button while leavingWait is true', () => {
+      const now = 200_000;
+      const orderAtLimit = {
+        ...baseOrder,
+        status: OrderStatus.courier_arrived_at_pickup_location,
+        arrivedAtOnPhone: now - 600_000,
+        waitLimitMinutes: 10,
+      } as unknown as Order;
+
+      const { getByTestId } = render(
+        <JobFooter
+          order={orderAtLimit}
+          onReportIssue={jest.fn()}
+          onLeaveWait={jest.fn()}
+          leavingWait={true}
+        />,
+      );
+
+      const leaveButton = getByTestId('job-action-leave-wait');
+      expect(leaveButton.props.accessibilityState).toEqual({
+        disabled: true,
+      });
+    });
+
+    it('hides Leave button when onLeaveWait prop is omitted even if limit has passed', () => {
+      const now = 200_000;
+      const orderAtLimit = {
+        ...baseOrder,
+        status: OrderStatus.courier_arrived_at_pickup_location,
+        arrivedAtOnPhone: now - 600_000,
+        waitLimitMinutes: 10,
+      } as unknown as Order;
+
+      const { queryByTestId } = render(
+        <JobFooter order={orderAtLimit} onReportIssue={jest.fn()} />,
+      );
+
+      expect(queryByTestId('job-action-leave-wait')).toBeNull();
+    });
+  });
 });

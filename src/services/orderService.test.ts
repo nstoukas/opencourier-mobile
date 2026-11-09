@@ -1002,4 +1002,130 @@ describe('orderService & isOfferEndedError (spec 0002, AC-5)', () => {
       ).rejects.toThrow(networkError);
     });
   });
+
+  describe('leaveWait (spec 0033, AC-6)', () => {
+    it('calls POST deliveries/:id/leave-wait with no body and returns result', async () => {
+      const mockResult = { status: 'ASSIGNING_COURIER' };
+      const mockPost = jest
+        .fn()
+        .mockResolvedValue({ data: { error: false, result: mockResult } });
+
+      const service = orderService({ post: mockPost } as unknown as UClient);
+      const res = await service.leaveWait('del-wait-1');
+
+      expect(mockPost).toHaveBeenCalledWith('deliveries/del-wait-1/leave-wait');
+      expect(res).toEqual(mockResult);
+    });
+
+    it('throws when client.post rejects on leaveWait (404, 409, or network failure)', async () => {
+      const err = new AxiosError('Wait limit not passed');
+      const mockPost = jest.fn().mockRejectedValue(err);
+
+      const service = orderService({ post: mockPost } as unknown as UClient);
+      await expect(service.leaveWait('del-wait-2')).rejects.toThrow(err);
+    });
+  });
+
+  describe('getInProgressOrders attaches arrivedAtOnPhone and waitLimitMinutes (spec 0033, AC-5)', () => {
+    it('corrects arrivedAt using serverNow and midpoint so wait duration matches server even with wrong phone clock', async () => {
+      const serverNow = '2026-11-09T12:10:00.000Z';
+      const arrivedAt = '2026-11-09T12:00:00.000Z'; // 10 minutes (600,000 ms) ago on server
+
+      // Scenario A: Phone clock is accurate
+      let phoneTimeAccurate = new Date(serverNow).getTime();
+      const dateSpy = jest
+        .spyOn(Date, 'now')
+        .mockImplementation(() => phoneTimeAccurate);
+
+      const mockGet = jest.fn().mockImplementation(async () => {
+        phoneTimeAccurate += 2000; // 2s round trip -> midpoint is +1000 ms
+        return {
+          data: {
+            result: {
+              serverNow,
+              waitLimitMinutes: 10,
+              data: [
+                { id: 'del-wait-1', arrivedAt },
+                { id: 'del-no-arrival', arrivedAt: null },
+              ],
+            },
+          },
+        };
+      });
+
+      const service = orderService({ get: mockGet } as unknown as UClient);
+
+      try {
+        const ordersAccurate = await service.getInProgressOrders();
+        expect(ordersAccurate).toHaveLength(2);
+
+        // waitLimitMinutes attached from response
+        expect(ordersAccurate[0].waitLimitMinutes).toBe(10);
+        expect(ordersAccurate[1].waitLimitMinutes).toBe(10);
+
+        // midpoint = 12:10:01
+        // server arrivedAt was 10 minutes before serverNow (-600,000 ms)
+        // arrivedAtOnPhone = midpoint - 600,000
+        const midpointAccurate = new Date(serverNow).getTime() + 1000;
+        expect(ordersAccurate[0].arrivedAtOnPhone).toBe(
+          midpointAccurate - 600_000,
+        );
+
+        // Elapsed waiting time on the phone clock:
+        const elapsedAccurate =
+          midpointAccurate - ordersAccurate[0].arrivedAtOnPhone!;
+        expect(elapsedAccurate).toBe(600_000); // exactly 10 minutes
+
+        // Order without arrivedAt has no arrivedAtOnPhone
+        expect(ordersAccurate[1].arrivedAt).toBeNull();
+        expect(ordersAccurate[1].arrivedAtOnPhone).toBeUndefined();
+
+        // Scenario B: Phone clock is 5 minutes in the past (12:05 instead of 12:10)
+        let phoneTimeSlow = new Date(serverNow).getTime() - 5 * 60 * 1000;
+        dateSpy.mockImplementation(() => phoneTimeSlow);
+
+        mockGet.mockImplementationOnce(async () => {
+          phoneTimeSlow += 2000;
+          return {
+            data: {
+              result: {
+                serverNow,
+                waitLimitMinutes: 10,
+                data: [{ id: 'del-wait-1', arrivedAt }],
+              },
+            },
+          };
+        });
+
+        const ordersSlow = await service.getInProgressOrders();
+        const midpointSlow =
+          new Date(serverNow).getTime() - 5 * 60 * 1000 + 1000;
+        expect(ordersSlow[0].arrivedAtOnPhone).toBe(midpointSlow - 600_000);
+
+        // Key assertion: elapsed waiting time relative to phone clock is STILL exactly 10 minutes!
+        const elapsedSlow = midpointSlow - ordersSlow[0].arrivedAtOnPhone!;
+        expect(elapsedSlow).toBe(600_000);
+      } finally {
+        dateSpy.mockRestore();
+      }
+    });
+
+    it('does not attach arrivedAtOnPhone when arrivedAt is missing', async () => {
+      const mockGet = jest.fn().mockResolvedValue({
+        data: {
+          result: {
+            serverNow: '2026-11-09T12:00:00.000Z',
+            waitLimitMinutes: 15,
+            data: [{ id: 'del-no-arrival' }],
+          },
+        },
+      });
+
+      const service = orderService({ get: mockGet } as unknown as UClient);
+      const orders = await service.getInProgressOrders();
+
+      expect(orders[0].waitLimitMinutes).toBe(15);
+      expect(orders[0].arrivedAtOnPhone).toBeUndefined();
+    });
+  });
 });

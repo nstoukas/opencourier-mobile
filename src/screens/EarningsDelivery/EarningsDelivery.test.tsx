@@ -68,4 +68,60 @@ describe('EarningsDelivery (spec 0009, AC-1)', () => {
     ).toBeTruthy();
     expect(screen.queryByText('Souvlaki Express')).toBeNull();
   });
+
+  describe('Waiting amount on delivered detail (spec 0033, AC-5, decision 23.11)', () => {
+    it('shows Waiting row with formatted currency when waitingPay is present', () => {
+      const deliveryWithWait: EarningsDeliveryDetail = {
+        ...mockDeliveryDetail,
+        waitingPay: 150, // €1.50
+        total: 600,
+      };
+
+      (useEarningsDelivery as jest.Mock).mockReturnValue({
+        delivery: deliveryWithWait,
+        isLoading: false,
+        isError: false,
+        isRefetching: false,
+        refetch: jest.fn(),
+      });
+
+      render(<EarningsDelivery {...defaultProps} />);
+
+      // Shows "Waiting" label and formatted currency value "€1.50"
+      expect(
+        screen.getByText(i18n.t('translations:earnings_waiting')),
+      ).toBeTruthy();
+      expect(screen.getByText('€1.50')).toBeTruthy();
+    });
+
+    it('hides Waiting row when waitingPay is 0, undefined, or null', () => {
+      // 1. undefined
+      (useEarningsDelivery as jest.Mock).mockReturnValue({
+        delivery: { ...mockDeliveryDetail, waitingPay: undefined },
+        isLoading: false,
+        isError: false,
+        isRefetching: false,
+        refetch: jest.fn(),
+      });
+
+      const { rerender } = render(<EarningsDelivery {...defaultProps} />);
+      expect(
+        screen.queryByText(i18n.t('translations:earnings_waiting')),
+      ).toBeNull();
+
+      // 2. 0
+      (useEarningsDelivery as jest.Mock).mockReturnValue({
+        delivery: { ...mockDeliveryDetail, waitingPay: 0 },
+        isLoading: false,
+        isError: false,
+        isRefetching: false,
+        refetch: jest.fn(),
+      });
+
+      rerender(<EarningsDelivery {...defaultProps} />);
+      expect(
+        screen.queryByText(i18n.t('translations:earnings_waiting')),
+      ).toBeNull();
+    });
+  });
 });

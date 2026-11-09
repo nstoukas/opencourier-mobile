@@ -523,6 +523,14 @@ describe('HomeScreen (spec 0018, AC-5 to AC-15)', () => {
       });
     });
 
+    it('wires onLeaveWait and leavingWait to JobFooter (spec 0033, AC-6)', () => {
+      const { UNSAFE_getByType } = renderHome();
+
+      const footer = UNSAFE_getByType(JobFooter);
+      expect(footer.props.onLeaveWait).toBeDefined();
+      expect(footer.props.leavingWait).toBe(false);
+    });
+
     it('shows preset messages via ActionSheet for onTextCustomer', async () => {
       const { UNSAFE_getByType } = renderHome();
 

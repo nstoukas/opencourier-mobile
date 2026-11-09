@@ -112,4 +112,59 @@ describe('EarningsDay (spec 0015, AC-15)', () => {
       screen.queryByText(i18n.t('translations:earnings_cancelled_job')),
     ).toBeNull();
   });
+
+  it('shows "Waiting" label on a WAITING day row (spec 0033, AC-5)', () => {
+    const deliveries: EarningsDelivery[] = [
+      {
+        deliveryId: 'del-waiting-1',
+        pickupBusinessName: 'Bakery Central',
+        dropoffAddress: null,
+        droppedOffAt: '2026-11-09T10:30:00Z',
+        compensation: 120, // 12 minutes wait
+        tips: 0,
+        total: 120,
+        kind: 'WAITING',
+      },
+      {
+        deliveryId: 'del-normal-2',
+        pickupBusinessName: 'Pizza Roma',
+        dropoffAddress: 'Ermou 10',
+        droppedOffAt: '2026-11-09T11:00:00Z',
+        compensation: 350,
+        tips: 50,
+        total: 400,
+        kind: undefined,
+      },
+    ];
+
+    (useEarningsDay as jest.Mock).mockReturnValue({
+      deliveries,
+      deliveryCount: 2,
+      compensation: 470,
+      tips: 50,
+      total: 520,
+      currency: 'EUR',
+      isLoading: false,
+      isError: false,
+      isRefetching: false,
+      refetch: jest.fn(),
+    });
+
+    render(<EarningsDay {...defaultProps} />);
+
+    // Exactly one "Waiting" label is displayed (for del-waiting-1)
+    const waitingLabels = screen.getAllByText(
+      i18n.t('translations:earnings_waiting'),
+    );
+    expect(waitingLabels).toHaveLength(1);
+
+    // Business names are displayed
+    expect(screen.getByText('Bakery Central')).toBeTruthy();
+    expect(screen.getByText('Pizza Roma')).toBeTruthy();
+
+    // Normal delivery does not show "Waiting"
+    expect(
+      screen.queryByText(i18n.t('translations:earnings_cancelled_job')),
+    ).toBeNull();
+  });
 });
