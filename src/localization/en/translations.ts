@@ -666,4 +666,50 @@ export default {
   im_here: "I'm here",
   swipe_picked_up: 'Picked up',
   swipe_delivered: 'Delivered',
+  // Spec 0035: asking dispatch to take the rider off an order.
+  request_removal: 'Request removal',
+  removal_title: 'Request removal',
+  removal_intro: 'Why do you need to come off this order?',
+  removal_paid: 'Paid',
+  removal_not_paid: 'Not paid',
+  removal_note_optional: 'Add a note if it helps (optional).',
+  removal_note_required:
+    'What happened? Dispatch needs a note for this reason.',
+  removal_send: 'Send',
+  removal_reasons_failed:
+    'Could not load the reasons. Try again, or call dispatch.',
+  removal_try_again: 'Try again',
+  removal_send_failed_title: 'Request not sent',
+  removal_send_no_connection:
+    'No connection. Try again when you have signal, or call dispatch.',
+  removal_send_failed:
+    'Dispatch did not get your request. Try again, or call dispatch.',
+  removal_send_refused: '{{reason}} You can call dispatch instead.',
+  removal_withdraw: 'Withdraw request',
+  removal_withdraw_confirm_title: 'Withdraw your request?',
+  removal_withdraw_confirm_body:
+    'Dispatch stops looking at it and you stay on this order. You can ask again.',
+  removal_withdraw_confirm: 'Withdraw',
+  removal_withdraw_keep: 'Keep it',
+  removal_withdraw_failed_title: 'Not withdrawn',
+  removal_withdraw_failed:
+    'Could not withdraw your request. Try again, or call dispatch.',
+  removal_waiting: 'Waiting for dispatch. Keep working this order.',
+  removal_declined: 'Dispatch said no to your removal request.',
+  removal_declined_with_note: 'Dispatch said no: {{note}}',
+  removal_declined_full_title: 'Dispatch said no',
+  removal_channel: 'Removal requests',
+  removal_notice_title_approved: 'Dispatch took you off an order',
+  removal_notice_title_declined: 'Dispatch said no to your request',
+  removal_notice_approved: 'You are off this order.',
+  removal_notice_approved_paid:
+    'You are off this order. {{amount}} goes to your earnings.',
+  removal_notice_approved_not_paid:
+    'You are off this order. This reason is not paid.',
+  removal_notice_declined: 'Keep working this order, or ask again.',
+  removal_notice_declined_with_note: '{{note}}',
+  removal_notice_close: 'OK',
+  // Spec 0035, AC-17: the two new lines in the rider's earnings.
+  earnings_removal: 'Removal from an order',
+  earnings_return_trip: 'Return trip',
 };

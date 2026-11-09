@@ -8,6 +8,7 @@
 
 import { parseJobReadyUpdate } from '@app/utilities/readySignals';
 import { showReadyNotice } from '@app/services/readyNotice/readyNotice';
+import { receiveRemovalDecision } from '@app/services/removalNotice/removalNotice';
 import { AppState } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 // `type` brings in only the TypeScript description of these, no code.
@@ -65,6 +66,15 @@ export const onRemoteMessage = async (
         console.log('Could not show the ready notice', error),
       );
       queryClient.invalidateQueries({ queryKey: [QueryKeys.inProgressOrders] });
+    }
+    return;
+  }
+  // Spec 0035 (AC-11): dispatch answered a removal request. Only a phone still logged in shows it.
+  if (message.data?.type === 'REMOVAL_REQUEST_DECIDED') {
+    if (await AsyncStorage.getItem('token')) {
+      await receiveRemovalDecision(message.data, queryClient).catch(error =>
+        console.log('Could not show the removal notice', error),
+      );
     }
     return;
   }

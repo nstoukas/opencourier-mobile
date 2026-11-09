@@ -8,6 +8,7 @@ import { styles } from './Home.styles';
 import { DispatchStopBanner } from '@app/components/DispatchStopBanner/DispatchStopBanner';
 import { ShiftBanner } from '@app/components/ShiftBanner/ShiftBanner';
 import { CancelledJobCard } from '@app/components/CancelledJobCard/CancelledJobCard';
+import { RemovalNotices } from '@app/components/RemovalNotices/RemovalNotices';
 import { RefusedSteps } from '@app/components/RefusedSteps/RefusedSteps';
 import { NewOrderCell } from '@app/components/NewOrderCell/NewOrderCell';
 import { InProgressCell } from '@app/components/InProgressCell/InProgressCell';
@@ -37,6 +38,10 @@ import { useJobContact } from '@app/hooks/useJobContact';
 import { useMoveDropoffPin } from '@app/hooks/useMoveDropoffPin';
 import { useHandBack } from '@app/hooks/useHandBack';
 import { useLeaveWait } from '@app/hooks/useLeaveWait';
+import {
+  useRemovalBusy,
+  useWithdrawRemoval,
+} from '@app/hooks/useRemovalRequest';
 import { useDeliveryRoute } from '@app/hooks/useDeliveryRoute';
 import { usePickupPoints } from '@app/hooks/usePickupPoints';
 import { useNavigateTo } from '@app/hooks/useNavigateTo';
@@ -82,6 +87,8 @@ export const HomeScreen = ({ navigation }: Props) => {
   // Spec 0020 (AC-9): the free hand back in the first minute after accepting.
   const { handBack, handingBackId } = useHandBack(user?.id);
   const { leaveWait, leavingId } = useLeaveWait(user?.id);
+  // Spec 0035: takes back an open removal request (asks first).
+  const withdrawRemoval = useWithdrawRemoval();
   const connectionStatus = useConnectionStatus();
   const navigateTo = useNavigateTo();
   const { locationPermission } = useLocationPermission();
@@ -195,6 +202,11 @@ export const HomeScreen = ({ navigation }: Props) => {
   const [index, setIndex] = useState(0);
   useEffect(() => setIndex(0), [listKey]);
   const shown: CardItem | undefined = items[Math.min(index, items.length - 1)];
+  // Spec 0035: true while a removal request for the shown job is on its way,
+  // even if the rider left the Request removal screen meanwhile.
+  const removalBusy = useRemovalBusy(
+    shown?.kind === 'job' ? shown.order.id : undefined,
+  );
 
   // AC-6: the route, asked for the server's status of the shown delivery.
   const serverJob =
@@ -351,6 +363,11 @@ export const HomeScreen = ({ navigation }: Props) => {
         handingBack={handingBackId === order.id}
         onLeaveWait={leaveWait}
         leavingWait={leavingId === order.id}
+        onRequestRemoval={job =>
+          navigation.navigate(MainScreens.RequestRemoval, { order: job })
+        }
+        onWithdrawRemoval={withdrawRemoval}
+        removalBusy={removalBusy}
       />
     );
   };
@@ -409,6 +426,8 @@ export const HomeScreen = ({ navigation }: Props) => {
         <DispatchStopBanner inFront={isFocused} />
         {/* Spec 0015: a job this rider held was cancelled. */}
         <CancelledJobCard inFront={isFocused} />
+        {/* Spec 0035: dispatch's answer to a removal request, until tapped. */}
+        <RemovalNotices />
         {/* Steps the co-op refused after they waited for signal (spec 0009). */}
         <RefusedSteps courierId={user?.id} />
       </HomeTopSlot>

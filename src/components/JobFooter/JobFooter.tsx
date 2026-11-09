@@ -1,15 +1,18 @@
 import React, { useState } from 'react';
-import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Alert, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { Order } from '@app/types/types';
 import { OrderStatus } from '@app/types/enums';
 import ButtonSwipe from '@app/components/ButtonSwipe/ButtonSwipe';
 import { Icon } from '@app/components/Icon/Icon';
 import { CloudArrowUpIcon } from 'phosphor-react-native/src/icons/CloudArrowUp';
+import { ClockIcon } from 'phosphor-react-native/src/icons/Clock';
+import { WarningIcon } from 'phosphor-react-native/src/icons/Warning';
 import useOrder from '@app/hooks/useOrder';
 import { useHandBackCountdown } from '@app/hooks/useHandBack';
 import { useWaitClock } from '@app/hooks/useLeaveWait';
 import { canHandBack } from '@app/utilities/handBackWindow';
+import { canRequestRemoval } from '@app/utilities/removalRequest';
 import {
   canLeaveWait,
   isWaitingAtPickup,
@@ -36,6 +39,12 @@ type Props = {
   // Spec 0033: leaves a late order once the co-op's limit has passed (asks first).
   onLeaveWait?: (order: Order) => void;
   leavingWait?: boolean;
+  // Spec 0035: opens the Request removal screen. Left out, no action.
+  onRequestRemoval?: (order: Order) => void;
+  // Spec 0035: takes back an open request (asks first).
+  onWithdrawRemoval?: (order: Order) => void;
+  // A send or a withdraw of this job's request is on its way.
+  removalBusy?: boolean;
 };
 
 type SmallAction = {
@@ -60,6 +69,9 @@ export const JobFooter = ({
   handingBack,
   onLeaveWait,
   leavingWait,
+  onRequestRemoval,
+  onWithdrawRemoval,
+  removalBusy,
 }: Props) => {
   const { t } = useTranslation();
   const { imHere, pickedUp, delivered } = useOrder();
@@ -76,6 +88,13 @@ export const JobFooter = ({
   const waiting = isWaitingAtPickup(order);
   const secondsWaiting = useWaitClock(order.arrivedAtOnPhone, waiting);
   const showLeaveWait = !!onLeaveWait && canLeaveWait(order, Date.now());
+
+  // Spec 0035: the rider's request, while it is open or was refused. It changes
+  // nothing about the job, so every other action on the card stays.
+  const removalRequest = order.removalRequest;
+  const removalOpen = removalRequest?.status === 'OPEN';
+  const removalDeclined = removalRequest?.status === 'DECLINED';
+  const refusalNote = removalRequest?.decisionNote?.trim();
 
   // After a swipe's steps are queued, draw the swipe fresh (a new key): when the
   // status moved the key changes anyway; when the step was refused, this brings
@@ -125,6 +144,27 @@ export const JobFooter = ({
       onPress: onCallDispatch,
     });
   }
+  // Spec 0035 (AC-3, AC-5): after the free hand back. Neither action is offered
+  // while a send or a withdraw is on its way, so it cannot be sent twice.
+  if (!jobOver && !removalBusy) {
+    if (removalOpen && onWithdrawRemoval) {
+      actions.push({
+        key: 'withdraw-removal',
+        label: t('translations:removal_withdraw'),
+        onPress: () => onWithdrawRemoval(order),
+      });
+    } else if (
+      !removalOpen &&
+      onRequestRemoval &&
+      canRequestRemoval(order, Date.now())
+    ) {
+      actions.push({
+        key: 'request-removal',
+        label: t('translations:request_removal'),
+        onPress: () => onRequestRemoval(order),
+      });
+    }
+  }
   // Spec 0032: at the customer's door the rider can report a wrong or missing product.
   if (onReportProduct && order.status === OrderStatus.courier_arrived_at_dropoff_location) {
     actions.push({
@@ -153,6 +193,40 @@ export const JobFooter = ({
               : t('translations:waiting_to_send')}
           </Text>
         </View>
+      ) : null}
+      {removalOpen ? (
+        <View
+          style={styles.waiting}
+          accessibilityRole="text"
+          testID="job-removal-waiting">
+          <Icon icon={ClockIcon} size={18} tone="muted-foreground" />
+          <Text style={styles.waitingText} numberOfLines={1}>
+            {t('translations:removal_waiting')}
+          </Text>
+        </View>
+      ) : null}
+      {removalDeclined ? (
+        // One line, as every note on the job (spec 0021); a tap reads the whole sentence.
+        <TouchableOpacity
+          style={styles.waiting}
+          disabled={!refusalNote}
+          onPress={() =>
+            Alert.alert(
+              t('translations:removal_declined_full_title'),
+              refusalNote,
+            )
+          }
+          accessibilityRole="button"
+          testID="job-removal-declined">
+          <Icon icon={WarningIcon} size={18} tone="destructive" />
+          <Text style={styles.refusedText} numberOfLines={1}>
+            {refusalNote
+              ? t('translations:removal_declined_with_note', {
+                  note: refusalNote,
+                })
+              : t('translations:removal_declined')}
+          </Text>
+        </TouchableOpacity>
       ) : null}
       {secondsWaiting !== null ? (
         <Text style={styles.waitClock} testID="job-wait-clock">
@@ -222,6 +296,11 @@ const styles = StyleSheet.create({
   waitingText: {
     ...typeScale.caption,
     color: color['muted-foreground'],
+    flexShrink: 1,
+  },
+  refusedText: {
+    ...typeScale.caption,
+    color: color.destructive,
     flexShrink: 1,
   },
   waitClock: {

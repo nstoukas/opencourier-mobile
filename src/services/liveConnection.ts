@@ -24,6 +24,8 @@ export const DELIVERY_STATUS_UPDATED_EVENT = 'DELIVERY_STATUS_UPDATED';
 export const OFFER_ENDED_EVENT = 'OFFER_ENDED';
 // The restaurant moved a held job's ready time or marked the food ready (spec 0023).
 export const JOB_READY_UPDATED_EVENT = 'JOB_READY_UPDATED';
+// Dispatch answered this rider's removal request (spec 0035).
+export const REMOVAL_REQUEST_DECIDED_EVENT = 'REMOVAL_REQUEST_DECIDED';
 
 // What the backend sends with OFFER_ENDED (backend `OfferEndedMessage`).
 export type OfferEndedMessage = {
@@ -96,6 +98,8 @@ export type LiveConnectionHandlers = {
   onOfferEnded?: (deliveryId: string | null) => void;
   // A held job's ready time changed (spec 0023); the raw message, read by `parseJobReadyUpdate`.
   onJobReadyUpdated?: (message: unknown) => void;
+  // Dispatch answered a removal request (spec 0035); the raw message, read by `parseRemovalDecision`.
+  onRemovalRequestDecided?: (message: unknown) => void;
   // Runs on every (re)connect, so anything sent while the phone was away is
   // fetched again.
   onConnected: () => void;
@@ -152,6 +156,9 @@ export class LiveConnection {
     );
     socket.on(JOB_READY_UPDATED_EVENT, (message: unknown) =>
       this.handlers.onJobReadyUpdated?.(message),
+    );
+    socket.on(REMOVAL_REQUEST_DECIDED_EVENT, (message: unknown) =>
+      this.handlers.onRemovalRequestDecided?.(message),
     );
   }
 

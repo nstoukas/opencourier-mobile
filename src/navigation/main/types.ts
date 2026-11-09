@@ -21,6 +21,7 @@ export enum MainScreens {
   ShiftAvailabilityScreen = 'ShiftAvailabilityScreen',
   ReportIssue = 'ReportIssue',
   ReportProduct = 'ReportProduct',
+  RequestRemoval = 'RequestRemoval',
   EarningsDay = 'EarningsDay',
   EarningsDelivery = 'EarningsDelivery',
 }
@@ -42,6 +43,9 @@ export type MainStackParamList = {
     order: Order;
   };
   ReportProduct: {
+    order: Order;
+  };
+  RequestRemoval: {
     order: Order;
   };
   // Only the day is passed; the screen re-fetches so the list always matches the ledger.

@@ -1,5 +1,6 @@
 import { parseJobReadyUpdate } from '@app/utilities/readySignals';
 import { showReadyNotice } from '@app/services/readyNotice/readyNotice';
+import { receiveRemovalDecision } from '@app/services/removalNotice/removalNotice';
 import useUser from '@app/hooks/useUser';
 import { services } from '@app/services/service';
 import { QueryKeys } from '@app/utilities/queryKeys';
@@ -121,6 +122,12 @@ const SocketProvider = ({ children }: Props) => {
         queryClient.invalidateQueries({
           queryKey: [QueryKeys.inProgressOrders],
         });
+      },
+      // Spec 0035 (AC-11): dispatch answered a removal request.
+      onRemovalRequestDecided: (message: unknown) => {
+        receiveRemovalDecision(message, queryClient).catch(error =>
+          console.log('Could not show the removal notice', error),
+        );
       },
       // After any (re)connect, fetch what may have been sent while away.
       onConnected: () =>

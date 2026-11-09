@@ -63,6 +63,17 @@ export const EarningsDay = ({ navigation, route }: Props) => {
             {t('translations:earnings_waiting')}
           </Text>
         )}
+        {/* Spec 0035, AC-17: paid for coming off an order, and for taking the food back. */}
+        {item.kind === 'REMOVAL_COMPENSATION' && (
+          <Text style={styles.cellAddress}>
+            {t('translations:earnings_removal')}
+          </Text>
+        )}
+        {item.kind === 'RETURN_TRIP' && (
+          <Text style={styles.cellAddress}>
+            {t('translations:earnings_return_trip')}
+          </Text>
+        )}
         {/* The address can legitimately be null when the location was never geocoded. */}
         {item.dropoffAddress && (
           <Text style={styles.cellAddress} numberOfLines={1}>
@@ -140,7 +151,10 @@ export const EarningsDay = ({ navigation, route }: Props) => {
           <ActivityIndicator />
         ) : (
           <FlatList
-            keyExtractor={item => item.deliveryId}
+            // One order can now pay twice in a day (a wait and a removal, spec 0035): one row each.
+            keyExtractor={item =>
+              `${item.deliveryId}-${item.kind ?? 'delivery'}`
+            }
             data={deliveries}
             renderItem={renderItem}
             ListEmptyComponent={renderEmpty}

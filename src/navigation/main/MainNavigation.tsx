@@ -16,6 +16,7 @@ import { EarningsDelivery } from '@app/screens/EarningsDelivery/EarningsDelivery
 import { ShiftAvailabilityScreen } from '@app/screens/SettingsStack/ShiftAvailability/ShiftAvailabilityScreen';
 import { ReportIssue } from '@app/screens/ReportIssue/ReportIssue';
 import { ReportProduct } from '@app/screens/ReportProduct/ReportProduct';
+import { RequestRemoval } from '@app/screens/RequestRemoval/RequestRemoval';
 
 // The <MainStackParamList> type argument tells the navigator which routes exist and what
 // params each takes, so every screen's Props is checked against its own route.
@@ -99,6 +100,11 @@ export const MainStack = () => {
       <MainStackNavigator.Screen
         name={MainScreens.ReportProduct}
         component={ReportProduct}
+        options={DEFAULT_OPTIONS}
+      />
+      <MainStackNavigator.Screen
+        name={MainScreens.RequestRemoval}
+        component={RequestRemoval}
         options={DEFAULT_OPTIONS}
       />
     </MainStackNavigator.Navigator>

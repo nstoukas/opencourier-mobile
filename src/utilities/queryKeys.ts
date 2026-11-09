@@ -23,4 +23,6 @@ export const QueryKeys = {
   // The shift schedule and this rider's bookings (spec 0027); saved to disk, so the banner survives a
   // restart with no signal.
   shifts: 'shifts',
+  // The reasons a rider can give for coming off an order (spec 0035); never saved to disk.
+  removalReasons: 'removalReasons',
 };

@@ -113,8 +113,13 @@ export type EarningsDelivery = {
   tips: number;
   total: number;
   // A pay that is not a drop off: a reassigned rider's payout, a cancelled job's (spec 0015),
-  // or a wait at the restaurant (spec 0033).
-  kind?: 'REASSIGNMENT_COMPENSATION' | 'CANCELLATION_COMPENSATION' | 'WAITING';
+  // a wait at the restaurant (spec 0033), or a removal or a return trip (spec 0035).
+  kind?:
+    | 'REASSIGNMENT_COMPENSATION'
+    | 'CANCELLATION_COMPENSATION'
+    | 'WAITING'
+    | 'REMOVAL_COMPENSATION'
+    | 'RETURN_TRIP';
   // Spec 0033, on the detail of a delivered order: what its wait paid, inside `total`.
   waitingPay?: number;
 };
@@ -380,6 +385,29 @@ export type Order = {
   foodReadyAt?: string | null;
   // `readyAt` moved onto this phone's clock when the job list arrived. Not sent by the server.
   readyAtOnPhone?: number | null;
+  // Spec 0035: this rider's newest removal request on this job, while it is open or was refused.
+  // Null otherwise. Only the job list (deliveries/in-progress) sends it.
+  removalRequest?: RemovalRequest | null;
+};
+
+// A reason a rider can give for asking to come off an order (`GET removal-reasons`, spec 0035).
+export type RemovalReason = {
+  id: string;
+  label: string;
+  // Whether this reason pays the rider. Riders never see whether it bills the restaurant.
+  paid: boolean;
+  needsNote: boolean;
+};
+
+// The rider's own removal request, as the server sends it (spec 0035).
+export type RemovalRequest = {
+  id: string;
+  status: 'OPEN' | 'APPROVED' | 'DECLINED' | 'WITHDRAWN' | 'CLOSED';
+  label: string;
+  paid: boolean;
+  // Dispatch's sentence on a refusal; null when they wrote none.
+  decisionNote: string | null;
+  createdAt: string;
 };
 
 // An offer's times in milliseconds on the phone's own clock (like Date.now()).

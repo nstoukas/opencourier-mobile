@@ -7,6 +7,7 @@ import earningsService, { EarningsService } from './earningsService';
 import routeService, { RouteService } from './routeService';
 import sosService, { SosService } from './sosService';
 import { setOwnPosition } from './ownPosition';
+import { clearRemovalNotices } from './removalNotice/removalNotice';
 import { setLatestFix } from './latestFix';
 import { clearHeldArrivals } from './heldArrivals';
 import { clearPickedUpTimes } from './pickupTimes';
@@ -43,6 +44,8 @@ const Services = (): Services => {
     // Nor inherits a fix or a held arrival from them (spec 0021).
     setLatestFix(null);
     clearPickedUpTimes();
+    // The next rider never sees the last one's removal answers (spec 0035).
+    clearRemovalNotices();
     clearHeldArrivals().catch(error =>
       console.log('Could not clear held arrivals', error),
     );

@@ -78,6 +78,10 @@ export const EarningsDelivery = ({ navigation, route }: Props) => {
     const currency = delivery.currency;
     const droppedOff = moment(delivery.droppedOffAt);
     const isWait = delivery.kind === 'WAITING';
+    // Spec 0035, AC-17: a removal or a return trip is not a drop off either.
+    const isRemoval = delivery.kind === 'REMOVAL_COMPENSATION';
+    const isReturnTrip = delivery.kind === 'RETURN_TRIP';
+    const notDelivered = isWait || isRemoval || isReturnTrip;
 
     return (
       <>
@@ -95,6 +99,10 @@ export const EarningsDelivery = ({ navigation, route }: Props) => {
             label={t(
               isWait
                 ? 'translations:earnings_waiting'
+                : isRemoval
+                ? 'translations:earnings_removal'
+                : isReturnTrip
+                ? 'translations:earnings_return_trip'
                 : 'translations:piece_rate_pay',
             )}
             value={formatCurrencyFromCents(delivery.compensation, currency)}
@@ -123,7 +131,7 @@ export const EarningsDelivery = ({ navigation, route }: Props) => {
             first
           />
           {/* Spec 0033: a rider who left never delivered this order. */}
-          {isWait ? null : (
+          {notDelivered ? null : (
             <DetailRow
               label={t('translations:delivered_to')}
               value={
@@ -133,7 +141,7 @@ export const EarningsDelivery = ({ navigation, route }: Props) => {
           )}
           <DetailRow
             label={t(
-              isWait
+              notDelivered
                 ? 'translations:earnings_paid_on'
                 : 'translations:delivered_on',
             )}

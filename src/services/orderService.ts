@@ -2,7 +2,7 @@ import { DeliveryIssueReason } from '@app/types/enums';
 import axios from 'axios';
 import { UClient } from './Client';
 import { OrderServiceReponse } from './types';
-import { Order } from '@app/types/types';
+import { Order, RemovalReason, RemovalRequest } from '@app/types/types';
 import { offerTimesOnPhone } from '@app/utilities/offerClock';
 import { handBackUntilOnPhone } from '@app/utilities/handBackWindow';
 import { JOB_STEP_ROUTE, JobStep } from '@app/utilities/jobSteps';
@@ -84,6 +84,17 @@ export interface OrderService {
   // throws the axios error on a refusal (404, 409) or no signal.
   leaveWait: (id: string) => Promise<{ status: string }>;
   declineOrder: (id: string) => Promise<OrderServiceReponse>;
+  // Spec 0035: the reasons a rider can give for coming off an order.
+  getRemovalReasons: () => Promise<RemovalReason[]>;
+  // Spec 0035: asks dispatch to take this rider off the order. Online only;
+  // throws the axios error on a refusal or no signal.
+  sendRemovalRequest: (params: {
+    id: string;
+    reasonId: string;
+    note?: string;
+  }) => Promise<RemovalRequest>;
+  // Spec 0035: takes back an open request. Online only, like the send.
+  withdrawRemovalRequest: (id: string) => Promise<{ status: string }>;
   // Sends one job step from the outbox (spec 0009) and reports the answer;
   // it never throws. `tapAgeMs` is how long ago the rider tapped.
   sendJobStep: (
@@ -234,6 +245,34 @@ const orderService = (client: UClient): OrderService => {
     return client.post(`deliveries/${id}/reject`, {});
   };
 
+  const getRemovalReasons = async (): Promise<RemovalReason[]> => {
+    const { data } = await client.get('removal-reasons');
+    return data.result;
+  };
+
+  const sendRemovalRequest = async (params: {
+    id: string;
+    reasonId: string;
+    note?: string;
+  }): Promise<RemovalRequest> => {
+    const { data } = await client.post(
+      `deliveries/${params.id}/removal-request`,
+      params.note
+        ? { reasonId: params.reasonId, note: params.note }
+        : { reasonId: params.reasonId },
+    );
+    return data.result;
+  };
+
+  const withdrawRemovalRequest = async (
+    id: string,
+  ): Promise<{ status: string }> => {
+    const { data } = await client.post(
+      `deliveries/${id}/removal-request/withdraw`,
+    );
+    return data.result;
+  };
+
   const sendJobStep = async (
     item: {
       deliveryId: string;
@@ -321,6 +360,9 @@ const orderService = (client: UClient): OrderService => {
     reportIssue,
     moveDropoffPin,
     declineOrder,
+    getRemovalReasons,
+    sendRemovalRequest,
+    withdrawRemovalRequest,
   };
 };
 
