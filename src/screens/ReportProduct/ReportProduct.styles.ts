@@ -20,6 +20,9 @@ export const styles = StyleSheet.create({
     fontWeight: '700',
     fontSize: typeScale.h1.fontSize,
   },
+  keyboardArea: {
+    flex: 1,
+  },
   content: {
     paddingTop: 24,
     gap: 16,

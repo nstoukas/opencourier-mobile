@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import {
   Alert,
+  KeyboardAvoidingView,
+  Platform,
   ScrollView,
   Text,
   TextInput,
@@ -9,6 +11,7 @@ import {
 } from 'react-native';
 import axios from 'axios';
 import { useTranslation } from 'react-i18next';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Button, ButtonType } from '@app/components/Button/Button';
 import { BackNavButton } from '@app/components/BackNavButton/BackNavButton';
 import { ScreenSafeArea } from '@app/components/ScreenSafeArea/ScreenSafeArea';
@@ -26,6 +29,7 @@ const SOMETHING_ELSE = '__other__';
 // report and out of the event; the item is free text if it is not on the order.
 export const ReportProduct = ({ navigation, route }: Props) => {
   const { t } = useTranslation();
+  const { bottom } = useSafeAreaInsets();
   const { order } = route.params;
   const names = (order.orderItems ?? []).map(item => item.name);
   const [kind, setKind] = useState<Kind>('WRONG_ITEM');
@@ -47,7 +51,10 @@ export const ReportProduct = ({ navigation, route }: Props) => {
         itemName: item === SOMETHING_ELSE ? undefined : item,
         note: note.trim() || undefined,
       });
-      navigation.goBack();
+      // Says it went, so the rider knows before the job screen comes back.
+      Alert.alert(t('translations:thanks_for_report'), '', [
+        { text: 'OK', onPress: () => navigation.goBack() },
+      ]);
     } catch (error) {
       // The message only: the whole error would print the rider's token in the log.
       console.log('Could not send the report', (error as Error)?.message);
@@ -56,7 +63,7 @@ export const ReportProduct = ({ navigation, route }: Props) => {
         t('translations:report_failed_title'),
         t(
           refused
-            ? 'translations:report_refused_body'
+            ? 'translations:report_product_refused_body'
             : 'translations:report_failed_body',
         ),
       );
@@ -84,7 +91,16 @@ export const ReportProduct = ({ navigation, route }: Props) => {
         <Text style={styles.title}>{t('translations:report_product')}</Text>
         <BackNavButton onPress={() => navigation.goBack()} />
       </View>
-      <ScrollView contentContainerStyle={styles.content}>
+      {/* iOS has no adjustResize, so this lifts the note above the keyboard, as in ReportIssue. */}
+      <KeyboardAvoidingView
+        style={styles.keyboardArea}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+      <ScrollView
+        contentContainerStyle={[
+          styles.content,
+          // Android: ScreenSafeArea pads only iOS, so Send stays clear of the gesture bar.
+          { paddingBottom: Platform.OS === 'android' ? bottom + 16 : 16 },
+        ]}>
         <View style={styles.row}>
           {chip(t('translations:report_product_wrong'), kind === 'WRONG_ITEM', () => setKind('WRONG_ITEM'))}
           {chip(t('translations:report_product_missing'), kind === 'MISSING_ITEM', () => setKind('MISSING_ITEM'))}
@@ -109,6 +125,7 @@ export const ReportProduct = ({ navigation, route }: Props) => {
           onPress={send}
         />
       </ScrollView>
+      </KeyboardAvoidingView>
     </ScreenSafeArea>
   );
 };

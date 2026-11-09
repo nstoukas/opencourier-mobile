@@ -516,6 +516,7 @@ export default {
   report_product_wrong: 'Wrong item',
   report_product_missing: 'Missing item',
   report_product_something_else: 'Something else',
+  report_product_refused_body: 'This job can no longer take a product report. Tell dispatch instead.',
   report_failed_title: 'Report not sent',
   report_failed_body:
     'The report could not reach the co-op. Check your signal and try again.',
