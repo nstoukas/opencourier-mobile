@@ -122,6 +122,8 @@ export type EarningsDelivery = {
     | 'RETURN_TRIP';
   // Spec 0033, on the detail of a delivered order: what its wait paid, inside `total`.
   waitingPay?: number;
+  // Spec 0035, on the detail of a job cancelled after pickup: the return trip's pay, inside `total`.
+  returnTripPay?: number;
 };
 
 /**

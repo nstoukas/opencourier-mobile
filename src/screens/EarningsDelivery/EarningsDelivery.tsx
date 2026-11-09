@@ -122,6 +122,14 @@ export const EarningsDelivery = ({ navigation, route }: Props) => {
               strong
             />
           ) : null}
+          {/* Spec 0035, AC-17: the return trip is its own line too. */}
+          {delivery.returnTripPay ? (
+            <DetailRow
+              label={t('translations:earnings_return_trip')}
+              value={formatCurrencyFromCents(delivery.returnTripPay, currency)}
+              strong
+            />
+          ) : null}
         </View>
 
         <View style={styles.card}>
