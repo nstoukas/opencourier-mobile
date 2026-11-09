@@ -257,9 +257,78 @@ describe('useLeaveWait & useWaitClock (spec 0033, AC-5, AC-6)', () => {
       ]);
       expect(cachedJobs).toEqual([otherJob]);
 
-      // 4. inProgressOrders query invalidated for authoritative server state
+      // 4. inProgressOrders, newOrders, earningsSummary, earningsDay, and earningsDelivery queries invalidated
       expect(invalidateSpy).toHaveBeenCalledWith({
         queryKey: [QueryKeys.inProgressOrders],
+      });
+      expect(invalidateSpy).toHaveBeenCalledWith({
+        queryKey: [QueryKeys.newOrders],
+      });
+      expect(invalidateSpy).toHaveBeenCalledWith({
+        queryKey: [QueryKeys.earningsSummary],
+      });
+      expect(invalidateSpy).toHaveBeenCalledWith({
+        queryKey: [QueryKeys.earningsDay],
+      });
+      expect(invalidateSpy).toHaveBeenCalledWith({
+        queryKey: [QueryKeys.earningsDelivery],
+      });
+    });
+
+    it('on failed Leave: newOrders, earningsSummary, earningsDay, and earningsDelivery queries are not refreshed', async () => {
+      const wrapper = createWrapper();
+      queryClient.setQueryData<Order[]>(
+        [QueryKeys.inProgressOrders],
+        [mockOrder],
+      );
+      const invalidateSpy = jest.spyOn(queryClient, 'invalidateQueries');
+
+      const error409 = new AxiosError('Conflict');
+      error409.response = {
+        status: 409,
+        statusText: 'Conflict',
+        headers: {},
+        config: {} as any,
+        data: {
+          error: true,
+          result: [{ message: 'Too early to leave' }],
+        },
+      };
+      leaveWaitSpy.mockRejectedValueOnce(error409);
+
+      const { result } = renderHook(() => useLeaveWait('courier-1'), {
+        wrapper,
+      });
+
+      act(() => {
+        result.current.leaveWait(mockOrder);
+      });
+
+      const confirmButton = alertSpy.mock.calls[0][2].find(
+        (b: any) => b.text === i18n.t('translations:leave_wait_confirm'),
+      );
+
+      await act(async () => {
+        await confirmButton.onPress();
+      });
+
+      // inProgressOrders is refreshed in finally
+      expect(invalidateSpy).toHaveBeenCalledWith({
+        queryKey: [QueryKeys.inProgressOrders],
+      });
+
+      // Earnings and newOrders are NOT refreshed on failure
+      expect(invalidateSpy).not.toHaveBeenCalledWith({
+        queryKey: [QueryKeys.newOrders],
+      });
+      expect(invalidateSpy).not.toHaveBeenCalledWith({
+        queryKey: [QueryKeys.earningsSummary],
+      });
+      expect(invalidateSpy).not.toHaveBeenCalledWith({
+        queryKey: [QueryKeys.earningsDay],
+      });
+      expect(invalidateSpy).not.toHaveBeenCalledWith({
+        queryKey: [QueryKeys.earningsDelivery],
       });
     });
 

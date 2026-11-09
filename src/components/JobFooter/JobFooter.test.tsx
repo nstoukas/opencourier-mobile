@@ -310,6 +310,41 @@ describe('JobFooter (spec 0021, AC-3, AC-5, AC-9, AC-12)', () => {
         expect.objectContaining({ id: 'del-footer-1' }),
       );
     });
+
+    it('disables swipe while leavingWait is true and enables when false or omitted', () => {
+      // 1. leavingWait is true -> swipe is disabled
+      const { UNSAFE_getByType, rerender } = render(
+        <JobFooter
+          order={{ ...baseOrder, status: OrderStatus.dispatched }}
+          onReportIssue={jest.fn()}
+          leavingWait={true}
+        />,
+      );
+
+      const swipeDisabled = UNSAFE_getByType(ButtonSwipe);
+      expect(swipeDisabled.props.enabled).toBe(false);
+
+      // 2. leavingWait is false -> swipe is enabled
+      rerender(
+        <JobFooter
+          order={{ ...baseOrder, status: OrderStatus.dispatched }}
+          onReportIssue={jest.fn()}
+          leavingWait={false}
+        />,
+      );
+      const swipeEnabled = UNSAFE_getByType(ButtonSwipe);
+      expect(swipeEnabled.props.enabled).toBe(true);
+
+      // 3. leavingWait is omitted -> swipe defaults to enabled
+      rerender(
+        <JobFooter
+          order={{ ...baseOrder, status: OrderStatus.dispatched }}
+          onReportIssue={jest.fn()}
+        />,
+      );
+      const swipeDefault = UNSAFE_getByType(ButtonSwipe);
+      expect(swipeDefault.props.enabled).toBe(true);
+    });
   });
 
   describe('When job is over (row 72, AC-9)', () => {
@@ -524,6 +559,64 @@ describe('JobFooter (spec 0021, AC-3, AC-5, AC-9, AC-12)', () => {
           onLeaveWait={onLeaveWait}
         />,
       );
+      expect(queryByTestId('job-action-leave-wait')).toBeNull();
+    });
+
+    it('appears on a clock tick as fake timers cross the limit, with no prop change', () => {
+      const now = 200_000;
+      const limitMinutes = 10;
+      const limitMs = limitMinutes * 60_000;
+      const onLeaveWait = jest.fn();
+
+      // 1 second before the limit (9 min 59 sec in)
+      const order = {
+        ...baseOrder,
+        status: OrderStatus.courier_arrived_at_pickup_location,
+        arrivedAtOnPhone: now - (limitMs - 1000),
+        waitLimitMinutes: limitMinutes,
+      } as unknown as Order;
+
+      const { queryByTestId } = render(
+        <JobFooter
+          order={order}
+          onReportIssue={jest.fn()}
+          onLeaveWait={onLeaveWait}
+        />,
+      );
+
+      // Before crossing the threshold, Leave is hidden
+      expect(queryByTestId('job-action-leave-wait')).toBeNull();
+
+      // Advance 1 second across the limit
+      act(() => {
+        jest.advanceTimersByTime(1000);
+      });
+
+      // Leave appears live on the clock tick without prop change
+      const leaveButton = queryByTestId('job-action-leave-wait');
+      expect(leaveButton).toBeTruthy();
+      fireEvent.press(leaveButton!);
+      expect(onLeaveWait).toHaveBeenCalledWith(order);
+    });
+
+    it('hides Leave button while order.waitingToSend is true even if past limit', () => {
+      const now = 200_000;
+      const orderWaitingToSend = {
+        ...baseOrder,
+        status: OrderStatus.courier_arrived_at_pickup_location,
+        arrivedAtOnPhone: now - 600_000,
+        waitLimitMinutes: 10,
+        waitingToSend: true,
+      } as unknown as Order;
+
+      const { queryByTestId } = render(
+        <JobFooter
+          order={orderWaitingToSend}
+          onReportIssue={jest.fn()}
+          onLeaveWait={jest.fn()}
+        />,
+      );
+
       expect(queryByTestId('job-action-leave-wait')).toBeNull();
     });
 

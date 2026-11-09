@@ -129,6 +129,16 @@ describe('waitClock (spec 0033, AC-5, AC-6)', () => {
       expect(canLeaveWait(baseOrder, arrived + limitMs + 5000)).toBe(true);
     });
 
+    it('refuses while order.waitingToSend is true even if past the limit', () => {
+      const waitingToSendOrder: Order = {
+        ...baseOrder,
+        waitingToSend: true,
+      };
+      expect(
+        canLeaveWait(waitingToSendOrder, arrived + limitMs + 10_000),
+      ).toBe(false);
+    });
+
     it('refuses when waitLimitMinutes is missing or 0', () => {
       const noLimitOrder: Order = {
         ...baseOrder,

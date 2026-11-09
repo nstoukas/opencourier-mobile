@@ -124,4 +124,84 @@ describe('EarningsDelivery (spec 0009, AC-1)', () => {
       ).toBeNull();
     });
   });
+
+  describe('Kind WAITING vs normal delivery presentation (spec 0033, review ruling)', () => {
+    it('with kind WAITING labels the amount Waiting, shows Paid on, and shows no Delivered to', () => {
+      const waitCompensationDetail: EarningsDeliveryDetail = {
+        ...mockDeliveryDetail,
+        kind: 'WAITING',
+      };
+
+      (useEarningsDelivery as jest.Mock).mockReturnValue({
+        delivery: waitCompensationDetail,
+        isLoading: false,
+        isError: false,
+        isRefetching: false,
+        refetch: jest.fn(),
+      });
+
+      render(<EarningsDelivery {...defaultProps} />);
+
+      // 1. Labels the compensation amount "Waiting", not "Piece-rate pay"
+      expect(
+        screen.getByText(i18n.t('translations:earnings_waiting')),
+      ).toBeTruthy();
+      expect(
+        screen.queryByText(i18n.t('translations:piece_rate_pay')),
+      ).toBeNull();
+
+      // 2. Shows "Paid on", not "Delivered on"
+      expect(
+        screen.getByText(i18n.t('translations:earnings_paid_on')),
+      ).toBeTruthy();
+      expect(
+        screen.queryByText(i18n.t('translations:delivered_on')),
+      ).toBeNull();
+
+      // 3. Shows no "Delivered to" row or dropoff address
+      expect(
+        screen.queryByText(i18n.t('translations:delivered_to')),
+      ).toBeNull();
+      expect(screen.queryByText('Dimitriadis 25, Volos')).toBeNull();
+
+      // 4. Pickup business is still shown
+      expect(screen.getByText('Souvlaki Express')).toBeTruthy();
+    });
+
+    it('normal delivery is unchanged: labels amount Piece-rate pay, shows Delivered to, and shows Delivered on', () => {
+      const normalDeliveryDetail: EarningsDeliveryDetail = {
+        ...mockDeliveryDetail,
+        kind: undefined,
+      };
+
+      (useEarningsDelivery as jest.Mock).mockReturnValue({
+        delivery: normalDeliveryDetail,
+        isLoading: false,
+        isError: false,
+        isRefetching: false,
+        refetch: jest.fn(),
+      });
+
+      render(<EarningsDelivery {...defaultProps} />);
+
+      // 1. Labels the compensation amount "Piece-rate pay"
+      expect(
+        screen.getByText(i18n.t('translations:piece_rate_pay')),
+      ).toBeTruthy();
+
+      // 2. Shows "Delivered to" and the dropoff address
+      expect(
+        screen.getByText(i18n.t('translations:delivered_to')),
+      ).toBeTruthy();
+      expect(screen.getByText('Dimitriadis 25, Volos')).toBeTruthy();
+
+      // 3. Shows "Delivered on", not "Paid on"
+      expect(
+        screen.getByText(i18n.t('translations:delivered_on')),
+      ).toBeTruthy();
+      expect(
+        screen.queryByText(i18n.t('translations:earnings_paid_on')),
+      ).toBeNull();
+    });
+  });
 });

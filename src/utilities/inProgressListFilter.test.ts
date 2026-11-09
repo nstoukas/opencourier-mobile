@@ -7,6 +7,7 @@ import {
 import { Order } from '@app/types/types';
 import { OrderStatus } from '@app/types/enums';
 import { OutboxItem } from '@app/services/jobStepOutbox';
+import { isWaitingAtPickup, canLeaveWait } from './waitClock';
 
 describe('filterInProgressOrdersForDisplay (decision 65.10)', () => {
   it('returns empty array when input is undefined or empty', () => {
@@ -205,5 +206,163 @@ describe('inProgressOrdersAsShown (spec 0009, AC-2)', () => {
     );
 
     expect(result.map(o => o.id)).toEqual(['del-active']);
+  });
+
+  describe('provisional arrival at pickup (spec 0033, AC-5, AC-6)', () => {
+    const baseOrder: Partial<Order> = {
+      id: 'del-wait',
+      status: OrderStatus.dispatched,
+      waitLimitMinutes: 10,
+    };
+
+    it("gives arrivedAtOnPhone from the arrived_at_pickup step's tappedAt when the server has none", () => {
+      const tappedAt = 50_000;
+      const outboxItems: OutboxItem[] = [
+        {
+          id: 'step-1',
+          courierId: 'c1',
+          deliveryId: 'del-wait',
+          step: 'arrived_at_pickup',
+          tappedAt,
+          state: 'waiting',
+          restaurantName: 'Test Tavern',
+        },
+      ];
+
+      const result = inProgressOrdersAsShown(
+        [baseOrder as Order],
+        outboxItems,
+        'c1',
+      );
+
+      expect(result).toHaveLength(1);
+      expect(result[0].arrivedAtOnPhone).toBe(tappedAt);
+      expect(result[0].status).toBe(
+        OrderStatus.courier_arrived_at_pickup_location,
+      );
+      expect(result[0].waitingToSend).toBe(true);
+    });
+
+    it('never overrides an existing server arrival timestamp', () => {
+      const serverArrival = 99_000;
+      const orderWithServerArrival: Partial<Order> = {
+        ...baseOrder,
+        status: OrderStatus.courier_arrived_at_pickup_location,
+        arrivedAtOnPhone: serverArrival,
+      };
+
+      const outboxItems: OutboxItem[] = [
+        {
+          id: 'step-1',
+          courierId: 'c1',
+          deliveryId: 'del-wait',
+          step: 'arrived_at_pickup',
+          tappedAt: 50_000,
+          state: 'waiting',
+          restaurantName: 'Test Tavern',
+        },
+      ];
+
+      const result = inProgressOrdersAsShown(
+        [orderWithServerArrival as Order],
+        outboxItems,
+        'c1',
+      );
+
+      expect(result).toHaveLength(1);
+      // Preserves server arrival, not the outbox tap
+      expect(result[0].arrivedAtOnPhone).toBe(serverArrival);
+    });
+
+    it("ignores another rider's arrived_at_pickup step", () => {
+      const outboxItems: OutboxItem[] = [
+        {
+          id: 'step-other-courier',
+          courierId: 'c2', // Different courier
+          deliveryId: 'del-wait',
+          step: 'arrived_at_pickup',
+          tappedAt: 50_000,
+          state: 'waiting',
+          restaurantName: 'Test Tavern',
+        },
+      ];
+
+      const result = inProgressOrdersAsShown(
+        [baseOrder as Order],
+        outboxItems,
+        'c1', // Current courier is c1
+      );
+
+      expect(result).toHaveLength(1);
+      expect(result[0].arrivedAtOnPhone).toBeUndefined();
+      expect(result[0].waitingToSend).toBeUndefined();
+    });
+
+    it("ignores a sent step (removed from outbox) or non-waiting step", () => {
+      // Once sent, the step is removed from the outbox
+      const resultSent = inProgressOrdersAsShown([baseOrder as Order], [], 'c1');
+      expect(resultSent).toHaveLength(1);
+      expect(resultSent[0].arrivedAtOnPhone).toBeUndefined();
+      expect(resultSent[0].waitingToSend).toBeUndefined();
+
+      // A refused step does not count as waiting
+      const refusedItems: OutboxItem[] = [
+        {
+          id: 'step-refused',
+          courierId: 'c1',
+          deliveryId: 'del-wait',
+          step: 'arrived_at_pickup',
+          tappedAt: 50_000,
+          state: 'refused',
+          restaurantName: 'Test Tavern',
+        },
+      ];
+
+      const resultRefused = inProgressOrdersAsShown(
+        [baseOrder as Order],
+        refusedItems,
+        'c1',
+      );
+      expect(resultRefused).toHaveLength(1);
+      expect(resultRefused[0].arrivedAtOnPhone).toBeUndefined();
+      expect(resultRefused[0].waitingToSend).toBeUndefined();
+    });
+
+    it('clock shows with that provisional time and Leave stays hidden', () => {
+      const tappedAt = 50_000;
+      const limitMinutes = 10;
+      const limitMs = limitMinutes * 60_000;
+
+      const outboxItems: OutboxItem[] = [
+        {
+          id: 'step-1',
+          courierId: 'c1',
+          deliveryId: 'del-wait',
+          step: 'arrived_at_pickup',
+          tappedAt,
+          state: 'waiting',
+          restaurantName: 'Test Tavern',
+        },
+      ];
+
+      const result = inProgressOrdersAsShown(
+        [
+          {
+            ...baseOrder,
+            waitLimitMinutes: limitMinutes,
+          } as Order,
+        ],
+        outboxItems,
+        'c1',
+      );
+
+      const shownOrder = result[0];
+      // Clock shows because isWaitingAtPickup is true with the provisional arrivedAtOnPhone
+      expect(isWaitingAtPickup(shownOrder)).toBe(true);
+
+      // Leave stays hidden because waitingToSend is true, even well past the limit
+      const wellPastLimitTime = tappedAt + limitMs + 30_000;
+      expect(canLeaveWait(shownOrder, wellPastLimitTime)).toBe(false);
+    });
   });
 });
