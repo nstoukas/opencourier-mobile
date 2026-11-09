@@ -11,6 +11,10 @@ has the full reasoning and verification notes.
 
 ## Added
 
+### Report a product at the door (row 15, spec 0032)
+- At the customer's door the footer offers Report a product: wrong or missing, the item or something else, and a note. It says when it is sent.
+- 1525 tests pass; put backs by hand. Reviewed by Fable. Seen on the emulator, the report stored and its note kept off the event.
+
 ### Ready signals on the job card (row 21, spec 0023): `62523f8` to `8a3bb33`
 - The job card shows "Preparing, ~8 min" or "Ready" until pickup, and a notice says when the restaurant delays or marks the food ready. The time is corrected for the phone's clock.
 - A live message and a push for the same change post one notice (agy's cross family review found the race).
