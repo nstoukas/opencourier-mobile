@@ -36,6 +36,7 @@ import {
 import { useJobContact } from '@app/hooks/useJobContact';
 import { useMoveDropoffPin } from '@app/hooks/useMoveDropoffPin';
 import { useHandBack } from '@app/hooks/useHandBack';
+import { useLeaveWait } from '@app/hooks/useLeaveWait';
 import { useDeliveryRoute } from '@app/hooks/useDeliveryRoute';
 import { usePickupPoints } from '@app/hooks/usePickupPoints';
 import { useNavigateTo } from '@app/hooks/useNavigateTo';
@@ -80,6 +81,7 @@ export const HomeScreen = ({ navigation }: Props) => {
   const { movePin, movingId } = useMoveDropoffPin();
   // Spec 0020 (AC-9): the free hand back in the first minute after accepting.
   const { handBack, handingBackId } = useHandBack(user?.id);
+  const { leaveWait, leavingId } = useLeaveWait(user?.id);
   const connectionStatus = useConnectionStatus();
   const navigateTo = useNavigateTo();
   const { locationPermission } = useLocationPermission();
@@ -347,6 +349,8 @@ export const HomeScreen = ({ navigation }: Props) => {
         }
         onHandBack={handBack}
         handingBack={handingBackId === order.id}
+        onLeaveWait={leaveWait}
+        leavingWait={leavingId === order.id}
       />
     );
   };

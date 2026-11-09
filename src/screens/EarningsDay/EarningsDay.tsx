@@ -57,6 +57,12 @@ export const EarningsDay = ({ navigation, route }: Props) => {
             {t('translations:earnings_cancelled_job')}
           </Text>
         )}
+        {/* Spec 0033, AC-5: paid for waiting at the restaurant. */}
+        {item.kind === 'WAITING' && (
+          <Text style={styles.cellAddress}>
+            {t('translations:earnings_waiting')}
+          </Text>
+        )}
         {/* The address can legitimately be null when the location was never geocoded. */}
         {item.dropoffAddress && (
           <Text style={styles.cellAddress} numberOfLines={1}>

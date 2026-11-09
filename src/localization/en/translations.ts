@@ -617,6 +617,15 @@ export default {
   pin_no_connection: 'No connection. Try again when you have signal.',
   pin_move_failed: 'Could not move the pin. Try again.',
   // Spec 0020: the free hand back on the job card, and the auto accept notice.
+  waiting_clock: 'Waiting {{time}}',
+  leave_wait_button: 'Leave',
+  leave_wait_confirm_title: 'Leave this order?',
+  leave_wait_confirm_body:
+    'It goes back to waiting and is offered again when the food is ready.',
+  leave_wait_confirm: 'Leave',
+  leave_wait_cancel: 'Keep waiting',
+  leave_wait_failed: 'Could not leave the order. Try again.',
+  earnings_waiting: 'Waiting',
   hand_back_button: 'Hand back · {{seconds}} s',
   hand_back_confirm_title: 'Give this order back?',
   hand_back_confirm_body: 'It goes to another rider. No cost to you.',

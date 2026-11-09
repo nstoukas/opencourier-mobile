@@ -101,6 +101,14 @@ export const EarningsDelivery = ({ navigation, route }: Props) => {
             value={formatCurrencyFromCents(delivery.tips, currency)}
             strong
           />
+          {/* Spec 0033, AC-5: a delivered order's wait is its own line. */}
+          {delivery.waitingPay ? (
+            <DetailRow
+              label={t('translations:earnings_waiting')}
+              value={formatCurrencyFromCents(delivery.waitingPay, currency)}
+              strong
+            />
+          ) : null}
         </View>
 
         <View style={styles.card}>

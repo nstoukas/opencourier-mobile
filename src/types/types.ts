@@ -112,8 +112,11 @@ export type EarningsDelivery = {
   compensation: number; // piece-rate pay
   tips: number;
   total: number;
-  // A pay that is not a drop off: a reassigned rider's payout, or a cancelled job's (spec 0015).
-  kind?: 'REASSIGNMENT_COMPENSATION' | 'CANCELLATION_COMPENSATION';
+  // A pay that is not a drop off: a reassigned rider's payout, a cancelled job's (spec 0015),
+  // or a wait at the restaurant (spec 0033).
+  kind?: 'REASSIGNMENT_COMPENSATION' | 'CANCELLATION_COMPENSATION' | 'WAITING';
+  // Spec 0033, on the detail of a delivered order: what its wait paid, inside `total`.
+  waitingPay?: number;
 };
 
 /**
@@ -362,6 +365,12 @@ export type Order = {
   // the job list (queryPersistence), which is harmless: home refetches on
   // focus and the server decides every hand back.
   handBackUntilOnPhone?: number | null;
+  // Spec 0033: when the rider reached the restaurant, while they wait there,
+  // on the server's clock, then moved onto this phone's clock; and how many
+  // minutes after that they may leave. The job list sends the first and third.
+  arrivedAt?: string | null;
+  arrivedAtOnPhone?: number | null;
+  waitLimitMinutes?: number;
   // Spec 0023: the restaurant's ready promise and when it marked the food ready, as ISO text on the
   // server's clock (null on orders made before ready times existed).
   readyAt?: string | null;

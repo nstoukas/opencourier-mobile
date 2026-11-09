@@ -80,6 +80,9 @@ export interface OrderService {
   // Spec 0020 (AC-9): gives an accepted order back inside the free window.
   // Online only; throws the axios error on a refusal (404, 409) or no signal.
   handBack: (id: string) => Promise<{ status: string }>;
+  // Spec 0033 (AC-6): leaves a late order after the co-op's limit. Online only;
+  // throws the axios error on a refusal (404, 409) or no signal.
+  leaveWait: (id: string) => Promise<{ status: string }>;
   declineOrder: (id: string) => Promise<OrderServiceReponse>;
   // Sends one job step from the outbox (spec 0009) and reports the answer;
   // it never throws. `tapAgeMs` is how long ago the rider tapped.
@@ -170,6 +173,20 @@ const orderService = (client: UClient): OrderService => {
           ),
         };
       }
+      // Spec 0033: the arrival, on the phone's clock, and the co-op's limit.
+      shown = {
+        ...shown,
+        waitLimitMinutes: data.result.waitLimitMinutes,
+        ...(order.arrivedAt
+          ? {
+              arrivedAtOnPhone: handBackUntilOnPhone(
+                order.arrivedAt,
+                data.result.serverNow,
+                phoneNow,
+              ),
+            }
+          : {}),
+      };
       return shown;
     });
   };
@@ -200,6 +217,12 @@ const orderService = (client: UClient): OrderService => {
       }
       throw error;
     }
+  };
+
+  const leaveWait = async (id: string): Promise<{ status: string }> => {
+    // No body: sent at once, so the tap time is now.
+    const { data } = await client.post(`deliveries/${id}/leave-wait`);
+    return data.result;
   };
 
   const handBack = async (id: string): Promise<{ status: string }> => {
@@ -294,6 +317,7 @@ const orderService = (client: UClient): OrderService => {
     getInProgressOrders,
     acceptOrder,
     handBack,
+    leaveWait,
     sendJobStep,
     reportIssue,
     moveDropoffPin,

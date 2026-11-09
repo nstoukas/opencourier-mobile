@@ -8,7 +8,13 @@ import { Icon } from '@app/components/Icon/Icon';
 import { CloudArrowUpIcon } from 'phosphor-react-native/src/icons/CloudArrowUp';
 import useOrder from '@app/hooks/useOrder';
 import { useHandBackCountdown } from '@app/hooks/useHandBack';
+import { useWaitClock } from '@app/hooks/useLeaveWait';
 import { canHandBack } from '@app/utilities/handBackWindow';
+import {
+  canLeaveWait,
+  isWaitingAtPickup,
+  waitClockText,
+} from '@app/utilities/waitClock';
 import { isJobOver } from '@app/utilities/jobContact';
 import { hasReachedStep } from '@app/utilities/jobSteps';
 import { ARRIVAL_STEP } from '@app/utilities/arrival';
@@ -25,6 +31,9 @@ type Props = {
   // Spec 0020: gives the order back inside the free window (asks first).
   onHandBack?: (order: Order) => void;
   handingBack?: boolean;
+  // Spec 0033: leaves a late order once the co-op's limit has passed (asks first).
+  onLeaveWait?: (order: Order) => void;
+  leavingWait?: boolean;
 };
 
 type SmallAction = {
@@ -47,6 +56,8 @@ export const JobFooter = ({
   onCallDispatch,
   onHandBack,
   handingBack,
+  onLeaveWait,
+  leavingWait,
 }: Props) => {
   const { t } = useTranslation();
   const { imHere, pickedUp, delivered } = useOrder();
@@ -58,6 +69,11 @@ export const JobFooter = ({
   // The hand back counts down each second while its window is open.
   const handBackSeconds = useHandBackCountdown(order.handBackUntilOnPhone);
   const showHandBack = !!onHandBack && canHandBack(order, Date.now());
+
+  // Spec 0033: the clock at the restaurant counts up each second.
+  const waiting = isWaitingAtPickup(order);
+  const secondsWaiting = useWaitClock(order.arrivedAtOnPhone, waiting);
+  const showLeaveWait = !!onLeaveWait && canLeaveWait(order, Date.now());
 
   // After a swipe's steps are queued, draw the swipe fresh (a new key): when the
   // status moved the key changes anyway; when the step was refused, this brings
@@ -90,6 +106,14 @@ export const JobFooter = ({
       label: t('translations:hand_back_button', { seconds: handBackSeconds }),
       onPress: () => onHandBack?.(order),
       disabled: handingBack,
+    });
+  }
+  if (showLeaveWait) {
+    actions.push({
+      key: 'leave-wait',
+      label: t('translations:leave_wait_button'),
+      onPress: () => onLeaveWait?.(order),
+      disabled: leavingWait,
     });
   }
   if (onCallDispatch && !jobOver) {
@@ -127,6 +151,13 @@ export const JobFooter = ({
               : t('translations:waiting_to_send')}
           </Text>
         </View>
+      ) : null}
+      {secondsWaiting !== null ? (
+        <Text style={styles.waitClock} testID="job-wait-clock">
+          {t('translations:waiting_clock', {
+            time: waitClockText(secondsWaiting),
+          })}
+        </Text>
       ) : null}
       {actions.length > 0 ? (
         <View style={styles.actions}>
@@ -185,6 +216,10 @@ const styles = StyleSheet.create({
     ...typeScale.caption,
     color: color['muted-foreground'],
     flexShrink: 1,
+  },
+  waitClock: {
+    ...typeScale.label,
+    color: color.foreground,
   },
   actions: {
     flexDirection: 'row',
