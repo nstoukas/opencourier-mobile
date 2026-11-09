@@ -20,6 +20,7 @@ export enum MainScreens {
   VehicleTypeScreen = 'VehicleTypeScreen',
   ShiftAvailabilityScreen = 'ShiftAvailabilityScreen',
   ReportIssue = 'ReportIssue',
+  ReportProduct = 'ReportProduct',
   EarningsDay = 'EarningsDay',
   EarningsDelivery = 'EarningsDelivery',
 }
@@ -38,6 +39,9 @@ export type MainStackParamList = {
   VehicleTypeScreen: undefined;
   ShiftAvailabilityScreen: undefined;
   ReportIssue: {
+    order: Order;
+  };
+  ReportProduct: {
     order: Order;
   };
   // Only the day is passed; the screen re-fetches so the list always matches the ledger.

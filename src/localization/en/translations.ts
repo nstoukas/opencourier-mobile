@@ -512,6 +512,10 @@ export default {
     'Some errors prevent couriers to deliver their assigned orders',
   report_and_finalize: 'Report Issue and Finalize Delivery',
   report_sent_back: 'Back to the delivery',
+  report_product: 'Report a product',
+  report_product_wrong: 'Wrong item',
+  report_product_missing: 'Missing item',
+  report_product_something_else: 'Something else',
   report_failed_title: 'Report not sent',
   report_failed_body:
     'The report could not reach the co-op. Check your signal and try again.',

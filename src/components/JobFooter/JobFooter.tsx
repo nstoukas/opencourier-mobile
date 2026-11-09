@@ -18,6 +18,8 @@ import { color, control, space, typeScale } from '@app/styles/theme';
 type Props = {
   order: Order;
   onReportIssue: (order: Order) => void;
+  // Spec 0032: a wrong or missing product, offered only at the customer's door.
+  onReportProduct?: (order: Order) => void;
   // Left out when the co-op has set no dispatch number (row 72).
   onCallDispatch?: () => void;
   // Spec 0020: gives the order back inside the free window (asks first).
@@ -41,6 +43,7 @@ type SmallAction = {
 export const JobFooter = ({
   order,
   onReportIssue,
+  onReportProduct,
   onCallDispatch,
   onHandBack,
   handingBack,
@@ -94,6 +97,14 @@ export const JobFooter = ({
       key: 'dispatch',
       label: t('translations:call_dispatch'),
       onPress: onCallDispatch,
+    });
+  }
+  // Spec 0032: at the customer's door the rider can report a wrong or missing product.
+  if (onReportProduct && order.status === OrderStatus.courier_arrived_at_dropoff_location) {
+    actions.push({
+      key: 'report-product',
+      label: t('translations:report_product'),
+      onPress: () => onReportProduct(order),
     });
   }
   if (!jobOver) {

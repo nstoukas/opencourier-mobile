@@ -94,6 +94,12 @@ export interface OrderService {
     reason: DeliveryIssueReason;
     note?: string;
   }) => Promise<OrderServiceReponse>;
+  reportProduct: (params: {
+    id: string;
+    kind: 'WRONG_ITEM' | 'MISSING_ITEM';
+    itemName?: string;
+    note?: string;
+  }) => Promise<OrderServiceReponse>;
   // Spec 0016: moves the customer's drop off pin to where the rider stands.
   // Online only; throws the axios error on a refusal or no signal.
   moveDropoffPin: (params: {
@@ -258,6 +264,17 @@ const orderService = (client: UClient): OrderService => {
         : { reason: params.reason },
     );
 
+  // Spec 0032: a wrong or missing product, at the customer's door.
+  const reportProduct = async (params: {
+    id: string;
+    kind: 'WRONG_ITEM' | 'MISSING_ITEM';
+    itemName?: string;
+    note?: string;
+  }): Promise<OrderServiceReponse> => {
+    const { id, ...body } = params;
+    return client.post(`deliveries/${id}/product-reports`, body);
+  };
+
   const moveDropoffPin = async (params: {
     id: string;
     latitude: number;
@@ -271,6 +288,7 @@ const orderService = (client: UClient): OrderService => {
   };
 
   return {
+    reportProduct,
     getNewOrders,
     getOrdersHistory,
     getInProgressOrders,

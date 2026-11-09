@@ -337,6 +337,9 @@ export const HomeScreen = ({ navigation }: Props) => {
         onReportIssue={job =>
           navigation.navigate(MainScreens.ReportIssue, { order: job })
         }
+        onReportProduct={job =>
+          navigation.navigate(MainScreens.ReportProduct, { order: job })
+        }
         onCallDispatch={
           dispatchPhoneNumber
             ? () => openContactUrl(telUrl(dispatchPhoneNumber))
