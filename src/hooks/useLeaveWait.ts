@@ -63,6 +63,13 @@ export const useLeaveWait = (courierId: string | undefined) => {
         queryClient.setQueryData<Order[]>([QueryKeys.inProgressOrders], jobs =>
           jobs?.filter(job => job.id !== order.id),
         );
+        // The rider is free for offers, and the wait may have just been paid.
+        [
+          QueryKeys.newOrders,
+          QueryKeys.earningsSummary,
+          QueryKeys.earningsDay,
+          QueryKeys.earningsDelivery,
+        ].forEach(key => queryClient.invalidateQueries({ queryKey: [key] }));
       } catch (error) {
         // The message only: the whole error would print the rider's token.
         console.log('Could not leave the order', (error as Error)?.message);

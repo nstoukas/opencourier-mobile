@@ -77,6 +77,7 @@ export const EarningsDelivery = ({ navigation, route }: Props) => {
 
     const currency = delivery.currency;
     const droppedOff = moment(delivery.droppedOffAt);
+    const isWait = delivery.kind === 'WAITING';
 
     return (
       <>
@@ -91,7 +92,11 @@ export const EarningsDelivery = ({ navigation, route }: Props) => {
 
         <View style={styles.card}>
           <DetailRow
-            label={t('translations:piece_rate_pay')}
+            label={t(
+              isWait
+                ? 'translations:earnings_waiting'
+                : 'translations:piece_rate_pay',
+            )}
             value={formatCurrencyFromCents(delivery.compensation, currency)}
             strong
             first
@@ -117,12 +122,21 @@ export const EarningsDelivery = ({ navigation, route }: Props) => {
             value={delivery.pickupBusinessName}
             first
           />
+          {/* Spec 0033: a rider who left never delivered this order. */}
+          {isWait ? null : (
+            <DetailRow
+              label={t('translations:delivered_to')}
+              value={
+                delivery.dropoffAddress ?? t('translations:address_unknown')
+              }
+            />
+          )}
           <DetailRow
-            label={t('translations:delivered_to')}
-            value={delivery.dropoffAddress ?? t('translations:address_unknown')}
-          />
-          <DetailRow
-            label={t('translations:delivered_on')}
+            label={t(
+              isWait
+                ? 'translations:earnings_paid_on'
+                : 'translations:delivered_on',
+            )}
             value={`${droppedOff.format(formatSpaced)}, ${droppedOff.format(
               formatShift,
             )}`}

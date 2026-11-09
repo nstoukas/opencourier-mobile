@@ -626,6 +626,7 @@ export default {
   leave_wait_cancel: 'Keep waiting',
   leave_wait_failed: 'Could not leave the order. Try again.',
   earnings_waiting: 'Waiting',
+  earnings_paid_on: 'Paid on',
   hand_back_button: 'Hand back · {{seconds}} s',
   hand_back_confirm_title: 'Give this order back?',
   hand_back_confirm_body: 'It goes to another rider. No cost to you.',

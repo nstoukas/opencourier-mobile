@@ -186,7 +186,7 @@ export const JobFooter = ({
           style={styles.swipe}
           isSwiped={false}
           onSwiped={onSwiped}
-          enabled={true}
+          enabled={!leavingWait}
           title={
             stage === 'pickup'
               ? t('translations:swipe_picked_up')

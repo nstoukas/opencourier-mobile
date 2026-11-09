@@ -29,7 +29,9 @@ export const isWaitingAtPickup = (order: Order): boolean =>
 // True once the co-op's limit has passed. The server checks again.
 export const canLeaveWait = (order: Order, now: number): boolean => {
   const arrived = order.arrivedAtOnPhone;
+  // As `canHandBack`: not while a step of this delivery still waits to be sent.
   if (
+    order.waitingToSend ||
     order.status !== OrderStatus.courier_arrived_at_pickup_location ||
     arrived === null ||
     arrived === undefined ||

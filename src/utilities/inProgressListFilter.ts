@@ -65,21 +65,24 @@ export function inProgressOrdersAsShown(
 ): Order[] {
   const keep = waitingDeliveryIds(items, courierId);
   return filterInProgressOrdersForDisplay(orders, keep).map(order => {
-    const steps: JobStep[] = items
-      .filter(
-        i =>
-          i.deliveryId === order.id &&
-          i.courierId === courierId &&
-          i.state === 'waiting',
-      )
-      .map(i => i.step);
+    const waiting = items.filter(
+      i =>
+        i.deliveryId === order.id &&
+        i.courierId === courierId &&
+        i.state === 'waiting',
+    );
+    const steps: JobStep[] = waiting.map(i => i.step);
     if (steps.length === 0) {
       return order;
     }
+    // Spec 0033: with no signal the server has no arrival yet, so the waiting
+    // clock counts from the tap, already on the phone's clock.
+    const arrivalTap = waiting.find(i => i.step === 'arrived_at_pickup');
     return {
       ...order,
       status: shownStatus(order.status, steps),
       waitingToSend: true,
+      arrivedAtOnPhone: order.arrivedAtOnPhone ?? arrivalTap?.tappedAt,
     };
   });
 }
