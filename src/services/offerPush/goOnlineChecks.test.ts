@@ -446,7 +446,7 @@ describe('goOnlineChecks (spec 0003, AC-8, AC-9, Decisions 58.22, 58.23)', () =>
 
       expect(title).toBe('Notifications are off');
       expect(message).toBe(
-        'While you are Online your location is shared to get offers. Android will not show the "OpenCourier is online" sign while notifications are off for this app.',
+        'While you are working, dispatch can see where you are, only to give out jobs, and no history is kept. Android will not show the "OpenCourier is online" sign while notifications are off for this app.',
       );
 
       const buttonTexts = buttons.map((b: any) => b.text);

@@ -50,7 +50,7 @@ describe('onlineService (spec 0008, AC-3, AC-4)', () => {
       expect(notifee.displayNotification).toHaveBeenCalledWith({
         id: ONLINE_NOTIFICATION_ID,
         title: 'OpenCourier is online',
-        body: 'Your location is shared to get offers. Go offline to stop.',
+        body: 'Dispatch can see where you are while you work, only to give out jobs. No history is kept. Go offline to stop.',
         android: {
           channelId: ONLINE_CHANNEL_ID,
           asForegroundService: true,

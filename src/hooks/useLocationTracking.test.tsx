@@ -471,7 +471,7 @@ describe('useLocationTracking (Row 67, Clauses 1, 2, 3, 4)', () => {
           expect.objectContaining({
             id: 'online-status',
             title: 'OpenCourier is online',
-            body: 'Your location is shared to get offers. Go offline to stop.',
+            body: 'Dispatch can see where you are while you work, only to give out jobs. No history is kept. Go offline to stop.',
             android: expect.objectContaining({
               asForegroundService: true,
               ongoing: true,
