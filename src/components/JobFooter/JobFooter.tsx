@@ -20,6 +20,8 @@ import { hasReachedStep } from '@app/utilities/jobSteps';
 import { ARRIVAL_STEP } from '@app/utilities/arrival';
 import { cardStageOf } from '@app/utilities/jobCard';
 import { color, control, space, typeScale } from '@app/styles/theme';
+import moment from 'moment';
+import { formatShift } from '@app/utilities/dates';
 
 type Props = {
   order: Order;
@@ -154,9 +156,14 @@ export const JobFooter = ({
       ) : null}
       {secondsWaiting !== null ? (
         <Text style={styles.waitClock} testID="job-wait-clock">
-          {t('translations:waiting_clock', {
-            time: waitClockText(secondsWaiting),
-          })}
+          {order.paidFromOnPhone
+            ? t('translations:waiting_clock_paid', {
+                time: waitClockText(secondsWaiting),
+                from: moment(order.paidFromOnPhone).format(formatShift),
+              })
+            : t('translations:waiting_clock', {
+                time: waitClockText(secondsWaiting),
+              })}
         </Text>
       ) : null}
       {actions.length > 0 ? (

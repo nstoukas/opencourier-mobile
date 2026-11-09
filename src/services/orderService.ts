@@ -173,20 +173,19 @@ const orderService = (client: UClient): OrderService => {
           ),
         };
       }
-      // Spec 0033: the arrival, on the phone's clock, and the co-op's limit.
-      shown = {
-        ...shown,
-        waitLimitMinutes: data.result.waitLimitMinutes,
-        ...(order.arrivedAt
-          ? {
-              arrivedAtOnPhone: handBackUntilOnPhone(
-                order.arrivedAt,
-                data.result.serverNow,
-                phoneNow,
-              ),
-            }
-          : {}),
-      };
+      // Spec 0033: the three waiting times, on the phone's clock.
+      const onPhone = (time: string | null | undefined) =>
+        time
+          ? handBackUntilOnPhone(time, data.result.serverNow, phoneNow)
+          : null;
+      if (order.arrivedAt) {
+        shown = {
+          ...shown,
+          arrivedAtOnPhone: onPhone(order.arrivedAt),
+          leaveFromOnPhone: onPhone(order.leaveFrom),
+          paidFromOnPhone: onPhone(order.paidFrom),
+        };
+      }
       return shown;
     });
   };

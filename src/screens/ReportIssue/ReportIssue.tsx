@@ -57,6 +57,15 @@ export const ReportIssue = ({ navigation, route }: Props) => {
       reason: DeliveryIssueReason.OrderHanded,
       label: t('translations:order_handed'),
     },
+    // Spec 0033 (decision 23.16): only once the restaurant has marked the food ready.
+    ...(order.foodReadyAt
+      ? [
+          {
+            reason: DeliveryIssueReason.FoodNotReady,
+            label: t('translations:food_not_ready'),
+          },
+        ]
+      : []),
     {
       reason: DeliveryIssueReason.Other,
       label: t('translations:other'),

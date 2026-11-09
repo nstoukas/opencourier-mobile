@@ -507,6 +507,7 @@ export default {
   wrong_address: 'Wrong Address',
   no_signal: 'No Internet / No GPS / No Signal ',
   order_handed: 'Order Handed To Customer',
+  food_not_ready: 'Marked Ready But Not Ready',
   thanks_for_report: 'Thanks for reporting your issue',
   errors_prevent_couriers:
     'Some errors prevent couriers to deliver their assigned orders',
@@ -618,6 +619,7 @@ export default {
   pin_move_failed: 'Could not move the pin. Try again.',
   // Spec 0020: the free hand back on the job card, and the auto accept notice.
   waiting_clock: 'Waiting {{time}}',
+  waiting_clock_paid: 'Waiting {{time}} · paid from {{from}}',
   leave_wait_button: 'Leave',
   leave_wait_confirm_title: 'Leave this order?',
   leave_wait_confirm_body:

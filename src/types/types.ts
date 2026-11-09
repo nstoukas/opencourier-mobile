@@ -365,12 +365,15 @@ export type Order = {
   // the job list (queryPersistence), which is harmless: home refetches on
   // focus and the server decides every hand back.
   handBackUntilOnPhone?: number | null;
-  // Spec 0033: when the rider reached the restaurant, while they wait there,
-  // on the server's clock, then moved onto this phone's clock; and how many
-  // minutes after that they may leave. The job list sends the first and third.
+  // Spec 0033, while the rider waits at the restaurant: when they arrived,
+  // when they may leave, and when the wait starts earning (null if it will
+  // not). Each is sent on the server's clock and moved onto this phone's clock.
   arrivedAt?: string | null;
   arrivedAtOnPhone?: number | null;
-  waitLimitMinutes?: number;
+  leaveFrom?: string | null;
+  leaveFromOnPhone?: number | null;
+  paidFrom?: string | null;
+  paidFromOnPhone?: number | null;
   // Spec 0023: the restaurant's ready promise and when it marked the food ready, as ISO text on the
   // server's clock (null on orders made before ready times existed).
   readyAt?: string | null;

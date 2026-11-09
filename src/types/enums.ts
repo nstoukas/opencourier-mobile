@@ -90,5 +90,6 @@ export enum DeliveryIssueReason {
   WrongAddress = 'WRONG_ADDRESS',
   NoSignal = 'NO_SIGNAL',
   OrderHanded = 'ORDER_HANDED',
+  FoodNotReady = 'FOOD_NOT_READY',
   Other = 'OTHER',
 }

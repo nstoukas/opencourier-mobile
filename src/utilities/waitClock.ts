@@ -6,8 +6,6 @@
 import { Order } from '@app/types/types';
 import { OrderStatus } from '@app/types/enums';
 
-const MINUTE_MS = 60_000;
-
 // Whole seconds since the arrival, never below 0.
 export const waitSeconds = (arrivedOnPhone: number, now: number): number =>
   Math.max(0, Math.floor((now - arrivedOnPhone) / 1000));
@@ -26,18 +24,17 @@ export const isWaitingAtPickup = (order: Order): boolean =>
   order.arrivedAtOnPhone !== null &&
   order.arrivedAtOnPhone !== undefined;
 
-// True once the co-op's limit has passed. The server checks again.
+// True once the time the server gave has come. The server checks again.
 export const canLeaveWait = (order: Order, now: number): boolean => {
-  const arrived = order.arrivedAtOnPhone;
+  const leaveFrom = order.leaveFromOnPhone;
   // As `canHandBack`: not while a step of this delivery still waits to be sent.
   if (
     order.waitingToSend ||
     order.status !== OrderStatus.courier_arrived_at_pickup_location ||
-    arrived === null ||
-    arrived === undefined ||
-    !order.waitLimitMinutes
+    leaveFrom === null ||
+    leaveFrom === undefined
   ) {
     return false;
   }
-  return now - arrived >= order.waitLimitMinutes * MINUTE_MS;
+  return now >= leaveFrom;
 };
