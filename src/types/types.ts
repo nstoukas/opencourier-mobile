@@ -124,6 +124,9 @@ export type EarningsDelivery = {
   waitingPay?: number;
   // Spec 0035, on the detail of a job cancelled after pickup: the return trip's pay, inside `total`.
   returnTripPay?: number;
+  // Spec 0035, decision 24.43: what a removal from this order paid, inside `total`. The `?` means the
+  // backend leaves the key out when there is none.
+  removalPay?: number;
 };
 
 /**

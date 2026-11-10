@@ -130,6 +130,14 @@ export const EarningsDelivery = ({ navigation, route }: Props) => {
               strong
             />
           ) : null}
+          {/* Decision 24.43: each kind of pay is its own line, so the lines add up to the total. */}
+          {delivery.removalPay ? (
+            <DetailRow
+              label={t('translations:earnings_removal')}
+              value={formatCurrencyFromCents(delivery.removalPay, currency)}
+              strong
+            />
+          ) : null}
         </View>
 
         <View style={styles.card}>
