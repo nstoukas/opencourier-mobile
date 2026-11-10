@@ -151,9 +151,10 @@ export const EarningsDay = ({ navigation, route }: Props) => {
           <ActivityIndicator />
         ) : (
           <FlatList
-            // One order can now pay twice in a day (a wait and a removal, spec 0035): one row each.
-            keyExtractor={item =>
-              `${item.deliveryId}-${item.kind ?? 'delivery'}`
+            // One order can pay several times in a day, even twice of one kind (spec 0035): one row each.
+            // The index keeps those apart, and is safe because this list is never reordered.
+            keyExtractor={(item, index) =>
+              `${item.deliveryId}-${item.kind ?? 'delivery'}-${index}`
             }
             data={deliveries}
             renderItem={renderItem}

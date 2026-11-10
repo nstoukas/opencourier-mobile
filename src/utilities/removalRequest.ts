@@ -34,7 +34,7 @@ export const parseRemovalDecision = (data: unknown): RemovalDecision | null => {
   }
   const d = data as Record<string, unknown>;
   const text = (value: unknown): string | null =>
-    typeof value === 'string' && value !== '' ? value : null;
+    typeof value === 'string' && value.trim() !== '' ? value.trim() : null;
   const deliveryId = text(d.deliveryId);
   if (!deliveryId || (d.outcome !== 'APPROVED' && d.outcome !== 'DECLINED')) {
     return null;

@@ -106,6 +106,7 @@ export const RequestRemoval = ({ navigation, route }: Props) => {
           style={styles.list}
           data={reasons.data}
           keyExtractor={item => item.id}
+          keyboardShouldPersistTaps="handled"
           renderItem={renderReason}
         />
       );

@@ -24,7 +24,9 @@ import {
 
 export const REMOVAL_CHANNEL_ID = 'removal-decided';
 
-const notificationId = (deliveryId: string): string => `removal-${deliveryId}`;
+const NOTIFICATION_ID_PREFIX = 'removal-';
+const notificationId = (deliveryId: string): string =>
+  `${NOTIFICATION_ID_PREFIX}${deliveryId}`;
 
 const ensureChannel = async () => {
   if (Platform.OS !== 'android') {
@@ -137,8 +139,26 @@ export const receiveRemovalDecision = async (
   await showRemovalDecision(decision);
 };
 
+// Asks the phone what is really in the shade, because those can outlive the app being closed.
+const cancelShownNotifications = async (): Promise<void> => {
+  try {
+    const shown = await notifee.getDisplayedNotifications();
+    await Promise.all(
+      shown
+        .filter(item => item.id?.startsWith(NOTIFICATION_ID_PREFIX))
+        .map(item => notifee.cancelNotification(item.id as string)),
+    );
+  } catch (error) {
+    console.log(
+      'Could not clear the removal notifications',
+      (error as Error)?.message,
+    );
+  }
+};
+
 // At logout: the next rider on this phone never sees these.
 export const clearRemovalNotices = (): void => {
   lastShown.clear();
   setNotices([]);
+  cancelShownNotifications();
 };

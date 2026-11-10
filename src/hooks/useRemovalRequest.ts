@@ -38,10 +38,12 @@ const busyNow = (client: QueryClient, deliveryId: string): boolean =>
   client.isMutating(removalFilters(deliveryId)) > 0;
 
 // The reasons, fresh each time the screen opens (a representative can edit them at any time).
+// `gcTime: 0` forgets the list as soon as the screen closes, so a Paid mark never comes from an old copy.
 export const useRemovalReasons = () =>
   useQuery({
     queryKey: [QueryKeys.removalReasons],
     queryFn: services.orderService.getRemovalReasons,
+    gcTime: 0,
   });
 
 // What the job shows now, ahead of the refetch.
@@ -71,7 +73,6 @@ export const useSendRemovalRequest = () => {
       services.orderService.sendRemovalRequest({ id: orderId, reasonId, note }),
     // These run even if the rider has left the screen.
     onSuccess: (request, { orderId }) => {
-      forgetRemovalDecision(orderId);
       setRequestOnJob(queryClient, orderId, request);
     },
     onError: error => {
@@ -97,7 +98,9 @@ export const useSendRemovalRequest = () => {
     },
     // Either way the server has the last word: a send whose answer got lost shows up here.
     // Braces, so nothing is returned: React Query would keep the send "on its way" until the refetch ends.
-    onSettled: () => {
+    // A lost answer can still be a request that arrived, so the next decision counts as new here too.
+    onSettled: (_request, _error, { orderId }) => {
+      forgetRemovalDecision(orderId);
       queryClient.invalidateQueries({
         queryKey: [QueryKeys.inProgressOrders],
       });
@@ -159,7 +162,12 @@ export const useWithdrawRemoval = () => {
           { text: t('translations:removal_withdraw_keep'), style: 'cancel' },
           {
             text: t('translations:removal_withdraw_confirm'),
-            onPress: () => mutate({ orderId: order.id }),
+            // Checked again here: two quick taps can open two dialogs before anything is on its way.
+            onPress: () => {
+              if (!busyNow(queryClient, order.id)) {
+                mutate({ orderId: order.id });
+              }
+            },
           },
         ],
       );
