@@ -107,4 +107,6 @@ the error count is above `typecheck-baseline.json`, and lowers the file when the
 
 - The waiting card at the pickup (spec 0033) only compares the clock to `leaveFrom` and `paidFrom`, which the server sends with each job and `getInProgressOrders` moves onto the phone's clock. The rule lives in the backend, so never work these times out on the phone. Leave is online only, like the hand back. While the arrival waits in the outbox the clock counts from the tap, and Leave stays hidden.
 
+- Removal requests (spec 0035): the reasons query uses `gcTime: 0`, because each reason says whether it pays and this app otherwise keeps answers 24 h. Logout clears removal notifications by the id prefix `removal-`, read from `getDisplayedNotifications`, because they outlive the app.
+
 _Drafted by /audit from the repo, worth a quick human pass. Edit freely: once a line stops matching this draft, later runs treat it as curated and will flag rather than overwrite it._
