@@ -1,6 +1,7 @@
 import React from 'react';
 import { ActivityIndicator } from 'react-native';
 import { render, screen, fireEvent, act } from '@testing-library/react-native';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { RequestRemoval } from './RequestRemoval';
 import { Button } from '@app/components/Button/Button';
 import {
@@ -8,10 +9,20 @@ import {
   useRemovalReasons,
   useSendRemovalRequest,
 } from '@app/hooks/useRemovalRequest';
+import { services } from '@app/services/service';
 import { RemovalReason } from '@app/types/types';
 import i18n from '@app/localization/i18n';
 
-jest.mock('@app/hooks/useRemovalRequest');
+const actualHooks = jest.requireActual('@app/hooks/useRemovalRequest');
+jest.mock('@app/hooks/useRemovalRequest', () => {
+  const actual = jest.requireActual('@app/hooks/useRemovalRequest');
+  return {
+    ...actual,
+    useRemovalBusy: jest.fn(),
+    useSendRemovalRequest: jest.fn(),
+    useRemovalReasons: jest.fn(),
+  };
+});
 
 describe('RequestRemoval screen (spec 0035, AC-3)', () => {
   const mockOrder = {
@@ -279,6 +290,112 @@ describe('RequestRemoval screen (spec 0035, AC-3)', () => {
       );
       fireEvent.press(retryButton);
       expect(mockRefetch).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  describe('Fresh reasons list on screen reopen (decision 24.50, minor 1)', () => {
+    it('after the screen closes and reopens, the list is fetched before anything is drawn, so an old list with old Paid marks is never shown', async () => {
+      (useRemovalReasons as jest.Mock).mockImplementation(
+        actualHooks.useRemovalReasons,
+      );
+
+      const queryClient = new QueryClient({
+        defaultOptions: {
+          queries: {
+            retry: false,
+          },
+        },
+      });
+
+      const firstAnswer: RemovalReason[] = [
+        {
+          id: 'reason-1',
+          label: 'Moped breakdown',
+          paid: true,
+          needsNote: false,
+        },
+      ];
+
+      const getReasonsSpy = jest
+        .spyOn(services.orderService, 'getRemovalReasons')
+        .mockResolvedValueOnce(firstAnswer);
+
+      // First opening: screen mounts with reason marked Paid
+      const { unmount } = render(
+        <QueryClientProvider client={queryClient}>
+          <RequestRemoval {...defaultProps} />
+        </QueryClientProvider>,
+      );
+
+      // Advance timers and flush microtasks to let the first fetch resolve
+      await act(async () => {
+        await Promise.resolve();
+      });
+      await act(async () => {
+        jest.runAllTimers();
+      });
+
+      expect(getReasonsSpy).toHaveBeenCalledTimes(1);
+      expect(screen.getByText('Moped breakdown')).toBeDefined();
+      expect(
+        screen.getByText(i18n.t('translations:removal_paid')),
+      ).toBeDefined();
+
+      // Close the screen: unmount
+      unmount();
+
+      // Give gc a chance to run after unmount (with gcTime 0 React Query removes the query on a timer)
+      act(() => {
+        jest.advanceTimersByTime(100);
+      });
+
+      // Change service answer so that reason is no longer Paid, held unresolved
+      let resolveSecondFetch!: (reasons: RemovalReason[]) => void;
+      const secondFetchPromise = new Promise<RemovalReason[]>(resolve => {
+        resolveSecondFetch = resolve;
+      });
+      getReasonsSpy.mockReturnValueOnce(secondFetchPromise);
+
+      // Second opening: render again with the SAME QueryClient
+      render(
+        <QueryClientProvider client={queryClient}>
+          <RequestRemoval {...defaultProps} />
+        </QueryClientProvider>,
+      );
+
+      // Assert that before the second fetch resolves the old list and its Paid mark are not on screen
+      expect(
+        screen.queryByText(i18n.t('translations:removal_paid')),
+      ).toBeNull();
+      expect(screen.queryByText('Moped breakdown')).toBeNull();
+
+      // Now resolve the second fetch with updated (unpaid) reason
+      await act(async () => {
+        resolveSecondFetch([
+          {
+            id: 'reason-1',
+            label: 'Moped breakdown',
+            paid: false,
+            needsNote: false,
+          },
+        ]);
+        await Promise.resolve();
+      });
+      await act(async () => {
+        jest.runAllTimers();
+      });
+
+      // After it resolves, only the new answer is on screen
+      expect(screen.getByText('Moped breakdown')).toBeDefined();
+      expect(
+        screen.getByText(i18n.t('translations:removal_not_paid')),
+      ).toBeDefined();
+      expect(
+        screen.queryByText(i18n.t('translations:removal_paid')),
+      ).toBeNull();
+      expect(getReasonsSpy).toHaveBeenCalledTimes(2);
+
+      queryClient.clear();
     });
   });
 });

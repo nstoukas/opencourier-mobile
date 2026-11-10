@@ -132,6 +132,44 @@ describe('removalRequest utilities (spec 0035, AC-3, AC-11)', () => {
       });
     });
 
+    it('turns decisionNote of only spaces into null and trims spaces around decisionNote', () => {
+      const allSpacesData = {
+        deliveryId: 'del-spaces',
+        outcome: 'DECLINED',
+        decisionNote: '     ',
+        paid: 'false',
+        payAmount: '',
+        currencyCode: 'EUR',
+      };
+      const parsedAllSpaces = parseRemovalDecision(allSpacesData);
+      expect(parsedAllSpaces).toEqual({
+        deliveryId: 'del-spaces',
+        outcome: 'DECLINED',
+        decisionNote: null,
+        paid: false,
+        payAmount: null,
+        currencyCode: 'EUR',
+      });
+
+      const trimmedData = {
+        deliveryId: 'del-trimmed',
+        outcome: 'DECLINED',
+        decisionNote: '  Please complete pickup first  ',
+        paid: 'false',
+        payAmount: '',
+        currencyCode: 'EUR',
+      };
+      const parsedTrimmed = parseRemovalDecision(trimmedData);
+      expect(parsedTrimmed).toEqual({
+        deliveryId: 'del-trimmed',
+        outcome: 'DECLINED',
+        decisionNote: 'Please complete pickup first',
+        paid: false,
+        payAmount: null,
+        currencyCode: 'EUR',
+      });
+    });
+
     it('returns null for null, non-object, missing deliveryId or unknown outcome', () => {
       expect(parseRemovalDecision(null)).toBeNull();
       expect(parseRemovalDecision('string')).toBeNull();

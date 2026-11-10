@@ -358,6 +358,52 @@ describe('useRemovalRequest hooks (spec 0035, AC-3, AC-4, AC-5, decision 24.24, 
       );
     });
 
+    it('runs forgetRemovalDecision after a send fails with no response and leaves in progress orders cache unchanged', async () => {
+      const wrapper = createWrapper();
+
+      const initialOrder: Order = {
+        id: 'del-net-err-1',
+        status: OrderStatus.dispatched,
+        removalRequest: null,
+      } as unknown as Order;
+
+      queryClient.setQueryData<Order[]>(
+        [QueryKeys.inProgressOrders],
+        [initialOrder],
+      );
+
+      const networkError = new axios.AxiosError('Network Error');
+      jest
+        .spyOn(services.orderService, 'sendRemovalRequest')
+        .mockRejectedValueOnce(networkError);
+
+      const { result } = renderHook(() => useSendRemovalRequest(), { wrapper });
+
+      const onSent = jest.fn();
+
+      await act(async () => {
+        result.current.send(
+          {
+            orderId: 'del-net-err-1',
+            reasonId: 'reason-1',
+            note: 'moped flat tyre',
+          },
+          onSent,
+        );
+      });
+
+      expect(onSent).toHaveBeenCalledTimes(0);
+      expect(forgetRemovalDecision).toHaveBeenCalledTimes(1);
+      expect(forgetRemovalDecision).toHaveBeenCalledWith('del-net-err-1');
+
+      // The in progress orders cache is unchanged
+      const cached = queryClient.getQueryData<Order[]>([
+        QueryKeys.inProgressOrders,
+      ]);
+      expect(cached).toEqual([initialOrder]);
+      expect(cached?.[0].removalRequest).toBeNull();
+    });
+
     it('409 with server message: shows alert with removal_send_refused naming reason, exactly one request, onSent not called (AC-4)', async () => {
       const wrapper = createWrapper();
 
@@ -559,6 +605,67 @@ describe('useRemovalRequest hooks (spec 0035, AC-3, AC-4, AC-5, decision 24.24, 
 
       expect(invalidateSpy).toHaveBeenCalledWith({
         queryKey: [QueryKeys.inProgressOrders],
+      });
+    });
+
+    it('confirming two stacked dialogs sends exactly one withdraw when pressed while first withdraw is in flight', async () => {
+      const wrapper = createWrapper();
+
+      let resolveWithdraw!: (value: any) => void;
+      const withdrawPromise = new Promise(resolve => {
+        resolveWithdraw = resolve;
+      });
+
+      const withdrawSpy = jest
+        .spyOn(services.orderService, 'withdrawRemovalRequest')
+        .mockReturnValue(withdrawPromise as any);
+
+      const { result } = renderHook(() => useWithdrawRemoval(), { wrapper });
+
+      const testOrder: Order = {
+        id: 'del-double-confirm-1',
+        status: OrderStatus.dispatched,
+      } as unknown as Order;
+
+      // Call withdraw action twice before anything is on its way so two dialogs are open
+      act(() => {
+        result.current(testOrder);
+      });
+      act(() => {
+        result.current(testOrder);
+      });
+
+      // Assert Alert.alert was called twice
+      expect(alertSpy).toHaveBeenCalledTimes(2);
+
+      // Capture confirm buttons from both dialogs
+      const confirmButton1 = alertSpy.mock.calls[0][2].find(
+        (b: any) => b.style !== 'cancel',
+      );
+      const confirmButton2 = alertSpy.mock.calls[1][2].find(
+        (b: any) => b.style !== 'cancel',
+      );
+
+      // Press both while the first withdraw is still in flight (withdrawPromise unresolved)
+      act(() => {
+        confirmButton1.onPress();
+      });
+      act(() => {
+        confirmButton2.onPress();
+      });
+
+      // Flush microtasks so the in-flight mutationFn executes
+      await act(async () => {
+        await Promise.resolve();
+      });
+
+      // Assert the withdraw service was called exactly once
+      expect(withdrawSpy).toHaveBeenCalledTimes(1);
+      expect(withdrawSpy).toHaveBeenCalledWith('del-double-confirm-1');
+
+      // Resolve the in-flight withdraw
+      await act(async () => {
+        resolveWithdraw({ status: 'WITHDRAWN' });
       });
     });
   });

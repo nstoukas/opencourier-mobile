@@ -174,6 +174,115 @@ describe('removalNotice service (spec 0035, AC-11, decision 24.22, decision 24.2
       expect(notifee.displayNotification).toHaveBeenCalledTimes(2);
       expect(result.current).toHaveLength(1);
     });
+
+    it('shows exactly one displayNotification when two identical decisions arrive together without awaiting between them', async () => {
+      const originalPlatform = Platform.OS;
+      (Platform as any).OS = 'android';
+
+      try {
+        const decision: RemovalDecision = {
+          deliveryId: 'del-race-sync-1',
+          outcome: 'APPROVED',
+          decisionNote: null,
+          paid: true,
+          payAmount: 350,
+          currencyCode: 'EUR',
+        };
+
+        (notifee.displayNotification as jest.Mock).mockClear();
+
+        // Two calls NOT awaited one after the other (live message and push arriving together)
+        const firstCall = showRemovalDecision(decision);
+        const secondCall = showRemovalDecision(decision);
+
+        await act(async () => {
+          await Promise.all([firstCall, secondCall]);
+        });
+
+        expect(notifee.displayNotification).toHaveBeenCalledTimes(1);
+      } finally {
+        (Platform as any).OS = originalPlatform;
+      }
+    });
+  });
+
+  describe('clearRemovalNotices (decision 24.53, minor 5)', () => {
+    it('cancels every displayed notification whose id starts with removal- and leaves others alone', async () => {
+      (notifee.getDisplayedNotifications as jest.Mock).mockResolvedValueOnce([
+        { id: 'removal-del-1', notification: {} },
+        { id: 'offer-trip-45', notification: {} },
+        { id: 'removal-del-orphan-before-restart', notification: {} },
+        { id: 'shift-reminder-1', notification: {} },
+      ]);
+
+      (notifee.cancelNotification as jest.Mock).mockClear();
+
+      clearRemovalNotices();
+
+      // clearRemovalNotices is not async, so flush microtasks/promises before asserting
+      await act(async () => {
+        await Promise.resolve();
+      });
+
+      expect(notifee.cancelNotification).toHaveBeenCalledTimes(2);
+      expect(notifee.cancelNotification).toHaveBeenNthCalledWith(
+        1,
+        'removal-del-1',
+      );
+      expect(notifee.cancelNotification).toHaveBeenNthCalledWith(
+        2,
+        'removal-del-orphan-before-restart',
+      );
+      expect(notifee.cancelNotification).not.toHaveBeenCalledWith(
+        'offer-trip-45',
+      );
+      expect(notifee.cancelNotification).not.toHaveBeenCalledWith(
+        'shift-reminder-1',
+      );
+    });
+
+    it('does not throw when getDisplayedNotifications or cancelNotification rejects', async () => {
+      const consoleLogSpy = jest
+        .spyOn(console, 'log')
+        .mockImplementation(() => {});
+
+      // Case 1: getDisplayedNotifications rejects
+      (notifee.getDisplayedNotifications as jest.Mock).mockRejectedValueOnce(
+        new Error('Device IPC failure'),
+      );
+
+      expect(() => clearRemovalNotices()).not.toThrow();
+
+      await act(async () => {
+        await Promise.resolve();
+      });
+
+      expect(consoleLogSpy).toHaveBeenCalledWith(
+        'Could not clear the removal notifications',
+        'Device IPC failure',
+      );
+
+      // Case 2: cancelNotification rejects
+      (notifee.getDisplayedNotifications as jest.Mock).mockResolvedValueOnce([
+        { id: 'removal-del-reject', notification: {} },
+      ]);
+      (notifee.cancelNotification as jest.Mock).mockRejectedValueOnce(
+        new Error('Cancel failed'),
+      );
+
+      expect(() => clearRemovalNotices()).not.toThrow();
+
+      await act(async () => {
+        await Promise.resolve();
+      });
+
+      expect(consoleLogSpy).toHaveBeenCalledWith(
+        'Could not clear the removal notifications',
+        'Cancel failed',
+      );
+
+      consoleLogSpy.mockRestore();
+    });
   });
 
   describe('Behaviour 9: notice stays until dismissed and names amount only when paid (AC-11, decision 24.22)', () => {
