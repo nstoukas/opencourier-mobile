@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
+  AppState,
   FlatList,
   KeyboardAvoidingView,
   Platform,
@@ -29,6 +30,7 @@ import { useConnectionStatus } from '@app/services/socket';
 import type { ChatMessage } from '@app/services/chat/chatService';
 import { markChatSeen } from '@app/services/chat/chatSeen';
 import { clearChatNotice } from '@app/services/chat/chatNotice';
+import { dropStoredOutgoing } from '@app/services/chat/chatOutgoing';
 import { formatShift } from '@app/utilities/dates';
 import { styles } from './Chat.styles';
 
@@ -47,39 +49,70 @@ export const Chat = ({ navigation, route }: Props) => {
   const deliveryId = route.params?.deliveryId ?? null;
   const orderReference = route.params?.orderReference ?? null;
   const focused = useIsFocused();
+  // Focus stays true while the app is in the background or the phone is locked, so the screen also
+  // follows `AppState` (the app in front or not), as useDispatchState does. No TanStack focus manager
+  // is wired to AppState here (review of 2026-11-18).
+  const [appActive, setAppActive] = useState(
+    AppState.currentState === 'active',
+  );
+  const onScreen = focused && appActive;
   const connection = useConnectionStatus();
-  // AC-8: with no live connection (Offline with no job, or no signal) the open screen polls.
+  // AC-8: with no live connection (Offline with no job, or no signal) the open screen polls, only
+  // while it is really on screen.
   const messages = useChatMessages({
-    poll: focused && connection !== 'connected',
+    poll: onScreen && connection !== 'connected',
   });
   const quickReplies = useChatQuickReplies();
   const { outgoing, send, retry } = useChatSender();
   const [text, setText] = useState('');
   const listRef = useRef<FlatList<Row>>(null);
 
-  // AC-12: what is on screen is seen, on this phone only. The notice in the shade goes too.
+  // Back in front: fetch once, so what is marked seen below is what is really on screen now.
+  const { refetch } = messages;
   useEffect(() => {
-    if (focused && messages.data) {
+    const subscription = AppState.addEventListener('change', state => {
+      setAppActive(state === 'active');
+      if (state === 'active') {
+        refetch();
+      }
+    });
+    return () => subscription.remove();
+  }, [refetch]);
+
+  // AC-12: what is on screen is seen, on this phone only. The notice in the shade goes too. Never in
+  // the background: a message that arrives then has not been seen.
+  useEffect(() => {
+    if (onScreen && messages.data) {
       markChatSeen(messages.data).catch(() => undefined);
       clearChatNotice();
     }
-  }, [focused, messages.data]);
+  }, [onScreen, messages.data]);
 
-  const rows = useMemo<Row[]>(
-    () => [
+  // A send whose answer was lost is in the server's list already: it is no longer outgoing.
+  useEffect(() => {
+    dropStoredOutgoing(messages.data);
+  }, [messages.data]);
+
+  const rows = useMemo<Row[]>(() => {
+    // Matched by the id the phone gave each message, so the same message never shows twice.
+    const stored = new Set(
+      (messages.data ?? []).map(message => message.clientMessageId),
+    );
+    return [
       ...(messages.data ?? []).map(message => ({
         kind: 'message' as const,
         key: message.id,
         message,
       })),
-      ...outgoing.map(item => ({
-        kind: 'outgoing' as const,
-        key: item.clientMessageId,
-        item,
-      })),
-    ],
-    [messages.data, outgoing],
-  );
+      ...outgoing
+        .filter(item => !stored.has(item.clientMessageId))
+        .map(item => ({
+          kind: 'outgoing' as const,
+          key: item.clientMessageId,
+          item,
+        })),
+    ];
+  }, [messages.data, outgoing]);
 
   // ScreenSafeArea pads the bottom only on iOS, so Android adds the inset itself.
   const composerInset = {
@@ -116,14 +149,24 @@ export const Chat = ({ navigation, route }: Props) => {
             <Text style={styles.mineText}>{item.body}</Text>
           </View>
           {item.state === 'failed' ? (
-            <TouchableOpacity
-              onPress={() => retry(item)}
-              accessibilityRole="button"
-              testID={`chat-retry-${item.clientMessageId}`}>
-              <Text style={styles.failed}>
-                {t('translations:chat_not_sent')}
-              </Text>
-            </TouchableOpacity>
+            <>
+              {/* A refusal (a 4xx) says why in the server's own words. */}
+              {item.refusal ? (
+                <Text style={styles.meta}>{item.refusal}</Text>
+              ) : null}
+              <TouchableOpacity
+                onPress={() => retry(item)}
+                accessibilityRole="button"
+                testID={`chat-retry-${item.clientMessageId}`}>
+                <Text style={styles.failed}>
+                  {t(
+                    item.tagDropped
+                      ? 'translations:chat_retry_untagged'
+                      : 'translations:chat_not_sent',
+                  )}
+                </Text>
+              </TouchableOpacity>
+            </>
           ) : (
             <Text style={styles.meta}>{t('translations:chat_sending')}</Text>
           )}
@@ -230,10 +273,11 @@ export const Chat = ({ navigation, route }: Props) => {
                 showsHorizontalScrollIndicator={false}
                 keyboardShouldPersistTaps="handled"
                 contentContainerStyle={styles.presets}>
-                {quickReplies.data?.map(reply => (
-                  // AC-13: one tap sends it, tagged like a typed message.
+                {quickReplies.data?.map((reply, index) => (
+                  // AC-13: one tap sends it, tagged like a typed message. The index keeps two equal
+                  // presets in the co-op's list apart.
                   <TouchableOpacity
-                    key={reply}
+                    key={`${index}-${reply}`}
                     style={styles.preset}
                     onPress={() => send(reply, deliveryId)}
                     accessibilityRole="button"

@@ -709,6 +709,7 @@ export default {
   chat_send: 'Send',
   chat_sending: 'Sending…',
   chat_not_sent: 'Not sent, tap to retry',
+  chat_retry_untagged: 'Not sent, tap to send it without the order',
   chat_read: 'read',
   chat_about_order: 'About order {{order}}',
   chat_empty:

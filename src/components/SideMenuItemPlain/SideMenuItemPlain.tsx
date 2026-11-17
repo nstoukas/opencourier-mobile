@@ -1,5 +1,11 @@
 import React, { useMemo } from 'react';
-import { StyleProp, ViewStyle, Text, TouchableOpacity } from 'react-native';
+import {
+  StyleProp,
+  ViewStyle,
+  Text,
+  TouchableOpacity,
+  View,
+} from 'react-native';
 import { styles } from './SideMenuItemPlain.styles';
 import { SideMenuItem } from '@app/types/types';
 import { useTranslation } from 'react-i18next';
@@ -7,7 +13,6 @@ import { Icon } from '@app/components/Icon/Icon';
 import { CaretRightIcon } from 'phosphor-react-native/src/icons/CaretRight';
 import { CardholderIcon } from 'phosphor-react-native/src/icons/Cardholder';
 import { ChatCircleIcon } from 'phosphor-react-native/src/icons/ChatCircle';
-import { View } from 'react-native';
 import { ClockCounterClockwiseIcon } from 'phosphor-react-native/src/icons/ClockCounterClockwise';
 import { CalendarBlankIcon } from 'phosphor-react-native/src/icons/CalendarBlank';
 import { GearSixIcon } from 'phosphor-react-native/src/icons/GearSix';

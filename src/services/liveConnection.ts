@@ -103,8 +103,9 @@ export type LiveConnectionHandlers = {
   onJobReadyUpdated?: (message: unknown) => void;
   // Dispatch answered a removal request (spec 0035); the raw message, read by `parseRemovalDecision`.
   onRemovalRequestDecided?: (message: unknown) => void;
-  // Chat (spec 0034, AC-8): a message in the rider's thread, or dispatch reading it.
-  onChatMessage?: () => void;
+  // Chat (spec 0034, AC-8): a message in the rider's thread (the raw message, read by
+  // `isFromDispatch`), or dispatch reading it.
+  onChatMessage?: (message: unknown) => void;
   onChatReadByDispatch?: () => void;
   // Runs on every (re)connect, so anything sent while the phone was away is
   // fetched again.
@@ -166,7 +167,9 @@ export class LiveConnection {
     socket.on(REMOVAL_REQUEST_DECIDED_EVENT, (message: unknown) =>
       this.handlers.onRemovalRequestDecided?.(message),
     );
-    socket.on(CHAT_MESSAGE_EVENT, () => this.handlers.onChatMessage?.());
+    socket.on(CHAT_MESSAGE_EVENT, (message: unknown) =>
+      this.handlers.onChatMessage?.(message),
+    );
     socket.on(CHAT_READ_BY_DISPATCH_EVENT, () =>
       this.handlers.onChatReadByDispatch?.(),
     );

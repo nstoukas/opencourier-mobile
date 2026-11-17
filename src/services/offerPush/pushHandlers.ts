@@ -33,7 +33,10 @@ import {
 import { answerOffer } from './answerOffer';
 import { onOnlineSignDismissed } from '@app/services/onlineService';
 import { alertNewCancelledJobs } from '@app/services/cancelledJobs/cancelledJobs';
-import { showChatNotice } from '@app/services/chat/chatNotice';
+import {
+  noticeChatMessage,
+  openChatFromNotice,
+} from '@app/services/chat/chatNotice';
 
 // Where the message was caught: `onMessage` (the app open in front) or
 // `setBackgroundMessageHandler` (closed, in the background, or locked).
@@ -79,15 +82,13 @@ export const onRemoteMessage = async (
     }
     return;
   }
-  // Spec 0034 (AC-11): dispatch wrote. The push holds no text: in the background the phone draws its
-  // own "New message from Dispatch" line; in front, the chat dots and screen already follow the thread.
+  // Spec 0034 (AC-11): dispatch wrote. The push holds no text: the phone draws its own "New message
+  // from Dispatch" line, in front too, unless Chat is on screen or the rider is Offline (chatNotice.ts).
   if (message.data?.type === 'CHAT_MESSAGE') {
     if (await AsyncStorage.getItem('token')) {
-      if (where === 'background') {
-        await showChatNotice().catch(error =>
-          console.log('Could not show the chat notice', error),
-        );
-      }
+      await noticeChatMessage().catch(error =>
+        console.log('Could not show the chat notice', error),
+      );
       queryClient.invalidateQueries({ queryKey: [QueryKeys.chatMessages] });
     }
     return;
@@ -147,6 +148,14 @@ export const onNotificationEvent = async ({
   if (type === EventType.DISMISSED) {
     // The "online" sign is never left swiped away while tracking (row 68).
     await onOnlineSignDismissed(detail.notification?.id);
+    return;
+  }
+  // A tap on the chat notice opens the chat (spec 0034).
+  if (
+    type === EventType.PRESS &&
+    detail.notification?.data?.type === 'CHAT_MESSAGE'
+  ) {
+    openChatFromNotice();
     return;
   }
   if (type !== EventType.ACTION_PRESS) {

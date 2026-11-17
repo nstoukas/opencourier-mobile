@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState, useSyncExternalStore } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
+import axios from 'axios';
 import { services } from '@app/services/service';
 import type { ChatMessage } from '@app/services/chat/chatService';
 import {
@@ -8,6 +9,14 @@ import {
   loadChatSeen,
   subscribeChatSeen,
 } from '@app/services/chat/chatSeen';
+import {
+  addOutgoing,
+  type OutgoingChat,
+  removeOutgoing,
+  updateOutgoing,
+  useChatOutgoing,
+} from '@app/services/chat/chatOutgoing';
+import { serverMessage } from '@app/hooks/useMoveDropoffPin';
 import { QueryKeys } from '@app/utilities/queryKeys';
 
 // Spec 0034 (chat), AC-8: with no live connection (a rider Offline with no job, or no signal), an open
@@ -54,13 +63,8 @@ export const useChatUnseen = (): boolean => {
   return hasUnseenFromDispatch(data, seen);
 };
 
-// A message the rider wrote that the server has not confirmed, or that failed (AC-19).
-export type OutgoingChat = {
-  clientMessageId: string;
-  body: string;
-  deliveryId: string | null;
-  state: 'sending' | 'failed';
-};
+// Kept outside the screen (chatOutgoing.ts), so leaving Chat does not lose them (AC-19).
+export type { OutgoingChat };
 
 const newClientMessageId = (): string =>
   `rider-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
@@ -70,17 +74,14 @@ const newClientMessageId = (): string =>
 // record anyone's pay depends on (spec 0034, Decision).
 export const useChatSender = () => {
   const queryClient = useQueryClient();
-  const [outgoing, setOutgoing] = useState<OutgoingChat[]>([]);
+  const outgoing = useChatOutgoing();
 
   const deliver = useCallback(
     async (item: OutgoingChat) => {
-      setOutgoing(list =>
-        list.map(entry =>
-          entry.clientMessageId === item.clientMessageId
-            ? { ...entry, state: 'sending' }
-            : entry,
-        ),
-      );
+      updateOutgoing(item.clientMessageId, {
+        state: 'sending',
+        refusal: undefined,
+      });
       try {
         const saved = await services.chatService.sendMessage({
           body: item.body,
@@ -95,18 +96,22 @@ export const useChatSender = () => {
               ? list
               : [...(list ?? []), saved],
         );
-        setOutgoing(list =>
-          list.filter(entry => entry.clientMessageId !== item.clientMessageId),
-        );
+        removeOutgoing(item.clientMessageId);
         queryClient.invalidateQueries({ queryKey: [QueryKeys.chatMessages] });
-      } catch {
-        setOutgoing(list =>
-          list.map(entry =>
-            entry.clientMessageId === item.clientMessageId
-              ? { ...entry, state: 'failed' }
-              : entry,
-          ),
-        );
+      } catch (error) {
+        // A 404 on a tagged message means the rider no longer holds that delivery (the thread itself
+        // comes from the login and cannot be missing): the retry goes out without the tag.
+        const tagRefused =
+          item.deliveryId !== null &&
+          axios.isAxiosError(error) &&
+          error.response?.status === 404;
+        updateOutgoing(item.clientMessageId, {
+          state: 'failed',
+          // The server's own sentence for a refusal (a 4xx); none for no signal or a server error.
+          refusal: serverMessage(error),
+          // `...(a ? b : {})` adds b's fields only when a is true.
+          ...(tagRefused ? { deliveryId: null, tagDropped: true } : {}),
+        });
       }
     },
     [queryClient],
@@ -125,7 +130,7 @@ export const useChatSender = () => {
         deliveryId,
         state: 'sending',
       };
-      setOutgoing(list => [...list, item]);
+      addOutgoing(item);
       deliver(item);
       return true;
     },

@@ -21,6 +21,14 @@ export type ChatMessage = {
   readByDispatch?: boolean;
 };
 
+// The live connection's CHAT_MESSAGE carries `{ message }`, the same shape as one of getMessages'
+// messages. True when that message is from dispatch; anything malformed counts as not.
+export const isFromDispatch = (event: unknown): boolean => {
+  const message = (event as { message?: { senderKind?: unknown } } | null)
+    ?.message;
+  return message?.senderKind === 'DISPATCH';
+};
+
 export type ChatSendInput = {
   body: string;
   deliveryId?: string | null;

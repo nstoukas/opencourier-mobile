@@ -19,6 +19,8 @@ import React, {
 import { AppState } from 'react-native';
 import { Order } from '@app/types/types';
 import { cancelOfferAlert } from './offerPush/offerAlert';
+import { isFromDispatch } from './chat/chatService';
+import { noticeChatMessage } from './chat/chatNotice';
 import {
   ConnectionStatus,
   createCourierSocket,
@@ -131,7 +133,16 @@ const SocketProvider = ({ children }: Props) => {
       },
       // Chat (spec 0034, AC-8): the messages live in the server's database, so
       // a message or a read mark is just a reason to fetch the thread again.
-      onChatMessage: () => refetch([QueryKeys.chatMessages]),
+      onChatMessage: (message: unknown) => {
+        refetch([QueryKeys.chatMessages]);
+        // The thread's every message comes here, the rider's own too: only dispatch's draws the
+        // notice (review of 2026-11-18, AC-11).
+        if (isFromDispatch(message)) {
+          noticeChatMessage().catch(error =>
+            console.log('Could not show the chat notice', error),
+          );
+        }
+      },
       onChatReadByDispatch: () => refetch([QueryKeys.chatMessages]),
       // After any (re)connect, fetch what may have been sent while away.
       onConnected: () =>
@@ -177,6 +188,9 @@ const SocketProvider = ({ children }: Props) => {
         // Learn any status change made while the app was away (an admin, or
         // the server), so tracking and the "online" sign follow it (AC-9).
         queryClient.invalidateQueries({ queryKey: [QueryKeys.user] });
+        // An Offline rider has no socket and gets no push: a message dispatch wrote while the app
+        // was away shows its dot now (spec 0034, AC-10).
+        queryClient.invalidateQueries({ queryKey: [QueryKeys.chatMessages] });
       }
     });
     return () => subscription.remove();

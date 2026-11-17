@@ -9,6 +9,7 @@ import sosService, { SosService } from './sosService';
 import chatService, { ChatService } from './chat/chatService';
 import { clearChatSeen } from './chat/chatSeen';
 import { clearChatNotice } from './chat/chatNotice';
+import { clearChatOutgoing } from './chat/chatOutgoing';
 import { setOwnPosition } from './ownPosition';
 import { clearRemovalNotices } from './removalNotice/removalNotice';
 import { setLatestFix } from './latestFix';
@@ -57,6 +58,8 @@ const Services = (): Services => {
       console.log('Could not clear the chat seen mark', error),
     );
     clearChatNotice();
+    // Nor the lines they wrote that were never sent.
+    clearChatOutgoing();
     clearHeldArrivals().catch(error =>
       console.log('Could not clear held arrivals', error),
     );
