@@ -201,12 +201,15 @@ describe('SocketProvider and useConnectionStatus', () => {
         latestSocket!.emit('connect');
       });
 
-      expect(invalidateQueriesSpy).toHaveBeenCalledTimes(2);
+      expect(invalidateQueriesSpy).toHaveBeenCalledTimes(3);
       expect(invalidateQueriesSpy).toHaveBeenCalledWith({
         queryKey: [QueryKeys.newOrders],
       });
       expect(invalidateQueriesSpy).toHaveBeenCalledWith({
         queryKey: [QueryKeys.inProgressOrders],
+      });
+      expect(invalidateQueriesSpy).toHaveBeenCalledWith({
+        queryKey: [QueryKeys.chatMessages],
       });
 
       act(() => {

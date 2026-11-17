@@ -96,8 +96,16 @@ describe('SideMenu logout (spec 0002, AC-6; spec 0009, AC-8, AC-11)', () => {
     multiRemoveSpy = jest.spyOn(AsyncStorage, 'multiRemove');
   });
 
-  afterEach(() => {
+  let renderedComponents: renderer.ReactTestRenderer[] = [];
+
+  afterEach(async () => {
     alertSpy.mockRestore();
+    act(() => {
+      while (renderedComponents.length) {
+        renderedComponents.pop()?.unmount();
+      }
+    });
+    await act(async () => {});
     queryClient.clear();
   });
 
@@ -107,11 +115,13 @@ describe('SideMenu logout (spec 0002, AC-6; spec 0009, AC-8, AC-11)', () => {
       closeDrawer: jest.fn(),
     };
 
-    return renderer.create(
+    const tree = renderer.create(
       <QueryClientProvider client={queryClient}>
         <SideMenu {...({ navigation: mockNavigation } as any)} />
       </QueryClientProvider>,
     );
+    renderedComponents.push(tree);
+    return tree;
   };
 
   it('refuses logout with an alert naming the count when rider has waiting steps, and does not call logout (AC-8)', async () => {
@@ -394,8 +404,16 @@ describe('SideMenu Location switch (Row 67, Clause 3)', () => {
       .mockImplementation(() => Promise.resolve() as any);
   });
 
-  afterEach(() => {
+  let locationRenderedComponents: renderer.ReactTestRenderer[] = [];
+
+  afterEach(async () => {
     openSettingsSpy.mockRestore();
+    act(() => {
+      while (locationRenderedComponents.length) {
+        locationRenderedComponents.pop()?.unmount();
+      }
+    });
+    await act(async () => {});
     queryClient.clear();
   });
 
@@ -405,11 +423,13 @@ describe('SideMenu Location switch (Row 67, Clause 3)', () => {
       closeDrawer: jest.fn(),
     };
 
-    return renderer.create(
+    const tree = renderer.create(
       <QueryClientProvider client={queryClient}>
         <SideMenu {...({ navigation: mockNavigation } as any)} />
       </QueryClientProvider>,
     );
+    locationRenderedComponents.push(tree);
+    return tree;
   };
 
   it('switching Location switch on calls requestLocationPermission and never calls watchPosition', () => {
