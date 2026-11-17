@@ -22,7 +22,7 @@ import { isJobOver } from '@app/utilities/jobContact';
 import { hasReachedStep } from '@app/utilities/jobSteps';
 import { ARRIVAL_STEP } from '@app/utilities/arrival';
 import { cardStageOf } from '@app/utilities/jobCard';
-import { color, control, space, typeScale } from '@app/styles/theme';
+import { color, control, space, typeScale, radius } from '@app/styles/theme';
 import moment from 'moment';
 import { formatShift } from '@app/utilities/dates';
 
@@ -365,7 +365,7 @@ const styles = StyleSheet.create({
   dot: {
     width: 8,
     height: 8,
-    borderRadius: 4,
+    borderRadius: radius.full,
     backgroundColor: color.destructive,
   },
   swipe: {

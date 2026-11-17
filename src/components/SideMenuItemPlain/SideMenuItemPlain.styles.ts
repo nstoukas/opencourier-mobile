@@ -1,6 +1,6 @@
 import { Colors } from '@app/styles/colors';
 import { StyleSheet } from 'react-native';
-import { color, control, typeScale } from '@app/styles/theme';
+import { color, control, typeScale, radius } from '@app/styles/theme';
 
 export const styles = StyleSheet.create({
   container: {
@@ -19,7 +19,7 @@ export const styles = StyleSheet.create({
   dot: {
     width: 8,
     height: 8,
-    borderRadius: 4,
+    borderRadius: radius.full,
     backgroundColor: color.destructive,
   },
 });
