@@ -33,6 +33,7 @@ import {
 import { answerOffer } from './answerOffer';
 import { onOnlineSignDismissed } from '@app/services/onlineService';
 import { alertNewCancelledJobs } from '@app/services/cancelledJobs/cancelledJobs';
+import { showChatNotice } from '@app/services/chat/chatNotice';
 
 // Where the message was caught: `onMessage` (the app open in front) or
 // `setBackgroundMessageHandler` (closed, in the background, or locked).
@@ -75,6 +76,19 @@ export const onRemoteMessage = async (
       await receiveRemovalDecision(message.data, queryClient).catch(error =>
         console.log('Could not show the removal notice', error),
       );
+    }
+    return;
+  }
+  // Spec 0034 (AC-11): dispatch wrote. The push holds no text: in the background the phone draws its
+  // own "New message from Dispatch" line; in front, the chat dots and screen already follow the thread.
+  if (message.data?.type === 'CHAT_MESSAGE') {
+    if (await AsyncStorage.getItem('token')) {
+      if (where === 'background') {
+        await showChatNotice().catch(error =>
+          console.log('Could not show the chat notice', error),
+        );
+      }
+      queryClient.invalidateQueries({ queryKey: [QueryKeys.chatMessages] });
     }
     return;
   }

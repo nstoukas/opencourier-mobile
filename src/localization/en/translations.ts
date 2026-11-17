@@ -517,7 +517,8 @@ export default {
   report_product_wrong: 'Wrong item',
   report_product_missing: 'Missing item',
   report_product_something_else: 'Something else',
-  report_product_refused_body: 'This job can no longer take a product report. Tell dispatch instead.',
+  report_product_refused_body:
+    'This job can no longer take a product report. Tell dispatch instead.',
   report_failed_title: 'Report not sent',
   report_failed_body:
     'The report could not reach the co-op. Check your signal and try again.',
@@ -699,6 +700,21 @@ export default {
   removal_declined_with_note: 'Dispatch said no: {{note}}',
   removal_declined_full_title: 'Dispatch said no',
   removal_channel: 'Removal requests',
+  // Chat with dispatch (spec 0034).
+  chat: 'Chat',
+  chat_dispatch: 'Dispatch',
+  chat_channel: 'Messages from dispatch',
+  chat_notice_title: 'New message from Dispatch',
+  chat_placeholder: 'Write to dispatch',
+  chat_send: 'Send',
+  chat_sending: 'Sending…',
+  chat_not_sent: 'Not sent, tap to retry',
+  chat_read: 'read',
+  chat_about_order: 'About order {{order}}',
+  chat_empty:
+    'No messages yet. Tap a ready answer below, or write to dispatch.',
+  chat_load_failed: "Messages can't be loaded right now.",
+  chat_unread: 'New message',
   removal_notice_title_approved: 'Dispatch took you off an order',
   removal_notice_title_declined: 'Dispatch said no to your request',
   removal_notice_approved: 'You are off this order.',

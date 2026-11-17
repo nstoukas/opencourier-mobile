@@ -129,9 +129,17 @@ const SocketProvider = ({ children }: Props) => {
           console.log('Could not show the removal notice', error),
         );
       },
+      // Chat (spec 0034, AC-8): the messages live in the server's database, so
+      // a message or a read mark is just a reason to fetch the thread again.
+      onChatMessage: () => refetch([QueryKeys.chatMessages]),
+      onChatReadByDispatch: () => refetch([QueryKeys.chatMessages]),
       // After any (re)connect, fetch what may have been sent while away.
       onConnected: () =>
-        refetch([QueryKeys.newOrders, QueryKeys.inProgressOrders]),
+        refetch([
+          QueryKeys.newOrders,
+          QueryKeys.inProgressOrders,
+          QueryKeys.chatMessages,
+        ]),
     });
   }
   const connection = connectionRef.current;

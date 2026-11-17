@@ -45,6 +45,10 @@ type Props = {
   onWithdrawRemoval?: (order: Order) => void;
   // A send or a withdraw of this job's request is on its way.
   removalBusy?: boolean;
+  // Spec 0034 (AC-12): opens the chat with dispatch, its messages tagged with this job. Shown whether
+  // or not the co-op has a dispatch number. `chatUnseen` draws the unread dot.
+  onOpenChat?: (order: Order) => void;
+  chatUnseen?: boolean;
 };
 
 type SmallAction = {
@@ -53,6 +57,8 @@ type SmallAction = {
   onPress: () => void;
   tone?: 'destructive';
   disabled?: boolean;
+  // A small dot after the label: something new to read (the chat, spec 0034).
+  dot?: boolean;
 };
 
 // The job card's pinned footer (spec 0021, AC-3, AC-5, AC-9): drawn outside the
@@ -72,6 +78,8 @@ export const JobFooter = ({
   onRequestRemoval,
   onWithdrawRemoval,
   removalBusy,
+  onOpenChat,
+  chatUnseen,
 }: Props) => {
   const { t } = useTranslation();
   const { imHere, pickedUp, delivered } = useOrder();
@@ -144,6 +152,15 @@ export const JobFooter = ({
       onPress: onCallDispatch,
     });
   }
+  // Spec 0034 (AC-12): beside Call dispatch, and offered even with no dispatch number.
+  if (onOpenChat && !jobOver) {
+    actions.push({
+      key: 'chat',
+      label: t('translations:chat'),
+      onPress: () => onOpenChat(order),
+      dot: chatUnseen,
+    });
+  }
   // Spec 0035 (AC-3, AC-5): after the free hand back. Neither action is offered
   // while a send or a withdraw is on its way, so it cannot be sent twice.
   if (!jobOver && !removalBusy) {
@@ -166,7 +183,10 @@ export const JobFooter = ({
     }
   }
   // Spec 0032: at the customer's door the rider can report a wrong or missing product.
-  if (onReportProduct && order.status === OrderStatus.courier_arrived_at_dropoff_location) {
+  if (
+    onReportProduct &&
+    order.status === OrderStatus.courier_arrived_at_dropoff_location
+  ) {
     actions.push({
       key: 'report-product',
       label: t('translations:report_product'),
@@ -249,14 +269,27 @@ export const JobFooter = ({
               onPress={action.onPress}
               disabled={action.disabled}
               accessibilityRole="button"
+              accessibilityLabel={
+                action.dot
+                  ? `${action.label}, ${t('translations:chat_unread')}`
+                  : undefined
+              }
               testID={`job-action-${action.key}`}>
-              <Text
-                style={[
-                  styles.actionText,
-                  action.tone === 'destructive' && styles.destructive,
-                ]}>
-                {action.label}
-              </Text>
+              <View style={styles.actionLabel}>
+                <Text
+                  style={[
+                    styles.actionText,
+                    action.tone === 'destructive' && styles.destructive,
+                  ]}>
+                  {action.label}
+                </Text>
+                {action.dot ? (
+                  <View
+                    style={styles.dot}
+                    testID={`job-action-${action.key}-dot`}
+                  />
+                ) : null}
+              </View>
             </TouchableOpacity>
           ))}
         </View>
@@ -323,6 +356,17 @@ const styles = StyleSheet.create({
   },
   destructive: {
     color: color.destructive,
+  },
+  actionLabel: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  dot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: color.destructive,
   },
   swipe: {
     alignSelf: 'center',

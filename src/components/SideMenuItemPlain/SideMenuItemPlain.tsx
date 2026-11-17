@@ -6,6 +6,8 @@ import { useTranslation } from 'react-i18next';
 import { Icon } from '@app/components/Icon/Icon';
 import { CaretRightIcon } from 'phosphor-react-native/src/icons/CaretRight';
 import { CardholderIcon } from 'phosphor-react-native/src/icons/Cardholder';
+import { ChatCircleIcon } from 'phosphor-react-native/src/icons/ChatCircle';
+import { View } from 'react-native';
 import { ClockCounterClockwiseIcon } from 'phosphor-react-native/src/icons/ClockCounterClockwise';
 import { CalendarBlankIcon } from 'phosphor-react-native/src/icons/CalendarBlank';
 import { GearSixIcon } from 'phosphor-react-native/src/icons/GearSix';
@@ -19,6 +21,8 @@ type Props = {
   onPress: (item: SideMenuItem) => void;
   item: SideMenuItem;
   hideArrow?: boolean;
+  // A small red dot after the label: something new to read (the chat, spec 0034, AC-12).
+  dot?: boolean;
 };
 
 export const SideMenuItemPlain = ({
@@ -26,12 +30,15 @@ export const SideMenuItemPlain = ({
   onPress,
   item,
   hideArrow,
+  dot,
 }: Props) => {
   const { t } = useTranslation();
   const icon = useMemo(() => {
     switch (item) {
       case SideMenuItem.Orders:
         return { glyph: NoteIcon, weight: 'fill' as const };
+      case SideMenuItem.Chat:
+        return { glyph: ChatCircleIcon, weight: 'fill' as const };
       case SideMenuItem.History:
         return { glyph: ClockCounterClockwiseIcon, weight: 'fill' as const };
       case SideMenuItem.Shifts:
@@ -52,9 +59,17 @@ export const SideMenuItemPlain = ({
   return (
     <TouchableOpacity
       style={[styles.container, style]}
-      onPress={() => onPress(item)}>
+      onPress={() => onPress(item)}
+      accessibilityLabel={
+        dot
+          ? `${t(`translations:${item}`)}, ${t('translations:chat_unread')}`
+          : undefined
+      }>
       {icon && <Icon icon={icon.glyph} weight={icon.weight} size={32} />}
       <Text style={styles.text}>{t(`translations:${item}`)}</Text>
+      {dot ? (
+        <View testID={`side-menu-${item}-dot`} style={styles.dot} />
+      ) : null}
       {!hideArrow && <Icon icon={CaretRightIcon} />}
     </TouchableOpacity>
   );

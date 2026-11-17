@@ -39,6 +39,8 @@ import useInstance from '@app/hooks/useInstance';
 import { unregisterThisPhone } from '@app/services/offerPush/registration';
 import { cancelAllOfferAlerts } from '@app/services/offerPush/offerAlert';
 import { prepareToGoOnline } from '@app/services/offerPush/goOnlineChecks';
+import { useChatUnseen } from '@app/hooks/useChat';
+import { MainScreens } from '@app/navigation/main/types';
 
 // The side menu is the drawer's content, not a screen, so it receives the drawer's
 // content props (no route), which is the type the drawer library exports for it.
@@ -47,6 +49,7 @@ type Props = DrawerContentComponentProps;
 const section1 = [SideMenuItem.Location, SideMenuItem.AutoOrders];
 const section2 = [
   SideMenuItem.Orders,
+  SideMenuItem.Chat,
   SideMenuItem.History,
   SideMenuItem.Earnings,
   SideMenuItem.Payout,
@@ -58,6 +61,7 @@ const section2 = [
 // Spec 0027: Shifts sits after History, only while the co-op runs shifts.
 const section2WithShifts = [
   SideMenuItem.Orders,
+  SideMenuItem.Chat,
   SideMenuItem.History,
   SideMenuItem.Shifts,
   SideMenuItem.Earnings,
@@ -68,6 +72,8 @@ const section2WithShifts = [
 ];
 
 export const SideMenu = ({ navigation }: Props) => {
+  // Spec 0034 (AC-12): the chat's unread dot, the same one the job's Chat action shows.
+  const chatUnseen = useChatUnseen();
   const { t } = useTranslation();
   const { user } = useUser();
   // The last co-op switch the app read (Home keeps it fresh); the menu itself never polls.
@@ -261,6 +267,10 @@ export const SideMenu = ({ navigation }: Props) => {
       case SideMenuItem.Orders:
         navigation.navigate(DrawerScreens.Home);
         break;
+      case SideMenuItem.Chat:
+        // A screen of the main stack, which holds the drawer: no delivery tag (AC-12).
+        navigation.navigate(MainScreens.Chat);
+        break;
       case SideMenuItem.History:
         navigation.navigate(DrawerScreens.History);
         break;
@@ -351,6 +361,7 @@ export const SideMenu = ({ navigation }: Props) => {
           return (
             <SideMenuItemPlain
               hideArrow={item === SideMenuItem.Logout}
+              dot={item === SideMenuItem.Chat && chatUnseen}
               key={item}
               style={styles.cell}
               item={item}

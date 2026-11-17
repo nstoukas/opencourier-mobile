@@ -6,6 +6,9 @@ import instanceService, { InstanceService } from './instanceService';
 import earningsService, { EarningsService } from './earningsService';
 import routeService, { RouteService } from './routeService';
 import sosService, { SosService } from './sosService';
+import chatService, { ChatService } from './chat/chatService';
+import { clearChatSeen } from './chat/chatSeen';
+import { clearChatNotice } from './chat/chatNotice';
 import { setOwnPosition } from './ownPosition';
 import { clearRemovalNotices } from './removalNotice/removalNotice';
 import { setLatestFix } from './latestFix';
@@ -23,6 +26,8 @@ export type Services = {
   earningsService: EarningsService;
   routeService: RouteService;
   sosService: SosService;
+  // The rider's chat with dispatch (spec 0034).
+  chatService: ChatService;
   notificationDeviceService: NotificationDeviceService;
   logout: () => void;
 };
@@ -36,6 +41,7 @@ const Services = (): Services => {
   const dService = notificationDeviceService(client);
   const rService = routeService(client);
   const sService = sosService(client);
+  const chService = chatService(client);
 
   const logout = () => {
     client.defaults.headers.common.Authorization = undefined;
@@ -46,6 +52,11 @@ const Services = (): Services => {
     clearPickedUpTimes();
     // The next rider never sees the last one's removal answers (spec 0035).
     clearRemovalNotices();
+    // Nor what the last rider had seen of their chat (spec 0034, AC-12).
+    clearChatSeen().catch(error =>
+      console.log('Could not clear the chat seen mark', error),
+    );
+    clearChatNotice();
     clearHeldArrivals().catch(error =>
       console.log('Could not clear held arrivals', error),
     );
@@ -59,6 +70,7 @@ const Services = (): Services => {
     earningsService: eService,
     routeService: rService,
     sosService: sService,
+    chatService: chService,
     notificationDeviceService: dService,
     logout,
   };

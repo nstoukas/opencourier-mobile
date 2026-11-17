@@ -1,6 +1,6 @@
 import { Colors } from '@app/styles/colors';
 import { StyleSheet } from 'react-native';
-import { control, typeScale } from '@app/styles/theme';
+import { color, control, typeScale } from '@app/styles/theme';
 
 export const styles = StyleSheet.create({
   container: {
@@ -14,5 +14,12 @@ export const styles = StyleSheet.create({
     fontSize: typeScale['body-sm'].fontSize,
     flex: 1,
     color: Colors.black,
+  },
+  // The chat's unread dot (spec 0034, AC-12).
+  dot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: color.destructive,
   },
 });

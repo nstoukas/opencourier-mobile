@@ -61,6 +61,7 @@ import {
   restaurantLayerOn,
   visibleLegs,
 } from '@app/utilities/routeLegs';
+import { useChatUnseen } from '@app/hooks/useChat';
 
 type Props = DrawerScreenProp<DrawerScreens.Home>;
 
@@ -338,6 +339,9 @@ export const HomeScreen = ({ navigation }: Props) => {
     );
   };
 
+  // Spec 0034 (AC-12): the chat's unread dot, worked out on the phone.
+  const chatUnseen = useChatUnseen();
+
   // Spec 0021 (AC-9): the job's swipe and small actions, pinned below the card.
   const renderFooter = () => {
     if (shown?.kind !== 'job') {
@@ -368,6 +372,13 @@ export const HomeScreen = ({ navigation }: Props) => {
         }
         onWithdrawRemoval={withdrawRemoval}
         removalBusy={removalBusy}
+        onOpenChat={job =>
+          navigation.navigate(MainScreens.Chat, {
+            deliveryId: job.id,
+            orderReference: job.orderReference ?? null,
+          })
+        }
+        chatUnseen={chatUnseen}
       />
     );
   };

@@ -1,0 +1,269 @@
+import React, { useEffect, useMemo, useRef, useState } from 'react';
+import {
+  ActivityIndicator,
+  FlatList,
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
+} from 'react-native';
+import { useTranslation } from 'react-i18next';
+import { useIsFocused } from '@react-navigation/native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import moment from 'moment';
+import { ScreenSafeArea } from '@app/components/ScreenSafeArea/ScreenSafeArea';
+import { BackNavButton } from '@app/components/BackNavButton/BackNavButton';
+import { Button, ButtonType } from '@app/components/Button/Button';
+import { MainScreenProp, MainScreens } from '@app/navigation/main/types';
+import {
+  CHAT_MESSAGE_MAX_LENGTH,
+  OutgoingChat,
+  useChatMessages,
+  useChatQuickReplies,
+  useChatSender,
+} from '@app/hooks/useChat';
+import { useConnectionStatus } from '@app/services/socket';
+import type { ChatMessage } from '@app/services/chat/chatService';
+import { markChatSeen } from '@app/services/chat/chatSeen';
+import { clearChatNotice } from '@app/services/chat/chatNotice';
+import { formatShift } from '@app/utilities/dates';
+import { styles } from './Chat.styles';
+
+type Props = MainScreenProp<MainScreens.Chat>;
+
+type Row =
+  | { kind: 'message'; key: string; message: ChatMessage }
+  | { kind: 'outgoing'; key: string; item: OutgoingChat };
+
+// Spec 0034 (chat), AC-12: the rider's one conversation with dispatch. Opened from a job (its messages
+// are tagged with that delivery) or from the side menu (no tag). Presets first and typing second, so
+// help is one tap away (AC-13). Nothing here tells dispatch whether the rider read anything (AC-6).
+export const Chat = ({ navigation, route }: Props) => {
+  const { t } = useTranslation();
+  const { bottom } = useSafeAreaInsets();
+  const deliveryId = route.params?.deliveryId ?? null;
+  const orderReference = route.params?.orderReference ?? null;
+  const focused = useIsFocused();
+  const connection = useConnectionStatus();
+  // AC-8: with no live connection (Offline with no job, or no signal) the open screen polls.
+  const messages = useChatMessages({
+    poll: focused && connection !== 'connected',
+  });
+  const quickReplies = useChatQuickReplies();
+  const { outgoing, send, retry } = useChatSender();
+  const [text, setText] = useState('');
+  const listRef = useRef<FlatList<Row>>(null);
+
+  // AC-12: what is on screen is seen, on this phone only. The notice in the shade goes too.
+  useEffect(() => {
+    if (focused && messages.data) {
+      markChatSeen(messages.data).catch(() => undefined);
+      clearChatNotice();
+    }
+  }, [focused, messages.data]);
+
+  const rows = useMemo<Row[]>(
+    () => [
+      ...(messages.data ?? []).map(message => ({
+        kind: 'message' as const,
+        key: message.id,
+        message,
+      })),
+      ...outgoing.map(item => ({
+        kind: 'outgoing' as const,
+        key: item.clientMessageId,
+        item,
+      })),
+    ],
+    [messages.data, outgoing],
+  );
+
+  // ScreenSafeArea pads the bottom only on iOS, so Android adds the inset itself.
+  const composerInset = {
+    paddingBottom: Platform.OS === 'android' ? bottom : 0,
+  };
+  const canSend = text.trim().length > 0;
+
+  const onSend = () => {
+    if (send(text, deliveryId)) {
+      setText('');
+    }
+  };
+
+  const meta = (message: ChatMessage): string => {
+    const time = moment(message.createdAt).format(formatShift);
+    const order = message.orderReference ? ` · #${message.orderReference}` : '';
+    if (message.senderKind === 'DISPATCH') {
+      return `${
+        message.senderName ?? t('translations:chat_dispatch')
+      } · ${time}${order}`;
+    }
+    const read = message.readByDispatch
+      ? ` · ${t('translations:chat_read')}`
+      : '';
+    return `${time}${order}${read}`;
+  };
+
+  const renderRow = ({ item: row }: { item: Row }) => {
+    if (row.kind === 'outgoing') {
+      const { item } = row;
+      return (
+        <View style={styles.mineRow}>
+          <View style={[styles.mineBubble, styles.mineSending]}>
+            <Text style={styles.mineText}>{item.body}</Text>
+          </View>
+          {item.state === 'failed' ? (
+            <TouchableOpacity
+              onPress={() => retry(item)}
+              accessibilityRole="button"
+              testID={`chat-retry-${item.clientMessageId}`}>
+              <Text style={styles.failed}>
+                {t('translations:chat_not_sent')}
+              </Text>
+            </TouchableOpacity>
+          ) : (
+            <Text style={styles.meta}>{t('translations:chat_sending')}</Text>
+          )}
+        </View>
+      );
+    }
+    const { message } = row;
+    if (message.senderKind === 'SYSTEM') {
+      return (
+        <View style={styles.systemRow}>
+          <View style={styles.systemBubble}>
+            <Text style={styles.systemText}>
+              {`${moment(message.createdAt).format(formatShift)} · ${
+                message.body
+              }`}
+            </Text>
+          </View>
+        </View>
+      );
+    }
+    const mine = message.senderKind === 'COURIER';
+    return (
+      <View
+        style={mine ? styles.mineRow : styles.theirsRow}
+        testID={`chat-message-${message.id}`}>
+        <View style={mine ? styles.mineBubble : styles.theirsBubble}>
+          <Text style={mine ? styles.mineText : styles.theirsText}>
+            {message.body}
+          </Text>
+        </View>
+        <Text style={styles.meta}>{meta(message)}</Text>
+      </View>
+    );
+  };
+
+  const renderBody = () => {
+    if (messages.data) {
+      return (
+        <FlatList
+          ref={listRef}
+          style={styles.list}
+          contentContainerStyle={styles.listContent}
+          data={rows}
+          keyExtractor={row => row.key}
+          renderItem={renderRow}
+          keyboardShouldPersistTaps="handled"
+          onContentSizeChange={() =>
+            listRef.current?.scrollToEnd({ animated: false })
+          }
+          ListEmptyComponent={
+            <Text style={styles.centerText}>
+              {t('translations:chat_empty')}
+            </Text>
+          }
+        />
+      );
+    }
+    if (messages.isError) {
+      return (
+        <View style={styles.center}>
+          <Text style={styles.centerText}>
+            {t('translations:chat_load_failed')}
+          </Text>
+          <Button
+            type={ButtonType.gray}
+            title={t('translations:removal_try_again')}
+            onPress={() => messages.refetch()}
+          />
+        </View>
+      );
+    }
+    return (
+      <View style={styles.center}>
+        <ActivityIndicator />
+      </View>
+    );
+  };
+
+  return (
+    <View style={styles.container}>
+      <ScreenSafeArea style={styles.safe}>
+        <View style={styles.navHeader}>
+          <Text style={styles.title}>{t('translations:chat_dispatch')}</Text>
+          <BackNavButton onPress={() => navigation.goBack()} />
+        </View>
+        {orderReference ? (
+          <Text style={styles.about}>
+            {t('translations:chat_about_order', {
+              order: `#${orderReference}`,
+            })}
+          </Text>
+        ) : null}
+
+        {/* iOS has no adjustResize, so this lifts the box above the keyboard; Android resizes itself. */}
+        <KeyboardAvoidingView
+          style={styles.keyboardArea}
+          behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+          {renderBody()}
+
+          <View style={[styles.composer, composerInset]}>
+            {(quickReplies.data?.length ?? 0) > 0 && (
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                keyboardShouldPersistTaps="handled"
+                contentContainerStyle={styles.presets}>
+                {quickReplies.data?.map(reply => (
+                  // AC-13: one tap sends it, tagged like a typed message.
+                  <TouchableOpacity
+                    key={reply}
+                    style={styles.preset}
+                    onPress={() => send(reply, deliveryId)}
+                    accessibilityRole="button"
+                    testID={`chat-preset-${reply}`}>
+                    <Text style={styles.presetText}>{reply}</Text>
+                  </TouchableOpacity>
+                ))}
+              </ScrollView>
+            )}
+            <View style={styles.inputRow}>
+              <TextInput
+                style={styles.input}
+                value={text}
+                onChangeText={setText}
+                placeholder={t('translations:chat_placeholder')}
+                multiline
+                maxLength={CHAT_MESSAGE_MAX_LENGTH}
+                testID="chat-input"
+              />
+              <Button
+                type={ButtonType.black}
+                title={t('translations:chat_send')}
+                disabled={!canSend}
+                onPress={onSend}
+                style={styles.send}
+              />
+            </View>
+          </View>
+        </KeyboardAvoidingView>
+      </ScreenSafeArea>
+    </View>
+  );
+};

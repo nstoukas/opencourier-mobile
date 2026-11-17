@@ -25,4 +25,7 @@ export const QueryKeys = {
   shifts: 'shifts',
   // The reasons a rider can give for coming off an order (spec 0035); never saved to disk.
   removalReasons: 'removalReasons',
+  // The rider's chat with dispatch and the co-op's presets (spec 0034); never saved to disk.
+  chatMessages: 'chatMessages',
+  chatQuickReplies: 'chatQuickReplies',
 };

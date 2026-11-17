@@ -22,6 +22,8 @@ export enum MainScreens {
   ReportIssue = 'ReportIssue',
   ReportProduct = 'ReportProduct',
   RequestRemoval = 'RequestRemoval',
+  // The rider's chat with dispatch (spec 0034).
+  Chat = 'Chat',
   EarningsDay = 'EarningsDay',
   EarningsDelivery = 'EarningsDelivery',
 }
@@ -48,6 +50,13 @@ export type MainStackParamList = {
   RequestRemoval: {
     order: Order;
   };
+  // Opened from a job, its messages are tagged with that delivery; from the side menu, with none.
+  Chat:
+    | {
+        deliveryId?: string;
+        orderReference?: string | null;
+      }
+    | undefined;
   // Only the day is passed; the screen re-fetches so the list always matches the ledger.
   EarningsDay: {
     date: string; // 'YYYY-MM-DD'

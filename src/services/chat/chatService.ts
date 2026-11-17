@@ -1,0 +1,54 @@
+import { UClient } from '../Client';
+
+// Spec 0034 (chat). The rider's one conversation with the co-op's dispatch, on the backend's
+// `courier/v1/chat` routes. The server finds the thread from the login: there is no thread id here.
+
+export type ChatSenderKind = 'DISPATCH' | 'COURIER' | 'PARTNER' | 'SYSTEM';
+
+export type ChatMessage = {
+  id: string;
+  senderKind: ChatSenderKind;
+  // "Dispatch" on dispatch's messages (AC-5), never a person's name; null on the rider's own and on
+  // a system line.
+  senderName: string | null;
+  body: string;
+  deliveryId: string | null;
+  orderReference: string | null;
+  // On the rider's own messages only: the id the phone gave it, so a retried send matches (AC-19).
+  clientMessageId?: string;
+  createdAt: string;
+  // On the rider's own messages only: true once any dispatcher opened the thread after it (AC-6).
+  readByDispatch?: boolean;
+};
+
+export type ChatSendInput = {
+  body: string;
+  deliveryId?: string | null;
+  clientMessageId: string;
+};
+
+export type ChatService = {
+  getMessages: (page?: {
+    before?: string;
+    after?: string;
+  }) => Promise<ChatMessage[]>;
+  sendMessage: (input: ChatSendInput) => Promise<ChatMessage>;
+  getQuickReplies: () => Promise<string[]>;
+};
+
+const chatService = (client: UClient): ChatService => ({
+  getMessages: async (page = {}) => {
+    const { data } = await client.get('chat/messages', { params: page });
+    return data.result.messages;
+  },
+  sendMessage: async input => {
+    const { data } = await client.post('chat/messages', input);
+    return data.result;
+  },
+  getQuickReplies: async () => {
+    const { data } = await client.get('chat/quick-replies');
+    return data.result.replies;
+  },
+});
+
+export default chatService;

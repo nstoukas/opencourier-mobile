@@ -33,6 +33,8 @@ export enum SideMenuItem {
   Location = 'real_time_location',
   AutoOrders = 'auto_accept_orders',
   Orders = 'orders',
+  // Spec 0034: the chat with dispatch, with no delivery tag.
+  Chat = 'chat',
   Earnings = 'earnings',
   // Spec 0018: the delivery history, moved off home.
   History = 'history',
