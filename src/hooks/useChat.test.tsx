@@ -130,10 +130,9 @@ describe('useChat hooks (spec 0034, AC-4, AC-8, AC-12, AC-13, AC-19)', () => {
       (services.chatService.getMessages as jest.Mock).mockResolvedValue([]);
 
       // 1. Polling hook
-      const polling = renderHook(
-        () => useChatMessages({ poll: true }),
-        { wrapper },
-      );
+      const polling = renderHook(() => useChatMessages({ poll: true }), {
+        wrapper,
+      });
 
       await act(async () => {
         await Promise.resolve();
@@ -157,10 +156,9 @@ describe('useChat hooks (spec 0034, AC-4, AC-8, AC-12, AC-13, AC-19)', () => {
       (services.chatService.getMessages as jest.Mock).mockClear();
 
       // 2. Non-polling hook
-      const nonPolling = renderHook(
-        () => useChatMessages({ poll: false }),
-        { wrapper },
-      );
+      const nonPolling = renderHook(() => useChatMessages({ poll: false }), {
+        wrapper,
+      });
 
       await act(async () => {
         await Promise.resolve();
@@ -187,7 +185,9 @@ describe('useChat hooks (spec 0034, AC-4, AC-8, AC-12, AC-13, AC-19)', () => {
         replies,
       );
 
-      const { result, unmount } = renderHook(() => useChatQuickReplies(), { wrapper });
+      const { result, unmount } = renderHook(() => useChatQuickReplies(), {
+        wrapper,
+      });
 
       await waitFor(() => expect(result.current.isSuccess).toBe(true));
 
@@ -199,7 +199,9 @@ describe('useChat hooks (spec 0034, AC-4, AC-8, AC-12, AC-13, AC-19)', () => {
 
   describe('useChatSender (AC-4, AC-13, AC-19, Major 3)', () => {
     it('send() trims text before sending and ignores blank or whitespace-only text', () => {
-      const { result, unmount } = renderHook(() => useChatSender(), { wrapper });
+      const { result, unmount } = renderHook(() => useChatSender(), {
+        wrapper,
+      });
 
       let sent = false;
       act(() => {
@@ -218,7 +220,9 @@ describe('useChat hooks (spec 0034, AC-4, AC-8, AC-12, AC-13, AC-19)', () => {
     });
 
     it('send() refuses text longer than 1000 characters (CHAT_MESSAGE_MAX_LENGTH)', () => {
-      const { result, unmount } = renderHook(() => useChatSender(), { wrapper });
+      const { result, unmount } = renderHook(() => useChatSender(), {
+        wrapper,
+      });
 
       const overlongText = 'a'.repeat(CHAT_MESSAGE_MAX_LENGTH + 1);
       let sent = false;
@@ -244,7 +248,9 @@ describe('useChat hooks (spec 0034, AC-4, AC-8, AC-12, AC-13, AC-19)', () => {
         createdAt: '2026-11-17T12:00:00Z',
       });
 
-      const { result, unmount } = renderHook(() => useChatSender(), { wrapper });
+      const { result, unmount } = renderHook(() => useChatSender(), {
+        wrapper,
+      });
 
       let sent = false;
       await act(async () => {
@@ -267,7 +273,9 @@ describe('useChat hooks (spec 0034, AC-4, AC-8, AC-12, AC-13, AC-19)', () => {
         new Error('Network error'),
       );
 
-      const { result, unmount } = renderHook(() => useChatSender(), { wrapper });
+      const { result, unmount } = renderHook(() => useChatSender(), {
+        wrapper,
+      });
 
       await act(async () => {
         result.current.send('Need help', 'del-1');
@@ -332,7 +340,9 @@ describe('useChat hooks (spec 0034, AC-4, AC-8, AC-12, AC-13, AC-19)', () => {
         refusalError,
       );
 
-      const { result, unmount } = renderHook(() => useChatSender(), { wrapper });
+      const { result, unmount } = renderHook(() => useChatSender(), {
+        wrapper,
+      });
 
       await act(async () => {
         result.current.send('Hello', 'del-1');
@@ -358,7 +368,9 @@ describe('useChat hooks (spec 0034, AC-4, AC-8, AC-12, AC-13, AC-19)', () => {
         error404,
       );
 
-      const { result, unmount } = renderHook(() => useChatSender(), { wrapper });
+      const { result, unmount } = renderHook(() => useChatSender(), {
+        wrapper,
+      });
 
       await act(async () => {
         result.current.send('Is food ready?', 'del-tag-1');
@@ -405,7 +417,9 @@ describe('useChat hooks (spec 0034, AC-4, AC-8, AC-12, AC-13, AC-19)', () => {
         new Error('Network request failed'),
       );
 
-      const { result, unmount } = renderHook(() => useChatSender(), { wrapper });
+      const { result, unmount } = renderHook(() => useChatSender(), {
+        wrapper,
+      });
 
       await act(async () => {
         result.current.send('On my way', 'del-tag-2');
@@ -452,7 +466,9 @@ describe('useChat hooks (spec 0034, AC-4, AC-8, AC-12, AC-13, AC-19)', () => {
       jest.spyOn(chatSeenModule, 'chatSeenNow').mockReturnValue(null);
       jest.spyOn(chatSeenModule, 'hasUnseenFromDispatch').mockReturnValue(true);
 
-      const { result, unmount } = renderHook(() => useChatUnseen(), { wrapper });
+      const { result, unmount } = renderHook(() => useChatUnseen(), {
+        wrapper,
+      });
 
       await act(async () => {});
 

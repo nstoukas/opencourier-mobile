@@ -573,11 +573,16 @@ describe('Chat screen (spec 0034, AC-5, AC-6, AC-8, AC-10, AC-12, AC-13, AC-19, 
         },
       );
 
-      const { getByPlaceholderText, getByText, findByText, queryByText, unmount } =
-        renderChat({
-          deliveryId: 'del-tagged-job',
-          orderReference: 'ORD-77',
-        });
+      const {
+        getByPlaceholderText,
+        getByText,
+        findByText,
+        queryByText,
+        unmount,
+      } = renderChat({
+        deliveryId: 'del-tagged-job',
+        orderReference: 'ORD-77',
+      });
 
       const input = getByPlaceholderText('Write to dispatch');
       fireEvent.changeText(input, 'Is this order ready?');
@@ -634,11 +639,16 @@ describe('Chat screen (spec 0034, AC-5, AC-6, AC-8, AC-10, AC-12, AC-13, AC-19, 
         },
       );
 
-      const { getByPlaceholderText, getByText, findByText, queryByText, unmount } =
-        renderChat({
-          deliveryId: 'del-tagged-net',
-          orderReference: 'ORD-88',
-        });
+      const {
+        getByPlaceholderText,
+        getByText,
+        findByText,
+        queryByText,
+        unmount,
+      } = renderChat({
+        deliveryId: 'del-tagged-net',
+        orderReference: 'ORD-88',
+      });
 
       const input = getByPlaceholderText('Write to dispatch');
       fireEvent.changeText(input, 'Heading over');
