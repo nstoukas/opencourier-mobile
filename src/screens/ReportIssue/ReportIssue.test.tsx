@@ -1,5 +1,5 @@
 import React from 'react';
-import { Alert } from 'react-native';
+import { Alert, KeyboardAvoidingView, Platform } from 'react-native';
 import axios from 'axios';
 import { render, screen, fireEvent, act } from '@testing-library/react-native';
 import { ReportIssue } from './ReportIssue';
@@ -1160,6 +1160,34 @@ describe('ReportIssue screen (decision 66.11)', () => {
           axiosError,
         );
       });
+    });
+  });
+
+  describe('Keyboard padding on Android as well as iOS (row 114)', () => {
+    const originalOS = Platform.OS;
+
+    afterEach(() => {
+      Platform.OS = originalOS;
+    });
+
+    it('uses behavior "padding" on KeyboardAvoidingView on Android as well as iOS', () => {
+      try {
+        // Test Android behavior
+        Platform.OS = 'android';
+        const androidRender = render(<ReportIssue {...defaultProps} />);
+        const androidKav = androidRender.UNSAFE_getByType(KeyboardAvoidingView);
+        expect(androidKav.props.behavior).toBe('padding');
+        androidRender.unmount();
+
+        // Test iOS behavior
+        Platform.OS = 'ios';
+        const iosRender = render(<ReportIssue {...defaultProps} />);
+        const iosKav = iosRender.UNSAFE_getByType(KeyboardAvoidingView);
+        expect(iosKav.props.behavior).toBe('padding');
+        iosRender.unmount();
+      } finally {
+        Platform.OS = originalOS;
+      }
     });
   });
 });

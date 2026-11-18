@@ -1,5 +1,9 @@
 import React from 'react';
-import { ActivityIndicator } from 'react-native';
+import {
+  ActivityIndicator,
+  KeyboardAvoidingView,
+  Platform,
+} from 'react-native';
 import { render, screen, fireEvent, act } from '@testing-library/react-native';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { RequestRemoval } from './RequestRemoval';
@@ -396,6 +400,34 @@ describe('RequestRemoval screen (spec 0035, AC-3)', () => {
       expect(getReasonsSpy).toHaveBeenCalledTimes(2);
 
       queryClient.clear();
+    });
+  });
+
+  describe('Keyboard padding on Android as well as iOS (row 114)', () => {
+    const originalOS = Platform.OS;
+
+    afterEach(() => {
+      Platform.OS = originalOS;
+    });
+
+    it('uses behavior "padding" on KeyboardAvoidingView on Android as well as iOS', () => {
+      try {
+        // Test Android behavior
+        Platform.OS = 'android';
+        const androidRender = render(<RequestRemoval {...defaultProps} />);
+        const androidKav = androidRender.UNSAFE_getByType(KeyboardAvoidingView);
+        expect(androidKav.props.behavior).toBe('padding');
+        androidRender.unmount();
+
+        // Test iOS behavior
+        Platform.OS = 'ios';
+        const iosRender = render(<RequestRemoval {...defaultProps} />);
+        const iosKav = iosRender.UNSAFE_getByType(KeyboardAvoidingView);
+        expect(iosKav.props.behavior).toBe('padding');
+        iosRender.unmount();
+      } finally {
+        Platform.OS = originalOS;
+      }
     });
   });
 });

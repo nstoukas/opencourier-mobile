@@ -1,5 +1,5 @@
 import React from 'react';
-import { Alert } from 'react-native';
+import { Alert, KeyboardAvoidingView, Platform } from 'react-native';
 import axios, { AxiosError } from 'axios';
 import { render, screen, fireEvent, act } from '@testing-library/react-native';
 import '@app/localization/i18n';
@@ -531,6 +531,34 @@ describe('ReportProduct screen (spec 0032, AC-1, AC-2, AC-9)', () => {
       );
       expect(mockNavigation.goBack).not.toHaveBeenCalled();
       expect(getSendButton().props.disabled).toBe(false);
+    });
+  });
+
+  describe('Keyboard padding on Android as well as iOS (row 114)', () => {
+    const originalOS = Platform.OS;
+
+    afterEach(() => {
+      Platform.OS = originalOS;
+    });
+
+    it('uses behavior "padding" on KeyboardAvoidingView on Android as well as iOS', () => {
+      try {
+        // Test Android behavior
+        Platform.OS = 'android';
+        const androidRender = render(<ReportProduct {...buildProps()} />);
+        const androidKav = androidRender.UNSAFE_getByType(KeyboardAvoidingView);
+        expect(androidKav.props.behavior).toBe('padding');
+        androidRender.unmount();
+
+        // Test iOS behavior
+        Platform.OS = 'ios';
+        const iosRender = render(<ReportProduct {...buildProps()} />);
+        const iosKav = iosRender.UNSAFE_getByType(KeyboardAvoidingView);
+        expect(iosKav.props.behavior).toBe('padding');
+        iosRender.unmount();
+      } finally {
+        Platform.OS = originalOS;
+      }
     });
   });
 });
