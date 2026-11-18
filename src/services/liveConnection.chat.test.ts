@@ -52,9 +52,17 @@ describe('liveConnection CHAT_MESSAGE and CHAT_READ_BY_DISPATCH (spec 0034, AC-8
     connection.open('https://socket.example', 'courier-jwt');
 
     expect(fakeSocket).not.toBeNull();
-    fakeSocket!.emit(CHAT_MESSAGE_EVENT, { body: 'New message' });
+    const messagePayload = {
+      message: {
+        id: 'msg-1',
+        senderKind: 'DISPATCH',
+        body: 'New message',
+      },
+    };
+    fakeSocket!.emit(CHAT_MESSAGE_EVENT, messagePayload);
 
     expect(mockOnChatMessage).toHaveBeenCalledTimes(1);
+    expect(mockOnChatMessage).toHaveBeenCalledWith(messagePayload);
     connection.close();
   });
 

@@ -1,5 +1,6 @@
 import React from 'react';
 import renderer, { act } from 'react-test-renderer';
+import { AppState, AppStateStatus } from 'react-native';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Socket } from 'socket.io-client';
@@ -9,11 +10,16 @@ import {
   CHAT_MESSAGE_EVENT,
   CHAT_READ_BY_DISPATCH_EVENT,
 } from './liveConnection';
+import { noticeChatMessage } from './chat/chatNotice';
 import SocketProvider from './socket';
 
 jest.mock('@react-native-async-storage/async-storage', () =>
   require('@react-native-async-storage/async-storage/jest/async-storage-mock'),
 );
+
+jest.mock('./chat/chatNotice', () => ({
+  noticeChatMessage: jest.fn(() => Promise.resolve()),
+}));
 
 class MockFakeSocket {
   connected = false;
@@ -64,10 +70,23 @@ jest.mock('@app/services/service', () => ({
   },
 }));
 
-describe('SocketProvider chat events wiring (spec 0034, AC-8)', () => {
+let appStateListener: ((state: AppStateStatus) => void) | undefined;
+
+describe('SocketProvider chat events wiring (spec 0034, AC-8, AC-10, AC-11)', () => {
   let queryClient: QueryClient;
   let invalidateSpy: jest.SpyInstance;
   let tree: renderer.ReactTestRenderer;
+
+  beforeAll(() => {
+    jest
+      .spyOn(AppState, 'addEventListener')
+      .mockImplementation((event: string, listener: any) => {
+        if (event === 'change') {
+          appStateListener = listener;
+        }
+        return { remove: jest.fn() } as any;
+      });
+  });
 
   beforeEach(async () => {
     jest.clearAllMocks();
@@ -100,14 +119,30 @@ describe('SocketProvider chat events wiring (spec 0034, AC-8)', () => {
     queryClient.clear();
   });
 
-  it('refetches chatMessages on CHAT_MESSAGE socket event', async () => {
+  it('refetches chatMessages on CHAT_MESSAGE socket event and draws notice when from dispatch (Major 2, AC-11)', async () => {
     await act(async () => {
-      mockLatestSocket!.emit(CHAT_MESSAGE_EVENT, { body: 'New message' });
+      mockLatestSocket!.emit(CHAT_MESSAGE_EVENT, {
+        message: { senderKind: 'DISPATCH', body: 'New message from dispatch' },
+      });
     });
 
     expect(invalidateSpy).toHaveBeenCalledWith({
       queryKey: [QueryKeys.chatMessages],
     });
+    expect(noticeChatMessage).toHaveBeenCalledTimes(1);
+  });
+
+  it('refetches chatMessages on CHAT_MESSAGE socket event but draws NO notice when rider own message (Major 2, AC-11)', async () => {
+    await act(async () => {
+      mockLatestSocket!.emit(CHAT_MESSAGE_EVENT, {
+        message: { senderKind: 'COURIER', body: 'My own message' },
+      });
+    });
+
+    expect(invalidateSpy).toHaveBeenCalledWith({
+      queryKey: [QueryKeys.chatMessages],
+    });
+    expect(noticeChatMessage).not.toHaveBeenCalled();
   });
 
   it('refetches chatMessages on CHAT_READ_BY_DISPATCH socket event', async () => {
@@ -137,6 +172,21 @@ describe('SocketProvider chat events wiring (spec 0034, AC-8)', () => {
     });
     expect(invalidateSpy).toHaveBeenCalledWith({
       queryKey: [QueryKeys.inProgressOrders],
+    });
+  });
+
+  it('coming back to the front refetches chat messages so the dot appears (Minor 1, AC-10)', async () => {
+    invalidateSpy.mockClear();
+
+    await act(async () => {
+      appStateListener?.('active');
+    });
+
+    expect(invalidateSpy).toHaveBeenCalledWith({
+      queryKey: [QueryKeys.chatMessages],
+    });
+    expect(invalidateSpy).toHaveBeenCalledWith({
+      queryKey: [QueryKeys.user],
     });
   });
 });

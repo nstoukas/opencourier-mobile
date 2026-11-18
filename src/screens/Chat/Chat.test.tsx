@@ -1,5 +1,6 @@
 import React from 'react';
 import { render, fireEvent, act, waitFor } from '@testing-library/react-native';
+import { AppState } from 'react-native';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import '@app/localization/i18n';
 import { Chat } from './Chat';
@@ -11,6 +12,11 @@ import * as chatNoticeModule from '@app/services/chat/chatNotice';
 import type { ChatMessage } from '@app/services/chat/chatService';
 import * as useChatHooks from '@app/hooks/useChat';
 import { CHAT_POLL_MS } from '@app/hooks/useChat';
+import * as chatOutgoingModule from '@app/services/chat/chatOutgoing';
+import {
+  addOutgoing,
+  clearChatOutgoing,
+} from '@app/services/chat/chatOutgoing';
 
 let mockIsFocused = true;
 jest.mock('@react-navigation/native', () => {
@@ -39,6 +45,44 @@ jest.mock('@app/services/chat/chatNotice', () => ({
   clearChatNotice: jest.fn(),
 }));
 
+let appStateListeners: Array<(state: string) => void> = [];
+
+beforeAll(() => {
+  jest
+    .spyOn(AppState, 'addEventListener')
+    .mockImplementation((event: string, listener: any) => {
+      if (event === 'change') {
+        appStateListeners.push(listener);
+      }
+      return {
+        remove: () => {
+          appStateListeners = appStateListeners.filter(l => l !== listener);
+        },
+      } as any;
+    });
+});
+
+const triggerAppState = (state: string) => {
+  AppState.currentState = state as any;
+  for (const listener of [...appStateListeners]) {
+    listener(state);
+  }
+};
+
+const makeAxiosError = (status: number, message?: string) => {
+  const error = new Error('Axios error') as any;
+  error.isAxiosError = true;
+  error.response = {
+    status,
+    data: message
+      ? {
+          result: [{ message }],
+        }
+      : {},
+  };
+  return error;
+};
+
 describe('Chat screen (spec 0034, AC-5, AC-6, AC-8, AC-10, AC-12, AC-13, AC-19, AC-20)', () => {
   let queryClient: QueryClient;
   const mockNavigation = {
@@ -46,9 +90,15 @@ describe('Chat screen (spec 0034, AC-5, AC-6, AC-8, AC-10, AC-12, AC-13, AC-19, 
     navigate: jest.fn(),
   } as any;
 
+  let activeRenders: Array<ReturnType<typeof render>> = [];
+
   beforeEach(() => {
     jest.clearAllMocks();
+    AppState.currentState = 'active';
     mockIsFocused = true;
+    act(() => {
+      clearChatOutgoing();
+    });
     (socketModule.useConnectionStatus as jest.Mock).mockReturnValue(
       'connected',
     );
@@ -64,6 +114,12 @@ describe('Chat screen (spec 0034, AC-5, AC-6, AC-8, AC-10, AC-12, AC-13, AC-19, 
   });
 
   afterEach(() => {
+    while (activeRenders.length > 0) {
+      activeRenders.pop()?.unmount();
+    }
+    act(() => {
+      clearChatOutgoing();
+    });
     queryClient.clear();
   });
 
@@ -77,11 +133,13 @@ describe('Chat screen (spec 0034, AC-5, AC-6, AC-8, AC-10, AC-12, AC-13, AC-19, 
       params: routeParams,
     } as any;
 
-    return render(
+    const rendered = render(
       <QueryClientProvider client={queryClient}>
         <Chat navigation={mockNavigation} route={route} />
       </QueryClientProvider>,
     );
+    activeRenders.push(rendered);
+    return rendered;
   };
 
   describe('AC-5 and AC-6: message labels and read marks', () => {
@@ -110,9 +168,8 @@ describe('Chat screen (spec 0034, AC-5, AC-6, AC-8, AC-10, AC-12, AC-13, AC-19, 
       const messageCard = getByTestId('chat-message-dispatch-msg-1');
       expect(messageCard).toBeTruthy();
       expect(getByText('Hello from dispatch')).toBeTruthy();
-      // Within the message card, meta shows "Dispatch"
       const metaElements = getAllByText(/Dispatch/);
-      expect(metaElements.length).toBeGreaterThanOrEqual(2); // Header title + message meta
+      expect(metaElements.length).toBeGreaterThanOrEqual(2);
     });
 
     it('rider messages show "read" only when readByDispatch is true (AC-6)', async () => {
@@ -149,16 +206,12 @@ describe('Chat screen (spec 0034, AC-5, AC-6, AC-8, AC-10, AC-12, AC-13, AC-19, 
         expect(getByText('Arrived at restaurant')).toBeTruthy();
       });
 
-      // "read" is shown for the read message
       expect(getByText(/read/)).toBeTruthy();
-
-      // For unread rider message, "read" is NOT in its meta text
       const unreadRow = getByText('On my way').parent?.parent;
       expect(unreadRow).toBeTruthy();
     });
 
     it('no screen text or service method tells the server the rider read anything (AC-6, AC-10, AC-20)', () => {
-      // The chatService interface has only getMessages, sendMessage, getQuickReplies
       expect(services.chatService).not.toHaveProperty('markAsRead');
       expect(services.chatService).not.toHaveProperty('markRead');
       expect(services.chatService).not.toHaveProperty('sendRead');
@@ -186,7 +239,6 @@ describe('Chat screen (spec 0034, AC-5, AC-6, AC-8, AC-10, AC-12, AC-13, AC-19, 
         orderReference: 'ORD-42',
       });
 
-      // Type some draft text in the composer
       const input = getByPlaceholderText('Write to dispatch');
       fireEvent.changeText(input, 'Draft message');
 
@@ -194,7 +246,6 @@ describe('Chat screen (spec 0034, AC-5, AC-6, AC-8, AC-10, AC-12, AC-13, AC-19, 
         expect(getByTestId('chat-preset-Wait 5 minutes')).toBeTruthy();
       });
 
-      // Tapping preset sends in one tap
       await act(async () => {
         fireEvent.press(getByTestId('chat-preset-Wait 5 minutes'));
       });
@@ -207,7 +258,6 @@ describe('Chat screen (spec 0034, AC-5, AC-6, AC-8, AC-10, AC-12, AC-13, AC-19, 
         }),
       );
 
-      // Clears nothing else: the draft input text remains untouched
       expect(input.props.value).toBe('Draft message');
     });
 
@@ -225,7 +275,6 @@ describe('Chat screen (spec 0034, AC-5, AC-6, AC-8, AC-10, AC-12, AC-13, AC-19, 
         createdAt: '2026-11-17T12:10:00Z',
       });
 
-      // Opened with no params (side menu)
       const { getByTestId } = renderChat(undefined);
 
       await waitFor(() => {
@@ -263,12 +312,10 @@ describe('Chat screen (spec 0034, AC-5, AC-6, AC-8, AC-10, AC-12, AC-13, AC-19, 
       const input = getByPlaceholderText('Write to dispatch');
       const sendButton = getByText('Send');
 
-      // Blank or whitespace only: send button is disabled
       fireEvent.changeText(input, '   ');
       fireEvent.press(sendButton);
       expect(services.chatService.sendMessage).not.toHaveBeenCalled();
 
-      // Valid text with whitespace padding: sent trimmed
       fireEvent.changeText(input, '   Trimmed text   ');
       await act(async () => {
         fireEvent.press(sendButton);
@@ -280,7 +327,6 @@ describe('Chat screen (spec 0034, AC-5, AC-6, AC-8, AC-10, AC-12, AC-13, AC-19, 
           deliveryId: 'del-1',
         }),
       );
-      // Input is cleared after successful submit
       expect(input.props.value).toBe('');
     });
   });
@@ -316,22 +362,18 @@ describe('Chat screen (spec 0034, AC-5, AC-6, AC-8, AC-10, AC-12, AC-13, AC-19, 
       const input = getByPlaceholderText('Write to dispatch');
       fireEvent.changeText(input, 'Important update');
 
-      // Attempt send 1 (fails)
       await act(async () => {
         fireEvent.press(getByText('Send'));
       });
 
-      // "Not sent, tap to retry" appears
       const retryButton = await findByText('Not sent, tap to retry');
       expect(retryButton).toBeTruthy();
       expect(firstClientId).toBeTruthy();
 
-      // Tap retry
       await act(async () => {
         fireEvent.press(retryButton);
       });
 
-      // sendMessage was called again with the EXACT SAME clientMessageId
       expect(sendAttempts).toBe(2);
       expect(services.chatService.sendMessage).toHaveBeenLastCalledWith(
         expect.objectContaining({
@@ -340,31 +382,88 @@ describe('Chat screen (spec 0034, AC-5, AC-6, AC-8, AC-10, AC-12, AC-13, AC-19, 
         }),
       );
 
-      // On success, "Not sent, tap to retry" is removed and stored message appears
       await waitFor(() => {
         expect(queryByText('Not sent, tap to retry')).toBeNull();
       });
     });
   });
 
-  describe('AC-8: polling when disconnected vs connected', () => {
-    it('Chat screen polls every 10 s (CHAT_POLL_MS) only while focused and connection is NOT connected', async () => {
+  describe('AC-8: polling when disconnected vs connected (Major 1)', () => {
+    it('with Chat screen focused and AppState active, polls every 10 s; with AppState background does not poll and does not mark seen; returning to active refetches once (Major 1, AC-8)', async () => {
       jest.useFakeTimers();
-      const useChatMessagesSpy = jest.spyOn(useChatHooks, 'useChatMessages');
       (socketModule.useConnectionStatus as jest.Mock).mockReturnValue(
         'disconnected',
       );
       mockIsFocused = true;
+      AppState.currentState = 'active';
+
+      const markChatSeenSpy = jest
+        .spyOn(chatSeenModule, 'markChatSeen')
+        .mockResolvedValue(undefined);
+
+      const mockMessages: ChatMessage[] = [
+        {
+          id: 'msg-poll-1',
+          senderKind: 'DISPATCH',
+          senderName: 'Dispatch',
+          body: 'Hello rider',
+          deliveryId: null,
+          orderReference: null,
+          createdAt: '2026-11-17T12:00:00Z',
+        },
+      ];
+      (services.chatService.getMessages as jest.Mock).mockResolvedValue(
+        mockMessages,
+      );
 
       const { unmount } = renderChat();
 
-      expect(useChatMessagesSpy).toHaveBeenCalledWith({ poll: true });
-      expect(CHAT_POLL_MS).toBe(10000);
+      await act(async () => {
+        await Promise.resolve();
+      });
+      expect(services.chatService.getMessages).toHaveBeenCalledTimes(1);
+
+      // Advance by 10 s while focused and active -> polls again
+      await act(async () => {
+        jest.advanceTimersByTime(CHAT_POLL_MS);
+      });
+      expect(services.chatService.getMessages).toHaveBeenCalledTimes(2);
+
+      // Advance by another 10 s -> polls again
+      await act(async () => {
+        jest.advanceTimersByTime(CHAT_POLL_MS);
+      });
+      expect(services.chatService.getMessages).toHaveBeenCalledTimes(3);
+
+      (services.chatService.getMessages as jest.Mock).mockClear();
+      markChatSeenSpy.mockClear();
+      (chatNoticeModule.clearChatNotice as jest.Mock).mockClear();
+
+      // Background the app
+      await act(async () => {
+        triggerAppState('background');
+      });
+
+      // Advance timers by 20 s -> does NOT poll in background
+      await act(async () => {
+        jest.advanceTimersByTime(CHAT_POLL_MS * 2);
+      });
+      expect(services.chatService.getMessages).not.toHaveBeenCalled();
+      expect(markChatSeenSpy).not.toHaveBeenCalled();
+      expect(chatNoticeModule.clearChatNotice).not.toHaveBeenCalled();
+
+      // Return to active -> refetches once and marks seen
+      await act(async () => {
+        triggerAppState('active');
+      });
+
+      expect(services.chatService.getMessages).toHaveBeenCalledTimes(1);
+      await waitFor(() => {
+        expect(markChatSeenSpy).toHaveBeenCalled();
+        expect(chatNoticeModule.clearChatNotice).toHaveBeenCalled();
+      });
 
       unmount();
-      await act(async () => {
-        jest.runOnlyPendingTimers();
-      });
       queryClient.clear();
       jest.clearAllTimers();
       jest.useRealTimers();
@@ -398,7 +497,7 @@ describe('Chat screen (spec 0034, AC-5, AC-6, AC-8, AC-10, AC-12, AC-13, AC-19, 
   });
 
   describe('AC-11 and AC-12: clearing notice and marking seen on open', () => {
-    it('marks chat seen and clears the chat notice when screen is focused and messages arrive', async () => {
+    it('marks chat seen and clears the chat notice when screen is focused and active and messages arrive', async () => {
       const messages: ChatMessage[] = [
         {
           id: 'dispatch-seen-1',
@@ -418,12 +517,223 @@ describe('Chat screen (spec 0034, AC-5, AC-6, AC-8, AC-10, AC-12, AC-13, AC-19, 
         .spyOn(chatSeenModule, 'markChatSeen')
         .mockResolvedValue(undefined);
 
-      renderChat();
+      const { unmount } = renderChat();
 
       await waitFor(() => {
         expect(markChatSeenSpy).toHaveBeenCalledWith(messages);
         expect(chatNoticeModule.clearChatNotice).toHaveBeenCalled();
       });
+      unmount();
+    });
+  });
+
+  describe('Major 3: refused sends, 404 tag drop, and network retries in UI', () => {
+    it('a 4xx send shows the backend sentence under the message', async () => {
+      const sentence = 'Content violates cooperative communication rules';
+      (services.chatService.sendMessage as jest.Mock).mockRejectedValueOnce(
+        makeAxiosError(400, sentence),
+      );
+
+      const { getByPlaceholderText, getByText, findByText, unmount } =
+        renderChat();
+      const input = getByPlaceholderText('Write to dispatch');
+      fireEvent.changeText(input, 'Hello dispatch');
+      await act(async () => {
+        fireEvent.press(getByText('Send'));
+      });
+
+      expect(await findByText(sentence)).toBeTruthy();
+      expect(getByText('Not sent, tap to retry')).toBeTruthy();
+      unmount();
+    });
+
+    it('a 404 on a tagged send turns retry into "Not sent, tap to send it without the order" and sends deliveryId null with SAME clientMessageId', async () => {
+      const backendSentence =
+        'This message cannot be linked to that order, because it is not one of your orders now';
+      let sendCalls = 0;
+      let firstClientId = '';
+
+      (services.chatService.sendMessage as jest.Mock).mockImplementation(
+        async input => {
+          sendCalls++;
+          if (sendCalls === 1) {
+            firstClientId = input.clientMessageId;
+            throw makeAxiosError(404, backendSentence);
+          }
+          return {
+            id: 'msg-retried-untagged',
+            senderKind: 'COURIER',
+            senderName: null,
+            body: 'Is this order ready?',
+            deliveryId: null,
+            orderReference: null,
+            clientMessageId: input.clientMessageId,
+            createdAt: '2026-11-17T12:20:00Z',
+          };
+        },
+      );
+
+      const { getByPlaceholderText, getByText, findByText, queryByText, unmount } =
+        renderChat({
+          deliveryId: 'del-tagged-job',
+          orderReference: 'ORD-77',
+        });
+
+      const input = getByPlaceholderText('Write to dispatch');
+      fireEvent.changeText(input, 'Is this order ready?');
+      await act(async () => {
+        fireEvent.press(getByText('Send'));
+      });
+
+      expect(await findByText(backendSentence)).toBeTruthy();
+      const retryWithoutOrder = await findByText(
+        'Not sent, tap to send it without the order',
+      );
+      expect(retryWithoutOrder).toBeTruthy();
+
+      await act(async () => {
+        fireEvent.press(retryWithoutOrder);
+      });
+
+      expect(sendCalls).toBe(2);
+      expect(services.chatService.sendMessage).toHaveBeenLastCalledWith({
+        body: 'Is this order ready?',
+        deliveryId: null,
+        clientMessageId: firstClientId,
+      });
+
+      await waitFor(() => {
+        expect(
+          queryByText('Not sent, tap to send it without the order'),
+        ).toBeNull();
+      });
+      unmount();
+    });
+
+    it('a network failure keeps the tag and plain retry ("Not sent, tap to retry")', async () => {
+      let sendCalls = 0;
+      let firstClientId = '';
+
+      (services.chatService.sendMessage as jest.Mock).mockImplementation(
+        async input => {
+          sendCalls++;
+          if (sendCalls === 1) {
+            firstClientId = input.clientMessageId;
+            throw new Error('Connection lost');
+          }
+          return {
+            id: 'msg-retried-tagged',
+            senderKind: 'COURIER',
+            senderName: null,
+            body: 'Heading over',
+            deliveryId: 'del-tagged-net',
+            orderReference: null,
+            clientMessageId: input.clientMessageId,
+            createdAt: '2026-11-17T12:22:00Z',
+          };
+        },
+      );
+
+      const { getByPlaceholderText, getByText, findByText, queryByText, unmount } =
+        renderChat({
+          deliveryId: 'del-tagged-net',
+          orderReference: 'ORD-88',
+        });
+
+      const input = getByPlaceholderText('Write to dispatch');
+      fireEvent.changeText(input, 'Heading over');
+      await act(async () => {
+        fireEvent.press(getByText('Send'));
+      });
+
+      const retryBtn = await findByText('Not sent, tap to retry');
+      expect(retryBtn).toBeTruthy();
+      expect(
+        queryByText('Not sent, tap to send it without the order'),
+      ).toBeNull();
+
+      await act(async () => {
+        fireEvent.press(retryBtn);
+      });
+
+      expect(sendCalls).toBe(2);
+      expect(services.chatService.sendMessage).toHaveBeenLastCalledWith({
+        body: 'Heading over',
+        deliveryId: 'del-tagged-net',
+        clientMessageId: firstClientId,
+      });
+      unmount();
+    });
+  });
+
+  describe('Minor 3: server row with same clientMessageId as pending shows once', () => {
+    it('a server row with the same clientMessageId as a pending one shows once', async () => {
+      // Mock dropStoredOutgoing so we test that rows filter de-duplicates during rendering
+      jest
+        .spyOn(chatOutgoingModule, 'dropStoredOutgoing')
+        .mockImplementation(() => {});
+
+      addOutgoing({
+        clientMessageId: 'msg-dedup-client-id',
+        body: 'De-duplicated message',
+        deliveryId: null,
+        state: 'sending',
+      });
+
+      const messages: ChatMessage[] = [
+        {
+          id: 'server-dedup-id',
+          clientMessageId: 'msg-dedup-client-id',
+          senderKind: 'COURIER',
+          senderName: null,
+          body: 'De-duplicated message',
+          deliveryId: null,
+          orderReference: null,
+          createdAt: '2026-11-17T12:30:00Z',
+        },
+      ];
+      (services.chatService.getMessages as jest.Mock).mockResolvedValue(
+        messages,
+      );
+
+      const { getAllByText, unmount } = renderChat();
+
+      await waitFor(() => {
+        expect(getAllByText('De-duplicated message')).toHaveLength(1);
+      });
+      unmount();
+    });
+  });
+
+  describe('Minor 4: failed outgoing survives leaving Chat screen and coming back', () => {
+    it('a failed outgoing message is still there after leaving the Chat screen and coming back', async () => {
+      (services.chatService.sendMessage as jest.Mock).mockRejectedValueOnce(
+        new Error('Failed network send'),
+      );
+
+      const firstRender = renderChat();
+      const input = firstRender.getByPlaceholderText('Write to dispatch');
+      fireEvent.changeText(input, 'Message surviving screen change');
+      await act(async () => {
+        fireEvent.press(firstRender.getByText('Send'));
+      });
+
+      await firstRender.findByText('Not sent, tap to retry');
+      expect(
+        firstRender.getByText('Message surviving screen change'),
+      ).toBeTruthy();
+
+      // Leave Chat screen (unmount)
+      firstRender.unmount();
+
+      // Re-enter Chat screen (second mount)
+      const secondRender = renderChat();
+
+      expect(
+        secondRender.getByText('Message surviving screen change'),
+      ).toBeTruthy();
+      expect(secondRender.getByText('Not sent, tap to retry')).toBeTruthy();
+      secondRender.unmount();
     });
   });
 });

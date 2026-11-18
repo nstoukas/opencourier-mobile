@@ -13,6 +13,7 @@ import {
 import { QueryKeys } from '@app/utilities/queryKeys';
 import type { ChatMessage } from '@app/services/chat/chatService';
 import * as chatSeenModule from '@app/services/chat/chatSeen';
+import { clearChatOutgoing } from '@app/services/chat/chatOutgoing';
 
 jest.mock('@app/services/service', () => ({
   services: {
@@ -24,11 +25,28 @@ jest.mock('@app/services/service', () => ({
   },
 }));
 
+const makeAxiosError = (status: number, message?: string) => {
+  const error = new Error('Axios error') as any;
+  error.isAxiosError = true;
+  error.response = {
+    status,
+    data: message
+      ? {
+          result: [{ message }],
+        }
+      : {},
+  };
+  return error;
+};
+
 describe('useChat hooks (spec 0034, AC-4, AC-8, AC-12, AC-13, AC-19)', () => {
   let queryClient: QueryClient;
 
   beforeEach(() => {
     jest.clearAllMocks();
+    act(() => {
+      clearChatOutgoing();
+    });
     queryClient = new QueryClient({
       defaultOptions: {
         queries: { retry: false, gcTime: Infinity },
@@ -38,6 +56,9 @@ describe('useChat hooks (spec 0034, AC-4, AC-8, AC-12, AC-13, AC-19)', () => {
   });
 
   afterEach(() => {
+    act(() => {
+      clearChatOutgoing();
+    });
     queryClient.clear();
   });
 
@@ -74,7 +95,6 @@ describe('useChat hooks (spec 0034, AC-4, AC-8, AC-12, AC-13, AC-19)', () => {
     });
 
     it('mounts useChatMessages a second time while the first answer is still fresh and refetches (refetchOnMount: always)', async () => {
-      // Set high staleTime so cached data remains fresh in React Query
       queryClient.setDefaultOptions({
         queries: { retry: false, gcTime: Infinity, staleTime: 60_000 },
       });
@@ -93,13 +113,11 @@ describe('useChat hooks (spec 0034, AC-4, AC-8, AC-12, AC-13, AC-19)', () => {
         mockMessages,
       );
 
-      // First mount asks the server
       const first = renderHook(() => useChatMessages(), { wrapper });
       await waitFor(() => expect(first.result.current.isSuccess).toBe(true));
       expect(services.chatService.getMessages).toHaveBeenCalledTimes(1);
       first.unmount();
 
-      // Second mount while the first answer is still fresh must ask the server again (refetchOnMount: 'always')
       const second = renderHook(() => useChatMessages(), { wrapper });
       await waitFor(() =>
         expect(services.chatService.getMessages).toHaveBeenCalledTimes(2),
@@ -107,24 +125,55 @@ describe('useChat hooks (spec 0034, AC-4, AC-8, AC-12, AC-13, AC-19)', () => {
       second.unmount();
     });
 
-    it('sets refetchInterval to CHAT_POLL_MS (10000) when poll is true, and false when poll is false', async () => {
+    it('polls every 10 s (CHAT_POLL_MS) when poll is true, and does not poll when poll is false (AC-8)', async () => {
       jest.useFakeTimers();
-      const { result: pollingResult, unmount: unmountPolling } = renderHook(
+      (services.chatService.getMessages as jest.Mock).mockResolvedValue([]);
+
+      // 1. Polling hook
+      const polling = renderHook(
         () => useChatMessages({ poll: true }),
         { wrapper },
       );
+
+      await act(async () => {
+        await Promise.resolve();
+      });
+      expect(services.chatService.getMessages).toHaveBeenCalledTimes(1);
       expect(CHAT_POLL_MS).toBe(10000);
 
-      const { result: nonPollingResult, unmount: unmountNonPolling } =
-        renderHook(() => useChatMessages({ poll: false }), { wrapper });
-      expect(nonPollingResult.current).toBeDefined();
-      expect(pollingResult.current).toBeDefined();
-
-      unmountPolling();
-      unmountNonPolling();
+      // Advance by 10 s -> second fetch
       await act(async () => {
-        jest.runOnlyPendingTimers();
+        jest.advanceTimersByTime(CHAT_POLL_MS);
       });
+      expect(services.chatService.getMessages).toHaveBeenCalledTimes(2);
+
+      // Advance by another 10 s -> third fetch
+      await act(async () => {
+        jest.advanceTimersByTime(CHAT_POLL_MS);
+      });
+      expect(services.chatService.getMessages).toHaveBeenCalledTimes(3);
+
+      polling.unmount();
+      (services.chatService.getMessages as jest.Mock).mockClear();
+
+      // 2. Non-polling hook
+      const nonPolling = renderHook(
+        () => useChatMessages({ poll: false }),
+        { wrapper },
+      );
+
+      await act(async () => {
+        await Promise.resolve();
+      });
+      expect(services.chatService.getMessages).toHaveBeenCalledTimes(1);
+
+      // Advance by 20 s -> still only 1 fetch
+      await act(async () => {
+        jest.advanceTimersByTime(CHAT_POLL_MS * 2);
+      });
+      expect(services.chatService.getMessages).toHaveBeenCalledTimes(1);
+
+      nonPolling.unmount();
       queryClient.clear();
       jest.clearAllTimers();
       jest.useRealTimers();
@@ -138,18 +187,19 @@ describe('useChat hooks (spec 0034, AC-4, AC-8, AC-12, AC-13, AC-19)', () => {
         replies,
       );
 
-      const { result } = renderHook(() => useChatQuickReplies(), { wrapper });
+      const { result, unmount } = renderHook(() => useChatQuickReplies(), { wrapper });
 
       await waitFor(() => expect(result.current.isSuccess).toBe(true));
 
       expect(services.chatService.getQuickReplies).toHaveBeenCalledTimes(1);
       expect(result.current.data).toEqual(replies);
+      unmount();
     });
   });
 
-  describe('useChatSender (AC-4, AC-13, AC-19)', () => {
+  describe('useChatSender (AC-4, AC-13, AC-19, Major 3)', () => {
     it('send() trims text before sending and ignores blank or whitespace-only text', () => {
-      const { result } = renderHook(() => useChatSender(), { wrapper });
+      const { result, unmount } = renderHook(() => useChatSender(), { wrapper });
 
       let sent = false;
       act(() => {
@@ -164,10 +214,11 @@ describe('useChat hooks (spec 0034, AC-4, AC-8, AC-12, AC-13, AC-19)', () => {
       });
       expect(sent).toBe(false);
       expect(services.chatService.sendMessage).not.toHaveBeenCalled();
+      unmount();
     });
 
     it('send() refuses text longer than 1000 characters (CHAT_MESSAGE_MAX_LENGTH)', () => {
-      const { result } = renderHook(() => useChatSender(), { wrapper });
+      const { result, unmount } = renderHook(() => useChatSender(), { wrapper });
 
       const overlongText = 'a'.repeat(CHAT_MESSAGE_MAX_LENGTH + 1);
       let sent = false;
@@ -178,6 +229,7 @@ describe('useChat hooks (spec 0034, AC-4, AC-8, AC-12, AC-13, AC-19)', () => {
       expect(sent).toBe(false);
       expect(services.chatService.sendMessage).not.toHaveBeenCalled();
       expect(result.current.outgoing).toEqual([]);
+      unmount();
     });
 
     it('send() accepts exactly 1000 characters and sends trimmed message', async () => {
@@ -192,7 +244,7 @@ describe('useChat hooks (spec 0034, AC-4, AC-8, AC-12, AC-13, AC-19)', () => {
         createdAt: '2026-11-17T12:00:00Z',
       });
 
-      const { result } = renderHook(() => useChatSender(), { wrapper });
+      const { result, unmount } = renderHook(() => useChatSender(), { wrapper });
 
       let sent = false;
       await act(async () => {
@@ -207,6 +259,7 @@ describe('useChat hooks (spec 0034, AC-4, AC-8, AC-12, AC-13, AC-19)', () => {
           clientMessageId: expect.stringMatching(/^rider-/),
         }),
       );
+      unmount();
     });
 
     it('failed send stays with state "failed" and retry calls sendMessage with the SAME clientMessageId', async () => {
@@ -214,13 +267,12 @@ describe('useChat hooks (spec 0034, AC-4, AC-8, AC-12, AC-13, AC-19)', () => {
         new Error('Network error'),
       );
 
-      const { result } = renderHook(() => useChatSender(), { wrapper });
+      const { result, unmount } = renderHook(() => useChatSender(), { wrapper });
 
       await act(async () => {
         result.current.send('Need help', 'del-1');
       });
 
-      // Send failed: item is in outgoing list with state: 'failed'
       expect(result.current.outgoing).toHaveLength(1);
       const failedItem = result.current.outgoing[0];
       expect(failedItem.body).toBe('Need help');
@@ -262,14 +314,135 @@ describe('useChat hooks (spec 0034, AC-4, AC-8, AC-12, AC-13, AC-19)', () => {
         clientMessageId: firstClientMessageId,
       });
 
-      // Success removed it from outgoing
       expect(result.current.outgoing).toHaveLength(0);
 
-      // And the message was added to query cache
       const cached = queryClient.getQueryData<ChatMessage[]>([
         QueryKeys.chatMessages,
       ]);
       expect(cached).toContainEqual(savedMessage);
+      unmount();
+    });
+
+    it('a 4xx send shows the backend sentence under the message (Major 3)', async () => {
+      const refusalError = makeAxiosError(
+        400,
+        'Cannot send message: content rejected by policy',
+      );
+      (services.chatService.sendMessage as jest.Mock).mockRejectedValueOnce(
+        refusalError,
+      );
+
+      const { result, unmount } = renderHook(() => useChatSender(), { wrapper });
+
+      await act(async () => {
+        result.current.send('Hello', 'del-1');
+      });
+
+      expect(result.current.outgoing).toHaveLength(1);
+      const item = result.current.outgoing[0];
+      expect(item.state).toBe('failed');
+      expect(item.refusal).toBe(
+        'Cannot send message: content rejected by policy',
+      );
+      expect(item.deliveryId).toBe('del-1');
+      expect(item.tagDropped).toBeFalsy();
+      unmount();
+    });
+
+    it('a 404 on a tagged send drops delivery tag and retry sends deliveryId null with SAME clientMessageId (Major 3)', async () => {
+      const notOurOrderSentence =
+        'This message cannot be linked to that order, because it is not one of your orders now';
+      const error404 = makeAxiosError(404, notOurOrderSentence);
+
+      (services.chatService.sendMessage as jest.Mock).mockRejectedValueOnce(
+        error404,
+      );
+
+      const { result, unmount } = renderHook(() => useChatSender(), { wrapper });
+
+      await act(async () => {
+        result.current.send('Is food ready?', 'del-tag-1');
+      });
+
+      expect(result.current.outgoing).toHaveLength(1);
+      const failed = result.current.outgoing[0];
+      expect(failed.state).toBe('failed');
+      expect(failed.refusal).toBe(notOurOrderSentence);
+      // Tag was dropped
+      expect(failed.deliveryId).toBeNull();
+      expect(failed.tagDropped).toBe(true);
+      const originalClientId = failed.clientMessageId;
+
+      // Retry sending the failed message
+      (services.chatService.sendMessage as jest.Mock).mockResolvedValueOnce({
+        id: 'msg-untagged-ok',
+        senderKind: 'COURIER',
+        senderName: null,
+        body: 'Is food ready?',
+        deliveryId: null,
+        orderReference: null,
+        clientMessageId: originalClientId,
+        createdAt: '2026-11-17T12:05:00Z',
+      });
+
+      await act(async () => {
+        await result.current.retry(failed);
+      });
+
+      // Verify retry sent deliveryId: null and SAME clientMessageId
+      expect(services.chatService.sendMessage).toHaveBeenCalledTimes(2);
+      expect(services.chatService.sendMessage).toHaveBeenLastCalledWith({
+        body: 'Is food ready?',
+        deliveryId: null,
+        clientMessageId: originalClientId,
+      });
+      expect(result.current.outgoing).toHaveLength(0);
+      unmount();
+    });
+
+    it('a network failure keeps the tag and plain retry (Major 3)', async () => {
+      (services.chatService.sendMessage as jest.Mock).mockRejectedValueOnce(
+        new Error('Network request failed'),
+      );
+
+      const { result, unmount } = renderHook(() => useChatSender(), { wrapper });
+
+      await act(async () => {
+        result.current.send('On my way', 'del-tag-2');
+      });
+
+      expect(result.current.outgoing).toHaveLength(1);
+      const failed = result.current.outgoing[0];
+      expect(failed.state).toBe('failed');
+      expect(failed.refusal).toBeUndefined();
+      // Tag is NOT dropped
+      expect(failed.deliveryId).toBe('del-tag-2');
+      expect(failed.tagDropped).toBeFalsy();
+      const originalClientId = failed.clientMessageId;
+
+      (services.chatService.sendMessage as jest.Mock).mockResolvedValueOnce({
+        id: 'msg-tagged-ok',
+        senderKind: 'COURIER',
+        senderName: null,
+        body: 'On my way',
+        deliveryId: 'del-tag-2',
+        orderReference: null,
+        clientMessageId: originalClientId,
+        createdAt: '2026-11-17T12:06:00Z',
+      });
+
+      await act(async () => {
+        await result.current.retry(failed);
+      });
+
+      expect(services.chatService.sendMessage).toHaveBeenCalledTimes(2);
+      expect(services.chatService.sendMessage).toHaveBeenLastCalledWith({
+        body: 'On my way',
+        deliveryId: 'del-tag-2',
+        clientMessageId: originalClientId,
+      });
+      expect(result.current.outgoing).toHaveLength(0);
+      unmount();
     });
   });
 
@@ -279,11 +452,12 @@ describe('useChat hooks (spec 0034, AC-4, AC-8, AC-12, AC-13, AC-19)', () => {
       jest.spyOn(chatSeenModule, 'chatSeenNow').mockReturnValue(null);
       jest.spyOn(chatSeenModule, 'hasUnseenFromDispatch').mockReturnValue(true);
 
-      const { result } = renderHook(() => useChatUnseen(), { wrapper });
+      const { result, unmount } = renderHook(() => useChatUnseen(), { wrapper });
 
       await act(async () => {});
 
       expect(result.current).toBe(true);
+      unmount();
     });
   });
 });

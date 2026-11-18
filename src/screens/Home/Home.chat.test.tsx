@@ -112,6 +112,7 @@ describe('HomeScreen chat wiring (spec 0034, AC-12)', () => {
   } as any;
 
   let testQueryClient: QueryClient;
+  let currentRender: ReturnType<typeof render> | null = null;
 
   beforeEach(() => {
     jest.useFakeTimers();
@@ -127,18 +128,23 @@ describe('HomeScreen chat wiring (spec 0034, AC-12)', () => {
   });
 
   afterEach(() => {
-    testQueryClient.clear();
     jest.useRealTimers();
+    currentRender?.unmount();
+    currentRender = null;
+    testQueryClient.clear();
+    jest.clearAllMocks();
   });
 
-  const renderHome = () =>
-    render(
+  const renderHome = () => {
+    currentRender = render(
       <QueryClientProvider client={testQueryClient}>
         <NavigationContainer>
           <HomeScreen navigation={mockNav} route={mockRoute} />
         </NavigationContainer>
       </QueryClientProvider>,
     );
+    return currentRender;
+  };
 
   it('wires onOpenChat on JobFooter to navigate to MainScreens.Chat with { deliveryId, orderReference } of that job', async () => {
     const { UNSAFE_getByType } = renderHome();
