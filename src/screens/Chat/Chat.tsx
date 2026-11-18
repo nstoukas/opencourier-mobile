@@ -66,6 +66,18 @@ export const Chat = ({ navigation, route }: Props) => {
   const { outgoing, send, retry } = useChatSender();
   const [text, setText] = useState('');
   const listRef = useRef<FlatList<Row>>(null);
+  // The height of all the rows together, and of the box they scroll in, as last laid out.
+  const contentHeight = useRef(0);
+  const listHeight = useRef(0);
+  // Shows the newest row whole, just above the presets and the box. FlatList's own scrollToEnd guesses
+  // where the last row ends from rows it has measured, so a row it has not measured yet (a new
+  // message, the send just made) left it about one row short (verify run, 2026-11-18). These two
+  // heights are the real ones, so the bottom is exact.
+  const showNewest = () =>
+    listRef.current?.scrollToOffset({
+      offset: Math.max(0, contentHeight.current - listHeight.current),
+      animated: false,
+    });
 
   // Back in front: fetch once, so what is marked seen below is what is really on screen now.
   const { refetch } = messages;
@@ -213,9 +225,16 @@ export const Chat = ({ navigation, route }: Props) => {
           keyExtractor={row => row.key}
           renderItem={renderRow}
           keyboardShouldPersistTaps="handled"
-          onContentSizeChange={() =>
-            listRef.current?.scrollToEnd({ animated: false })
-          }
+          // The rows changed height: a message came, was sent or drew.
+          onContentSizeChange={(_width, height) => {
+            contentHeight.current = height;
+            showNewest();
+          }}
+          // The box changed height: the presets appeared or the keyboard opened or closed.
+          onLayout={event => {
+            listHeight.current = event.nativeEvent.layout.height;
+            showNewest();
+          }}
           ListEmptyComponent={
             <Text style={styles.centerText}>
               {t('translations:chat_empty')}
@@ -260,10 +279,12 @@ export const Chat = ({ navigation, route }: Props) => {
           </Text>
         ) : null}
 
-        {/* iOS has no adjustResize, so this lifts the box above the keyboard; Android resizes itself. */}
-        <KeyboardAvoidingView
-          style={styles.keyboardArea}
-          behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+        {/* Lifts the presets and the box above the keyboard, on both systems. iOS never resizes the
+            screen for the keyboard, and from Android 15 (the app targets SDK 35) apps draw edge to edge
+            and adjustResize no longer does either: the keyboard covered the box (verify run,
+            2026-11-18). It pads only by how much the keyboard overlaps it, so where Android still
+            resizes the screen it adds nothing (reasoned, not yet seen on a phone before Android 15). */}
+        <KeyboardAvoidingView style={styles.keyboardArea} behavior="padding">
           {renderBody()}
 
           <View style={[styles.composer, composerInset]}>
