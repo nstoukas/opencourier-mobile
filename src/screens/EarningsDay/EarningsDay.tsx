@@ -69,6 +69,12 @@ export const EarningsDay = ({ navigation, route }: Props) => {
             {t('translations:earnings_removal')}
           </Text>
         )}
+        {/* Row 112 review: paid when the job went to another rider. */}
+        {item.kind === 'REASSIGNMENT_COMPENSATION' && (
+          <Text style={styles.cellAddress}>
+            {t('translations:earnings_reassigned_job')}
+          </Text>
+        )}
         {item.kind === 'RETURN_TRIP' && (
           <Text style={styles.cellAddress}>
             {t('translations:earnings_return_trip')}

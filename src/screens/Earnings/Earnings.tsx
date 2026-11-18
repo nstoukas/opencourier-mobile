@@ -149,11 +149,16 @@ export const Earnings = ({ navigation }: Props) => {
         date={moment(item.date, formatApiDate)}
         earned={item.total}
         currency={currency}
-        detail={`${item.deliveryCount} ${
-          item.deliveryCount === 1
-            ? t('translations:delivery_small')
-            : t('translations:deliveries_small')
-        }`}
+        // Row 112 review: a day of pay with no drop off reads like the header, not "0 deliveries".
+        detail={
+          item.deliveryCount === 0 && item.total > 0
+            ? t('translations:earnings_paid_without_deliveries')
+            : `${item.deliveryCount} ${
+                item.deliveryCount === 1
+                  ? t('translations:delivery_small')
+                  : t('translations:deliveries_small')
+              }`
+        }
         onPress={() =>
           navigation.navigate(MainScreens.EarningsDay, { date: item.date })
         }

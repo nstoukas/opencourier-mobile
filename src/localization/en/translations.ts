@@ -605,6 +605,8 @@ export default {
   cancelled_reminder: 'Tap here to see it.',
   cancelled_send_failed: 'Could not send. Check your signal and try again.',
   earnings_cancelled_job: 'Cancelled job',
+  // Row 112 review: paid when an admin moved the job to another rider.
+  earnings_reassigned_job: 'Reassigned job',
   // Spec 0016: floor and doorbell on the job screen, and moving a wrong pin.
   dropoff_floor: 'Floor {{floor}}',
   dropoff_doorbell: 'Doorbell {{doorbell}}',
