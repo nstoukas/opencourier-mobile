@@ -133,11 +133,14 @@ export const EarningsDay = ({ navigation, route }: Props) => {
             {formatCurrencyFromCents(total, currency)}
           </Text>
           <Text style={styles.summaryCount}>
-            {deliveryCount === 1
+            {/* Row 112: a day of pay with no drop off says so, never "0 deliveries" alone. */}
+            {deliveryCount === 0 && total > 0
+              ? t('translations:earnings_paid_without_deliveries')
+              : deliveryCount === 1
               ? `1 ${t('translations:delivery_small')}`
               : `${deliveryCount} ${t('translations:deliveries_small')}`}
           </Text>
-          {deliveryCount > 0 && (
+          {(deliveryCount > 0 || total > 0) && (
             <Text style={styles.summaryBreakdown}>
               {t('translations:pay_tips_breakdown', {
                 pay: formatCurrencyFromCents(compensation, currency),
