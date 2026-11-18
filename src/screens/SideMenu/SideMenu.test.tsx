@@ -1,7 +1,7 @@
 import React from 'react';
 import renderer, { act } from 'react-test-renderer';
 import { waitFor } from '@testing-library/react-native';
-import { Alert, Linking } from 'react-native';
+import { Alert, Linking, Text } from 'react-native';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import Geolocation from 'react-native-geolocation-service';
@@ -30,12 +30,14 @@ jest.mock('@react-navigation/drawer', () => {
 const mockSetUserStatus = jest.fn();
 const mockLogout = jest.fn();
 const mockUnregisterThisPhone = jest.fn();
-const mockUserData = {
+const mockDefaultUserData = {
   id: 'courier-1',
   status: 'ONLINE',
   deliverySetting: 'MANUAL',
   name: 'Courier User',
+  firstName: 'Testing',
 };
+let mockUserData: any = mockDefaultUserData;
 
 jest.mock('@app/services/offerPush/registration', () => ({
   unregisterThisPhone: (...args: any[]) => mockUnregisterThisPhone(...args),
@@ -486,5 +488,132 @@ describe('SideMenu Location switch (Row 67, Clause 3)', () => {
 
       expect(mockNav.navigate).toHaveBeenCalledWith(DrawerScreens.History);
     });
+  });
+});
+
+describe('SideMenu greeting (row 116)', () => {
+  let queryClient: QueryClient;
+  let greetingRenderedComponents: renderer.ReactTestRenderer[] = [];
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+    mockUserData = mockDefaultUserData;
+    queryClient = new QueryClient({
+      defaultOptions: {
+        queries: { retry: false, gcTime: Infinity },
+      },
+    });
+  });
+
+  afterEach(async () => {
+    mockUserData = mockDefaultUserData;
+    act(() => {
+      while (greetingRenderedComponents.length) {
+        greetingRenderedComponents.pop()?.unmount();
+      }
+    });
+    await act(async () => {});
+    queryClient.clear();
+  });
+
+  const renderSideMenu = async (nav?: any) => {
+    const mockNavigation: any = nav ?? {
+      navigate: jest.fn(),
+      closeDrawer: jest.fn(),
+    };
+
+    let tree: renderer.ReactTestRenderer;
+    await act(async () => {
+      tree = renderer.create(
+        <QueryClientProvider client={queryClient}>
+          <SideMenu {...({ navigation: mockNavigation } as any)} />
+        </QueryClientProvider>,
+      );
+    });
+    greetingRenderedComponents.push(tree!);
+    return tree!;
+  };
+
+  it('shows personalized greeting "Hi Testing!" when user is present with a firstName', async () => {
+    mockUserData = {
+      ...mockDefaultUserData,
+      firstName: 'Testing',
+    };
+
+    const component = await renderSideMenu();
+    const greetingNode = component.root.findAllByType(Text).find(node => {
+      const content = Array.isArray(node.props.children)
+        ? node.props.children.join('')
+        : node.props.children;
+      return (
+        typeof content === 'string' &&
+        content.startsWith(i18n.t('translations:hi'))
+      );
+    });
+
+    expect(greetingNode).toBeDefined();
+    expect(greetingNode!.props.children).toBe(
+      `${i18n.t('translations:hi')} Testing!`,
+    );
+  });
+
+  it('renders without throwing and shows plain greeting "Hi!" when user is undefined (row 116)', async () => {
+    // When queryClient.resetQueries() runs on logout, useUser returns undefined for user
+    mockUserData = undefined;
+
+    const component = await renderSideMenu();
+    const greetingNode = component.root.findAllByType(Text).find(node => {
+      const content = Array.isArray(node.props.children)
+        ? node.props.children.join('')
+        : node.props.children;
+      return (
+        typeof content === 'string' &&
+        content.startsWith(i18n.t('translations:hi'))
+      );
+    });
+
+    expect(greetingNode).toBeDefined();
+    expect(greetingNode!.props.children).toBe(`${i18n.t('translations:hi')}!`);
+  });
+
+  it('updates to plain greeting "Hi!" without throwing when user becomes undefined on logout', async () => {
+    mockUserData = {
+      ...mockDefaultUserData,
+      firstName: 'Testing',
+    };
+
+    const component = await renderSideMenu();
+    const findGreeting = () =>
+      component.root.findAllByType(Text).find(node => {
+        const content = Array.isArray(node.props.children)
+          ? node.props.children.join('')
+          : node.props.children;
+        return (
+          typeof content === 'string' &&
+          content.startsWith(i18n.t('translations:hi'))
+        );
+      });
+
+    expect(findGreeting()?.props.children).toBe(
+      `${i18n.t('translations:hi')} Testing!`,
+    );
+
+    // Simulate queryClient.resetQueries() clearing the user during logout
+    mockUserData = undefined;
+    await act(async () => {
+      component.update(
+        <QueryClientProvider client={queryClient}>
+          <SideMenu
+            {...({
+              navigation: { navigate: jest.fn(), closeDrawer: jest.fn() },
+            } as any)}
+          />
+        </QueryClientProvider>,
+      );
+    });
+
+    expect(findGreeting()?.props.children).toBe(
+      `${i18n.t('translations:hi')}!`,
+    );
   });
 });
