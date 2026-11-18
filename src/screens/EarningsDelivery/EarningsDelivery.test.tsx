@@ -204,4 +204,130 @@ describe('EarningsDelivery (spec 0009, AC-1)', () => {
       ).toBeNull();
     });
   });
+
+  describe('Honest labels for undelivered compensation kinds (row 112, decision 112.1)', () => {
+    const compensationKinds: NonNullable<EarningsDeliveryDetail['kind']>[] = [
+      'WAITING',
+      'REMOVAL_COMPENSATION',
+      'RETURN_TRIP',
+      'CANCELLATION_COMPENSATION',
+      'REASSIGNMENT_COMPENSATION',
+    ];
+
+    it.each(compensationKinds)(
+      'for kind %s: hides Delivered to, Delivered on, and dropoff address; shows Paid on',
+      kind => {
+        const detail: EarningsDeliveryDetail = {
+          ...mockDeliveryDetail,
+          kind,
+        };
+
+        (useEarningsDelivery as jest.Mock).mockReturnValue({
+          delivery: detail,
+          isLoading: false,
+          isError: false,
+          isRefetching: false,
+          refetch: jest.fn(),
+        });
+
+        render(<EarningsDelivery {...defaultProps} />);
+
+        // No "Delivered to" or "Delivered on" text appears
+        expect(
+          screen.queryByText(i18n.t('translations:delivered_to')),
+        ).toBeNull();
+        expect(
+          screen.queryByText(i18n.t('translations:delivered_on')),
+        ).toBeNull();
+
+        // "Paid on" DOES appear
+        expect(
+          screen.getByText(i18n.t('translations:earnings_paid_on')),
+        ).toBeTruthy();
+
+        // The dropoff address row is absent
+        expect(screen.queryByText('Dimitriadis 25, Volos')).toBeNull();
+      },
+    );
+
+    it('shows "Cancelled job" as the first line label for CANCELLATION_COMPENSATION', () => {
+      const detail: EarningsDeliveryDetail = {
+        ...mockDeliveryDetail,
+        kind: 'CANCELLATION_COMPENSATION',
+      };
+
+      (useEarningsDelivery as jest.Mock).mockReturnValue({
+        delivery: detail,
+        isLoading: false,
+        isError: false,
+        isRefetching: false,
+        refetch: jest.fn(),
+      });
+
+      render(<EarningsDelivery {...defaultProps} />);
+
+      expect(
+        screen.getByText(i18n.t('translations:earnings_cancelled_job')),
+      ).toBeTruthy();
+      expect(
+        screen.queryByText(i18n.t('translations:piece_rate_pay')),
+      ).toBeNull();
+    });
+
+    it('plain delivery (kind absent) shows Delivered to, Delivered on, dropoff address, and no Paid on', () => {
+      const detail: EarningsDeliveryDetail = {
+        ...mockDeliveryDetail,
+        kind: undefined,
+      };
+
+      (useEarningsDelivery as jest.Mock).mockReturnValue({
+        delivery: detail,
+        isLoading: false,
+        isError: false,
+        isRefetching: false,
+        refetch: jest.fn(),
+      });
+
+      render(<EarningsDelivery {...defaultProps} />);
+
+      expect(
+        screen.getByText(i18n.t('translations:delivered_to')),
+      ).toBeTruthy();
+      expect(
+        screen.getByText(i18n.t('translations:delivered_on')),
+      ).toBeTruthy();
+      expect(screen.getByText('Dimitriadis 25, Volos')).toBeTruthy();
+      expect(
+        screen.queryByText(i18n.t('translations:earnings_paid_on')),
+      ).toBeNull();
+    });
+
+    it('kind null behaves like absent (delivered): shows Delivered to, Delivered on, dropoff address, and no Paid on', () => {
+      const detail: EarningsDeliveryDetail = {
+        ...mockDeliveryDetail,
+        kind: null as any,
+      };
+
+      (useEarningsDelivery as jest.Mock).mockReturnValue({
+        delivery: detail,
+        isLoading: false,
+        isError: false,
+        isRefetching: false,
+        refetch: jest.fn(),
+      });
+
+      render(<EarningsDelivery {...defaultProps} />);
+
+      expect(
+        screen.getByText(i18n.t('translations:delivered_to')),
+      ).toBeTruthy();
+      expect(
+        screen.getByText(i18n.t('translations:delivered_on')),
+      ).toBeTruthy();
+      expect(screen.getByText('Dimitriadis 25, Volos')).toBeTruthy();
+      expect(
+        screen.queryByText(i18n.t('translations:earnings_paid_on')),
+      ).toBeNull();
+    });
+  });
 });

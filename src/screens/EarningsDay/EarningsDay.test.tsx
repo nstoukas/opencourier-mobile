@@ -167,4 +167,134 @@ describe('EarningsDay (spec 0015, AC-15)', () => {
       screen.queryByText(i18n.t('translations:earnings_cancelled_job')),
     ).toBeNull();
   });
+
+  describe('Honest labels when day has pay but no deliveries (row 112, decision 112.1)', () => {
+    it('with deliveryCount 0 and total > 0 says "Paid for other work, no deliveries" and shows pay and tips line', () => {
+      const deliveries: EarningsDelivery[] = [
+        {
+          deliveryId: 'del-wait-only',
+          pickupBusinessName: 'Souvlaki Express',
+          dropoffAddress: null,
+          droppedOffAt: '2026-11-01T12:00:00Z',
+          compensation: 250,
+          tips: 0,
+          total: 250,
+          kind: 'WAITING',
+        },
+      ];
+
+      (useEarningsDay as jest.Mock).mockReturnValue({
+        deliveries,
+        deliveryCount: 0,
+        compensation: 250,
+        tips: 0,
+        total: 250,
+        currency: 'EUR',
+        isLoading: false,
+        isError: false,
+        isRefetching: false,
+        refetch: jest.fn(),
+      });
+
+      render(<EarningsDay {...defaultProps} />);
+
+      // Summary count text says "Paid for other work, no deliveries"
+      expect(
+        screen.getByText(
+          i18n.t('translations:earnings_paid_without_deliveries'),
+        ),
+      ).toBeTruthy();
+
+      // Does NOT say "0 deliveries"
+      expect(
+        screen.queryByText(`0 ${i18n.t('translations:deliveries_small')}`),
+      ).toBeNull();
+
+      // Pay and tips breakdown line shows
+      expect(
+        screen.getByText(
+          i18n.t('translations:pay_tips_breakdown', {
+            pay: '€2.50',
+            tips: '€0.00',
+          }),
+        ),
+      ).toBeTruthy();
+    });
+
+    it('with deliveryCount 1 it says "1 delivery" and shows pay and tips line', () => {
+      const deliveries: EarningsDelivery[] = [
+        {
+          deliveryId: 'del-single',
+          pickupBusinessName: 'Pizza Bistro',
+          dropoffAddress: 'Iasonos 40',
+          droppedOffAt: '2026-11-01T14:00:00Z',
+          compensation: 300,
+          tips: 50,
+          total: 350,
+          kind: undefined,
+        },
+      ];
+
+      (useEarningsDay as jest.Mock).mockReturnValue({
+        deliveries,
+        deliveryCount: 1,
+        compensation: 300,
+        tips: 50,
+        total: 350,
+        currency: 'EUR',
+        isLoading: false,
+        isError: false,
+        isRefetching: false,
+        refetch: jest.fn(),
+      });
+
+      render(<EarningsDay {...defaultProps} />);
+
+      expect(
+        screen.getByText(`1 ${i18n.t('translations:delivery_small')}`),
+      ).toBeTruthy();
+      expect(
+        screen.getByText(
+          i18n.t('translations:pay_tips_breakdown', {
+            pay: '€3.00',
+            tips: '€0.50',
+          }),
+        ),
+      ).toBeTruthy();
+    });
+
+    it('with deliveryCount 0 and total 0 shows "0 deliveries" and hides breakdown line', () => {
+      (useEarningsDay as jest.Mock).mockReturnValue({
+        deliveries: [],
+        deliveryCount: 0,
+        compensation: 0,
+        tips: 0,
+        total: 0,
+        currency: 'EUR',
+        isLoading: false,
+        isError: false,
+        isRefetching: false,
+        refetch: jest.fn(),
+      });
+
+      render(<EarningsDay {...defaultProps} />);
+
+      expect(
+        screen.getByText(`0 ${i18n.t('translations:deliveries_small')}`),
+      ).toBeTruthy();
+      expect(
+        screen.queryByText(
+          i18n.t('translations:earnings_paid_without_deliveries'),
+        ),
+      ).toBeNull();
+      expect(
+        screen.queryByText(
+          i18n.t('translations:pay_tips_breakdown', {
+            pay: '€0.00',
+            tips: '€0.00',
+          }),
+        ),
+      ).toBeNull();
+    });
+  });
 });
