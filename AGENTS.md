@@ -109,7 +109,7 @@ the error count is above `typecheck-baseline.json`, and lowers the file when the
 
 - Removal requests (spec 0035): the reasons query uses `gcTime: 0`, because each reason says whether it pays and this app otherwise keeps answers 24 h. Logout clears removal notifications by the id prefix `removal-`, read from `getDisplayedNotifications`, because they outlive the app.
 
-- The app targets SDK 35, so on Android 15 it draws edge to edge and `adjustResize` no longer makes room for the keyboard: a `KeyboardAvoidingView` needs `behavior="padding"` on Android as well as iOS (Chat has it; AddNote, ReportIssue and DeleteNote are still iOS only). FlatList's `scrollToEnd` stops short while rows are unmeasured: Chat scrolls to the content height less the list height, from `onContentSizeChange` and `onLayout`.
+- The app targets SDK 35, so on Android 15 it draws edge to edge and `adjustResize` no longer makes room for the keyboard: a `KeyboardAvoidingView` needs `behavior="padding"` on Android as well as iOS (Chat has it, and since row 114 so does every screen where a rider types; AddNote is still iOS only, but nothing opens it until notes come back with row 82). FlatList's `scrollToEnd` stops short while rows are unmeasured: Chat scrolls to the content height less the list height, from `onContentSizeChange` and `onLayout`.
 
 - Chat (spec 0034): unsent messages live in the module store `services/chat/chatOutgoing.ts`, so leaving the screen keeps them; logout and `endExpiredSession` clear it, the chat notice and the seen mark. What the rider has seen is worked out on the phone only.
 
