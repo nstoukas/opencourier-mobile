@@ -328,8 +328,13 @@ export const SideMenu = ({ navigation }: Props) => {
             userStatus={status as UserStatus}
             onPress={() => undefined}
           />
+          {/* Logout clears the user while this menu is still drawn, for a moment
+              before the login screen replaces it, so the name may be missing.
+              Reading it with `!` threw there and left a blank screen (row 116). */}
           <Text style={styles.textName}>
-            {t('translations:hi') + ` ${user!.firstName}!`}
+            {user
+              ? `${t('translations:hi')} ${user.firstName}!`
+              : `${t('translations:hi')}!`}
           </Text>
         </View>
         {shouldRenderOrgSelect && (
