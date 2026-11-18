@@ -145,11 +145,10 @@ export const RequestRemoval = ({ navigation, route }: Props) => {
         </View>
         <Text style={styles.intro}>{t('translations:removal_intro')}</Text>
 
-        {/* iOS has no adjustResize, so this lifts the note box above the keyboard
-            (as in ReportIssue); Android resizes the window itself. */}
-        <KeyboardAvoidingView
-          style={styles.keyboardArea}
-          behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+        {/* Lifts the note box above the keyboard on both systems. Android no longer
+            makes room by itself since the app draws edge to edge (SDK 35), so it needs
+            the padding too, as in ReportIssue (row 114). */}
+        <KeyboardAvoidingView style={styles.keyboardArea} behavior="padding">
           {renderReasons()}
 
           {selected && (

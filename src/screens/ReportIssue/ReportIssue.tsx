@@ -143,11 +143,13 @@ export const ReportIssue = ({ navigation, route }: Props) => {
               <BackNavButton onPress={() => navigation.goBack()} />
             </View>
 
-            {/* iOS has no adjustResize, so this lifts the note box above the keyboard
-                (as in AddNote); Android resizes the window itself. */}
+            {/* Lifts the note box above the keyboard on both systems. Android used to
+                resize the window itself (adjustResize), but the app draws edge to edge
+                since SDK 35 and it no longer does, so Android needs the padding too
+                (row 114). It pads only by the real overlap, so nothing doubles up. */}
             <KeyboardAvoidingView
               style={styles.keyboardArea}
-              behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+              behavior="padding">
               <FlatList
                 keyExtractor={item => item.reason}
                 data={items}

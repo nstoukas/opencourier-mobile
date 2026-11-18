@@ -5,7 +5,6 @@ import {
   Text,
   ScrollView,
   KeyboardAvoidingView,
-  Platform,
 } from 'react-native';
 import { ScreenSafeArea } from '@app/components/ScreenSafeArea/ScreenSafeArea';
 import { Images } from '@app/utilities/images';
@@ -74,10 +73,13 @@ export const WelcomeScreen = ({ navigation }: Props) => {
     <View style={styles.container}>
       <Image source={Images.NoiseBG} style={styles.background} />
       <ScreenSafeArea style={styles.safeArea}>
+        {/* Keeps the link fields and Continue above the keyboard on both systems. Android no
+            longer makes room by itself since the app draws edge to edge (SDK 35), so it needs
+            the padding too (row 114). */}
         <KeyboardAvoidingView
           style={styles.container}
           enabled
-          behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+          behavior="padding">
           <ScrollView
             style={styles.container}
             contentContainerStyle={styles.content}>

@@ -91,10 +91,10 @@ export const ReportProduct = ({ navigation, route }: Props) => {
         <Text style={styles.title}>{t('translations:report_product')}</Text>
         <BackNavButton onPress={() => navigation.goBack()} />
       </View>
-      {/* iOS has no adjustResize, so this lifts the note above the keyboard, as in ReportIssue. */}
-      <KeyboardAvoidingView
-        style={styles.keyboardArea}
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+      {/* Lifts the note above the keyboard on both systems, as in ReportIssue. Android no longer
+          makes room by itself since the app draws edge to edge (SDK 35), so it needs the padding
+          too (row 114); the ScrollView inside can then scroll the note into view. */}
+      <KeyboardAvoidingView style={styles.keyboardArea} behavior="padding">
       <ScrollView
         contentContainerStyle={[
           styles.content,

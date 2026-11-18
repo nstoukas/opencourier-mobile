@@ -5,7 +5,6 @@ import {
   Text,
   ScrollView,
   KeyboardAvoidingView,
-  Platform,
 } from 'react-native';
 import { ScreenSafeArea } from '@app/components/ScreenSafeArea/ScreenSafeArea';
 import { Images } from '@app/utilities/images';
@@ -166,10 +165,13 @@ export const ChooseInstanceScreen = ({ navigation, route }: Props) => {
           <BackNavButton onPress={handleBack} />
         </View>
         <Image source={Images.OpenDeli} style={styles.imageOpenDeli} />
+        {/* Keeps the search bar above the keyboard on both systems. Android no longer makes
+            room by itself since the app draws edge to edge (SDK 35), so it needs the padding
+            too (row 114). */}
         <KeyboardAvoidingView
           style={[styles.screen, { flexDirection: 'column' }]}
           enabled
-          behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+          behavior="padding">
           <View style={{ flexShrink: 1 }}>
             <Text style={styles.textSubtitle}>
               {t('translations:choose_instance')}
