@@ -113,4 +113,6 @@ the error count is above `typecheck-baseline.json`, and lowers the file when the
 
 - Chat (spec 0034): unsent messages live in the module store `services/chat/chatOutgoing.ts`, so leaving the screen keeps them; logout and `endExpiredSession` clear it, the chat notice and the seen mark. What the rider has seen is worked out on the phone only.
 
+- Logout ends with `queryClient.resetQueries()`, which empties the `user` query while the drawer and the main stack are still drawn, for a moment before `router.tsx` swaps to the login screens. Anything on screen then must cope with no user: read it with `user?.` or a check first, never `user!` (that threw in the side menu and left a blank screen, row 116).
+
 _Drafted by /audit from the repo, worth a quick human pass. Edit freely: once a line stops matching this draft, later runs treat it as curated and will flag rather than overwrite it._
