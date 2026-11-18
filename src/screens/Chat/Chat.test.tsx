@@ -1,6 +1,11 @@
 import React from 'react';
 import { render, fireEvent, act, waitFor } from '@testing-library/react-native';
-import { AppState } from 'react-native';
+import {
+  FlatList,
+  AppState,
+  KeyboardAvoidingView,
+  Platform,
+} from 'react-native';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import '@app/localization/i18n';
 import { Chat } from './Chat';
@@ -744,6 +749,123 @@ describe('Chat screen (spec 0034, AC-5, AC-6, AC-8, AC-10, AC-12, AC-13, AC-19, 
       ).toBeTruthy();
       expect(secondRender.getByText('Not sent, tap to retry')).toBeTruthy();
       secondRender.unmount();
+    });
+  });
+
+  describe('Verify fixes: scroll to newest message and keyboard behavior (Decision 111.17)', () => {
+    const originalOS = Platform.OS;
+
+    afterEach(() => {
+      Platform.OS = originalOS;
+    });
+
+    it('scrolls FlatList to content height minus list height on content size change and on layout, and updates with the new difference when either changes', async () => {
+      const { findByText, UNSAFE_getByType } = renderChat();
+      // Wait for initial query to resolve so the list is mounted
+      await findByText(
+        'No messages yet. Tap a ready answer below, or write to dispatch.',
+      );
+
+      const list = UNSAFE_getByType(FlatList);
+      const scrollToOffsetMock = jest.fn();
+      const scrollToEndMock = jest.fn();
+      list.instance.scrollToOffset = scrollToOffsetMock;
+      list.instance.scrollToEnd = scrollToEndMock;
+
+      // 1. Initial list layout: box height is 600
+      fireEvent(list, 'layout', { nativeEvent: { layout: { height: 600 } } });
+      expect(scrollToOffsetMock).toHaveBeenLastCalledWith({
+        offset: 0,
+        animated: false,
+      });
+
+      // 2. Messages render: content height is 1000. Offset = 1000 - 600 = 400
+      fireEvent(list, 'contentSizeChange', 400, 1000);
+      expect(scrollToOffsetMock).toHaveBeenLastCalledWith({
+        offset: 400,
+        animated: false,
+      });
+
+      // 3. New message arrives or is sent: content height grows to 1350. Offset = 1350 - 600 = 750
+      fireEvent(list, 'contentSizeChange', 400, 1350);
+      expect(scrollToOffsetMock).toHaveBeenLastCalledWith({
+        offset: 750,
+        animated: false,
+      });
+
+      // 4. Keyboard opens: list height shrinks to 350. Offset = 1350 - 350 = 1000
+      fireEvent(list, 'layout', { nativeEvent: { layout: { height: 350 } } });
+      expect(scrollToOffsetMock).toHaveBeenLastCalledWith({
+        offset: 1000,
+        animated: false,
+      });
+
+      // 5. Keyboard closes: list height expands back to 600. Offset = 1350 - 600 = 750
+      fireEvent(list, 'layout', { nativeEvent: { layout: { height: 600 } } });
+      expect(scrollToOffsetMock).toHaveBeenLastCalledWith({
+        offset: 750,
+        animated: false,
+      });
+
+      // Must not depend on scrollToEnd
+      expect(scrollToEndMock).not.toHaveBeenCalled();
+    });
+
+    it('never scrolls to a negative offset when the content is shorter than the list', async () => {
+      const { findByText, UNSAFE_getByType } = renderChat();
+      await findByText(
+        'No messages yet. Tap a ready answer below, or write to dispatch.',
+      );
+
+      const list = UNSAFE_getByType(FlatList);
+      const scrollToOffsetMock = jest.fn();
+      list.instance.scrollToOffset = scrollToOffsetMock;
+
+      // List box height is 700
+      fireEvent(list, 'layout', { nativeEvent: { layout: { height: 700 } } });
+
+      // Content height is only 250 (shorter than list: 250 - 700 = -450 -> clamped to 0)
+      fireEvent(list, 'contentSizeChange', 400, 250);
+      expect(scrollToOffsetMock).toHaveBeenLastCalledWith({
+        offset: 0,
+        animated: false,
+      });
+
+      // Content height updates to 500, still shorter than list (500 - 700 = -200 -> clamped to 0)
+      fireEvent(list, 'contentSizeChange', 400, 500);
+      expect(scrollToOffsetMock).toHaveBeenLastCalledWith({
+        offset: 0,
+        animated: false,
+      });
+
+      // Verify no call to scrollToOffset ever had a negative offset
+      for (const call of scrollToOffsetMock.mock.calls) {
+        expect(call[0].offset).toBeGreaterThanOrEqual(0);
+      }
+    });
+
+    it('uses behavior "padding" on KeyboardAvoidingView on Android as well as iOS', async () => {
+      try {
+        // Test Android behavior
+        Platform.OS = 'android';
+        const androidRender = renderChat();
+        await androidRender.findByText(
+          'No messages yet. Tap a ready answer below, or write to dispatch.',
+        );
+        const androidKav = androidRender.UNSAFE_getByType(KeyboardAvoidingView);
+        expect(androidKav.props.behavior).toBe('padding');
+
+        // Test iOS behavior
+        Platform.OS = 'ios';
+        const iosRender = renderChat();
+        await iosRender.findByText(
+          'No messages yet. Tap a ready answer below, or write to dispatch.',
+        );
+        const iosKav = iosRender.UNSAFE_getByType(KeyboardAvoidingView);
+        expect(iosKav.props.behavior).toBe('padding');
+      } finally {
+        Platform.OS = originalOS;
+      }
     });
   });
 });
