@@ -274,7 +274,37 @@ describe('EarningsDelivery (spec 0009, AC-1)', () => {
       ).toBeNull();
     });
 
-    it('plain delivery (kind absent) shows Delivered to, Delivered on, dropoff address, and no Paid on', () => {
+    it('shows "Reassigned job" (not "Piece-rate pay") as the first line label for REASSIGNMENT_COMPENSATION', () => {
+      const detail: EarningsDeliveryDetail = {
+        ...mockDeliveryDetail,
+        kind: 'REASSIGNMENT_COMPENSATION',
+      };
+
+      (useEarningsDelivery as jest.Mock).mockReturnValue({
+        delivery: detail,
+        isLoading: false,
+        isError: false,
+        isRefetching: false,
+        refetch: jest.fn(),
+      });
+
+      render(<EarningsDelivery {...defaultProps} />);
+
+      // First line says "Reassigned job"
+      expect(
+        screen.getByText(i18n.t('translations:earnings_reassigned_job')),
+      ).toBeTruthy();
+
+      // Does NOT say "Piece-rate pay"
+      expect(
+        screen.queryByText(i18n.t('translations:piece_rate_pay')),
+      ).toBeNull();
+
+      // Formatted compensation value is shown
+      expect(screen.getByText('€3.50')).toBeTruthy();
+    });
+
+    it('plain delivery (kind absent) shows Delivered to, Delivered on, dropoff address, no Paid on, and first line is piece rate label', () => {
       const detail: EarningsDeliveryDetail = {
         ...mockDeliveryDetail,
         kind: undefined,
@@ -290,6 +320,14 @@ describe('EarningsDelivery (spec 0009, AC-1)', () => {
 
       render(<EarningsDelivery {...defaultProps} />);
 
+      // First line is piece-rate pay, not reassigned job
+      expect(
+        screen.getByText(i18n.t('translations:piece_rate_pay')),
+      ).toBeTruthy();
+      expect(
+        screen.queryByText(i18n.t('translations:earnings_reassigned_job')),
+      ).toBeNull();
+
       expect(
         screen.getByText(i18n.t('translations:delivered_to')),
       ).toBeTruthy();
@@ -302,7 +340,7 @@ describe('EarningsDelivery (spec 0009, AC-1)', () => {
       ).toBeNull();
     });
 
-    it('kind null behaves like absent (delivered): shows Delivered to, Delivered on, dropoff address, and no Paid on', () => {
+    it('kind null behaves like absent (delivered): shows Delivered to, Delivered on, dropoff address, no Paid on, and first line is piece rate label', () => {
       const detail: EarningsDeliveryDetail = {
         ...mockDeliveryDetail,
         kind: null as any,
@@ -317,6 +355,14 @@ describe('EarningsDelivery (spec 0009, AC-1)', () => {
       });
 
       render(<EarningsDelivery {...defaultProps} />);
+
+      // First line is piece-rate pay, not reassigned job
+      expect(
+        screen.getByText(i18n.t('translations:piece_rate_pay')),
+      ).toBeTruthy();
+      expect(
+        screen.queryByText(i18n.t('translations:earnings_reassigned_job')),
+      ).toBeNull();
 
       expect(
         screen.getByText(i18n.t('translations:delivered_to')),

@@ -2,6 +2,7 @@ import React from 'react';
 import { render, screen, fireEvent } from '@testing-library/react-native';
 import { Earnings } from './Earnings';
 import { useEarnings } from '@app/hooks/useEarnings';
+import { EarningsSummaryDay } from '@app/types/types';
 import i18n from '@app/localization/i18n';
 
 jest.mock('@app/hooks/useEarnings');
@@ -254,6 +255,124 @@ describe('Earnings summary (row 112, decision 112.1)', () => {
           }),
         ),
       ).toBeTruthy();
+    });
+  });
+
+  describe('day rows in summary list (row 112 review)', () => {
+    it('a day row with deliveryCount 0 and total > 0 reads "Paid for other work, no deliveries", with 1 delivery reads "1 delivery", and with 3 reads "3 deliveries"', () => {
+      const days: EarningsSummaryDay[] = [
+        {
+          date: '2026-11-18',
+          deliveryCount: 0,
+          compensation: 200,
+          tips: 0,
+          total: 200,
+        },
+        {
+          date: '2026-11-17',
+          deliveryCount: 1,
+          compensation: 300,
+          tips: 50,
+          total: 350,
+        },
+        {
+          date: '2026-11-16',
+          deliveryCount: 3,
+          compensation: 900,
+          tips: 150,
+          total: 1050,
+        },
+      ];
+
+      (useEarnings as jest.Mock).mockReturnValue({
+        days,
+        totalEarnings: 1600,
+        totalCompensation: 1400,
+        totalTips: 200,
+        deliveryCount: 4,
+        currency: 'EUR',
+        isLoading: false,
+        isError: false,
+        isRefetching: false,
+        refetch: jest.fn(),
+      });
+
+      render(<Earnings {...defaultProps} />);
+
+      // A day row with deliveryCount 0 and total > 0 reads "Paid for other work, no deliveries"
+      expect(
+        screen.getByText(
+          new RegExp(
+            `· ${i18n.t('translations:earnings_paid_without_deliveries')}`,
+          ),
+        ),
+      ).toBeTruthy();
+
+      // Does not say "0 deliveries"
+      expect(
+        screen.queryByText(
+          new RegExp(`· 0 ${i18n.t('translations:deliveries_small')}`),
+        ),
+      ).toBeNull();
+
+      // A day with 1 delivery reads "1 delivery"
+      expect(
+        screen.getByText(
+          new RegExp(`· 1 ${i18n.t('translations:delivery_small')}`),
+        ),
+      ).toBeTruthy();
+
+      // A day with 3 reads "3 deliveries"
+      expect(
+        screen.getByText(
+          new RegExp(`· 3 ${i18n.t('translations:deliveries_small')}`),
+        ),
+      ).toBeTruthy();
+
+      // Formatted day amounts are shown
+      expect(screen.getByText('€2.00')).toBeTruthy();
+      expect(screen.getByText('€3.50')).toBeTruthy();
+      expect(screen.getByText('€10.50')).toBeTruthy();
+    });
+
+    it('a day row with deliveryCount 0 and total 0 reads "0 deliveries"', () => {
+      const days: EarningsSummaryDay[] = [
+        {
+          date: '2026-11-18',
+          deliveryCount: 0,
+          compensation: 0,
+          tips: 0,
+          total: 0,
+        },
+      ];
+
+      (useEarnings as jest.Mock).mockReturnValue({
+        days,
+        totalEarnings: 0,
+        totalCompensation: 0,
+        totalTips: 0,
+        deliveryCount: 0,
+        currency: 'EUR',
+        isLoading: false,
+        isError: false,
+        isRefetching: false,
+        refetch: jest.fn(),
+      });
+
+      render(<Earnings {...defaultProps} />);
+
+      expect(
+        screen.getByText(
+          new RegExp(`· 0 ${i18n.t('translations:deliveries_small')}`),
+        ),
+      ).toBeTruthy();
+      expect(
+        screen.queryByText(
+          new RegExp(
+            `· ${i18n.t('translations:earnings_paid_without_deliveries')}`,
+          ),
+        ),
+      ).toBeNull();
     });
   });
 });

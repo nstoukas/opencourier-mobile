@@ -297,4 +297,122 @@ describe('EarningsDay (spec 0015, AC-15)', () => {
       ).toBeNull();
     });
   });
+
+  describe('Reassigned job and plain delivery cell labels (row 112 review)', () => {
+    it('a REASSIGNMENT_COMPENSATION cell shows "Reassigned job" and a plain delivery cell shows no kind label', () => {
+      const deliveries: EarningsDelivery[] = [
+        {
+          deliveryId: 'del-reassigned-1',
+          pickupBusinessName: 'Creperie',
+          dropoffAddress: 'Pavlou Mela 5',
+          droppedOffAt: '2026-11-01T15:00:00Z',
+          compensation: 200,
+          tips: 0,
+          total: 200,
+          kind: 'REASSIGNMENT_COMPENSATION',
+        },
+        {
+          deliveryId: 'del-plain-2',
+          pickupBusinessName: 'Burger House',
+          dropoffAddress: 'Ermou 12',
+          droppedOffAt: '2026-11-01T16:00:00Z',
+          compensation: 300,
+          tips: 50,
+          total: 350,
+          kind: undefined,
+        },
+      ];
+
+      (useEarningsDay as jest.Mock).mockReturnValue({
+        deliveries,
+        deliveryCount: 1,
+        compensation: 500,
+        tips: 50,
+        total: 550,
+        currency: 'EUR',
+        isLoading: false,
+        isError: false,
+        isRefetching: false,
+        refetch: jest.fn(),
+      });
+
+      render(<EarningsDay {...defaultProps} />);
+
+      // A REASSIGNMENT_COMPENSATION cell shows "Reassigned job"
+      expect(
+        screen.getByText(i18n.t('translations:earnings_reassigned_job')),
+      ).toBeTruthy();
+
+      // Exactly one "Reassigned job" is displayed across the whole screen
+      expect(
+        screen.getAllByText(i18n.t('translations:earnings_reassigned_job')),
+      ).toHaveLength(1);
+
+      // Plain delivery cell shows no kind label
+      expect(
+        screen.queryByText(i18n.t('translations:earnings_cancelled_job')),
+      ).toBeNull();
+      expect(
+        screen.queryByText(i18n.t('translations:earnings_waiting')),
+      ).toBeNull();
+      expect(
+        screen.queryByText(i18n.t('translations:earnings_removal')),
+      ).toBeNull();
+      expect(
+        screen.queryByText(i18n.t('translations:earnings_return_trip')),
+      ).toBeNull();
+
+      // Dropoff addresses and store names are shown for both
+      expect(screen.getByText('Creperie')).toBeTruthy();
+      expect(screen.getByText('Pavlou Mela 5')).toBeTruthy();
+      expect(screen.getByText('Burger House')).toBeTruthy();
+      expect(screen.getByText('Ermou 12')).toBeTruthy();
+    });
+
+    it('plain delivery only day shows no kind label at all', () => {
+      const deliveries: EarningsDelivery[] = [
+        {
+          deliveryId: 'del-plain-only',
+          pickupBusinessName: 'Burger House',
+          dropoffAddress: 'Ermou 12',
+          droppedOffAt: '2026-11-01T16:00:00Z',
+          compensation: 300,
+          tips: 50,
+          total: 350,
+          kind: undefined,
+        },
+      ];
+
+      (useEarningsDay as jest.Mock).mockReturnValue({
+        deliveries,
+        deliveryCount: 1,
+        compensation: 300,
+        tips: 50,
+        total: 350,
+        currency: 'EUR',
+        isLoading: false,
+        isError: false,
+        isRefetching: false,
+        refetch: jest.fn(),
+      });
+
+      render(<EarningsDay {...defaultProps} />);
+
+      expect(
+        screen.queryByText(i18n.t('translations:earnings_reassigned_job')),
+      ).toBeNull();
+      expect(
+        screen.queryByText(i18n.t('translations:earnings_cancelled_job')),
+      ).toBeNull();
+      expect(
+        screen.queryByText(i18n.t('translations:earnings_waiting')),
+      ).toBeNull();
+      expect(
+        screen.queryByText(i18n.t('translations:earnings_removal')),
+      ).toBeNull();
+      expect(
+        screen.queryByText(i18n.t('translations:earnings_return_trip')),
+      ).toBeNull();
+    });
+  });
 });
