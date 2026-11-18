@@ -81,7 +81,10 @@ export const EarningsDelivery = ({ navigation, route }: Props) => {
     // Spec 0035, AC-17: a removal or a return trip is not a drop off either.
     const isRemoval = delivery.kind === 'REMOVAL_COMPENSATION';
     const isReturnTrip = delivery.kind === 'RETURN_TRIP';
-    const notDelivered = isWait || isRemoval || isReturnTrip;
+    const isCancelled = delivery.kind === 'CANCELLATION_COMPENSATION';
+    // Row 112: every pay that is not a drop off carries a `kind` (a wait, a removal, a return trip, a
+    // cancelled or reassigned job), so none of them may say "Delivered".
+    const notDelivered = Boolean(delivery.kind);
 
     return (
       <>
@@ -103,6 +106,8 @@ export const EarningsDelivery = ({ navigation, route }: Props) => {
                 ? 'translations:earnings_removal'
                 : isReturnTrip
                 ? 'translations:earnings_return_trip'
+                : isCancelled
+                ? 'translations:earnings_cancelled_job'
                 : 'translations:piece_rate_pay',
             )}
             value={formatCurrencyFromCents(delivery.compensation, currency)}

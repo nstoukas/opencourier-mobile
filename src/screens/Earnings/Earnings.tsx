@@ -165,6 +165,10 @@ export const Earnings = ({ navigation }: Props) => {
     if (deliveryCount > 0) {
       return `${deliveryCount} ${t('translations:orders_small')}`;
     }
+    // Row 112: money with no delivery (a wait, a removal, a cancelled job) is not "No Orders".
+    if (totalEarnings > 0) {
+      return t('translations:earnings_paid_without_deliveries');
+    }
     switch (selectedTab) {
       case EarningsTabItem.Today:
         return t('translations:no_orders_today');
@@ -173,7 +177,7 @@ export const Earnings = ({ navigation }: Props) => {
       case EarningsTabItem.All:
         return t('translations:no_orders');
     }
-  }, [selectedTab, deliveryCount]);
+  }, [selectedTab, deliveryCount, totalEarnings, t]);
 
   const handleWeekChange = (start: Moment, end: Moment) => {
     setWeek({
@@ -199,7 +203,7 @@ export const Earnings = ({ navigation }: Props) => {
               {formatCurrencyFromCents(totalEarnings, currency)}
             </Text>
             <Text style={styles.textCount}>{headerTitle}</Text>
-            {deliveryCount > 0 && (
+            {(deliveryCount > 0 || totalEarnings > 0) && (
               // Piece-rate pay and tips are different things: pay is what the co-op owes
               // for the work, tips are the customer's. Showing only the sum would let a
               // good tips week hide a bad rate, so the split is always visible.

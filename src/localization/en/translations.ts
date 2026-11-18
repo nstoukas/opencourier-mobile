@@ -200,6 +200,8 @@ export default {
   no_orders_today: 'No Orders Today',
   no_orders_this_week: 'No Orders This Week',
   no_orders: 'No Orders',
+  // Row 112: a day or week that paid for waits, removals or cancelled jobs but had no drop off.
+  earnings_paid_without_deliveries: 'Paid for other work, no deliveries',
   orders_small: 'orders',
   Monday: 'Monday',
   Tuesday: 'Tuesday',
