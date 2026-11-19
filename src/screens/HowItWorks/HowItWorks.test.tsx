@@ -153,6 +153,45 @@ describe('HowItWorks screen (spec 0038, AC-7, AC-8, AC-9, AC-11, AC-13)', () => 
       ).toBeTruthy();
     });
 
+    it('renders the "How your time worked is counted" section from howItWorks.timeWorked (spec 0040, AC-13)', () => {
+      (useHowItWorks as jest.Mock).mockReturnValue({
+        data: {
+          ...sampleHowItWorks,
+          timeWorked: [
+            'Breaks under 30 minutes count as part of the same shift.',
+            'Admins can see your time worked on your page to answer questions and reviews.',
+            'No one ranks or compares riders by time worked.',
+          ],
+        },
+        isLoading: false,
+        isError: false,
+        isRefetching: false,
+        refetch: mockRefetchHow,
+      });
+
+      render(<HowItWorks {...defaultProps} />);
+
+      // Section title
+      expect(
+        screen.getByText(i18n.t('translations:how_time_worked')),
+      ).toBeTruthy();
+
+      // Content lines
+      expect(
+        screen.getByText(
+          'Breaks under 30 minutes count as part of the same shift.',
+        ),
+      ).toBeTruthy();
+      expect(
+        screen.getByText(
+          'Admins can see your time worked on your page to answer questions and reviews.',
+        ),
+      ).toBeTruthy();
+      expect(
+        screen.getByText('No one ranks or compares riders by time worked.'),
+      ).toBeTruthy();
+    });
+
     it('pressing "Ask for a review" button navigates to RequestReview with empty params', () => {
       render(<HowItWorks {...defaultProps} />);
 

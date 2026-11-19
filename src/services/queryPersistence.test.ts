@@ -158,6 +158,27 @@ describe('queryPersistence (spec 0009, AC-1, AC-11)', () => {
         ),
       ).toBe(false);
     });
+
+    it('never keeps timeWorkedCurrent, timeWorked or coopTotals even with data (spec 0040, AC-10)', () => {
+      const sampleCurrent = { asOf: '2026-11-20T10:00:00.000Z', shift: null };
+      const sampleRange = { recordedFrom: '2026-11-19', days: [], shifts: [] };
+      const sampleCoop = {
+        thisWeek: { tooFewRiders: true },
+        lastWeek: { tooFewRiders: true },
+      };
+
+      const cases: [string, unknown][] = [
+        [QueryKeys.timeWorkedCurrent, sampleCurrent],
+        [QueryKeys.timeWorked, sampleRange],
+        [QueryKeys.coopTotals, sampleCoop],
+      ];
+
+      for (const [key, data] of cases) {
+        expect(shouldKeepQuery(makeQuery(key, data, 'success'))).toBe(false);
+        expect(shouldKeepQuery(makeQuery(key, data, 'error'))).toBe(false);
+        expect(shouldKeepQuery(makeQuery(key, data, 'pending'))).toBe(false);
+      }
+    });
   });
 
   describe('persistOptions and queryClient default gcTime', () => {

@@ -17,6 +17,9 @@ jest.mock('@app/hooks/useReviewRequests', () => ({
 jest.mock('@app/services/reviewSeen', () => ({
   useReviewSeen: jest.fn(() => []),
 }));
+jest.mock('@app/components/TimeWorkedSection/TimeWorkedSection', () => ({
+  TimeWorkedSection: () => null,
+}));
 
 describe('Earnings summary (row 112, decision 112.1)', () => {
   const mockNavigation: any = {
