@@ -9,7 +9,12 @@ import { Icon } from '@app/components/Icon/Icon';
 import { useCoopTotals, useTimeWorkedPages } from '@app/hooks/useTimeWorked';
 import { CoopWeek, WorkedDay, WorkedShift } from '@app/types/timeWorked';
 import { formatCurrencyFromCents } from '@app/utilities/currency';
-import { formatShare, formatWorkDuration } from '@app/utilities/timeWorked';
+import {
+  coopClock,
+  coopDate,
+  formatShare,
+  formatWorkDuration,
+} from '@app/utilities/timeWorked';
 import { styles } from './TimeWorkedSection.styles';
 
 // The words for each kind of extra pay, the same the Earnings day screen uses.
@@ -22,11 +27,13 @@ const REASON_KEYS: Record<string, string> = {
   REVIEW: 'earnings_review_correction',
 };
 
-const clock = (iso: string) => moment(iso).format('HH:mm');
+// Clock times and days are the co-op's (Europe/Athens), like the server's day rows and the admin's
+// screens, whatever zone the phone is set to (review 2026-11-20, decision 36.48).
+const clock = (iso: string) => coopClock(Date.parse(iso));
 
-// A shift belongs under the day it started on.
+// A shift belongs under the co-op day it started on.
 const dayOfShift = (shift: WorkedShift) =>
-  moment(shift.startedAt).format('YYYY-MM-DD');
+  coopDate(Date.parse(shift.startedAt));
 
 // Spec 0040, AC-12: the co-op's week. A small week shows only the sentence, never a figure.
 const CoopWeekLine = ({
@@ -123,7 +130,10 @@ const ShiftDetails = ({ shift }: { shift: WorkedShift }) => {
                     ? t(`translations:${REASON_KEYS[c.reason]}`)
                     : c.reason,
                   amount: money(c.amountCents),
-                  date: moment(c.createdAt).format('D MMM'),
+                  date: moment(
+                    coopDate(Date.parse(c.createdAt)),
+                    'YYYY-MM-DD',
+                  ).format('D MMM'),
                 },
               )}
             </Text>
@@ -276,7 +286,9 @@ export const TimeWorkedSection = () => {
   const loaded = pages.data?.pages ?? [];
   const first = loaded[0];
   const currencyCode = first?.currencyCode ?? 'EUR';
-  // A shift that crosses into the next page is listed on both; keep it once.
+  // A shift that crosses into the next page is listed on both; keep it once. A shift longer than a day
+  // is cut at the 24 hour look back with a different start, so it can still show twice: accepted, as
+  // it needs a shift over a day long (review 2026-11-20).
   const seen = new Set<string>();
   const shifts: WorkedShift[] = [];
   for (const page of loaded) {
@@ -329,7 +341,10 @@ export const TimeWorkedSection = () => {
         <Text style={styles.muted}>
           {first.recordedFrom
             ? t('translations:time_worked_recorded_from', {
-                date: moment(first.recordedFrom).format('D MMM YYYY'),
+                date: moment(
+                  coopDate(Date.parse(first.recordedFrom)),
+                  'YYYY-MM-DD',
+                ).format('D MMM YYYY'),
               })
             : t('translations:time_worked_recorded_from_today')}
         </Text>
@@ -337,9 +352,6 @@ export const TimeWorkedSection = () => {
       {first && days.length === 0 && orphans.length === 0 && (
         <Text style={styles.muted}>{t('translations:time_worked_none')}</Text>
       )}
-      {orphans.map(shift => (
-        <ShiftRow key={shift.startedAt} shift={shift} />
-      ))}
       {days.map(day => (
         <DayBlock
           key={day.date}
@@ -348,6 +360,12 @@ export const TimeWorkedSection = () => {
           currencyCode={currencyCode}
         />
       ))}
+      {/* Shifts that began before the first day shown are the oldest, so they go last, newest first. */}
+      {[...orphans]
+        .sort((a, b) => (a.startedAt < b.startedAt ? 1 : -1))
+        .map(shift => (
+          <ShiftRow key={shift.startedAt} shift={shift} />
+        ))}
       {pages.hasNextPage && (
         <TouchableOpacity
           accessibilityRole="button"

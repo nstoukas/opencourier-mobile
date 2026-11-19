@@ -297,7 +297,9 @@ export const Earnings = ({ navigation }: Props) => {
             data={dataSource}
             renderItem={renderItem}
             contentContainerStyle={styles.listContent}
-            ListFooterComponent={renderFooter}
+            // An element, not the function: FlatList treats a function as a component type, and a new
+            // function each render would throw the footer (and an opened shift) away (review 2026-11-20).
+            ListFooterComponent={renderFooter()}
             refreshControl={
               <RefreshControl refreshing={isRefetching} onRefresh={onRefresh} />
             }

@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { AppState } from 'react-native';
 import {
   useInfiniteQuery,
@@ -56,11 +56,17 @@ export const useCurrentTimeWorked = (inFront: boolean = true) => {
 
   // `getQueryCache().subscribe` calls back on every change to any query; only a successful fetch of a
   // trigger key starts a new read here. This query's own key is not a trigger, so it cannot loop.
+  // `setQueryData` also sends a 'success' update, marked `manual`, and every location fix writes the
+  // user that way, so manual updates are skipped: only a real fetch from the server counts (review
+  // 2026-11-20, major). Nothing is read while the app is in the background either: coming back to the
+  // foreground fetches anyway (the AppState listener above).
   useEffect(() => {
     const unsubscribe = queryClient.getQueryCache().subscribe(event => {
       if (
         event.type === 'updated' &&
         event.action.type === 'success' &&
+        !event.action.manual &&
+        AppState.currentState === 'active' &&
         TRIGGER_KEYS.has(String(event.query.queryKey[0]))
       ) {
         refetch();
@@ -68,6 +74,16 @@ export const useCurrentTimeWorked = (inFront: boolean = true) => {
     });
     return unsubscribe;
   }, [queryClient, refetch]);
+
+  // The 5 minute fetch pauses while another screen is in front, so read again when Home comes back,
+  // and an admin's Offline shows at once (review nit). Not on the first render: mounting fetches.
+  const wasInFront = useRef(inFront);
+  useEffect(() => {
+    if (inFront && !wasInFront.current) {
+      refetch();
+    }
+    wasInFront.current = inFront;
+  }, [inFront, refetch]);
 
   // The local tick: redraw while there is something to count and the home map is in front.
   const [now, setNow] = useState(Date.now());

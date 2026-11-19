@@ -95,6 +95,27 @@ export const coopDate = (ms: number): string => {
   return moment(ms).format('YYYY-MM-DD');
 };
 
+// A clock time, HH:mm, in the co-op's timezone, so a shift reads the same on a phone set to another
+// zone as on the admin's screen. Falls back to the phone's own clock like coopDate.
+export const coopClock = (ms: number): string => {
+  try {
+    const parts = new Intl.DateTimeFormat('en-GB', {
+      timeZone: COOP_TIMEZONE,
+      hour: '2-digit',
+      minute: '2-digit',
+      hourCycle: 'h23',
+    }).formatToParts(new Date(ms));
+    const part = (type: string) => parts.find(p => p.type === type)?.value;
+    const time = `${part('hour')}:${part('minute')}`;
+    if (/^\d{2}:\d{2}$/.test(time)) {
+      return time;
+    }
+  } catch {
+    // fall through
+  }
+  return moment(ms).format('HH:mm');
+};
+
 // A YYYY-MM-DD day moved by whole days, with no timezone involved.
 export const addDays = (date: string, days: number): string =>
   moment.utc(date, 'YYYY-MM-DD').add(days, 'day').format('YYYY-MM-DD');
