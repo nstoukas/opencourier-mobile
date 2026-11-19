@@ -10,11 +10,15 @@ import {
   useWithdrawReviewRequest,
 } from '@app/hooks/useReviewRequests';
 import { markReviewsSeen, useReviewSeen } from '@app/services/reviewSeen';
+import { clearReviewNotice } from '@app/services/reviewNotice';
 import { MainScreens } from '@app/navigation/main/types';
 import { ReviewRequest, SettingChangeLine } from '@app/types/types';
 
 jest.mock('@app/hooks/useReviewRequests');
 jest.mock('@app/services/reviewSeen');
+jest.mock('@app/services/reviewNotice', () => ({
+  clearReviewNotice: jest.fn(),
+}));
 
 // Mock useFocusEffect to capture the cleanup (blur) function
 let focusEffectCleanup: (() => void) | undefined;
@@ -164,6 +168,38 @@ describe('HowItWorks screen (spec 0038, AC-7, AC-8, AC-9, AC-11, AC-13)', () => 
         {},
       );
     });
+
+    it('shows "may be out of date" line when howItWorks has data but isError is true', () => {
+      (useHowItWorks as jest.Mock).mockReturnValue({
+        data: sampleHowItWorks,
+        isLoading: false,
+        isError: true,
+        isRefetching: false,
+        refetch: mockRefetchHow,
+      });
+
+      render(<HowItWorks {...defaultProps} />);
+
+      expect(
+        screen.getByText(i18n.t('translations:how_maybe_stale')),
+      ).toBeTruthy();
+    });
+
+    it('hides "may be out of date" line when isError is false', () => {
+      (useHowItWorks as jest.Mock).mockReturnValue({
+        data: sampleHowItWorks,
+        isLoading: false,
+        isError: false,
+        isRefetching: false,
+        refetch: mockRefetchHow,
+      });
+
+      render(<HowItWorks {...defaultProps} />);
+
+      expect(
+        screen.queryByText(i18n.t('translations:how_maybe_stale')),
+      ).toBeNull();
+    });
   });
 
   describe('Review requests list (AC-7, AC-8, AC-9)', () => {
@@ -295,6 +331,43 @@ describe('HowItWorks screen (spec 0038, AC-7, AC-8, AC-9, AC-11, AC-13)', () => 
       ).toBeNull();
     });
 
+    it('shows no correction line when an answered request has correctionCents undefined', () => {
+      const answeredWithoutCorrection: ReviewRequest = {
+        id: 'rev-no-corr',
+        topic: 'PAY',
+        note: 'Check pay amount',
+        status: 'ANSWERED',
+        createdAt: '2026-11-18T10:00:00Z',
+        dueAt: '2026-12-02T10:00:00Z',
+        overdue: false,
+        outcome: 'STANDS',
+        answer: 'Decision stands, pay was calculated accurately.',
+        answeredAt: '2026-11-19T09:00:00Z',
+        withdrawnAt: null,
+        correctionCents: undefined as any,
+        correctionCurrency: null,
+        delivery: null,
+      };
+
+      (useReviewRequests as jest.Mock).mockReturnValue({
+        data: { pages: [{ data: [answeredWithoutCorrection] }] },
+        hasNextPage: false,
+        refetch: mockRefetchRequests,
+      });
+
+      render(<HowItWorks {...defaultProps} />);
+
+      expect(
+        screen.getByText(i18n.t('translations:review_outcome_stands')),
+      ).toBeTruthy();
+      expect(
+        screen.getByText('Decision stands, pay was calculated accurately.'),
+      ).toBeTruthy();
+      expect(
+        screen.queryByText(new RegExp('added to your pay', 'i')),
+      ).toBeNull();
+    });
+
     it('renders WITHDRAWN request with Withdrawn status label', () => {
       const withdrawnRequest: ReviewRequest = {
         id: 'rev-withdrawn',
@@ -324,6 +397,12 @@ describe('HowItWorks screen (spec 0038, AC-7, AC-8, AC-9, AC-11, AC-13)', () => 
       expect(
         screen.getByText(i18n.t('translations:review_withdrawn')),
       ).toBeTruthy();
+    });
+
+    it('clears answer notice when the screen is focused (opened)', () => {
+      render(<HowItWorks {...defaultProps} />);
+
+      expect(clearReviewNotice).toHaveBeenCalledTimes(1);
     });
 
     it('shows "New answer" mark when answered request is not in seen, and marks seen on blur (leaving page)', () => {

@@ -1,8 +1,10 @@
 import React from 'react';
-import { ActivityIndicator } from 'react-native';
+import { ActivityIndicator, Alert } from 'react-native';
 import { render, screen, fireEvent, act } from '@testing-library/react-native';
+import moment from 'moment';
 import '@app/localization/i18n';
 import i18n from '@app/localization/i18n';
+import { formatShift, formatSpaced } from '@app/utilities/dates';
 import { RequestReview, REVIEW_NOTE_MAX_LENGTH } from './RequestReview';
 import { useSendReviewRequest } from '@app/hooks/useReviewRequests';
 
@@ -113,12 +115,75 @@ describe('RequestReview screen (spec 0038, AC-1, AC-2)', () => {
         },
         expect.objectContaining({ onSuccess: expect.any(Function) }),
       );
+    });
 
-      // Trigger onSuccess callback to test goBack
-      const { onSuccess } = mockMutate.mock.calls[0][1];
+    it('on success with dueAt: shows alert titled "Sent" with formatted due date line and navigates back', () => {
+      render(<RequestReview {...props} />);
+
       act(() => {
-        onSuccess();
+        fireEvent.press(screen.getByTestId('review-topic-OFFER'));
+        fireEvent.changeText(
+          screen.getByTestId('review-note'),
+          'Why did I receive no offers?',
+        );
       });
+
+      const sendButtonText = screen.getByText(
+        i18n.t('translations:review_send'),
+      );
+      act(() => {
+        fireEvent.press(sendButtonText);
+      });
+
+      const alertSpy = jest.spyOn(Alert, 'alert');
+      const { onSuccess } = mockMutate.mock.calls[0][1];
+
+      const dueAtString = '2026-11-26T12:00:00.000Z';
+      const due = moment(dueAtString);
+      const expectedWhen = `${due.format(formatSpaced)}, ${due.format(
+        formatShift,
+      )}`;
+
+      act(() => {
+        onSuccess({ dueAt: dueAtString });
+      });
+
+      expect(alertSpy).toHaveBeenCalledWith(
+        i18n.t('translations:review_sent_title'),
+        i18n.t('translations:review_due', { when: expectedWhen }),
+      );
+      expect(mockNavigation.goBack).toHaveBeenCalledTimes(1);
+    });
+
+    it('on success with no dueAt in answer: shows alert titled "Sent" with undefined message and navigates back', () => {
+      render(<RequestReview {...props} />);
+
+      act(() => {
+        fireEvent.press(screen.getByTestId('review-topic-OTHER'));
+        fireEvent.changeText(
+          screen.getByTestId('review-note'),
+          'General feedback note',
+        );
+      });
+
+      const sendButtonText = screen.getByText(
+        i18n.t('translations:review_send'),
+      );
+      act(() => {
+        fireEvent.press(sendButtonText);
+      });
+
+      const alertSpy = jest.spyOn(Alert, 'alert');
+      const { onSuccess } = mockMutate.mock.calls[0][1];
+
+      act(() => {
+        onSuccess({});
+      });
+
+      expect(alertSpy).toHaveBeenCalledWith(
+        i18n.t('translations:review_sent_title'),
+        undefined,
+      );
       expect(mockNavigation.goBack).toHaveBeenCalledTimes(1);
     });
   });

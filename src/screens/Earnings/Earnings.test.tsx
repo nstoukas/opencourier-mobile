@@ -1,9 +1,11 @@
 import React from 'react';
-import { render, screen, fireEvent } from '@testing-library/react-native';
+import { render, screen, fireEvent, act } from '@testing-library/react-native';
 import { Earnings } from './Earnings';
 import { useEarnings } from '@app/hooks/useEarnings';
 import { useReviewRequests } from '@app/hooks/useReviewRequests';
 import { useReviewSeen } from '@app/services/reviewSeen';
+import { queryClient } from '@app/services/queryClient';
+import { QueryKeys } from '@app/utilities/queryKeys';
 import { MainScreens } from '@app/navigation/main/types';
 import { EarningsSummaryDay } from '@app/types/types';
 import i18n from '@app/localization/i18n';
@@ -456,6 +458,59 @@ describe('Earnings summary (row 112, decision 112.1)', () => {
       expect(
         screen.queryByText(i18n.t('translations:review_new_answer')),
       ).toBeNull();
+    });
+  });
+
+  describe('Review requests refreshed on focus (spec 0038, AC-9, row 30 review)', () => {
+    it('invalidates reviewRequests when the screen gets focus', () => {
+      let focusCallback: (() => void) | undefined;
+      const unsubscribe = jest.fn();
+      const nav: any = {
+        toggleDrawer: jest.fn(),
+        navigate: jest.fn(),
+        addListener: jest.fn((event: string, cb: () => void) => {
+          if (event === 'focus') {
+            focusCallback = cb;
+          }
+          return unsubscribe;
+        }),
+      };
+
+      (useEarnings as jest.Mock).mockReturnValue({
+        days: [],
+        totalEarnings: 0,
+        totalCompensation: 0,
+        totalTips: 0,
+        deliveryCount: 0,
+        currency: 'EUR',
+        isLoading: false,
+        isError: false,
+        isRefetching: false,
+        refetch: jest.fn(),
+      });
+
+      const invalidateSpy = jest.spyOn(queryClient, 'invalidateQueries');
+
+      const { unmount } = render(
+        <Earnings {...defaultProps} navigation={nav} />,
+      );
+
+      expect(nav.addListener).toHaveBeenCalledWith(
+        'focus',
+        expect.any(Function),
+      );
+      expect(focusCallback).toBeDefined();
+
+      act(() => {
+        focusCallback!();
+      });
+
+      expect(invalidateSpy).toHaveBeenCalledWith({
+        queryKey: [QueryKeys.reviewRequests],
+      });
+
+      unmount();
+      expect(unsubscribe).toHaveBeenCalled();
     });
   });
 });

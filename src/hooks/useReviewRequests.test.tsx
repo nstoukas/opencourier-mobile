@@ -172,7 +172,7 @@ describe('useReviewRequests hooks (spec 0038, AC-1, AC-2, AC-8, AC-11, AC-13)', 
       });
     });
 
-    it('shows Alert with server refusal message on 409 (e.g. naming open request)', async () => {
+    it('shows Alert with app sentence (review_send_already_open) on 409 instead of server id', async () => {
       const axios409Error = new axios.AxiosError(
         'Request failed with status code 409',
         '409',
@@ -209,7 +209,48 @@ describe('useReviewRequests hooks (spec 0038, AC-1, AC-2, AC-8, AC-11, AC-13)', 
       await waitFor(() => {
         expect(alertSpy).toHaveBeenCalledWith(
           i18n.t('translations:review_send_failed_title'),
-          'A review request is already open for this delivery (rev-open-1)',
+          i18n.t('translations:review_send_already_open'),
+        );
+      });
+    });
+
+    it('shows Alert with server sentence on any other refusal (e.g. 404)', async () => {
+      const axios404Error = new axios.AxiosError(
+        'Request failed with status code 404',
+        '404',
+        undefined,
+        undefined,
+        {
+          status: 404,
+          data: {
+            result: [
+              {
+                message: 'Delivery del-999 not found or never offered to you',
+              },
+            ],
+          },
+        } as any,
+      );
+
+      jest
+        .spyOn(services.reviewService, 'sendReviewRequest')
+        .mockRejectedValueOnce(axios404Error);
+
+      const wrapper = createWrapper();
+      const { result } = renderHook(() => useSendReviewRequest(), { wrapper });
+
+      await act(async () => {
+        result.current.mutate({
+          topic: 'PAY',
+          note: 'Note for unknown delivery',
+          deliveryId: 'del-999',
+        });
+      });
+
+      await waitFor(() => {
+        expect(alertSpy).toHaveBeenCalledWith(
+          i18n.t('translations:review_send_failed_title'),
+          'Delivery del-999 not found or never offered to you',
         );
       });
     });

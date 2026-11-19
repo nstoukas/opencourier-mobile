@@ -4,6 +4,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import Geolocation from 'react-native-geolocation-service';
 import { User, UserStatus } from '@app/types/types';
 import { TrackingMode } from '@app/utilities/locationTracking';
+import { QueryKeys } from '@app/utilities/queryKeys';
 import * as sosStore from '@app/services/sosStore';
 import { useLocationTracking } from './useLocationTracking';
 
@@ -33,8 +34,10 @@ jest.mock('@app/services/onlineService', () => ({
 
 describe('useLocationTracking 409 refusal handling (spec 0038, AC-14)', () => {
   let queryClient: QueryClient;
+  let invalidateSpy: jest.SpyInstance;
   let watchCallback: ((pos: any) => void) | undefined;
   let watchIdCounter = 500;
+  let currentTime = 1_000_000;
 
   const createWrapper = () => {
     queryClient = new QueryClient({
@@ -42,6 +45,7 @@ describe('useLocationTracking 409 refusal handling (spec 0038, AC-14)', () => {
         queries: { retry: false, gcTime: Infinity },
       },
     });
+    invalidateSpy = jest.spyOn(queryClient, 'invalidateQueries');
     return ({ children }: { children: React.ReactNode }) => (
       <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
     );
@@ -54,7 +58,10 @@ describe('useLocationTracking 409 refusal handling (spec 0038, AC-14)', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
+    mockSetUserLocation.mockResolvedValue(undefined);
     watchCallback = undefined;
+    currentTime = 1_000_000;
+    jest.spyOn(Date, 'now').mockImplementation(() => currentTime);
     mockGetInProgressOrders.mockResolvedValue([]);
 
     (Geolocation.watchPosition as jest.Mock).mockImplementation(
@@ -67,6 +74,7 @@ describe('useLocationTracking 409 refusal handling (spec 0038, AC-14)', () => {
   });
 
   afterEach(() => {
+    jest.restoreAllMocks();
     queryClient?.clear();
   });
 
@@ -79,8 +87,7 @@ describe('useLocationTracking 409 refusal handling (spec 0038, AC-14)', () => {
     });
   };
 
-  it('outside SOS: when location route answers 409, clears watch and stops sending fixes', async () => {
-    // Server refuses position with 409
+  it('outside SOS: when location route answers 409, clears watch, invalidates user query, and stops sending fixes', async () => {
     mockSetUserLocation.mockRejectedValueOnce({
       response: {
         status: 409,
@@ -110,13 +117,17 @@ describe('useLocationTracking 409 refusal handling (spec 0038, AC-14)', () => {
 
     // Outside SOS: watch is cleared
     expect(Geolocation.clearWatch).toHaveBeenCalledWith(activeWatchId);
+    // User query is invalidated so phone stops showing Online
+    expect(invalidateSpy).toHaveBeenCalledWith({
+      queryKey: [QueryKeys.user],
+    });
 
     // Second fix arrives: must NOT be sent
     fireFix(39.365, 22.945);
     expect(mockSetUserLocation).toHaveBeenCalledTimes(1);
   });
 
-  it('inside SOS: when location route answers 409, keeps watch alive for SOS points but stops ordinary setUserLocation', async () => {
+  it('inside SOS: when location route answers 409, keeps watch alive for SOS points, invalidates user query, but stops ordinary setUserLocation even past throttle', async () => {
     mockSetUserLocation.mockRejectedValueOnce({
       response: {
         status: 409,
@@ -144,13 +155,57 @@ describe('useLocationTracking 409 refusal handling (spec 0038, AC-14)', () => {
 
     // In SOS mode: clearWatch is NOT called so watch stays alive
     expect(Geolocation.clearWatch).not.toHaveBeenCalled();
+    // User query is invalidated
+    expect(invalidateSpy).toHaveBeenCalledWith({
+      queryKey: [QueryKeys.user],
+    });
 
-    // Advance time slightly and fire second fix
+    // Advance clock past the 30s Waiting throttle (fastestInterval: 30000)
+    // and move position by > 100m (distanceFilter: 100)
+    currentTime += 35_000;
     fireFix(39.37, 22.95);
 
     // SOS point is still collected!
     expect(sosStore.addSosPoint).toHaveBeenCalledTimes(2);
-    // But ordinary setUserLocation was NOT called again (refusedByServer is true)
+    // But ordinary setUserLocation was NOT called again (refusedByServer guard prevented it)
     expect(mockSetUserLocation).toHaveBeenCalledTimes(1);
+  });
+
+  it('non-409 failure: keeps the watch sending on subsequent fixes and does not invalidate user query', async () => {
+    // Non-409 failure (e.g. 500 server error or network issue)
+    mockSetUserLocation.mockRejectedValueOnce({
+      response: {
+        status: 500,
+        data: { message: 'Internal server error' },
+      },
+    });
+
+    const { result } = renderHook(
+      () => useLocationTracking(onlineUser, true, false),
+      { wrapper: createWrapper() },
+    );
+
+    expect(result.current).toBe(TrackingMode.Waiting);
+    expect(Geolocation.watchPosition).toHaveBeenCalledTimes(1);
+
+    // First fix fires and fails with 500
+    fireFix(39.362, 22.942);
+    expect(mockSetUserLocation).toHaveBeenCalledTimes(1);
+
+    await act(async () => {
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    // Watch is NOT cleared
+    expect(Geolocation.clearWatch).not.toHaveBeenCalled();
+    // User query is NOT invalidated
+    expect(invalidateSpy).not.toHaveBeenCalledWith({
+      queryKey: [QueryKeys.user],
+    });
+
+    // Second fix arrives: since watch is still active and error was not 409, it sends again
+    fireFix(39.365, 22.945);
+    expect(mockSetUserLocation).toHaveBeenCalledTimes(2);
   });
 });
