@@ -798,7 +798,7 @@ export default {
   time_worked_earlier: 'Earlier',
   time_worked_day_total: '{{time}} worked · {{amount}}',
   time_worked_split: 'Jobs {{job}} · Paid waiting {{wait}} · Unpaid {{unpaid}}',
-  time_worked_not_in_shift: '{{amount}} paid for work before recording began',
+  time_worked_not_in_shift: '{{amount}} paid for work outside a recorded shift',
   time_worked_shift: '{{start}} to {{end}}',
   time_worked_shift_open: 'From {{start}}, still open',
   time_worked_started_before: 'Started before these days',
