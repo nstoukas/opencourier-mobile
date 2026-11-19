@@ -1,6 +1,6 @@
 import { Colors } from '@app/styles/colors';
 import { StyleSheet } from 'react-native';
-import { radius, typeScale } from '@app/styles/theme';
+import { color, radius, typeScale } from '@app/styles/theme';
 
 export const styles = StyleSheet.create({
   container: {
@@ -20,6 +20,34 @@ export const styles = StyleSheet.create({
     fontWeight: '700',
     color: Colors.black1,
     marginLeft: 16,
+  },
+  // Spec 0038: the link to "How offers and pay work".
+  howLink: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    borderRadius: radius['2xl'],
+    backgroundColor: Colors.white,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    marginBottom: 12,
+    minHeight: 48,
+  },
+  howLinkText: {
+    fontSize: typeScale.body.fontSize,
+    fontWeight: '600',
+    color: Colors.black1,
+    textDecorationLine: 'underline',
+  },
+  howLinkNew: {
+    fontSize: typeScale.caption.fontSize,
+    fontWeight: '700',
+    color: Colors.white,
+    backgroundColor: color.success,
+    borderRadius: radius.full,
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    overflow: 'hidden',
   },
   containerEarnings: {
     borderRadius: radius['2xl'],

@@ -18,6 +18,7 @@ import { useTranslation } from 'react-i18next';
 import { useEarningsDelivery } from '@app/hooks/useEarningsDelivery';
 import { formatCurrencyFromCents } from '@app/utilities/currency';
 import { formatShift, formatSpaced } from '@app/utilities/dates';
+import { Button, ButtonType } from '@app/components/Button/Button';
 
 type Props = MainScreenProp<MainScreens.EarningsDelivery>;
 
@@ -83,6 +84,8 @@ export const EarningsDelivery = ({ navigation, route }: Props) => {
     const isReturnTrip = delivery.kind === 'RETURN_TRIP';
     const isCancelled = delivery.kind === 'CANCELLATION_COMPENSATION';
     const isReassigned = delivery.kind === 'REASSIGNMENT_COMPENSATION';
+    // Spec 0038: a pay correction from a review, on a delivery that paid nothing else to this rider.
+    const isReviewCorrection = delivery.kind === 'REVIEW_CORRECTION';
     // Row 112: every pay that is not a drop off carries a `kind` (a wait, a removal, a return trip, a
     // cancelled or reassigned job), so none of them may say "Delivered".
     const notDelivered = Boolean(delivery.kind);
@@ -111,6 +114,8 @@ export const EarningsDelivery = ({ navigation, route }: Props) => {
                 ? 'translations:earnings_cancelled_job'
                 : isReassigned
                 ? 'translations:earnings_reassigned_job'
+                : isReviewCorrection
+                ? 'translations:earnings_review_correction'
                 : 'translations:piece_rate_pay',
             )}
             value={formatCurrencyFromCents(delivery.compensation, currency)}
@@ -143,6 +148,14 @@ export const EarningsDelivery = ({ navigation, route }: Props) => {
             <DetailRow
               label={t('translations:earnings_removal')}
               value={formatCurrencyFromCents(delivery.removalPay, currency)}
+              strong
+            />
+          ) : null}
+          {/* Spec 0038 (AC-7): a review's pay correction is its own line too. */}
+          {delivery.reviewPay ? (
+            <DetailRow
+              label={t('translations:earnings_review_correction')}
+              value={formatCurrencyFromCents(delivery.reviewPay, currency)}
               strong
             />
           ) : null}
@@ -180,6 +193,27 @@ export const EarningsDelivery = ({ navigation, route }: Props) => {
             <Text style={styles.idValue} selectable>
               {delivery.deliveryId}
             </Text>
+          </View>
+        </View>
+
+        {/* Spec 0038 (AC-1): ask a person to look again at this delivery's offer or pay. */}
+        <View style={styles.card}>
+          <Text style={styles.rowLabel}>
+            {t('translations:review_from_delivery_hint')}
+          </Text>
+          <View style={styles.reviewButton}>
+            <Button
+              type={ButtonType.gray}
+              title={t('translations:review_ask')}
+              onPress={() =>
+                navigation.navigate(MainScreens.RequestReview, {
+                  deliveryId: delivery.deliveryId,
+                  deliveryLabel: `${
+                    delivery.pickupBusinessName
+                  }, ${droppedOff.format(formatSpaced)}`,
+                })
+              }
+            />
           </View>
         </View>
       </>

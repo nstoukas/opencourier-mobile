@@ -121,7 +121,9 @@ export type EarningsDelivery = {
     | 'CANCELLATION_COMPENSATION'
     | 'WAITING'
     | 'REMOVAL_COMPENSATION'
-    | 'RETURN_TRIP';
+    | 'RETURN_TRIP'
+    // Spec 0038: pay a person added when answering the rider's review request.
+    | 'REVIEW_CORRECTION';
   // Spec 0033, on the detail of a delivered order: what its wait paid, inside `total`.
   waitingPay?: number;
   // Spec 0035, on the detail of a job cancelled after pickup: the return trip's pay, inside `total`.
@@ -129,6 +131,8 @@ export type EarningsDelivery = {
   // Spec 0035, decision 24.43: what a removal from this order paid, inside `total`. The `?` means the
   // backend leaves the key out when there is none.
   removalPay?: number;
+  // Spec 0038: what review corrections added to this order, inside `total`.
+  reviewPay?: number;
 };
 
 /**
@@ -648,3 +652,57 @@ export type Item = {
 //   orderDeliveryInProgress,
 //   deliveryDone,
 // }
+
+// Spec 0038: a rider asks a person to review a decision the app took about their work.
+export type ReviewTopic = 'OFFER' | 'PAY' | 'OTHER';
+export type ReviewRequestStatus = 'OPEN' | 'ANSWERED' | 'WITHDRAWN';
+
+export type ReviewRequest = {
+  id: string;
+  topic: ReviewTopic;
+  // The rider's own words.
+  note: string;
+  status: ReviewRequestStatus;
+  createdAt: string;
+  // When a person must have answered by. Fixed when the request was sent.
+  dueAt: string;
+  // Open and past dueAt, decided by the server.
+  overdue: boolean;
+  outcome: 'STANDS' | 'CHANGED' | null;
+  answer: string | null;
+  answeredAt: string | null;
+  withdrawnAt: string | null;
+  // The pay correction the answer added, in cents, or null.
+  correctionCents: number | null;
+  // The correction's currency (the delivery's), or null with no correction.
+  correctionCurrency: string | null;
+  // The delivery it is about; null for a general request.
+  delivery: { id: string; pickupName: string; createdAt: string } | null;
+};
+
+/** One page of a list the backend pages. `nextPage` is null on the last page. */
+export type PagedList<T> = {
+  data: T[];
+  pagination?: {
+    currentPage: number;
+    nextPage: number | null;
+    totalItems: number;
+  };
+};
+
+/** Spec 0038: the "How offers and pay work" page, as sentences built from the settings in effect. */
+export type HowItWorks = {
+  offers: string[];
+  pay: string[];
+  personDecides: string[];
+  appRecords: string[];
+  reviewAnswerDays: number;
+};
+
+/** Spec 0038: one line of "What changed". Never names a person. */
+export type SettingChangeLine = {
+  at: string;
+  label: string;
+  oldText: string;
+  newText: string;
+};

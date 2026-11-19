@@ -733,4 +733,60 @@ export default {
   // Spec 0035, AC-17: the two new lines in the rider's earnings.
   earnings_removal: 'Removal from an order',
   earnings_return_trip: 'Return trip',
+  // Spec 0038: review requests, the "How offers and pay work" page and what changed.
+  earnings_review_correction: 'Review correction',
+  how_title: 'How offers and pay work',
+  how_offers: 'How an offer reaches you',
+  how_pay: 'How your pay is worked out',
+  how_person_decides: 'What a person decides, never the app',
+  how_app_records: 'What the app records about you',
+  how_ask_review: 'Ask for a review',
+  how_ask_review_body:
+    'If you think a decision about your work was wrong, ask a person to look at it again. A representative answers in writing within {{days}} days.',
+  how_ask_review_body_plain:
+    'If you think a decision about your work was wrong, ask a person to look at it again. A representative answers in writing.',
+  how_failed: 'This could not be loaded. Pull down to try again.',
+  how_what_changed: 'What changed',
+  how_no_changes: 'No rule has changed since this list began.',
+  how_changes_failed:
+    'The changes could not be loaded. Pull down to try again.',
+  how_change_line: 'From {{from}} to {{to}}',
+  how_change_by: 'Changed by a representative, {{when}}',
+  show_older: 'Show older',
+  review_ask: 'Ask for a review',
+  review_title: 'Ask for a review',
+  review_intro_delivery:
+    'About {{delivery}}. Pick what you want looked at again and say why. A person answers in writing.',
+  review_intro_general:
+    'Pick what you want looked at again and say why. A person answers in writing.',
+  review_topic_offer: 'An offer',
+  review_topic_pay: 'Pay',
+  review_topic_other: 'Something else',
+  review_note_placeholder: 'What happened, and what you think is wrong',
+  review_send: 'Send',
+  review_send_failed_title: 'Not sent',
+  review_send_no_connection: 'No connection. Try again when you have signal.',
+  review_send_failed: 'It could not be sent. Try again in a moment.',
+  review_from_delivery_hint:
+    'Think the offer or the pay for this delivery was wrong? A person will look at it again.',
+  review_list_failed:
+    'Your requests could not be loaded. Pull down to try again.',
+  review_general: 'general',
+  review_new_answer: 'New answer',
+  review_sent_on: 'Sent {{when}}',
+  review_due: 'A representative answers by {{when}}',
+  review_overdue: 'Overdue. A representative has not answered yet.',
+  review_outcome_stands: 'The decision stands',
+  review_outcome_changed: 'Changed and put right',
+  review_correction: '{{amount}} added to your pay',
+  review_answered_on: 'Answered {{when}}',
+  review_withdrawn: 'You withdrew this request.',
+  review_withdraw: 'Withdraw',
+  review_withdraw_title: 'Withdraw this request?',
+  review_withdraw_body:
+    'Nobody will look at it. You can always send a new one.',
+  review_withdraw_keep: 'Keep it',
+  review_withdraw_confirm: 'Withdraw',
+  review_withdraw_failed_title: 'Not withdrawn',
+  review_notice_title: 'Your review request has an answer',
 };

@@ -80,6 +80,12 @@ export const EarningsDay = ({ navigation, route }: Props) => {
             {t('translations:earnings_return_trip')}
           </Text>
         )}
+        {/* Spec 0038 (AC-7): pay a person added when answering a review request. */}
+        {item.kind === 'REVIEW_CORRECTION' && (
+          <Text style={styles.cellAddress}>
+            {t('translations:earnings_review_correction')}
+          </Text>
+        )}
         {/* The address can legitimately be null when the location was never geocoded. */}
         {item.dropoffAddress && (
           <Text style={styles.cellAddress} numberOfLines={1}>

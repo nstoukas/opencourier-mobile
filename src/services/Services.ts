@@ -7,6 +7,9 @@ import earningsService, { EarningsService } from './earningsService';
 import routeService, { RouteService } from './routeService';
 import sosService, { SosService } from './sosService';
 import chatService, { ChatService } from './chat/chatService';
+import reviewService, { ReviewService } from './reviewService';
+import { clearReviewSeen } from './reviewSeen';
+import { clearReviewNotice } from './reviewNotice';
 import { clearChatSeen } from './chat/chatSeen';
 import { clearChatNotice } from './chat/chatNotice';
 import { clearChatOutgoing } from './chat/chatOutgoing';
@@ -29,6 +32,8 @@ export type Services = {
   sosService: SosService;
   // The rider's chat with dispatch (spec 0034).
   chatService: ChatService;
+  // Review requests and the explanation page (spec 0038).
+  reviewService: ReviewService;
   notificationDeviceService: NotificationDeviceService;
   logout: () => void;
 };
@@ -43,6 +48,7 @@ const Services = (): Services => {
   const rService = routeService(client);
   const sService = sosService(client);
   const chService = chatService(client);
+  const rvService = reviewService(client);
 
   const logout = () => {
     client.defaults.headers.common.Authorization = undefined;
@@ -60,6 +66,11 @@ const Services = (): Services => {
     clearChatNotice();
     // Nor the lines they wrote that were never sent.
     clearChatOutgoing();
+    // Nor which review answers the last rider had opened, nor their notice (spec 0038).
+    clearReviewSeen().catch(error =>
+      console.log('Could not clear the review seen marks', error),
+    );
+    clearReviewNotice();
     clearHeldArrivals().catch(error =>
       console.log('Could not clear held arrivals', error),
     );
@@ -74,6 +85,7 @@ const Services = (): Services => {
     routeService: rService,
     sosService: sService,
     chatService: chService,
+    reviewService: rvService,
     notificationDeviceService: dService,
     logout,
   };

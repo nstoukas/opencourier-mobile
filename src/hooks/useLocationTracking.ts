@@ -24,6 +24,11 @@ import {
   TrackingOnMode,
 } from '@app/services/onlineService';
 
+// The 409 the server answers to a position from a rider it has as Offline with no job (spec 0038).
+const isOfflineRefusal = (error: unknown): boolean =>
+  (error as { response?: { status?: number } } | undefined)?.response
+    ?.status === 409;
+
 // The app's one location watch (row 67). It runs only while the rider is
 // Online or carrying a job, and stops the moment neither is true. Each fix is
 // sent to the server and written into the cached user, so the screens show it;
@@ -74,6 +79,10 @@ export const useLocationTracking = (
     let active = true;
     // The last fix sent as the ordinary location during this watch.
     let lastForwarded: ForwardedFix | undefined;
+    // Spec 0038 (AC-14): the server answered 409, "You are Offline, so no position is stored". It
+    // should never happen (the app stops tracking when it goes Offline), but if the two disagree the
+    // app must not send fix after fix in a loop: this watch sends no more ordinary positions.
+    let refusedByServer = false;
     const watchId = track((point, info) => {
       if (!active) {
         return;
@@ -113,10 +122,25 @@ export const useLocationTracking = (
         }
         lastForwarded = { latitude, longitude, at: now };
       }
+      if (refusedByServer) {
+        return;
+      }
       services.userService
         .setUserLocation({ latitude, longitude })
-        // A lost fix is fine: the next one follows shortly.
-        .catch(error => console.log('Could not send location', error));
+        .catch(error => {
+          if (isOfflineRefusal(error)) {
+            refusedByServer = true;
+            // Outside an SOS nothing else needs this watch, so it stops quietly; during an SOS it
+            // keeps running for the SOS points, which go to their own route (spec 0022).
+            if (mode !== TrackingMode.Sos) {
+              active = false;
+              Geolocation.clearWatch(watchId);
+            }
+            return;
+          }
+          // A lost fix is fine: the next one follows shortly.
+          console.log('Could not send location', error);
+        });
       // The distance and the map read the rider's position from the cached
       // user. `setQueryData` writes the new position into that cache directly:
       // the screens update and nothing is fetched again.

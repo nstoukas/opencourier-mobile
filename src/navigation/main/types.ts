@@ -26,6 +26,9 @@ export enum MainScreens {
   Chat = 'Chat',
   EarningsDay = 'EarningsDay',
   EarningsDelivery = 'EarningsDelivery',
+  // How offers and pay work, the rider's review requests and what changed (spec 0038).
+  HowItWorks = 'HowItWorks',
+  RequestReview = 'RequestReview',
 }
 
 export type MainStackParamList = {
@@ -64,6 +67,15 @@ export type MainStackParamList = {
   EarningsDelivery: {
     deliveryId: string;
   };
+  HowItWorks: undefined;
+  // From a delivery's pay breakdown: its id and a short label ("R101 Kitchen, 3 Nov 2026"). From the
+  // explanation page: neither, for a general request.
+  RequestReview:
+    | {
+        deliveryId?: string;
+        deliveryLabel?: string;
+      }
+    | undefined;
 };
 
 /**

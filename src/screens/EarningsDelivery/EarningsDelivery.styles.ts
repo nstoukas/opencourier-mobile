@@ -52,6 +52,9 @@ export const styles = StyleSheet.create({
     alignItems: 'flex-start',
     paddingVertical: 10,
   },
+  reviewButton: {
+    marginTop: 10,
+  },
   rowSeparator: {
     height: 1,
     backgroundColor: Colors.gray1,

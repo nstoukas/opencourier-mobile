@@ -28,4 +28,9 @@ export const QueryKeys = {
   // The rider's chat with dispatch and the co-op's presets (spec 0034); never saved to disk.
   chatMessages: 'chatMessages',
   chatQuickReplies: 'chatQuickReplies',
+  // Spec 0038: the explanation page, the rider's review requests and what changed. Never saved to
+  // disk: the page must show the settings in effect when it opens.
+  howItWorks: 'howItWorks',
+  reviewRequests: 'reviewRequests',
+  settingChanges: 'settingChanges',
 };

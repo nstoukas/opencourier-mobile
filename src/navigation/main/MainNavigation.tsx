@@ -18,6 +18,8 @@ import { ReportIssue } from '@app/screens/ReportIssue/ReportIssue';
 import { ReportProduct } from '@app/screens/ReportProduct/ReportProduct';
 import { RequestRemoval } from '@app/screens/RequestRemoval/RequestRemoval';
 import { Chat } from '@app/screens/Chat/Chat';
+import { HowItWorks } from '@app/screens/HowItWorks/HowItWorks';
+import { RequestReview } from '@app/screens/RequestReview/RequestReview';
 
 // The <MainStackParamList> type argument tells the navigator which routes exist and what
 // params each takes, so every screen's Props is checked against its own route.
@@ -111,6 +113,16 @@ export const MainStack = () => {
       <MainStackNavigator.Screen
         name={MainScreens.Chat}
         component={Chat}
+        options={DEFAULT_OPTIONS}
+      />
+      <MainStackNavigator.Screen
+        name={MainScreens.HowItWorks}
+        component={HowItWorks}
+        options={DEFAULT_OPTIONS}
+      />
+      <MainStackNavigator.Screen
+        name={MainScreens.RequestReview}
+        component={RequestReview}
         options={DEFAULT_OPTIONS}
       />
     </MainStackNavigator.Navigator>

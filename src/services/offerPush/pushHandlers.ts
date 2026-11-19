@@ -37,6 +37,11 @@ import {
   noticeChatMessage,
   openChatFromNotice,
 } from '@app/services/chat/chatNotice';
+import {
+  REVIEW_ANSWERED_TYPE,
+  openReviewsFromNotice,
+  receiveReviewAnswer,
+} from '@app/services/reviewNotice';
 
 // Where the message was caught: `onMessage` (the app open in front) or
 // `setBackgroundMessageHandler` (closed, in the background, or locked).
@@ -90,6 +95,16 @@ export const onRemoteMessage = async (
         console.log('Could not show the chat notice', error),
       );
       queryClient.invalidateQueries({ queryKey: [QueryKeys.chatMessages] });
+    }
+    return;
+  }
+  // Spec 0038 (AC-9): a person answered a review request. Only the request id travels; the phone draws
+  // a fixed line on chat's quiet channel and the page reads the answer from the server.
+  if (message.data?.type === REVIEW_ANSWERED_TYPE) {
+    if (await AsyncStorage.getItem('token')) {
+      await receiveReviewAnswer().catch(error =>
+        console.log('Could not show the review notice', error),
+      );
     }
     return;
   }
@@ -156,6 +171,14 @@ export const onNotificationEvent = async ({
     detail.notification?.data?.type === 'CHAT_MESSAGE'
   ) {
     openChatFromNotice();
+    return;
+  }
+  // A tap on the review answer notice opens the page with the rider's requests (spec 0038).
+  if (
+    type === EventType.PRESS &&
+    detail.notification?.data?.type === REVIEW_ANSWERED_TYPE
+  ) {
+    openReviewsFromNotice();
     return;
   }
   if (type !== EventType.ACTION_PRESS) {

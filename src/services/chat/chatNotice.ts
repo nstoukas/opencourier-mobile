@@ -16,7 +16,8 @@ import { RootScreen } from '@app/navigation/types';
 export const MESSAGES_CHANNEL_ID = 'messages';
 export const CHAT_NOTIFICATION_ID = 'chat-message';
 
-const ensureChannel = async () => {
+// Exported for the review answer notice (spec 0038), which uses the same quiet channel.
+export const ensureChannel = async () => {
   if (Platform.OS !== 'android') {
     return;
   }

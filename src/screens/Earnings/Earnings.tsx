@@ -6,6 +6,7 @@ import {
   Image,
   RefreshControl,
   ActivityIndicator,
+  TouchableOpacity,
 } from 'react-native';
 import { ScreenSafeArea } from '@app/components/ScreenSafeArea/ScreenSafeArea';
 import { styles } from './Earnings.styles';
@@ -32,6 +33,8 @@ import { formatCurrencyFromCents } from '@app/utilities/currency';
 import { MainScreens } from '@app/navigation/main/types';
 import { useTranslation } from 'react-i18next';
 import { useEarnings } from '@app/hooks/useEarnings';
+import { useReviewRequests } from '@app/hooks/useReviewRequests';
+import { useReviewSeen } from '@app/services/reviewSeen';
 
 type Props = DrawerScreenProp<DrawerScreens.Earnings>;
 
@@ -184,6 +187,16 @@ export const Earnings = ({ navigation }: Props) => {
     }
   }, [selectedTab, deliveryCount, totalEarnings, t]);
 
+  // Spec 0038: an answered review request this phone has not shown yet.
+  const reviewRequests = useReviewRequests();
+  const seenAnswers = useReviewSeen();
+  const hasNewAnswer = (reviewRequests.data?.pages ?? []).some(page =>
+    page.data.some(
+      request =>
+        request.status === 'ANSWERED' && !seenAnswers.includes(request.id),
+    ),
+  );
+
   const handleWeekChange = (start: Moment, end: Moment) => {
     setWeek({
       start: start.format(formatApiDate),
@@ -202,6 +215,20 @@ export const Earnings = ({ navigation }: Props) => {
           <BackNavButton onPress={() => navigation.toggleDrawer()} />
           <Text style={styles.title}>{t('translations:earnings')}</Text>
         </View>
+        {/* Spec 0038 (AC-11): how offers and pay work, from the settings in effect now. The dot says
+            an answer to a review request has not been opened yet (kept on this phone only). */}
+        <TouchableOpacity
+          style={styles.howLink}
+          onPress={() => navigation.navigate(MainScreens.HowItWorks)}
+          accessibilityRole="link"
+          testID="how-it-works-link">
+          <Text style={styles.howLinkText}>{t('translations:how_title')}</Text>
+          {hasNewAnswer ? (
+            <Text style={styles.howLinkNew}>
+              {t('translations:review_new_answer')}
+            </Text>
+          ) : null}
+        </TouchableOpacity>
         <View style={styles.containerEarnings}>
           <View style={styles.earningsText}>
             <Text style={styles.textEarned}>
