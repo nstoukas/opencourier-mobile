@@ -1,6 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import axios, { AxiosInstance, AxiosRequestConfig } from 'axios';
-//@ts-ignore
+import { apiUrl } from '@app/utilities/config';
 
 export interface UClient extends AxiosInstance {}
 
@@ -8,6 +8,8 @@ const timeout = 10000;
 
 const Client = (): UClient => {
   const options: AxiosRequestConfig = {
+    // The co-op's address, fixed by the build (row 17, spec 0039, AC-1).
+    baseURL: apiUrl,
     timeout: timeout,
     headers: {
       Accept: 'application/json',

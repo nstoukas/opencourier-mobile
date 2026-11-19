@@ -1,49 +1,24 @@
 export default {
-  welcome: 'Welcome!',
-  choose_instance: 'Choose an instance',
   or: 'Or',
   loading: 'Loading...',
-  registry_link: 'Registry link',
-  instance_link: 'Instance link',
-  last_fetched_at: 'Last fetched at:',
-  privacy_policy: 'Privacy Policy',
-  terms_of_service: 'Terms of Service',
-  looking_for_start: 'Looking for somewhere to start?',
-  browse_nearby: 'Browse courier instances near you.',
-  know_where_go: 'Know where you want to go?',
-  join_directly: 'Join directly using a link.',
-  something_went_wrong: 'Something went wrong',
-  popular_nearby: 'Popular nearby instances',
-  user_count: 'User count',
   description: 'Description',
   rules: 'Rules',
-  enable_location_warning: 'Enable location access to see nearby instances.',
   join_instance: 'Join Instance',
-  login_to_instance: 'Log In To Instance',
   join: 'Join',
-  login_to: 'Log In To',
   full_name: 'Full Name',
   user_name: 'User Name',
-  email_address: 'Email Address',
   confirm_password: 'Confirm Password',
   already_have_account: 'Already have an account?',
-  looking_for_instances: 'Looking for instances?',
-  search_here: 'Search here',
   no_account: "Don't have an account?",
   send_reset: 'Send Reset Link',
-  back_to_login: 'Back To Log In',
-  password_reset: 'Forgot your password?',
   email_sent:
     'An email with a reset link has been sent to your registered email address.',
   // Spec 0014: the Home banner while dispatch is stopped, or about to be.
   dispatch_stopped_title: 'Dispatch stopped',
   dispatch_stops_soon_title: 'Dispatch stops soon',
   // Spec 0013: the co-op issues and resets every rider's login.
-  ask_coop_for_password:
-    'Ask the co-op to set a new password for you. Your login email stays the same.',
   forgot_password: 'Forgot password?',
   // The link and the card no longer reset anything: the co-op sets a new password (spec 0013).
-  reset_password: 'Ask the co-op',
   account_information: 'Account information',
   manage_your_account: 'Manage your account and personal information',
   accessibility: 'Accessibility',
@@ -79,13 +54,6 @@ export default {
   include_orders_drinks: 'Include Orders with Drinks',
   enable_include_orders:
     'Enable this to receive orders that include drink items',
-  support_locals: 'Support locals',
-  support_locals_details: 'Support your local restaurants and communities.',
-  earn_money: 'Earn\nmoney',
-  more_than_a_gig:
-    'More than just a gig economy, join a community of couriers.',
-  reach_goals: 'Reach\ngoals',
-  get_paid: 'Get paid and accomplish successful milestones.',
   cuisine_types: 'Cuisine Types',
   select_cuisine: 'Select your preferred cuisine type to pick up orders from',
   restaurant_types: 'Restaurant Types',
@@ -307,11 +275,7 @@ export default {
   later_stay_offline: 'Later & Stay Offline',
   stay_online: 'Stay Online',
   continue_orders: 'Continue Orders',
-  add_instance: 'Add instance',
   enter_url_or_search: 'Enter URL or search for an organization',
-  deli_is_made: 'Explore & Deliver with Open Deli',
-  quickly_find_restaurant:
-    'Quickly find and join restaurant instances in Open Deli – your gateway to more delivery opportunities!',
   accept_now: 'Accept Now',
   decline: 'Decline',
   // Spec 0019: the offer card.
@@ -485,20 +449,12 @@ export default {
   include_code: 'Include country code',
   shift_availability: 'Shift Availability',
   shift_availability_more: 'Shift Availability info',
-  enable_location: 'Enable location',
-  enable_location_text:
-    'By allowing location you are able to explore nearby organizations.',
   enable_camera: 'Enable camera',
   enable_camera_text:
     'Please provide us access to your camera, which is required to complete orders.',
-  enable_notifications_text:
-    'Please provide us access to your notifications, so you don’t miss any order requests.',
-  skip: 'Skip',
   allow: 'Allow',
   allowed: 'Allowed',
-  location_allowed: 'Location Allowed',
   camera_allowed: 'Camera Allowed',
-  notifications_allowed: 'Notifications Allowed',
   report_incident: 'Report an Incident',
   report_incident_text:
     'To address any misconduct from restaurants or customers, please identify the incident by its date and time. For privacy, our system keeps customer details confidential.',
@@ -794,4 +750,50 @@ export default {
   review_withdraw_confirm: 'Withdraw',
   review_withdraw_failed_title: 'Not withdrawn',
   review_notice_title: 'Your review request has an answer',
+  // Row 17 (spec 0039): the co-op login and the password reset by email.
+  // coop_name is a placeholder until the co-op names itself.
+  coop_name: 'Volos Couriers Co-op',
+  login_title: 'Log in to start riding',
+  build_without_address:
+    "This app was built without the co-op's address. Tell the co-op.",
+  auth_error_title: "That didn't work",
+  auth_error_wrong_login:
+    "That email and password don't match. Try again, or reset your password.",
+  auth_error_too_many: 'Too many tries. Wait a minute and try again.',
+  auth_error_no_connection: 'No connection. Check your signal and try again.',
+  auth_error_other: 'Something went wrong. Try again in a minute.',
+  auth_error_reset_off:
+    "Reset by email isn't set up yet. Ask the co-op to set a new password.",
+  auth_error_wrong_code:
+    'That code is wrong or has expired. Ask for a new one.',
+  forgot_title: 'Reset your password',
+  forgot_body:
+    "Type your login email. We'll send you a 6 digit code to set a new password.",
+  send_code: 'Send code',
+  enter_code_title: 'Enter the code',
+  enter_code_body:
+    "If {{email}} is a rider's login, a code is on its way. It works for 15 minutes. No mail after a few minutes? Ask the co-op.",
+  code_label: '6 digit code',
+  new_password: 'New password',
+  new_password_hint: '8 to 72 characters',
+  set_password_and_log_in: 'Set password and log in',
+  send_new_code: 'Send a new code',
+  send_new_code_in: 'Send a new code in {{seconds}} s',
+  code_sent_again: 'A new code is on its way.',
+  back: 'Back',
+  // Row 17 (spec 0039, AC-15, AC-16): permissions after login, and no Online
+  // without location.
+  permissions_title: 'Before you ride',
+  permissions_body:
+    "Two things the app needs to work for you. You can change them later in your phone's settings.",
+  permission_location_title: 'Location',
+  permission_location_why:
+    'Dispatch offers you jobs near where you are. Your position is used only while you are Online or on a job, never to watch you.',
+  permission_notifications_title: 'Notifications',
+  permission_notifications_why:
+    'New offers ring and show on your screen, even when the app is closed.',
+  location_off_title: "Can't go Online",
+  location_off_online:
+    "Location is off. Dispatch needs your position to offer you jobs, so you can't go Online without it.",
+  open_settings: 'Open settings',
 };

@@ -106,6 +106,33 @@ const isRefused = (error: unknown): boolean => {
   );
 };
 
+// Forgets the logged in rider on this phone, with no request to any server:
+// the login, the saved deliveries and every per rider note. Shared by a
+// refused renewal (below) and the first start after an instance build (row 17,
+// spec 0039, AC-3). The waiting job steps are not touched here.
+export const clearRiderDataOnPhone = async (http: UClient): Promise<void> => {
+  await AsyncStorage.multiRemove(['token', 'refreshToken']);
+  http.defaults.headers.common.Authorization = undefined;
+  // Nothing may keep ringing on a phone nobody is logged in on.
+  await cancelAllOfferAlerts().catch(() => undefined);
+  // With no user the app shows its logged out screens again.
+  queryClient.resetQueries();
+  // No other rider may see these deliveries (spec 0009, AC-11). The rider's
+  // waiting job steps stay: they are sent at their next login (AC-8).
+  await clearSavedQueries();
+  // Nor the last rider's removal answers (spec 0035).
+  clearRemovalNotices();
+  // Nor what they had seen of their chat (spec 0034), its notice in the shade, or the lines
+  // they wrote that were never sent (review of 2026-11-18).
+  await clearChatSeen();
+  clearChatNotice();
+  clearChatOutgoing();
+  // Nor which review answers they had opened, nor the answer notice in the shade (spec 0038),
+  // as logging out does.
+  await clearReviewSeen().catch(() => undefined);
+  clearReviewNotice();
+};
+
 // Logs the rider out on this phone after the backend refused to renew the
 // session, and tells them why. The server calls that logging out normally
 // makes (going Offline, removing this phone from push) cannot work without a
@@ -113,26 +140,7 @@ const isRefused = (error: unknown): boolean => {
 export const endExpiredSession = (http: UClient): Promise<void> => {
   if (!ending) {
     ending = (async () => {
-      await AsyncStorage.multiRemove(['token', 'refreshToken']);
-      http.defaults.headers.common.Authorization = undefined;
-      // Nothing may keep ringing on a phone nobody is logged in on.
-      await cancelAllOfferAlerts().catch(() => undefined);
-      // With no user the app shows its logged out screens again.
-      queryClient.resetQueries();
-      // No other rider may see these deliveries (spec 0009, AC-11). The rider's
-      // waiting job steps stay: they are sent at their next login (AC-8).
-      await clearSavedQueries();
-      // Nor the last rider's removal answers (spec 0035).
-      clearRemovalNotices();
-      // Nor what they had seen of their chat (spec 0034), its notice in the shade, or the lines
-      // they wrote that were never sent (review of 2026-11-18).
-      await clearChatSeen();
-      clearChatNotice();
-      clearChatOutgoing();
-      // Nor which review answers they had opened, nor the answer notice in the shade (spec 0038),
-      // as logging out does.
-      await clearReviewSeen().catch(() => undefined);
-      clearReviewNotice();
+      await clearRiderDataOnPhone(http);
       // Opening the app with an expired session leaves it on the splash screen,
       // which only looks for a token when it first appears: move on from it.
       if (
@@ -141,7 +149,7 @@ export const endExpiredSession = (http: UClient): Promise<void> => {
       ) {
         // The ref is not typed with the app's screens, so `as never` lets this
         // call name a screen it cannot check.
-        navigationRef.navigate(RootScreen.Onboarding as never);
+        navigationRef.navigate(RootScreen.Auth as never);
       }
       Alert.alert(
         i18n.t('translations:session_ended_title'),

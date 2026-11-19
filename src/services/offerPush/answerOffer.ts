@@ -2,9 +2,9 @@
 //
 // This can run with no screen at all: Android wakes the app's JavaScript just
 // to handle a button press on a locked phone. So it relies on nothing the
-// screens set up. It reads the instance address (`BASE_URL`) and the login
-// (`token`) from storage itself, because the shared HTTP client only learns
-// its address on the startup screens.
+// screens set up. It reads the login (`token`) from storage itself and builds
+// its own HTTP client on the co-op's address, which the build fixes (`apiUrl`,
+// row 17, spec 0039), so it works even before the app's startup gate has run.
 //
 // It sends exactly what the app's own Accept and Decline send
 // (`orderService.acceptOrder` and `declineOrder`). The rider's own tap is the
@@ -18,6 +18,7 @@ import {
   isOfferEndedError,
 } from '@app/services/orderService';
 import { queryClient } from '@app/services/queryClient';
+import { apiUrl } from '@app/utilities/config';
 import { QueryKeys } from '@app/utilities/queryKeys';
 import {
   loadAnsweredOffers,
@@ -51,10 +52,8 @@ export const answerOffer = async (
     return 'already-answered';
   }
 
-  const [baseURL, token] = await Promise.all([
-    AsyncStorage.getItem('BASE_URL'),
-    AsyncStorage.getItem('token'),
-  ]);
+  const baseURL = apiUrl;
+  const token = await AsyncStorage.getItem('token');
   if (!baseURL || !token) {
     // Logged out since the alert was posted: there is nobody to answer for.
     return 'failed';

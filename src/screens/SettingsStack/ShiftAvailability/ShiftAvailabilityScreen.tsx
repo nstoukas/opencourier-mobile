@@ -1,25 +1,14 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, FlatList, TouchableOpacity } from 'react-native';
+import { View, Text, FlatList } from 'react-native';
 import { ScreenSafeArea } from '@app/components/ScreenSafeArea/ScreenSafeArea';
 import { styles } from './ShiftAvailabilityScreen.styles';
 import { MainScreenProp, MainScreens } from '@app/navigation/main/types';
 import { BackNavButton } from '@app/components/BackNavButton/BackNavButton';
 import { useTranslation } from 'react-i18next';
-import {
-  Organization,
-  Shift,
-  ShiftRange,
-  ShiftAvailability,
-} from '@app/types/types';
+import { Shift, ShiftRange, ShiftAvailability } from '@app/types/types';
 import { ShiftCell } from '@app/components/ShiftCell/ShiftCell';
-import { RootScreen } from '@app/navigation/types';
 import DatePicker from 'react-native-date-picker';
 import useUserSettings from '@app/hooks/useUserSetttings';
-import useInstance from '@app/hooks/useInstance';
-import { RemoteImage } from '@app/components/RemoteImage/RemoteImage';
-import { touchRow } from '@app/utilities/touch';
-import { Icon } from '@app/components/Icon/Icon';
-import { CaretDownIcon } from 'phosphor-react-native/src/icons/CaretDown';
 
 type Props = MainScreenProp<MainScreens.ShiftAvailabilityScreen>;
 function capitalizeFirstLetter(string: string) {
@@ -60,11 +49,6 @@ function getSelectedDays(
 
 export const ShiftAvailabilityScreen = ({ navigation }: Props) => {
   const { t } = useTranslation();
-  // Fetch user instances to get the current organization
-  const { userInstances, isLoadingInstances } = useInstance();
-  const [selectedOrg, setSelectedOrg] = useState<Organization | undefined>(
-    userInstances[0],
-  );
   const [showModal, setShowModal] = useState<boolean>(false);
   const [dayToAddShiftTo, setDayToAddShiftTo] = useState<{
     startOrEnd: 'start' | 'end';
@@ -372,13 +356,6 @@ export const ShiftAvailabilityScreen = ({ navigation }: Props) => {
     }
   }, [shiftToAdd]);
 
-  // Update selectedOrg when instances are loaded
-  useEffect(() => {
-    if (!isLoadingInstances && userInstances.length > 0 && !selectedOrg) {
-      setSelectedOrg(userInstances[0]);
-    }
-  }, [userInstances, isLoadingInstances]);
-
   return (
     <View style={styles.container}>
       <ScreenSafeArea style={styles.safe}>
@@ -388,21 +365,6 @@ export const ShiftAvailabilityScreen = ({ navigation }: Props) => {
             {t('translations:shift_availability')}
           </Text>
         </View>
-        {selectedOrg && (
-          <TouchableOpacity
-            onPress={() =>
-              navigation.navigate(RootScreen.SelectOrganizationModal, {
-                preselected: selectedOrg,
-                onOrganizationSelect: (org: Organization) =>
-                  setSelectedOrg(org),
-              })
-            }
-            style={[touchRow, styles.org]}>
-            <RemoteImage uri={selectedOrg.imageUrl} style={styles.iconOrg} />
-            <Text style={styles.textOrg}>{selectedOrg.name}</Text>
-            <Icon icon={CaretDownIcon} weight="fill" size={16} />
-          </TouchableOpacity>
-        )}
         <FlatList
           contentContainerStyle={styles.list}
           showsVerticalScrollIndicator={false}

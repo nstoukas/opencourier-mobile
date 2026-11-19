@@ -7,18 +7,12 @@ import {
   DrawerContentScrollView,
 } from '@react-navigation/drawer';
 import { ProfileBadge } from '@app/components/ProfileBadge/ProfileBadge';
-import { Organization, SideMenuItem, UserStatus } from '@app/types/types';
+import { SideMenuItem, UserStatus } from '@app/types/types';
 import { UserStatusSelector } from '@app/components/UserStatusSelector/UserStatusSelector';
 import { SideMenuItemSwitch } from '@app/components/SideMenuItemSwitch/SideMenuItemSwitch';
 import { SideMenuItemPlain } from '@app/components/SideMenuItemPlain/SideMenuItemPlain';
-import { OrganizationSelect } from '@app/components/OrganizationSelect/OrganizationSelect';
-import {
-  getSelectedOrganizationStorage,
-  setSelectedOrganizationStorage,
-} from '@app/utilities/storage';
 import { DrawerScreens } from '@app/navigation/drawer/types';
 import { useTranslation } from 'react-i18next';
-import RNRestart from 'react-native-restart';
 import { OrderSetting } from '@app/types/enums';
 import { useLocationPermission } from '@app/hooks/useLocationPermission';
 import { waitingCount } from '@app/services/jobStepOutbox';
@@ -35,10 +29,10 @@ import { syncShiftReminders } from '@app/services/shifts/shiftReminder';
 import { useQueryClient } from '@tanstack/react-query';
 import { LOGOUT_OFFLINE_TIMEOUT_MS } from '@app/utilities/constants';
 import { services } from '@app/services/service';
-import useInstance from '@app/hooks/useInstance';
 import { unregisterThisPhone } from '@app/services/offerPush/registration';
 import { cancelAllOfferAlerts } from '@app/services/offerPush/offerAlert';
 import { prepareToGoOnline } from '@app/services/offerPush/goOnlineChecks';
+import { confirmLocationForOnline } from '@app/services/locationForOnline';
 import { useChatUnseen } from '@app/hooks/useChat';
 import { MainScreens } from '@app/navigation/main/types';
 
@@ -88,15 +82,9 @@ export const SideMenu = ({ navigation }: Props) => {
   const [autoAcceptOrders, setAutoAcceptOrders] = useState<boolean>(
     user?.deliverySetting === OrderSetting.auto_accept,
   );
-  const [selectedOrg, setSelectedOrg] = useState<Organization | undefined>(
-    undefined,
-  );
   const [status, setStatus] = useState<string | undefined>(user?.status);
 
   const { updateStatus, updateDeliverySettings } = useUser();
-
-  // Fetch user instances
-  const { userInstances, isLoadingInstances } = useInstance();
 
   const isSwitchOn = (item: SideMenuItem) => {
     switch (item) {
@@ -131,40 +119,6 @@ export const SideMenu = ({ navigation }: Props) => {
     }
   };
 
-  const organizationSelected = (org: Organization) => {
-    // setSelectedOrg(org);
-    setSelectedOrganizationStorage(org);
-    RNRestart.restart();
-  };
-
-  useEffect(() => {
-    (async () => {
-      // First, check if we have instances loaded
-      if (userInstances.length > 0) {
-        // Check if we have a stored organization
-        const storedOrg = await getSelectedOrganizationStorage();
-
-        if (storedOrg) {
-          const matchingInstance = userInstances.find(
-            inst => inst.id === storedOrg.id,
-          );
-
-          if (matchingInstance) {
-            setSelectedOrg(matchingInstance);
-          } else {
-            setSelectedOrg(userInstances[0]);
-            setSelectedOrganizationStorage(userInstances[0]);
-          }
-        } else {
-          setSelectedOrg(userInstances[0]);
-          setSelectedOrganizationStorage(userInstances[0]);
-        }
-      }
-      //const accept = await getAutoAcceptOrdersStorage();
-      //setAutoAcceptOrders(accept);
-    })();
-  }, [userInstances]);
-
   useEffect(() => {
     setStatus(user?.status);
   }, [user]);
@@ -188,12 +142,7 @@ export const SideMenu = ({ navigation }: Props) => {
       // is on, and the next login starts Offline.
       console.log('Could not go Offline before logging out', error);
     }
-    await AsyncStorage.multiRemove([
-      'token',
-      'refreshToken',
-      'BASE_URL',
-      'SOCKET_BASE_URL',
-    ]);
+    await AsyncStorage.multiRemove(['token', 'refreshToken']);
     // Nothing may keep ringing on a phone nobody is logged in on.
     await cancelAllOfferAlerts();
     // Nor remind anyone of this rider's shifts (spec 0027, row 78 review).
@@ -304,10 +253,17 @@ export const SideMenu = ({ navigation }: Props) => {
     navigation.navigate(RootScreen.UserStatusModal, {
       status: newStatus,
       onAccept: async () => {
-        // Going Online: the first time, ask for the alert permissions; every
-        // time, warn if the phone is on silent (spec 0003, AC-8, AC-9). The
-        // rider decides; either answer goes Online.
         if (newStatus === UserStatus.Online) {
+          // Location first: refused, the rider stays as they are and is told
+          // why (row 17, spec 0039, AC-16).
+          if (
+            !(await confirmLocationForOnline(() => requestLocationPermission()))
+          ) {
+            return;
+          }
+          // Then, the first time, ask for the alert permissions; every time,
+          // warn if the phone is on silent (spec 0003, AC-8, AC-9). The rider
+          // decides; either answer goes Online.
           await prepareToGoOnline();
         }
         updateStatus(newStatus);
@@ -315,9 +271,6 @@ export const SideMenu = ({ navigation }: Props) => {
       onCancel: () => undefined,
     });
   };
-
-  // Don't render organization selector if we don't have an organization yet
-  const shouldRenderOrgSelect = selectedOrg && !isLoadingInstances;
 
   return (
     <DrawerContentScrollView>
@@ -337,13 +290,6 @@ export const SideMenu = ({ navigation }: Props) => {
               : `${t('translations:hi')}!`}
           </Text>
         </View>
-        {shouldRenderOrgSelect && (
-          <OrganizationSelect
-            style={styles.cell}
-            organization={selectedOrg}
-            onPress={() => {}}
-          />
-        )}
         <UserStatusSelector
           style={styles.cell}
           selected={status as UserStatus}

@@ -2,7 +2,6 @@ import { client } from './Client';
 import commentService, { CommentService } from './commentService';
 import orderService, { OrderService } from './orderService';
 import userService, { UserService } from './userService';
-import instanceService, { InstanceService } from './instanceService';
 import earningsService, { EarningsService } from './earningsService';
 import routeService, { RouteService } from './routeService';
 import sosService, { SosService } from './sosService';
@@ -26,7 +25,6 @@ export type Services = {
   userService: UserService;
   orderService: OrderService;
   commentService: CommentService;
-  instanceService: InstanceService;
   earningsService: EarningsService;
   routeService: RouteService;
   sosService: SosService;
@@ -42,7 +40,6 @@ const Services = (): Services => {
   const uService = userService(client);
   const oService = orderService(client);
   const cService = commentService(client);
-  const iService = instanceService(client);
   const eService = earningsService(client);
   const dService = notificationDeviceService(client);
   const rService = routeService(client);
@@ -80,7 +77,6 @@ const Services = (): Services => {
     userService: uService,
     orderService: oService,
     commentService: cService,
-    instanceService: iService,
     earningsService: eService,
     routeService: rService,
     sosService: sService,

@@ -19,11 +19,6 @@ export enum UserStatus {
   LastCall = 'LAST_CALL',
 }
 
-export enum InstanceTabItem {
-  Description = 'description',
-  Rules = 'rules',
-}
-
 // Only the History screen shows an empty list since spec 0018 (home is a map).
 export enum HomeEmptyState {
   History = 'History',
@@ -173,12 +168,6 @@ export enum PaymentTabItem {
   Bank = 'bank',
   DirectDebit = 'direct_debit',
 }
-
-export type Organization = {
-  name: string;
-  id: string;
-  imageUrl: string;
-};
 
 export type Courier = {
   id: string;
@@ -492,13 +481,6 @@ export type Pagination = {
 export type ConfirmItemsCheck = {
   orderId: string;
   confirmedItems: boolean;
-};
-
-export type Instance = {
-  registry?: any;
-  details: any;
-  config: any;
-  updatedAt: any;
 };
 
 export enum SettingsOptions {

@@ -277,6 +277,11 @@ export const flushOutbox = (
   return flushing;
 };
 
+// Empties the outbox, every rider's steps. Only for the first start after an
+// instance build pointed at another server (row 17, spec 0039, AC-3): those
+// steps belong to that server and can never be sent to the co-op's.
+export const clearOutbox = (): Promise<void> => change(() => []);
+
 // For tests only: forget everything held in memory.
 export const resetOutboxForTests = (): void => {
   items = [];

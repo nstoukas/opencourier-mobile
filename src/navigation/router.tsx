@@ -2,9 +2,8 @@ import React from 'react';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { RootScreen, RootStackParamList } from '@app/navigation/types';
 import { LoadingScreen } from '@app/screens/Loading/Loading';
-import { OnboardingStack } from '@app/navigation/onboarding/OnboardingNavigation';
+import { AuthStack } from '@app/navigation/auth/AuthNavigation';
 import { MainStack } from './main/MainNavigation';
-import { SelectOrganizationModal } from '@app/screens/SelectOrganizationModal/SelectOrganizationModal';
 import { StatusPopupScreen } from '@app/screens/StatusPopup/StatusPopupScreen';
 import { useOfferPushRegistration } from '@app/services/offerPush/registration';
 import { AddNote } from '@app/screens/AddNote/AddNote';
@@ -16,6 +15,7 @@ import {
 } from '@app/hooks/useLocationPermission';
 import useUser from '@app/hooks/useUser';
 import { useLocationTracking } from '@app/hooks/useLocationTracking';
+import { useOfflineWithoutLocation } from '@app/hooks/useOfflineWithoutLocation';
 import { useArrivalDetection } from '@app/hooks/useArrivalDetection';
 import { useSos } from '@app/hooks/useSos';
 import { SosScreen } from '@app/screens/Sos/SosScreen';
@@ -53,6 +53,10 @@ export const Router = () => {
   // the rider's own SOS (spec 0022), when it runs at SOS options.
   useLocationTracking(user, locationPermission, sosSharing);
 
+  // Online with no job and location switched off: Offline on returning to the
+  // app, with the reason (row 17, spec 0039, AC-16).
+  useOfflineWithoutLocation(user);
+
   return (
     <>
       {/* Arrival at the restaurant and the customer, noticed from the
@@ -68,8 +72,8 @@ export const Router = () => {
               options={DEFAULT_OPTIONS}
             />
             <RootStack.Screen
-              name={RootScreen.Onboarding}
-              component={OnboardingStack}
+              name={RootScreen.Auth}
+              component={AuthStack}
               options={DEFAULT_OPTIONS}
             />
           </>
@@ -79,11 +83,6 @@ export const Router = () => {
               name={RootScreen.Main}
               component={MainStack}
               options={DEFAULT_OPTIONS}
-            />
-            <RootStack.Screen
-              name={RootScreen.SelectOrganizationModal}
-              component={SelectOrganizationModal}
-              options={{ headerShown: false, presentation: 'transparentModal' }}
             />
             <RootStack.Screen
               name={RootScreen.UserStatusModal}

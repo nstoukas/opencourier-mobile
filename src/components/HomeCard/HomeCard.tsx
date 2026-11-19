@@ -47,6 +47,8 @@ type Props = {
   pager?: Pager;
   isLoading: boolean;
   onGoOnline: (didSwipe: boolean) => void;
+  // Bumped by Home when going Online was refused, so the knob springs back.
+  goOnlineAttempt?: number;
   onLastCall: () => void;
   onStayOnline: () => void;
   onGoOffline: () => void;
@@ -64,6 +66,7 @@ export const HomeCard = ({
   pager,
   isLoading,
   onGoOnline,
+  goOnlineAttempt = 0,
   onLastCall,
   onStayOnline,
   onGoOffline,
@@ -77,6 +80,7 @@ export const HomeCard = ({
       case HomeCardMode.Offline:
         return (
           <ButtonSwipe
+            key={`go-online-${goOnlineAttempt}`}
             style={styles.swipe}
             isSwiped={false}
             onSwiped={onGoOnline}

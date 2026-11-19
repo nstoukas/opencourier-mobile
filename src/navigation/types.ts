@@ -1,18 +1,12 @@
 import { NavigationProp, RouteProp } from '@react-navigation/native';
 import { MainStackParamList } from './main/types';
-import {
-  Note,
-  CourierTip,
-  Order,
-  Organization,
-  UserStatus,
-} from '@app/types/types';
+import { Note, CourierTip, Order, UserStatus } from '@app/types/types';
 
 export enum RootScreen {
   Loading = 'Loading',
-  Onboarding = 'Onboarding',
+  // The logged out screens: the co-op's login and the reset by email (row 17).
+  Auth = 'Auth',
   Main = 'Main',
-  SelectOrganizationModal = 'SelectOrganizationModal',
   UserStatusModal = 'UserStatusModal',
   AddNoteModal = 'AddNoteModal',
   DeleteNoteModal = 'DeleteNoteModal',
@@ -24,12 +18,8 @@ export enum RootScreen {
 export type RootStackParamList = {
   Loading: undefined;
   Sos: undefined;
-  Onboarding: undefined;
+  Auth: undefined;
   Main: undefined;
-  SelectOrganizationModal: {
-    preselected: Organization;
-    onOrganizationSelect: (org: Organization) => void;
-  };
   UserStatusModal: {
     status: UserStatus;
     onAccept: (status: UserStatus) => void;

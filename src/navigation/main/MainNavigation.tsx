@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { MainScreens, MainStackParamList } from './types';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { DrawerStack } from '../drawer/DrawerNavigation';
@@ -20,6 +20,8 @@ import { RequestRemoval } from '@app/screens/RequestRemoval/RequestRemoval';
 import { Chat } from '@app/screens/Chat/Chat';
 import { HowItWorks } from '@app/screens/HowItWorks/HowItWorks';
 import { RequestReview } from '@app/screens/RequestReview/RequestReview';
+import { Permissions } from '@app/screens/Permissions/Permissions';
+import { takeJustLoggedIn } from '@app/services/afterLogin';
 
 // The <MainStackParamList> type argument tells the navigator which routes exist and what
 // params each takes, so every screen's Props is checked against its own route.
@@ -28,11 +30,22 @@ const MainStackNavigator = createNativeStackNavigator<MainStackParamList>();
 const DEFAULT_OPTIONS = { headerShown: false };
 
 export const MainStack = () => {
+  // Right after a login or a reset, Permissions comes first; it goes straight on
+  // to Home when nothing is missing. Never on a restart while logged in (AC-15).
+  // `useState(() => ...)` reads the one time flag once, when the stack appears.
+  const [firstRoute] = useState(() =>
+    takeJustLoggedIn() ? MainScreens.Permissions : MainScreens.Drawer,
+  );
   return (
-    <MainStackNavigator.Navigator initialRouteName={MainScreens.Drawer}>
+    <MainStackNavigator.Navigator initialRouteName={firstRoute}>
       <MainStackNavigator.Screen
         name={MainScreens.Drawer}
         component={DrawerStack}
+        options={DEFAULT_OPTIONS}
+      />
+      <MainStackNavigator.Screen
+        name={MainScreens.Permissions}
+        component={Permissions}
         options={DEFAULT_OPTIONS}
       />
       <MainStackNavigator.Screen

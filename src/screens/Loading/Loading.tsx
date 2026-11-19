@@ -4,7 +4,6 @@ import { RootScreen, RootScreenProp } from '@app/navigation/types';
 import { Images } from '@app/utilities/images';
 import { styles } from './Loading.styles';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { client } from '@app/services/Client';
 import useUser from '@app/hooks/useUser';
 
 type Props = RootScreenProp<RootScreen.Loading>;
@@ -19,13 +18,13 @@ export const LoadingScreen = ({ navigation }: Props) => {
   }, []);
 
   const checkForToken = async () => {
+    // The server address is fixed by the build (row 17, spec 0039), so a saved login is all that
+    // is needed to go on.
     const savedToken = await AsyncStorage.getItem('token');
-    const baseUrl = await AsyncStorage.getItem('BASE_URL');
-    if (savedToken && baseUrl) {
-      client.defaults.baseURL = baseUrl;
+    if (savedToken) {
       setToken(savedToken);
     } else {
-      navigation.navigate(RootScreen.Onboarding);
+      navigation.navigate(RootScreen.Auth);
     }
   };
 

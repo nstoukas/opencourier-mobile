@@ -27,6 +27,7 @@ import {
   LiveConnection,
   shouldBeConnected,
 } from './liveConnection';
+import { socketUrl } from '@app/utilities/config';
 
 // A React context hands one value to every screen below the provider without
 // passing it through each screen's props. Here the value is the connection status.
@@ -163,16 +164,14 @@ const SocketProvider = ({ children }: Props) => {
       connection.close();
       return;
     }
-    // The token and socket address are read fresh each time, so a new login
-    // (another rider, another token) opens a new socket.
+    // The token is read fresh each time, so a new login (another rider, another
+    // token) opens a new socket. The address is the co-op's, fixed by the build
+    // (row 17, spec 0039, AC-1).
     let cancelled = false;
     (async () => {
-      const [token, url] = await Promise.all([
-        AsyncStorage.getItem('token'),
-        AsyncStorage.getItem('SOCKET_BASE_URL'),
-      ]);
-      if (!cancelled && token && url) {
-        connection.open(url, token);
+      const token = await AsyncStorage.getItem('token');
+      if (!cancelled && token && socketUrl) {
+        connection.open(socketUrl, token);
       }
     })();
     return () => {

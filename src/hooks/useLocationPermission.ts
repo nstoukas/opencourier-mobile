@@ -1,84 +1,50 @@
 import UserContext from '@app/context/userContext';
 import { useContext, useEffect, useCallback } from 'react';
 import Geolocation from 'react-native-geolocation-service';
-import { AppState, PermissionsAndroid, Platform } from 'react-native';
+import { requestAndroidPermission } from '@app/utilities/permissions';
+import { AppState, Linking, PermissionsAndroid, Platform } from 'react-native';
 
 export const useLocationPermission = (
   autoRequestPermission: boolean = false,
 ) => {
   const { locationPermission, setLocationPermission } = useContext(UserContext);
 
-  const requestLocationPermission = useCallback(async () => {
-    console.log(
-      '[LocationPermission] Request initiated on platform:',
-      Platform.OS,
-    );
-    if (Platform.OS === 'ios') {
-      console.log('[LocationPermission] Requesting iOS location permission...');
-      const permission = await Geolocation.requestAuthorization('whenInUse');
-      console.log('[LocationPermission] iOS result:', permission);
-      if (permission === 'granted') {
-        setLocationPermission(true);
-      }
-    } else if (Platform.OS === 'android') {
-      try {
-        console.log(
-          '[LocationPermission] Requesting Android FINE_LOCATION permission...',
-        );
-        const fineGranted = await PermissionsAndroid.request(
-          PermissionsAndroid.PERMISSIONS.ACCESS_FINE_LOCATION,
-          {
-            title: 'Location Permission',
-            message: 'This app needs access to your location.',
-            buttonNeutral: 'Ask Me Later',
-            buttonNegative: 'Cancel',
-            buttonPositive: 'OK',
-          },
-        );
-
-        console.log(
-          '[LocationPermission] FINE_LOCATION request result:',
-          fineGranted,
-        );
-        console.log(
-          '[LocationPermission] GRANTED constant:',
-          PermissionsAndroid.RESULTS.GRANTED,
-        );
-
-        const isGranted = fineGranted === PermissionsAndroid.RESULTS.GRANTED;
-        console.log('[LocationPermission] Is granted?', isGranted);
-
-        if (isGranted) {
-          console.log(
-            '[LocationPermission] Now requesting COARSE_LOCATION permission...',
-          );
-          await PermissionsAndroid.request(
-            PermissionsAndroid.PERMISSIONS.ACCESS_COARSE_LOCATION,
-            {
-              title: 'Location Permission',
-              message: 'This app needs access to your approximate location.',
-              buttonNeutral: 'Ask Me Later',
-              buttonNegative: 'Cancel',
-              buttonPositive: 'OK',
-            },
-          );
-
-          console.log(
-            '[LocationPermission] Setting location permission to true',
-          );
+  // Asks for location and answers whether the app may use it (row 17, spec
+  // 0039, AC-16: going Online needs the answer). With `openSettingsIfBlocked`,
+  // an Android "don't ask again" opens this app's page in the phone's settings,
+  // the only place left where the rider can allow it (AC-15).
+  const requestLocationPermission = useCallback(
+    async (
+      options: { openSettingsIfBlocked?: boolean } = {},
+    ): Promise<boolean> => {
+      if (Platform.OS === 'ios') {
+        // Answers at once, with no prompt, when location is already allowed.
+        const permission = await Geolocation.requestAuthorization('whenInUse');
+        const granted = permission === 'granted';
+        if (granted) {
           setLocationPermission(true);
-        } else {
-          console.log(
-            '[LocationPermission] Permission denied, setting to false',
-          );
-          setLocationPermission(false);
         }
-      } catch (err) {
-        console.warn('[LocationPermission] Request error:', err);
-        setLocationPermission(false);
+        return granted;
       }
-    }
-  }, [setLocationPermission]);
+      if (Platform.OS !== 'android') {
+        return false;
+      }
+      const answer = await requestAndroidPermission(
+        PermissionsAndroid.PERMISSIONS.ACCESS_FINE_LOCATION,
+      );
+      const granted = answer === 'granted';
+      if (granted) {
+        await requestAndroidPermission(
+          PermissionsAndroid.PERMISSIONS.ACCESS_COARSE_LOCATION,
+        );
+      } else if (answer === 'blocked' && options.openSettingsIfBlocked) {
+        Linking.openSettings().catch(() => undefined);
+      }
+      setLocationPermission(granted);
+      return granted;
+    },
+    [setLocationPermission],
+  );
 
   useEffect(() => {
     if (autoRequestPermission) {

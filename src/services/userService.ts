@@ -8,8 +8,19 @@ import {
 } from './types';
 import { saveSession } from './session';
 
+export type ResetPasswordParams = {
+  email: string;
+  code: string;
+  password: string;
+};
+
 export interface UserService {
   login: (params: LoginParams) => Promise<LoginResponse>;
+  // Row 17 (spec 0039): asks for a reset code by email. The server answers 202
+  // whether or not the email has an account.
+  forgotPassword: (email: string) => Promise<void>;
+  // Sets a new password with the emailed code and logs the rider in, like login.
+  resetPassword: (params: ResetPasswordParams) => Promise<LoginResponse>;
   getUser: () => Promise<User>;
   getUserSettings: () => Promise<UserSettings>;
   // Resolves with the raw PATCH response; the only caller (useUserSettings) ignores it
@@ -35,6 +46,23 @@ const userService = (client: UClient): UserService => {
     const { data } = await client.post<LoginResponse>('auth/login', params);
     const { accessToken, refreshToken } = data.result.session;
     // Both tokens: the refresh token renews the login when it expires (row 66).
+    await saveSession(accessToken, refreshToken, client);
+    return data;
+  };
+
+  const forgotPassword = async (email: string): Promise<void> => {
+    await client.post('auth/forgot-password', { email });
+  };
+
+  const resetPassword = async (
+    params: ResetPasswordParams,
+  ): Promise<LoginResponse> => {
+    const { data } = await client.post<LoginResponse>(
+      'auth/reset-password',
+      params,
+    );
+    // The answer is a login's: the session is saved the same way.
+    const { accessToken, refreshToken } = data.result.session;
     await saveSession(accessToken, refreshToken, client);
     return data;
   };
@@ -83,6 +111,8 @@ const userService = (client: UClient): UserService => {
 
   return {
     login,
+    forgotPassword,
+    resetPassword,
     getUser,
     getUserSettings,
     updateUserSettings,

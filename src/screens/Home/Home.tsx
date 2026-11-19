@@ -26,6 +26,7 @@ import { useHomeOrders } from '@app/hooks/useHomeOrders';
 import useUser from '@app/hooks/useUser';
 import { useConnectionStatus } from '@app/services/socket';
 import { prepareToGoOnline } from '@app/services/offerPush/goOnlineChecks';
+import { confirmLocationForOnline } from '@app/services/locationForOnline';
 import { cancelOfferAlert } from '@app/services/offerPush/offerAlert';
 import { isHomeInFront } from '@app/navigation/navigationRef';
 import { color } from '@app/styles/theme';
@@ -92,7 +93,8 @@ export const HomeScreen = ({ navigation }: Props) => {
   const withdrawRemoval = useWithdrawRemoval();
   const connectionStatus = useConnectionStatus();
   const navigateTo = useNavigateTo();
-  const { locationPermission } = useLocationPermission();
+  const { locationPermission, requestLocationPermission } =
+    useLocationPermission();
   const isFocused = useIsFocused();
   const { data: jobContact } = useJobContact(isFocused);
   const dispatchPhoneNumber = jobContact?.dispatchPhoneNumber;
@@ -249,8 +251,18 @@ export const HomeScreen = ({ navigation }: Props) => {
       onCancel: () => undefined,
     });
 
+  // Changes after a refused swipe, so the Go Online knob springs back (a
+  // ButtonSwipe only resets when its key changes).
+  const [goOnlineAttempt, setGoOnlineAttempt] = useState(0);
+
   const onGoOnline = async (didSwipe: boolean) => {
     if (!didSwipe) {
+      return;
+    }
+    // Location first: without it dispatch cannot offer this rider a job, so
+    // they stay Offline and are told why (row 17, spec 0039, AC-16).
+    if (!(await confirmLocationForOnline(() => requestLocationPermission()))) {
+      setGoOnlineAttempt(attempt => attempt + 1);
       return;
     }
     // The first time, ask for the alert permissions; every time, warn if the
@@ -453,6 +465,7 @@ export const HomeScreen = ({ navigation }: Props) => {
         }}
         isLoading={isLoading ?? false}
         onGoOnline={onGoOnline}
+        goOnlineAttempt={goOnlineAttempt}
         onLastCall={() => confirmStatus(UserStatus.LastCall)}
         onStayOnline={() => updateStatus(UserStatus.Online)}
         onGoOffline={() => confirmStatus(UserStatus.Offline)}

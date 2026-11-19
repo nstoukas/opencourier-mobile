@@ -9,6 +9,8 @@ import type { RootStackParamList } from '../types';
 
 export enum MainScreens {
   Drawer = 'Drawer',
+  // Location and notifications, once after a login (row 17, spec 0039, AC-15).
+  Permissions = 'Permissions',
   PayoutActivity = 'PayoutActivity',
   Licences = 'Licences',
   LanguageScreen = 'LanguageScreen',
@@ -33,6 +35,7 @@ export enum MainScreens {
 
 export type MainStackParamList = {
   Drawer: undefined;
+  Permissions: undefined;
   PayoutActivity: undefined;
   Licences: undefined;
   LanguageScreen: undefined;
@@ -80,7 +83,7 @@ export type MainStackParamList = {
 
 /**
  * The main stack sits inside the root stack, so a main screen can also open the root's
- * modals (AddNoteModal, SelectOrganizationModal). The composite type lets TypeScript
+ * modals (AddNoteModal, UserStatusModal). The composite type lets TypeScript
  * accept both sets of route names; at runtime React Navigation already bubbles the call up.
  */
 export type MainNavigationProp = CompositeNavigationProp<

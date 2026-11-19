@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Router } from '@app/navigation/router';
 import { NavigationContainer } from '@react-navigation/native';
 import UserContext from '@app/context/userContext';
@@ -9,6 +9,7 @@ import { persistOptions } from '@app/services/queryPersistence';
 import { navigationRef } from '@app/navigation/navigationRef';
 import { installSessionRefresh } from '@app/services/session';
 import { client } from '@app/services/Client';
+import { runUpgradeGate } from '@app/services/upgradeGate';
 // Sets the one locale every date, time and amount uses (row 66).
 import '@app/utilities/locale';
 
@@ -23,6 +24,17 @@ const App = () => {
   const [locationPermission, setLocationPermission] = useState<boolean>(false);
   const [userLatitude, setUserLatitude] = useState<number | null>(null);
   const [userLongitude, setUserLongitude] = useState<number | null>(null);
+  // Row 17 (spec 0039, AC-3): nothing is restored or drawn until the check for
+  // a login saved against another server has finished.
+  const [upgradeChecked, setUpgradeChecked] = useState(false);
+
+  useEffect(() => {
+    runUpgradeGate().finally(() => setUpgradeChecked(true));
+  }, []);
+
+  if (!upgradeChecked) {
+    return null;
+  }
 
   return (
     <UserContext.Provider
