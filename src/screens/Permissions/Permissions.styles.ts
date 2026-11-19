@@ -45,6 +45,12 @@ export const styles = StyleSheet.create({
     color: color['muted-foreground'],
     marginBottom: space['3'],
   },
+  // Something the rider must change, so in the main text color rather than muted (decision 17.22).
+  cardNote: {
+    ...typeScale['body-sm'],
+    color: color.foreground,
+    marginBottom: space['3'],
+  },
   allowed: {
     flexDirection: 'row',
     alignItems: 'center',

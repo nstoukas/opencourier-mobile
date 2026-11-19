@@ -4,6 +4,7 @@ import useUser from '@app/hooks/useUser';
 import { useLocationPermission } from '@app/hooks/useLocationPermission';
 import { isLocationGranted } from '@app/utilities/permissions';
 import { showLocationOffAlert } from '@app/services/locationForOnline';
+import { takeSkipFirstLocationCheck } from '@app/services/afterLogin';
 import { services } from '@app/services/service';
 import { User, UserStatus } from '@app/types/types';
 
@@ -39,6 +40,12 @@ export const useOfflineWithoutLocation = (user: User | undefined) => {
         if (known ?? (await current.requestLocationPermission())) {
           return;
         }
+        // The status comes fresh from the server too: the one restored from the phone's 24 h cache
+        // may be old, and a rider the server already has Offline must not be told "Location is off".
+        const fresh = await services.userService.getUser();
+        if (fresh.status !== UserStatus.Online) {
+          return;
+        }
         // The held jobs come fresh from the server: a list not loaded yet must
         // never count as "no job". Asked directly, not through the query cache,
         // where Home's own fetch of the same list cancels this one at a cold
@@ -48,7 +55,7 @@ export const useOfflineWithoutLocation = (user: User | undefined) => {
           return;
         }
         latest.current.updateStatus(UserStatus.Offline);
-        showLocationOffAlert();
+        await showLocationOffAlert();
       } catch {
         // Leave the rider as they are.
       } finally {
@@ -56,7 +63,10 @@ export const useOfflineWithoutLocation = (user: User | undefined) => {
       }
     };
 
-    check();
+    // Not right after a login: the Permissions screen asks first (afterLogin.ts).
+    if (!takeSkipFirstLocationCheck()) {
+      check();
+    }
     const subscription = AppState.addEventListener('change', state => {
       if (state === 'active') {
         check();

@@ -10,6 +10,7 @@ const useUser = (enabled: boolean = true) => {
     data: user,
     refetch,
     isLoading,
+    isError,
   } = useQuery({
     queryFn: services.userService.getUser,
     queryKey: [QueryKeys.user],
@@ -39,6 +40,8 @@ const useUser = (enabled: boolean = true) => {
   return {
     user,
     isLoading,
+    // True when loading the rider failed (and react-query's retries ran out).
+    isUserError: isError,
     refetchUser: refetch,
     updateStatus,
     updateDeliverySettings,

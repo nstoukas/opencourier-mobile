@@ -51,8 +51,11 @@ export const EnterCode = ({ navigation, route }: Props) => {
     onSuccess: () => markJustLoggedIn(),
     onError: error => showAuthError(error, 'reset'),
   });
-  // Once the new session is saved, loading the user opens the main app.
-  useUser(reset.data !== undefined);
+  // Once the new session is saved, loading the user opens the main app. From then on the code is spent,
+  // so the button never sends it again: it waits for the user, and if that load fails (no signal), it
+  // loads the user again instead (review of 2026-11-19).
+  const resetDone = reset.data !== undefined;
+  const { isUserError, refetchUser } = useUser(resetDone);
 
   const resend = useMutation({
     mutationFn: services.userService.forgotPassword,
@@ -65,6 +68,7 @@ export const EnterCode = ({ navigation, route }: Props) => {
   });
 
   const canSubmit =
+    !resetDone &&
     isCodeComplete(code) &&
     isNewPasswordLongEnough(password) &&
     !reset.isPending;
@@ -104,14 +108,23 @@ export const EnterCode = ({ navigation, route }: Props) => {
         onSubmitEditing={() => canSubmit && submit()}
       />
       <Text style={authStyles.hint}>{t('translations:new_password_hint')}</Text>
-      <Button
-        type={ButtonType.black}
-        title={t('translations:set_password_and_log_in')}
-        onPress={submit}
-        disabled={!canSubmit}
-        isLoading={reset.isPending}
-        style={authStyles.primaryButton}
-      />
+      {resetDone && isUserError ? (
+        <Button
+          type={ButtonType.black}
+          title={t('translations:reset_done_try_again')}
+          onPress={() => refetchUser()}
+          style={authStyles.primaryButton}
+        />
+      ) : (
+        <Button
+          type={ButtonType.black}
+          title={t('translations:set_password_and_log_in')}
+          onPress={submit}
+          disabled={!canSubmit}
+          isLoading={reset.isPending || resetDone}
+          style={authStyles.primaryButton}
+        />
+      )}
       <TouchableOpacity
         style={authStyles.link}
         disabled={wait > 0 || resend.isPending}

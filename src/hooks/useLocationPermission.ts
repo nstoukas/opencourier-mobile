@@ -1,7 +1,7 @@
 import UserContext from '@app/context/userContext';
 import { useContext, useEffect, useCallback } from 'react';
 import Geolocation from 'react-native-geolocation-service';
-import { requestAndroidPermission } from '@app/utilities/permissions';
+import { requestAndroidLocation } from '@app/utilities/permissions';
 import { AppState, Linking, PermissionsAndroid, Platform } from 'react-native';
 
 export const useLocationPermission = (
@@ -29,15 +29,10 @@ export const useLocationPermission = (
       if (Platform.OS !== 'android') {
         return false;
       }
-      const answer = await requestAndroidPermission(
-        PermissionsAndroid.PERMISSIONS.ACCESS_FINE_LOCATION,
-      );
+      // Precise and approximate in one dialog; only precise counts (decision 17.22).
+      const answer = await requestAndroidLocation();
       const granted = answer === 'granted';
-      if (granted) {
-        await requestAndroidPermission(
-          PermissionsAndroid.PERMISSIONS.ACCESS_COARSE_LOCATION,
-        );
-      } else if (answer === 'blocked' && options.openSettingsIfBlocked) {
+      if (answer === 'blocked' && options.openSettingsIfBlocked) {
         Linking.openSettings().catch(() => undefined);
       }
       setLocationPermission(granted);

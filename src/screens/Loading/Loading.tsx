@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { View, Image } from 'react-native';
+import { StackActions } from '@react-navigation/native';
 import { RootScreen, RootScreenProp } from '@app/navigation/types';
 import { Images } from '@app/utilities/images';
 import { styles } from './Loading.styles';
@@ -24,7 +25,10 @@ export const LoadingScreen = ({ navigation }: Props) => {
     if (savedToken) {
       setToken(savedToken);
     } else {
-      navigation.navigate(RootScreen.Auth);
+      // Replaced, not navigated to: the logo screen leaves the history, so Back on Login leaves the app
+      // instead of landing on this screen with no way on (review of 2026-11-19). `StackActions.replace`
+      // builds that step; this screen's navigation type has no `replace` of its own.
+      navigation.dispatch(StackActions.replace(RootScreen.Auth));
     }
   };
 

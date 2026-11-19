@@ -84,12 +84,6 @@ jest.mock('react-native-svg', () => {
   );
 });
 
-// react-native-restart ships no mock; the side menu calls restart() after an instance switch.
-jest.mock('react-native-restart', () => ({
-  __esModule: true,
-  default: { restart: jest.fn(), Restart: jest.fn() },
-}));
-
 // Firebase messaging: index.js and the push hook call these; none should touch a network.
 jest.mock('@react-native-firebase/messaging', () => {
   const instance = {

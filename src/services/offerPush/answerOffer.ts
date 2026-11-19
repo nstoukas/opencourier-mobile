@@ -18,6 +18,7 @@ import {
   isOfferEndedError,
 } from '@app/services/orderService';
 import { queryClient } from '@app/services/queryClient';
+import { runUpgradeGate } from '@app/services/upgradeGate';
 import { apiUrl } from '@app/utilities/config';
 import { QueryKeys } from '@app/utilities/queryKeys';
 import {
@@ -52,6 +53,11 @@ export const answerOffer = async (
     return 'already-answered';
   }
 
+  // An offer can be answered from its alert before the app has ever started on this build. The
+  // upgrade gate runs first, so a login saved for another server is forgotten instead of being sent
+  // here, where it would be refused and end in a "session ended" alert (review of 2026-11-19, AC-3).
+  // Running it twice does nothing the second time.
+  await runUpgradeGate();
   const baseURL = apiUrl;
   const token = await AsyncStorage.getItem('token');
   if (!baseURL || !token) {

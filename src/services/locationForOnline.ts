@@ -1,17 +1,26 @@
 import { Alert, Linking } from 'react-native';
 import i18n from '@app/localization/i18n';
-import { isLocationGranted } from '@app/utilities/permissions';
+import {
+  isApproximateLocationOnly,
+  isLocationGranted,
+} from '@app/utilities/permissions';
 
 // Row 17 (spec 0039, AC-16): dispatch can only offer jobs to a rider whose
 // position it has, so going Online needs location. Before, a rider without it
 // sat Online and silently got nothing. The position is still used only to
 // dispatch and deliver (value 5); nothing here records the answer.
 
-// Explains why the rider is Offline, with a way to the phone's settings.
-export const showLocationOffAlert = (): void => {
+// Explains why the rider is Offline, with a way to the phone's settings. With location allowed only as
+// "Approximate", it asks for Precise instead of saying location is off (decision 17.22).
+export const showLocationOffAlert = async (): Promise<void> => {
+  const approximate = await isApproximateLocationOnly();
   Alert.alert(
     i18n.t('translations:location_off_title'),
-    i18n.t('translations:location_off_online'),
+    i18n.t(
+      approximate
+        ? 'translations:location_precise_needed'
+        : 'translations:location_off_online',
+    ),
     [
       { text: i18n.t('translations:not_now'), style: 'cancel' },
       {
@@ -39,6 +48,6 @@ export const confirmLocationForOnline = async (
   if (await requestLocation()) {
     return true;
   }
-  showLocationOffAlert();
+  await showLocationOffAlert();
   return false;
 };

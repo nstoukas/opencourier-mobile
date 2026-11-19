@@ -1,18 +1,4 @@
 export default {
-  or: 'Or',
-  loading: 'Loading...',
-  description: 'Description',
-  rules: 'Rules',
-  join_instance: 'Join Instance',
-  join: 'Join',
-  full_name: 'Full Name',
-  user_name: 'User Name',
-  confirm_password: 'Confirm Password',
-  already_have_account: 'Already have an account?',
-  no_account: "Don't have an account?",
-  send_reset: 'Send Reset Link',
-  email_sent:
-    'An email with a reset link has been sent to your registered email address.',
   // Spec 0014: the Home banner while dispatch is stopped, or about to be.
   dispatch_stopped_title: 'Dispatch stopped',
   dispatch_stops_soon_title: 'Dispatch stops soon',
@@ -275,7 +261,6 @@ export default {
   later_stay_offline: 'Later & Stay Offline',
   stay_online: 'Stay Online',
   continue_orders: 'Continue Orders',
-  enter_url_or_search: 'Enter URL or search for an organization',
   accept_now: 'Accept Now',
   decline: 'Decline',
   // Spec 0019: the offer card.
@@ -777,6 +762,7 @@ export default {
   new_password: 'New password',
   new_password_hint: '8 to 72 characters',
   set_password_and_log_in: 'Set password and log in',
+  reset_done_try_again: 'Password set. Tap to try logging in again',
   send_new_code: 'Send a new code',
   send_new_code_in: 'Send a new code in {{seconds}} s',
   code_sent_again: 'A new code is on its way.',
@@ -796,4 +782,7 @@ export default {
   location_off_online:
     "Location is off. Dispatch needs your position to offer you jobs, so you can't go Online without it.",
   open_settings: 'Open settings',
+  // Decision 17.22: "Approximate" alone is not enough to work.
+  location_precise_needed:
+    'Choose Precise location: dispatch and arrival need it.',
 };

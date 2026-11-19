@@ -221,12 +221,6 @@
         "licenseUrl": "https://github.com/software-mansion/react-native-reanimated/raw/master/LICENSE",
         "parents": "opencourier"
     },
-    "react-native-restart@0.0.27": {
-        "licenses": "MIT",
-        "repository": "https://github.com/avishayil/react-native-restart",
-        "licenseUrl": "https://github.com/avishayil/react-native-restart/raw/master/LICENSE",
-        "parents": "opencourier"
-    },
     "react-native-safe-area-context@4.14.1": {
         "licenses": "MIT",
         "repository": "https://github.com/th3rdwave/react-native-safe-area-context",

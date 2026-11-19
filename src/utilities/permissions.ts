@@ -18,18 +18,21 @@ import notifee, { AuthorizationStatus } from '@notifee/react-native';
 export const BLOCKED_DIALOG_WAIT_MS = 1500;
 
 export type AndroidAnswer = 'granted' | 'denied' | 'blocked';
+// Location has one more answer since Android 12: "Approximate" only (decision 17.22).
+export type LocationAnswer = AndroidAnswer | 'approximate';
 
-// Asks Android for one permission. Once a rider has chosen "don't ask again",
-// Android shows no dialog, and React Native only hands the answer back the next
-// time the app comes to the front, so a plain request would wait until then.
-// Here no dialog within BLOCKED_DIALOG_WAIT_MS counts as blocked.
-export const requestAndroidPermission = (
-  permission: Permission,
-): Promise<AndroidAnswer> =>
+// Asks Android once, through `ask`. Once a rider has chosen "don't ask again", Android shows no dialog,
+// and React Native only hands the answer back the next time the app comes to the front, so a plain
+// request would wait until then. Here no dialog within BLOCKED_DIALOG_WAIT_MS counts as blocked; a
+// dialog shown (the app leaves the front) waits for the rider however long they take.
+// `<T extends string>` lets one helper serve both requests below, each with its own answers.
+const askWithBlockedDetection = <T extends string>(
+  ask: () => Promise<T>,
+): Promise<T | 'blocked'> =>
   new Promise(resolve => {
     let settled = false;
     let dialogShown = false;
-    const finish = (answer: AndroidAnswer) => {
+    const finish = (answer: T | 'blocked') => {
       if (settled) {
         return;
       }
@@ -48,18 +51,67 @@ export const requestAndroidPermission = (
         finish('blocked');
       }
     }, BLOCKED_DIALOG_WAIT_MS);
-    PermissionsAndroid.request(permission)
-      .then(answer => {
-        if (answer === PermissionsAndroid.RESULTS.GRANTED) {
-          finish('granted');
-        } else if (answer === PermissionsAndroid.RESULTS.NEVER_ASK_AGAIN) {
-          finish('blocked');
-        } else {
-          finish('denied');
-        }
-      })
-      .catch(() => finish('denied'));
+    ask()
+      .then(finish)
+      .catch(() => finish('denied' as T));
   });
+
+// Asks Android for one permission.
+export const requestAndroidPermission = (
+  permission: Permission,
+): Promise<AndroidAnswer> =>
+  askWithBlockedDetection<AndroidAnswer>(async () => {
+    const answer = await PermissionsAndroid.request(permission);
+    if (answer === PermissionsAndroid.RESULTS.GRANTED) {
+      return 'granted';
+    }
+    return answer === PermissionsAndroid.RESULTS.NEVER_ASK_AGAIN
+      ? 'blocked'
+      : 'denied';
+  });
+
+// Asks for location the way Android 12 and later expect: precise and approximate together, so the
+// dialog offers both. Only precise counts (decision 17.22: dispatch and arrival need it); approximate
+// alone is its own answer, so the rider is told to choose Precise instead of being sent to settings.
+export const requestAndroidLocation = (): Promise<LocationAnswer> =>
+  askWithBlockedDetection<LocationAnswer>(async () => {
+    const answers = await PermissionsAndroid.requestMultiple([
+      PermissionsAndroid.PERMISSIONS.ACCESS_FINE_LOCATION,
+      PermissionsAndroid.PERMISSIONS.ACCESS_COARSE_LOCATION,
+    ]);
+    const fine = answers[PermissionsAndroid.PERMISSIONS.ACCESS_FINE_LOCATION];
+    const coarse =
+      answers[PermissionsAndroid.PERMISSIONS.ACCESS_COARSE_LOCATION];
+    if (fine === PermissionsAndroid.RESULTS.GRANTED) {
+      return 'granted';
+    }
+    if (coarse === PermissionsAndroid.RESULTS.GRANTED) {
+      return 'approximate';
+    }
+    return fine === PermissionsAndroid.RESULTS.NEVER_ASK_AGAIN
+      ? 'blocked'
+      : 'denied';
+  });
+
+// Android: true when location is allowed only as "Approximate" (decision 17.22). Never on iOS.
+export const isApproximateLocationOnly = async (): Promise<boolean> => {
+  if (Platform.OS !== 'android') {
+    return false;
+  }
+  try {
+    const [fine, coarse] = await Promise.all([
+      PermissionsAndroid.check(
+        PermissionsAndroid.PERMISSIONS.ACCESS_FINE_LOCATION,
+      ),
+      PermissionsAndroid.check(
+        PermissionsAndroid.PERMISSIONS.ACCESS_COARSE_LOCATION,
+      ),
+    ]);
+    return !fine && coarse;
+  } catch {
+    return false;
+  }
+};
 
 export const isLocationGranted = async (): Promise<boolean | null> => {
   if (Platform.OS !== 'android') {

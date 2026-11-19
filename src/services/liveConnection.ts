@@ -52,7 +52,7 @@ export const endedDeliveryId = (message: unknown): string | null => {
 // on the default namespace, which has no login and never receives an offer.
 export const COURIER_NAMESPACE = '/couriers';
 
-// Builds the address to connect to: the instance's websocket link plus the
+// Builds the address to connect to: the co-op's socket address (`socketUrl`) plus the
 // courier namespace, without doubling slashes or the namespace.
 export const courierSocketUrl = (baseUrl: string): string => {
   const trimmed = baseUrl.replace(/\/+$/, '');

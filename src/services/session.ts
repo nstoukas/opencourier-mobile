@@ -15,6 +15,7 @@ import i18n from '@app/localization/i18n';
 import type { UClient } from './Client';
 import { queryClient } from './queryClient';
 import { cancelAllOfferAlerts } from './offerPush/offerAlert';
+import { StackActions } from '@react-navigation/native';
 import { navigationRef } from '@app/navigation/navigationRef';
 import { RootScreen } from '@app/navigation/types';
 
@@ -147,9 +148,10 @@ export const endExpiredSession = (http: UClient): Promise<void> => {
         navigationRef.isReady() &&
         navigationRef.getCurrentRoute()?.name === RootScreen.Loading
       ) {
-        // The ref is not typed with the app's screens, so `as never` lets this
-        // call name a screen it cannot check.
-        navigationRef.navigate(RootScreen.Auth as never);
+        // Replaced, not pushed, so Back on Login does not return to the splash
+        // screen (review of 2026-11-19). `StackActions.replace` builds that step
+        // for a ref, which has no `replace` of its own.
+        navigationRef.dispatch(StackActions.replace(RootScreen.Auth));
       }
       Alert.alert(
         i18n.t('translations:session_ended_title'),

@@ -11,6 +11,7 @@ import { Icon } from '@app/components/Icon/Icon';
 import { MainScreenProp, MainScreens } from '@app/navigation/main/types';
 import { useLocationPermission } from '@app/hooks/useLocationPermission';
 import {
+  isApproximateLocationOnly,
   isLocationGranted,
   isNotificationsGranted,
   requestNotifications,
@@ -30,6 +31,8 @@ export const Permissions = ({ navigation }: Props) => {
   // without asking: both cards then show).
   const [location, setLocation] = useState<boolean | null>(null);
   const [notifications, setNotifications] = useState<boolean | null>(null);
+  // Location allowed only as "Approximate": the card asks for Precise (decision 17.22).
+  const [approximate, setApproximate] = useState(false);
   const [checked, setChecked] = useState(false);
 
   // Replaces this screen, so Back from Home never returns here.
@@ -53,6 +56,7 @@ export const Permissions = ({ navigation }: Props) => {
       }
       setLocation(loc);
       setNotifications(notif);
+      setApproximate(await isApproximateLocationOnly());
       setChecked(true);
     })();
     return () => {
@@ -77,6 +81,7 @@ export const Permissions = ({ navigation }: Props) => {
       if (loc !== null) {
         setLocation(loc);
       }
+      setApproximate(await isApproximateLocationOnly());
       if (notif !== null) {
         setNotifications(notif);
       }
@@ -93,6 +98,7 @@ export const Permissions = ({ navigation }: Props) => {
     setLocation(
       await requestLocationPermission({ openSettingsIfBlocked: true }),
     );
+    setApproximate(await isApproximateLocationOnly());
   };
   const allowNotifications = async () => {
     setNotifications(await requestNotifications());
@@ -111,6 +117,11 @@ export const Permissions = ({ navigation }: Props) => {
           title={t('translations:permission_location_title')}
           why={t('translations:permission_location_why')}
           granted={location === true}
+          note={
+            approximate && location !== true
+              ? t('translations:location_precise_needed')
+              : undefined
+          }
           onAllow={allowLocation}
           allowLabel={t('translations:allow')}
           allowedLabel={t('translations:allowed')}
@@ -140,6 +151,8 @@ type CardProps = {
   icon: React.ComponentProps<typeof Icon>['icon'];
   title: string;
   why: string;
+  // One more line under the reason, when there is something to fix (approximate location).
+  note?: string;
   granted: boolean;
   onAllow: () => void;
   allowLabel: string;
@@ -151,6 +164,7 @@ const PermissionCard = ({
   icon,
   title,
   why,
+  note,
   granted,
   onAllow,
   allowLabel,
@@ -162,6 +176,11 @@ const PermissionCard = ({
       <Text style={styles.cardTitle}>{title}</Text>
     </View>
     <Text style={styles.cardWhy}>{why}</Text>
+    {note !== undefined && (
+      <Text style={styles.cardNote} accessibilityLiveRegion="polite">
+        {note}
+      </Text>
+    )}
     {granted ? (
       <View style={styles.allowed} accessibilityLiveRegion="polite">
         <Icon icon={CheckCircleIcon} weight="fill" size={20} tone="success" />
