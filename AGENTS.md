@@ -13,7 +13,8 @@ react-native-maps. It uses the backend's `courier` API.
 |---|---|
 | `src/screens/`, `src/navigation/` | Screens and routing |
 | `src/services/`, `src/hooks/` | API calls and data hooks |
-| `src/utilities/config.ts` | Reads `API_URL` from `.env` via `@env` |
+| `src/utilities/config.ts` | Reads `API_URL` from `.env` via `@env`: `apiUrl` and `socketUrl` are the app's one server (spec 0039); nothing lets a rider change it |
+| `src/services/upgradeGate.ts` | The first start after an instance build: another server's saved `BASE_URL` clears that server's login, outbox and per rider notes before anything is drawn (spec 0039, AC-3) |
 | `src/services/offerPush/`, `android/.../OfferAlertActivity.kt`, `OfferAlertModule.kt` | Offer pushes on Android: token registration, the ringing full screen alert (its own activity, the only screen over the lock screen), answers sent from the alert, the Online checks for silent mode and permissions (spec 0003) |
 | `src/utilities/offerCountdowns.ts`, `src/utilities/offerClock.ts` | Offer timing: counts down to the server's `offerExpiresAt`, corrected by `serverNow`; the phone never answers for the rider at zero (spec 0002) |
 | `src/services/jobStepOutbox.ts`, `src/hooks/useJobStepOutbox.ts`, `src/utilities/jobSteps.ts` | Job steps go through an outbox in AsyncStorage, online or not, and are sent oldest first with `tapAgeMs`; the screen shows the later of the server's status and the waiting steps' (`inProgressOrdersAsShown`), never edits the cache (spec 0009) |
@@ -41,8 +42,14 @@ the error count is above `typecheck-baseline.json`, and lowers the file when the
   app's own `onRemoteMessage` (decision 58.27).
 - Cutting the app off from the backend on the emulator: `adb reverse --remove tcp:3000` (switching wifi off does nothing, the app reaches the backend through adb); `adb reverse tcp:3000 tcp:3000` restores. An already open connection survives the removal, so wait for "No connection" before tapping (spec 0009).
 - A React Query refetch that fails keeps the data but sets `status: 'error'`: anything that filters on `status === 'success'` drops data that is still there (row 20 review).
-- No sign up in the app: the co-op issues every rider's login from admin and resets passwords there (spec 0013). An
+- No sign up in the app: the co-op issues every rider's login from admin (spec 0013); a rider resets a forgotten password by an emailed code (spec 0039). An
   admin's password change makes the backend answer 401 to the old session, which ends it through the refused renewal path.
+- One server per build (spec 0039): no source file outside `upgradeGate.ts` may read or write `BASE_URL` or `SOCKET_BASE_URL`, or
+  import a deleted instance screen (`coopInstanceGuard.test.ts` fails). A new AsyncStorage key that holds per rider data must be
+  cleared by `clearRiderDataOnPhone` and, if an older build could have written it, by the gate's `OTHER_SERVER_KEYS`.
+- Location means precise (decision 17.22): ask with `requestAndroidLocation` (fine and coarse together); "Approximate" alone is
+  its own answer, never "blocked". Every Android permission request goes through `askWithBlockedDetection`: no dialog within
+  1.5 s counts as "don't ask again", because React Native otherwise answers only when the app next comes to the front.
 - Dispatch stops (spec 0014) reach the app only by polling `dispatch-state` (`useDispatchState`): every minute while Home
   is in front and the app is active, and on returning to the foreground. No TanStack focus manager is wired to AppState
   here, so `refetchInterval` alone keeps running in the background; scope it by hand.
