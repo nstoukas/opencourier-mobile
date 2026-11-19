@@ -5,6 +5,8 @@ import { clearRemovalNotices } from './removalNotice/removalNotice';
 import { clearChatSeen } from './chat/chatSeen';
 import { clearChatNotice } from './chat/chatNotice';
 import { clearChatOutgoing } from './chat/chatOutgoing';
+import { clearReviewSeen } from './reviewSeen';
+import { clearReviewNotice } from './reviewNotice';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import i18n from '@app/localization/i18n';
 // `import type` brings in only the type, never the module itself, so this file
@@ -127,6 +129,10 @@ export const endExpiredSession = (http: UClient): Promise<void> => {
       await clearChatSeen();
       clearChatNotice();
       clearChatOutgoing();
+      // Nor which review answers they had opened, nor the answer notice in the shade (spec 0038),
+      // as logging out does.
+      await clearReviewSeen().catch(() => undefined);
+      clearReviewNotice();
       // Opening the app with an expired session leaves it on the splash screen,
       // which only looks for a token when it first appears: move on from it.
       if (

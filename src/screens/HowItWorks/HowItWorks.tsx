@@ -24,6 +24,7 @@ import {
   useWithdrawReviewRequest,
 } from '@app/hooks/useReviewRequests';
 import { markReviewsSeen, useReviewSeen } from '@app/services/reviewSeen';
+import { clearReviewNotice } from '@app/services/reviewNotice';
 import { ReviewRequest } from '@app/types/types';
 import { formatCurrencyFromCents } from '@app/utilities/currency';
 import { formatShift, formatSpaced } from '@app/utilities/dates';
@@ -63,12 +64,13 @@ export const HowItWorks = ({ navigation }: Props) => {
     .filter(request => request.status === 'ANSWERED')
     .map(request => request.id);
   useFocusEffect(
-    useCallback(
-      () => () => {
+    useCallback(() => {
+      // The rider is reading the answers now, so the notice about them leaves the shade.
+      clearReviewNotice();
+      return () => {
         markReviewsSeen(answeredNow.current).catch(() => undefined);
-      },
-      [],
-    ),
+      };
+    }, []),
   );
 
   const refreshing =
@@ -162,7 +164,7 @@ export const HowItWorks = ({ navigation }: Props) => {
             {request.answer ? (
               <Text style={styles.line}>{request.answer}</Text>
             ) : null}
-            {request.correctionCents !== null ? (
+            {request.correctionCents != null ? (
               <Text style={styles.answerTitle}>
                 {t('translations:review_correction', {
                   amount: formatCurrencyFromCents(
@@ -203,6 +205,12 @@ export const HowItWorks = ({ navigation }: Props) => {
           refreshControl={
             <RefreshControl refreshing={refreshing} onRefresh={refresh} />
           }>
+          {/* Shown with the last numbers loaded when they could not be loaded again (AC-11). */}
+          {howItWorks.isError && howItWorks.data ? (
+            <Text style={styles.muted}>
+              {t('translations:how_maybe_stale')}
+            </Text>
+          ) : null}
           {section(t('translations:how_offers'), howItWorks.data?.offers)}
           {section(t('translations:how_pay'), howItWorks.data?.pay)}
           {section(

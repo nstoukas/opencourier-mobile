@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import {
+  Alert,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
@@ -9,6 +10,7 @@ import {
   View,
 } from 'react-native';
 import LinearGradient from 'react-native-linear-gradient';
+import moment from 'moment';
 import { useTranslation } from 'react-i18next';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ScreenSafeArea } from '@app/components/ScreenSafeArea/ScreenSafeArea';
@@ -22,6 +24,7 @@ import { Colors } from '@app/styles/colors';
 import { useSendReviewRequest } from '@app/hooks/useReviewRequests';
 import { ReviewTopic } from '@app/types/types';
 import { touchRow } from '@app/utilities/touch';
+import { formatShift, formatSpaced } from '@app/utilities/dates';
 import { styles } from '../RequestRemoval/RequestRemoval.styles';
 
 type Props = MainScreenProp<MainScreens.RequestReview>;
@@ -63,7 +66,23 @@ export const RequestReview = ({ navigation, route }: Props) => {
     }
     send.mutate(
       { topic, note: trimmed, ...(deliveryId ? { deliveryId } : {}) },
-      { onSuccess: () => navigation.goBack() },
+      {
+        // Say it went, and by when a person answers, so the rider does not send it again.
+        onSuccess: sent => {
+          const due = sent?.dueAt ? moment(sent.dueAt) : null;
+          Alert.alert(
+            t('translations:review_sent_title'),
+            due
+              ? t('translations:review_due', {
+                  when: `${due.format(formatSpaced)}, ${due.format(
+                    formatShift,
+                  )}`,
+                })
+              : undefined,
+          );
+          navigation.goBack();
+        },
+      },
     );
   };
 

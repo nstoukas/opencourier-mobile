@@ -136,6 +136,9 @@ export const useLocationTracking = (
               active = false;
               Geolocation.clearWatch(watchId);
             }
+            // The server says this rider is Offline: load the rider again, so the screen stops
+            // showing Online without a watch behind it.
+            queryClient.invalidateQueries({ queryKey: [QueryKeys.user] });
             return;
           }
           // A lost fix is fine: the next one follows shortly.

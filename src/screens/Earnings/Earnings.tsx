@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
   View,
   Text,
@@ -34,6 +34,8 @@ import { MainScreens } from '@app/navigation/main/types';
 import { useTranslation } from 'react-i18next';
 import { useEarnings } from '@app/hooks/useEarnings';
 import { useReviewRequests } from '@app/hooks/useReviewRequests';
+import { queryClient } from '@app/services/queryClient';
+import { QueryKeys } from '@app/utilities/queryKeys';
 import { useReviewSeen } from '@app/services/reviewSeen';
 
 type Props = DrawerScreenProp<DrawerScreens.Earnings>;
@@ -189,6 +191,16 @@ export const Earnings = ({ navigation }: Props) => {
 
   // Spec 0038: an answered review request this phone has not shown yet.
   const reviewRequests = useReviewRequests();
+  // An Offline rider gets no push for an answer, so the list is asked again each time this screen
+  // comes back into view; otherwise the "New answer" mark would wait for the page to be opened.
+  // `addListener` returns the function that removes the listener, which React calls on unmount.
+  useEffect(
+    () =>
+      navigation.addListener('focus', () => {
+        queryClient.invalidateQueries({ queryKey: [QueryKeys.reviewRequests] });
+      }),
+    [navigation],
+  );
   const seenAnswers = useReviewSeen();
   const hasNewAnswer = (reviewRequests.data?.pages ?? []).some(page =>
     page.data.some(

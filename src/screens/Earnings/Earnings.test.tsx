@@ -20,6 +20,8 @@ describe('Earnings summary (row 112, decision 112.1)', () => {
   const mockNavigation: any = {
     toggleDrawer: jest.fn(),
     navigate: jest.fn(),
+    // The screen asks for the review list again on focus (row 30 review); nothing to check here.
+    addListener: jest.fn(() => jest.fn()),
   };
 
   const defaultProps: any = {

@@ -746,6 +746,8 @@ export default {
   how_ask_review_body_plain:
     'If you think a decision about your work was wrong, ask a person to look at it again. A representative answers in writing.',
   how_failed: 'This could not be loaded. Pull down to try again.',
+  how_maybe_stale:
+    'These are the last numbers loaded. They could not be loaded again, so they may be out of date. Pull down to try again.',
   how_what_changed: 'What changed',
   how_no_changes: 'No rule has changed since this list began.',
   how_changes_failed:
@@ -767,6 +769,9 @@ export default {
   review_send_failed_title: 'Not sent',
   review_send_no_connection: 'No connection. Try again when you have signal.',
   review_send_failed: 'It could not be sent. Try again in a moment.',
+  review_send_already_open:
+    'You already have an open request about this delivery. You can follow it on "How offers and pay work".',
+  review_sent_title: 'Sent',
   review_from_delivery_hint:
     'Think the offer or the pay for this delivery was wrong? A person will look at it again.',
   review_list_failed:

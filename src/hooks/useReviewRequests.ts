@@ -44,8 +44,9 @@ export const useSettingChanges = () =>
     getNextPageParam: last => last.pagination?.nextPage ?? undefined,
   });
 
-// AC-1, AC-2. Online only: a request is not queued for later. The server's own sentence is shown on a
-// refusal (a 409 names the request already open about this delivery).
+// AC-1, AC-2. Online only: a request is not queued for later. A 409 (a request about this delivery is
+// already open) gets the app's own sentence, since the server's names the request by its id; any other
+// refusal shows the server's sentence.
 export const useSendReviewRequest = () => {
   const { t } = useTranslation();
   const queryClient = useQueryClient();
@@ -60,11 +61,15 @@ export const useSendReviewRequest = () => {
         (error as Error)?.message,
       );
       const answered = axios.isAxiosError(error) && !!error.response;
+      const alreadyOpen =
+        axios.isAxiosError(error) && error.response?.status === 409;
       const reason = serverMessage(error);
       Alert.alert(
         t('translations:review_send_failed_title'),
         !answered
           ? t('translations:review_send_no_connection')
+          : alreadyOpen
+          ? t('translations:review_send_already_open')
           : reason ?? t('translations:review_send_failed'),
       );
     },
