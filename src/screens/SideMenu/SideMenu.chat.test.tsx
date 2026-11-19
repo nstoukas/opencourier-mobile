@@ -26,10 +26,6 @@ jest.mock('@app/hooks/useUser', () => () => ({
   updateDeliverySettings: jest.fn(),
 }));
 
-jest.mock('@app/hooks/useInstance', () => () => ({
-  userInstances: [],
-  isLoadingInstances: false,
-}));
 
 let mockShiftsEnabled = false;
 jest.mock('@app/hooks/useJobContact', () => ({

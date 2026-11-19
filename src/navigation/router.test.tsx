@@ -46,10 +46,10 @@ jest.mock('./main/MainNavigation', () => {
   };
 });
 
-jest.mock('./onboarding/OnboardingNavigation', () => {
+jest.mock('./auth/AuthNavigation', () => {
   const { View } = require('react-native');
   return {
-    OnboardingStack: () => <View testID="mock-onboarding-stack" />,
+    AuthStack: () => <View testID="mock-auth-stack" />,
   };
 });
 
@@ -60,15 +60,9 @@ jest.mock('@app/screens/Loading/Loading', () => {
   };
 });
 
-jest.mock(
-  '@app/screens/SelectOrganizationModal/SelectOrganizationModal',
-  () => {
-    const { View } = require('react-native');
-    return {
-      SelectOrganizationModal: () => <View testID="mock-select-org" />,
-    };
-  },
-);
+jest.mock('@app/hooks/useOfflineWithoutLocation', () => ({
+  useOfflineWithoutLocation: jest.fn(),
+}));
 
 jest.mock('@app/screens/StatusPopup/StatusPopupScreen', () => {
   const { View } = require('react-native');

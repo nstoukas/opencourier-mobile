@@ -175,7 +175,7 @@ describe('session service (Row 66, Clause 3)', () => {
       );
     });
 
-    it('navigates to Onboarding when current route is Loading', async () => {
+    it('navigates to Auth when current route is Loading', async () => {
       jest.spyOn(navigationRef, 'isReady').mockReturnValue(true);
       jest.spyOn(navigationRef, 'getCurrentRoute').mockReturnValue({
         name: RootScreen.Loading,
@@ -187,7 +187,7 @@ describe('session service (Row 66, Clause 3)', () => {
 
       await endExpiredSession(mockHttp);
 
-      expect(navigateSpy).toHaveBeenCalledWith(RootScreen.Onboarding);
+      expect(navigateSpy).toHaveBeenCalledWith(RootScreen.Auth);
     });
 
     it('does not navigate away when current route is not Loading', async () => {

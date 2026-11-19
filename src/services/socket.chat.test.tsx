@@ -92,7 +92,6 @@ describe('SocketProvider chat events wiring (spec 0034, AC-8, AC-10, AC-11)', ()
     jest.clearAllMocks();
     mockLatestSocket = null;
     await AsyncStorage.setItem('token', 'courier-jwt-token');
-    await AsyncStorage.setItem('SOCKET_BASE_URL', 'http://localhost:3000');
 
     queryClient = new QueryClient({
       defaultOptions: {

@@ -92,7 +92,7 @@ describe('Screen safe area guard (row 104)', () => {
     );
   });
 
-  // The 22 screens row 104's commit moved off React Native's SafeAreaView.
+  // The screens moved off React Native's SafeAreaView (row 104, updated row 17).
   const screens = [
     'screens/Earnings/Earnings.tsx',
     'screens/EarningsDay/EarningsDay.tsx',
@@ -112,14 +112,12 @@ describe('Screen safe area guard (row 104)', () => {
     'screens/SettingsStack/ShiftAvailability/ShiftAvailabilityScreen.tsx',
     'screens/SettingsStack/VehicleType/VehicleType.tsx',
     'screens/SettingsStack/Volume/Volume.tsx',
-    'screens/onboarding/ChooseInstance/ChooseInstance.tsx',
-    'screens/onboarding/InstanceDetails/InstanceDetails.tsx',
-    'screens/onboarding/Landing/Landing.tsx',
-    'screens/onboarding/Welcome/Welcome.tsx',
+    'screens/auth/AuthFrame.tsx',
+    'screens/Permissions/Permissions.tsx',
   ];
 
-  it('lists 22 screens', () => {
-    expect(new Set(screens).size).toBe(22);
+  it('lists 20 screens', () => {
+    expect(new Set(screens).size).toBe(20);
   });
 
   it.each(screens)('src/%s imports and renders ScreenSafeArea', screen => {

@@ -9,6 +9,7 @@ import { Socket } from 'socket.io-client';
 import { Order, UserStatus } from '@app/types/types';
 import { OrderStatus } from '@app/types/enums';
 import { QueryKeys } from '@app/utilities/queryKeys';
+import { socketUrl } from '@app/utilities/config';
 import {
   DELIVERY_STATUS_UPDATED_EVENT,
   OFFER_ENDED_EVENT,
@@ -148,7 +149,6 @@ describe('SocketProvider and useConnectionStatus', () => {
     mockUser = { id: 'courier-1', status: UserStatus.Online };
     mockInProgressOrdersData = [];
     await AsyncStorage.setItem('token', 'courier-jwt-token');
-    await AsyncStorage.setItem('SOCKET_BASE_URL', 'http://localhost:3000');
 
     queryClient = new QueryClient({
       defaultOptions: {
@@ -433,14 +433,14 @@ describe('SocketProvider and useConnectionStatus', () => {
   });
 
   describe('Clause 3 & Minor 2: Provider level lifecycle rules with real LiveConnection', () => {
-    it('opens connection with token and URL from AsyncStorage when rider is online', async () => {
+    it('opens connection with token from AsyncStorage and socketUrl when rider is online', async () => {
       let tree!: renderer.ReactTestRenderer;
       await act(async () => {
         tree = renderer.create(renderTree(queryClient));
       });
 
       expect(mockCreateCourierSocket).toHaveBeenCalledWith(
-        'http://localhost:3000',
+        socketUrl,
         'courier-jwt-token',
       );
       expect(createdSockets.length).toBe(1);
@@ -666,7 +666,7 @@ describe('SocketProvider and useConnectionStatus', () => {
         if (key === 'token') {
           return tokenPromise;
         }
-        return Promise.resolve('http://localhost:3000');
+        return Promise.resolve(null);
       });
 
       mockUser = { id: 'courier-1', status: UserStatus.Online };

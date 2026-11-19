@@ -64,10 +64,6 @@ jest.mock('@app/hooks/useLocationPermission', () => ({
   }),
 }));
 
-jest.mock('@app/hooks/useInstance', () => () => ({
-  userInstances: [],
-  isLoadingInstances: false,
-}));
 
 const mockJob: Order = {
   id: 'del-job-chat-1',

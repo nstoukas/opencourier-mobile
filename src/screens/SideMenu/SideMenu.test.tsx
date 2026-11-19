@@ -6,6 +6,8 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import Geolocation from 'react-native-geolocation-service';
 import { SideMenuItem, UserStatus } from '@app/types/types';
+import { RootScreen } from '@app/navigation/types';
+import * as locationForOnline from '@app/services/locationForOnline';
 import { DrawerScreens } from '@app/navigation/drawer/types';
 import { LOGOUT_OFFLINE_TIMEOUT_MS } from '@app/utilities/constants';
 import * as jobStepOutbox from '@app/services/jobStepOutbox';
@@ -52,9 +54,10 @@ jest.mock('@app/services/service', () => ({
   },
 }));
 
+const mockUpdateStatus = jest.fn();
 jest.mock('@app/hooks/useUser', () => () => ({
   user: mockUserData,
-  updateStatus: jest.fn(),
+  updateStatus: (...args: any[]) => mockUpdateStatus(...args),
   updateDeliverySettings: jest.fn(),
 }));
 
@@ -66,14 +69,11 @@ jest.mock('@app/hooks/useLocationPermission', () => ({
   }),
 }));
 
-jest.mock('@app/hooks/useInstance', () => () => ({
-  userInstances: [],
-  isLoadingInstances: false,
-}));
 
 import { SideMenu } from './SideMenu';
 import { SideMenuItemPlain } from '@app/components/SideMenuItemPlain/SideMenuItemPlain';
 import { SideMenuItemSwitch } from '@app/components/SideMenuItemSwitch/SideMenuItemSwitch';
+import { UserStatusSelector } from '@app/components/UserStatusSelector/UserStatusSelector';
 
 describe('SideMenu logout (spec 0002, AC-6; spec 0009, AC-8, AC-11)', () => {
   let queryClient: QueryClient;
@@ -258,12 +258,7 @@ describe('SideMenu logout (spec 0002, AC-6; spec 0009, AC-8, AC-11)', () => {
     });
 
     // 3. Clears storage (including refreshToken, row 66), logs out, and resets queries
-    expect(multiRemoveSpy).toHaveBeenCalledWith([
-      'token',
-      'refreshToken',
-      'BASE_URL',
-      'SOCKET_BASE_URL',
-    ]);
+    expect(multiRemoveSpy).toHaveBeenCalledWith(['token', 'refreshToken']);
     expect(mockLogout).toHaveBeenCalledTimes(1);
     expect(resetQueriesSpy).toHaveBeenCalledTimes(1);
     expect(clearSavedQueriesSpy).toHaveBeenCalledTimes(1);
@@ -272,7 +267,7 @@ describe('SideMenu logout (spec 0002, AC-6; spec 0009, AC-8, AC-11)', () => {
     expect(executionOrder).toEqual([
       'unregisterThisPhone',
       'setUserStatus:OFFLINE',
-      'multiRemove:token,refreshToken,BASE_URL,SOCKET_BASE_URL',
+      'multiRemove:token,refreshToken',
       'logout',
       'resetQueries',
       'multiRemove:queryCache',
@@ -318,12 +313,7 @@ describe('SideMenu logout (spec 0002, AC-6; spec 0009, AC-8, AC-11)', () => {
     });
 
     // AsyncStorage, logout, query reset and queryCache clear MUST still happen so user is not stuck logged in
-    expect(multiRemoveSpy).toHaveBeenCalledWith([
-      'token',
-      'refreshToken',
-      'BASE_URL',
-      'SOCKET_BASE_URL',
-    ]);
+    expect(multiRemoveSpy).toHaveBeenCalledWith(['token', 'refreshToken']);
     expect(mockLogout).toHaveBeenCalledTimes(1);
     expect(resetQueriesSpy).toHaveBeenCalledTimes(1);
     expect(clearSavedQueriesSpy).toHaveBeenCalledTimes(1);
@@ -488,6 +478,99 @@ describe('SideMenu Location switch (Row 67, Clause 3)', () => {
 
       expect(mockNav.navigate).toHaveBeenCalledWith(DrawerScreens.History);
     });
+  });
+});
+
+describe('Going Online from SideMenu status select (spec 0039, AC-16)', () => {
+  let queryClient: QueryClient;
+  let onlineGateComponents: renderer.ReactTestRenderer[] = [];
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+    mockUserData = { ...mockDefaultUserData, status: UserStatus.Offline };
+    queryClient = new QueryClient({
+      defaultOptions: {
+        queries: { retry: false, gcTime: Infinity },
+      },
+    });
+  });
+
+  afterEach(async () => {
+    act(() => {
+      while (onlineGateComponents.length) {
+        onlineGateComponents.pop()?.unmount();
+      }
+    });
+    await act(async () => {});
+    queryClient.clear();
+  });
+
+  const renderSideMenu = (nav?: any) => {
+    const mockNav = nav ?? {
+      navigate: jest.fn(),
+      closeDrawer: jest.fn(),
+    };
+    const tree = renderer.create(
+      <QueryClientProvider client={queryClient}>
+        <SideMenu {...({ navigation: mockNav } as any)} />
+      </QueryClientProvider>,
+    );
+    onlineGateComponents.push(tree);
+    return tree;
+  };
+
+  it('status change to Online with location refused keeps the rider Offline', async () => {
+    jest
+      .spyOn(locationForOnline, 'confirmLocationForOnline')
+      .mockResolvedValue(false);
+
+    const mockNav = { navigate: jest.fn(), closeDrawer: jest.fn() } as any;
+    const component = renderSideMenu(mockNav);
+    const statusSelect = component.root.findByType(UserStatusSelector);
+
+    act(() => {
+      statusSelect.props.onPress(UserStatus.Online);
+    });
+
+    expect(mockNav.navigate).toHaveBeenCalledWith(
+      RootScreen.UserStatusModal,
+      expect.objectContaining({
+        status: UserStatus.Online,
+        onAccept: expect.any(Function),
+      }),
+    );
+
+    const modalCall = mockNav.navigate.mock.calls.find(
+      (call: any[]) => call[0] === RootScreen.UserStatusModal,
+    );
+    await act(async () => {
+      await modalCall[1].onAccept();
+    });
+
+    expect(mockUpdateStatus).not.toHaveBeenCalled();
+  });
+
+  it('status change to Online with location granted updates status to Online', async () => {
+    jest
+      .spyOn(locationForOnline, 'confirmLocationForOnline')
+      .mockResolvedValue(true);
+
+    const mockNav = { navigate: jest.fn(), closeDrawer: jest.fn() } as any;
+    const component = renderSideMenu(mockNav);
+    const statusSelect = component.root.findByType(UserStatusSelector);
+
+    act(() => {
+      statusSelect.props.onPress(UserStatus.Online);
+    });
+
+    const modalCall = mockNav.navigate.mock.calls.find(
+      (call: any[]) => call[0] === RootScreen.UserStatusModal,
+    );
+    await act(async () => {
+      await modalCall[1].onAccept();
+    });
+
+    expect(mockUpdateStatus).toHaveBeenCalledWith(UserStatus.Online);
   });
 });
 

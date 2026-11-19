@@ -74,7 +74,6 @@ describe('SocketProvider REMOVAL_REQUEST_DECIDED (spec 0035, AC-11)', () => {
     jest.clearAllMocks();
     mockLatestSocket = null;
     await AsyncStorage.setItem('token', 'courier-jwt-token');
-    await AsyncStorage.setItem('SOCKET_BASE_URL', 'http://localhost:3000');
     queryClient = new QueryClient({
       defaultOptions: {
         queries: { retry: false, gcTime: 0, staleTime: Infinity },

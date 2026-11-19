@@ -83,7 +83,6 @@ describe('SocketProvider JOB_READY_UPDATED (spec 0023, AC-6)', () => {
     Platform.OS = 'android';
     mockLatestSocket = null;
     await AsyncStorage.setItem('token', 'courier-jwt-token');
-    await AsyncStorage.setItem('SOCKET_BASE_URL', 'http://localhost:3000');
     queryClient = new QueryClient({
       defaultOptions: {
         queries: { retry: false, gcTime: 0, staleTime: Infinity },

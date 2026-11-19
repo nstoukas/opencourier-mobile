@@ -18,10 +18,12 @@ jest.mock('@tanstack/react-query', () => {
   };
 });
 
+import i18n from 'i18next';
 import '@app/localization/i18n';
 import App from '../App';
 import { User, UserStatus } from '@app/types/types';
 import { OrderSetting } from '@app/types/enums';
+import { socketUrl } from '@app/utilities/config';
 
 // Fake socket class to intercept socket connection through row 57's seam
 class FakeSocket {
@@ -80,8 +82,6 @@ const mockGetUser = jest.fn();
 const mockGetNewOrders = jest.fn();
 const mockGetInProgressOrders = jest.fn();
 const mockGetOrdersHistory = jest.fn();
-const mockGetUserInstances = jest.fn();
-const mockGetInstanceMetadata = jest.fn();
 
 jest.mock('@app/services/service', () => ({
   services: {
@@ -97,10 +97,6 @@ jest.mock('@app/services/service', () => ({
       getOrdersHistory: () => mockGetOrdersHistory(),
       acceptOrder: jest.fn().mockResolvedValue({}),
       declineOrder: jest.fn().mockResolvedValue({}),
-    },
-    instanceService: {
-      getUserInstances: () => mockGetUserInstances(),
-      getInstanceMetadata: (link: string) => mockGetInstanceMetadata(link),
     },
   },
 }));
@@ -132,8 +128,6 @@ describe('App smoke tests', () => {
     mockGetNewOrders.mockResolvedValue([]);
     mockGetInProgressOrders.mockResolvedValue([]);
     mockGetOrdersHistory.mockResolvedValue([]);
-    mockGetUserInstances.mockResolvedValue([]);
-    mockGetInstanceMetadata.mockResolvedValue({});
   });
 
   afterEach(async () => {
@@ -142,27 +136,21 @@ describe('App smoke tests', () => {
     });
   });
 
-  it('renders logged out: passes through Loading and reaches Landing (AC-4)', async () => {
+  it('renders logged out: passes through Loading and reaches Login (AC-1, AC-5)', async () => {
     // Logged out: /auth/me rejects (e.g. 401) and AsyncStorage has no token
     mockGetUser.mockRejectedValue(new Error('401 Unauthorized'));
 
     render(<App />);
 
-    const landing = await screen.findByTestId('landing-screen');
-    expect(landing).toBeTruthy();
+    const login = await screen.findByText(i18n.t('translations:log_in'));
+    expect(login).toBeTruthy();
     expect(mockGetUser).toHaveBeenCalled();
   });
 
-  it('renders logged in: exercises providers and reaches Home (AC-5)', async () => {
+  it('renders logged in: exercises providers and reaches Home (AC-1, AC-5)', async () => {
     const fakeToken = 'test-token';
-    const fakeBaseUrl = 'http://localhost:3000/api/courier/v1';
-    const fakeSocketUrl = 'http://localhost:3000';
 
-    await AsyncStorage.multiSet([
-      ['token', fakeToken],
-      ['BASE_URL', fakeBaseUrl],
-      ['SOCKET_BASE_URL', fakeSocketUrl],
-    ]);
+    await AsyncStorage.setItem('token', fakeToken);
 
     mockGetUser.mockResolvedValue(mockCourierUser);
 
@@ -172,7 +160,7 @@ describe('App smoke tests', () => {
     expect(home).toBeTruthy();
     expect(mockGetUser).toHaveBeenCalled();
     expect(mockCreateCourierSocket).toHaveBeenCalledWith(
-      fakeSocketUrl,
+      socketUrl,
       fakeToken,
     );
   });

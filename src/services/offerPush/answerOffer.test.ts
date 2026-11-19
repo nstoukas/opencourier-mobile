@@ -7,6 +7,7 @@ import {
 } from '@app/services/orderService';
 import { queryClient } from '@app/services/queryClient';
 import { QueryKeys } from '@app/utilities/queryKeys';
+import { apiUrl } from '@app/utilities/config';
 import '@app/localization/i18n';
 import { answerOffer } from './answerOffer';
 import { loadAnsweredOffers, offerKeyOf } from './answeredOffers';
@@ -35,7 +36,7 @@ describe('answerOffer (spec 0003, AC-5)', () => {
     });
 
     fakeClient.defaults = {
-      baseURL: 'https://coop.example.com/api/courier/v1',
+      baseURL: apiUrl,
       headers: {
         common: {
           Accept: 'application/json',
@@ -95,14 +96,10 @@ describe('answerOffer (spec 0003, AC-5)', () => {
     mockPost.mockResolvedValue({ status: 200, data: {} });
     invalidateSpy = jest.spyOn(queryClient, 'invalidateQueries');
 
-    await AsyncStorage.setItem(
-      'BASE_URL',
-      'https://coop.example.com/api/courier/v1',
-    );
     await AsyncStorage.setItem('token', 'courier-auth-token-xyz');
   });
 
-  it('headless answer reads BASE_URL and token from AsyncStorage itself, sends accept and mark-as-dispatched, and cancels the alert', async () => {
+  it('headless answer reads token from AsyncStorage, uses apiUrl, sends accept and mark-as-dispatched, and cancels the alert', async () => {
     const offer = {
       deliveryId: 'del-headless-1',
       offeredAt: '2026-10-26T10:00:00.000Z',
@@ -114,10 +111,10 @@ describe('answerOffer (spec 0003, AC-5)', () => {
     // Cancels the alert so ring stops immediately
     expect(notifee.cancelNotification).toHaveBeenCalledWith('del-headless-1');
 
-    // Axios client configured directly from AsyncStorage
+    // Axios client configured with apiUrl from config
     expect(mockedAxios.create).toHaveBeenCalledWith(
       expect.objectContaining({
-        baseURL: 'https://coop.example.com/api/courier/v1',
+        baseURL: apiUrl,
         headers: {
           Accept: 'application/json',
           Authorization: 'Bearer courier-auth-token-xyz',
@@ -182,7 +179,7 @@ describe('answerOffer (spec 0003, AC-5)', () => {
 
     // axios.post was called to renew token
     expect(mockedAxios.post).toHaveBeenCalledWith(
-      'https://coop.example.com/api/courier/v1/auth/refresh-tokens',
+      `${apiUrl}/auth/refresh-tokens`,
       undefined,
       {
         headers: { 'x-refresh-token': 'courier-refresh-token-123' },
@@ -341,7 +338,7 @@ describe('answerOffer (spec 0003, AC-5)', () => {
     expect(parsed).not.toContain(key);
   });
 
-  it('returns failed without sending if token or BASE_URL are missing from storage', async () => {
+  it('returns failed without sending if token is missing from storage', async () => {
     await AsyncStorage.clear();
     const offer = {
       deliveryId: 'del-headless-no-auth',
