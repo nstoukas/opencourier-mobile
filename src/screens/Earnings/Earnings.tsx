@@ -33,6 +33,7 @@ import { formatCurrencyFromCents } from '@app/utilities/currency';
 import { MainScreens } from '@app/navigation/main/types';
 import { useTranslation } from 'react-i18next';
 import { useEarnings } from '@app/hooks/useEarnings';
+import { TimeWorkedSection } from '@app/components/TimeWorkedSection/TimeWorkedSection';
 import { useReviewRequests } from '@app/hooks/useReviewRequests';
 import { queryClient } from '@app/services/queryClient';
 import { QueryKeys } from '@app/utilities/queryKeys';
@@ -120,7 +121,22 @@ export const Earnings = ({ navigation }: Props) => {
     );
   };
 
-  const renderFooter = () => {
+  // Spec 0040 (AC-11): the Time worked section closes the list on every tab.
+  const renderFooter = () => (
+    <>
+      {renderWeeklyFooter()}
+      <TimeWorkedSection />
+    </>
+  );
+
+  // Pulling down reloads the earnings and the time worked together.
+  const onRefresh = () => {
+    refetch();
+    queryClient.invalidateQueries({ queryKey: [QueryKeys.timeWorked] });
+    queryClient.invalidateQueries({ queryKey: [QueryKeys.coopTotals] });
+  };
+
+  const renderWeeklyFooter = () => {
     if (selectedTab !== EarningsTabItem.Weekly) {
       // FlatList's ListFooterComponent types reject undefined, so return null.
       return null;
@@ -283,7 +299,7 @@ export const Earnings = ({ navigation }: Props) => {
             contentContainerStyle={styles.listContent}
             ListFooterComponent={renderFooter}
             refreshControl={
-              <RefreshControl refreshing={isRefetching} onRefresh={refetch} />
+              <RefreshControl refreshing={isRefetching} onRefresh={onRefresh} />
             }
           />
         )}

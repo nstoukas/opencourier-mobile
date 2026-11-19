@@ -31,4 +31,9 @@ export const QueryKeys = {
   howItWorks: 'howItWorks',
   reviewRequests: 'reviewRequests',
   settingChanges: 'settingChanges',
+  // Spec 0040: the home counter's snapshot, the rider's time worked and the co-op totals. Never saved to
+  // disk (AC-10): a snapshot from yesterday would show a shift that has ended.
+  timeWorkedCurrent: 'timeWorkedCurrent',
+  timeWorked: 'timeWorked',
+  coopTotals: 'coopTotals',
 };

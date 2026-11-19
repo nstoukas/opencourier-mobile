@@ -7,6 +7,7 @@ import routeService, { RouteService } from './routeService';
 import sosService, { SosService } from './sosService';
 import chatService, { ChatService } from './chat/chatService';
 import reviewService, { ReviewService } from './reviewService';
+import timeWorkedService, { TimeWorkedService } from './timeWorkedService';
 import { clearReviewSeen } from './reviewSeen';
 import { clearReviewNotice } from './reviewNotice';
 import { clearChatSeen } from './chat/chatSeen';
@@ -32,6 +33,8 @@ export type Services = {
   chatService: ChatService;
   // Review requests and the explanation page (spec 0038).
   reviewService: ReviewService;
+  // The rider's time worked and the co-op totals (spec 0040).
+  timeWorkedService: TimeWorkedService;
   notificationDeviceService: NotificationDeviceService;
   logout: () => void;
 };
@@ -46,6 +49,7 @@ const Services = (): Services => {
   const sService = sosService(client);
   const chService = chatService(client);
   const rvService = reviewService(client);
+  const twService = timeWorkedService(client);
 
   const logout = () => {
     client.defaults.headers.common.Authorization = undefined;
@@ -82,6 +86,7 @@ const Services = (): Services => {
     sosService: sService,
     chatService: chService,
     reviewService: rvService,
+    timeWorkedService: twService,
     notificationDeviceService: dService,
     logout,
   };

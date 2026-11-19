@@ -678,6 +678,8 @@ export type HowItWorks = {
   pay: string[];
   personDecides: string[];
   appRecords: string[];
+  // Spec 0040 (AC-13): how time worked is counted. Optional: a server before spec 0040 leaves it out.
+  timeWorked?: string[];
   reviewAnswerDays: number;
 };
 

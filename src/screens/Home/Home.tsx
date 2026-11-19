@@ -7,6 +7,7 @@ import { useFocusEffect, useIsFocused } from '@react-navigation/native';
 import { styles } from './Home.styles';
 import { DispatchStopBanner } from '@app/components/DispatchStopBanner/DispatchStopBanner';
 import { ShiftBanner } from '@app/components/ShiftBanner/ShiftBanner';
+import { TimeWorkedCounter } from '@app/components/TimeWorkedCounter/TimeWorkedCounter';
 import { CancelledJobCard } from '@app/components/CancelledJobCard/CancelledJobCard';
 import { RemovalNotices } from '@app/components/RemovalNotices/RemovalNotices';
 import { RefusedSteps } from '@app/components/RefusedSteps/RefusedSteps';
@@ -445,6 +446,8 @@ export const HomeScreen = ({ navigation }: Props) => {
         {sosActive && <SosActiveBanner onPress={() => openSosScreen()} />}
         {/* On shift or free, while the co-op runs shifts (spec 0027). */}
         <ShiftBanner inFront={isFocused} />
+        {/* The open shift's time, money and € per hour (spec 0040, AC-10). */}
+        <TimeWorkedCounter inFront={isFocused} />
         {/* Dispatch stopped for heat or a storm, or about to be (spec 0014). */}
         <DispatchStopBanner inFront={isFocused} />
         {/* Spec 0015: a job this rider held was cancelled. */}

@@ -221,6 +221,11 @@ export const HowItWorks = ({ navigation }: Props) => {
             t('translations:how_app_records'),
             howItWorks.data?.appRecords,
           )}
+          {/* Spec 0040 (AC-13): how time worked is counted, and that admins can see it. */}
+          {section(
+            t('translations:how_time_worked'),
+            howItWorks.data?.timeWorked,
+          )}
 
           <View style={styles.card}>
             <Text style={styles.cardTitle} accessibilityRole="header">
