@@ -1,7 +1,7 @@
 import fs from 'fs';
 import path from 'path';
 
-// AC-2 guard (spec 0039): fails if any non-test source file under src/ or App.tsx,
+// AC-2 guard (spec 0039, Clause 10): fails if any non-test source file under src/ or App.tsx,
 // other than src/services/upgradeGate.ts, contains BASE_URL or SOCKET_BASE_URL,
 // or imports any deleted screen or module.
 
@@ -42,19 +42,41 @@ const DELETED_MODULE_NAMES = [
   'OrganizationCell',
 ];
 
-const DELETED_IMPORT_REGEX = new RegExp(
-  `import\\s+[\\s\\S]*?\\b(${DELETED_MODULE_NAMES.map(n =>
-    n.replace('/', '\\/'),
-  ).join(
-    '|',
-  )})\\b[\\s\\S]*?from\\s+['"]|from\\s+['"][^'"]*\\b(${DELETED_MODULE_NAMES.map(
-    n => n.replace('/', '\\/'),
-  ).join('|')})\\b`,
+const DELETED_NAME_PATTERN = new RegExp(
+  `\\b(${DELETED_MODULE_NAMES.map(n => n.replace('/', '\\/')).join('|')})\\b`,
 );
+
+// Matches import and require statements per statement, never lazily across statements
+export function findDeletedImportStatements(content: string): string[] {
+  const statementPatterns = [
+    // import ... from '...' (including multiline named imports with braces)
+    /import\s+(?:type\s+)?(?:[^;{}]*\{[^}]*\}|[^;{}]+)?\s*from\s*['"][^'"]+['"]/g,
+    // side-effect import '...'
+    /import\s*['"][^'"]+['"]/g,
+    // require('...')
+    /require\s*\(\s*['"][^'"]+['"]\s*\)/g,
+    // dynamic import('...')
+    /import\s*\(\s*['"][^'"]+['"]\s*\)/g,
+  ];
+
+  const found: string[] = [];
+  for (const pattern of statementPatterns) {
+    const matches = content.match(pattern);
+    if (matches) {
+      for (const statement of matches) {
+        const match = statement.match(DELETED_NAME_PATTERN);
+        if (match) {
+          found.push(match[1]);
+        }
+      }
+    }
+  }
+  return found;
+}
 
 const OLD_URL_KEYS_REGEX = /\b(BASE_URL|SOCKET_BASE_URL)\b/;
 
-describe('AC-2 guard: no instance screens or old address keys in source (spec 0039)', () => {
+describe('AC-2 guard: no instance screens or old address keys in source (spec 0039, Clause 10)', () => {
   const sourceFiles = [
     ...getSourceFiles(srcDir),
     path.join(rootDir, 'App.tsx'),
@@ -85,13 +107,35 @@ describe('AC-2 guard: no instance screens or old address keys in source (spec 00
     for (const file of sourceFiles) {
       const relative = path.relative(rootDir, file);
       const content = fs.readFileSync(file, 'utf-8');
-      const match = content.match(DELETED_IMPORT_REGEX);
-      if (match) {
-        violations.push(
-          `${relative} imports deleted module: ${match[1] || match[2]}`,
-        );
+      const matches = findDeletedImportStatements(content);
+      for (const m of matches) {
+        violations.push(`${relative} imports deleted module: ${m}`);
       }
     }
     expect(violations).toEqual([]);
+  });
+
+  describe('guard behavior checks (Clause 10)', () => {
+    it('fails on require("...navigation/onboarding...")', () => {
+      const sample = `const x = require('@app/navigation/onboarding/Landing');`;
+      const violations = findDeletedImportStatements(sample);
+      expect(violations).toContain('navigation/onboarding');
+    });
+
+    it('matches import patterns per statement and does NOT fail when a deleted name appears in a comment between imports', () => {
+      const sample = `
+import { Button } from '@app/components/Button/Button';
+// Welcome comment between imports must not trigger a false positive
+import { Text } from 'react-native';
+`;
+      const violations = findDeletedImportStatements(sample);
+      expect(violations).toEqual([]);
+    });
+
+    it('fails when an import statement explicitly imports a deleted screen or module', () => {
+      const sample = `import { Welcome } from '@app/screens/Welcome';`;
+      const violations = findDeletedImportStatements(sample);
+      expect(violations).toContain('Welcome');
+    });
   });
 });

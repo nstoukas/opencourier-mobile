@@ -1,7 +1,8 @@
 import React from 'react';
-import { AppState, PermissionsAndroid, Platform } from 'react-native';
+import { AppState, Linking, PermissionsAndroid, Platform } from 'react-native';
 import { renderHook, act, cleanup } from '@testing-library/react-native';
 import UserContext from '@app/context/userContext';
+import * as permissionsUtil from '@app/utilities/permissions';
 import {
   useLocationPermission,
   useGrantedLocationPermission,
@@ -152,5 +153,76 @@ describe('useLocationPermission (Row 67, Clause 6, Decision 67.5)', () => {
 
     expect(checkSpy).not.toHaveBeenCalled();
     expect(appStateSpy).not.toHaveBeenCalled();
+  });
+
+  describe('requestLocationPermission (decision 17.22, Clause 3)', () => {
+    let openSettingsSpy: jest.SpyInstance;
+    let requestLocationSpy: jest.SpyInstance;
+
+    beforeEach(() => {
+      openSettingsSpy = jest
+        .spyOn(Linking, 'openSettings')
+        .mockResolvedValue(undefined as any);
+      requestLocationSpy = jest.spyOn(
+        permissionsUtil,
+        'requestAndroidLocation',
+      );
+    });
+
+    afterEach(() => {
+      openSettingsSpy.mockRestore();
+      requestLocationSpy.mockRestore();
+    });
+
+    it('"approximate" returns false and does NOT open settings even with openSettingsIfBlocked', async () => {
+      requestLocationSpy.mockResolvedValue('approximate');
+
+      const { result } = renderHook(() => useLocationPermission(), { wrapper });
+
+      let granted: boolean | undefined;
+      await act(async () => {
+        granted = await result.current.requestLocationPermission({
+          openSettingsIfBlocked: true,
+        });
+      });
+
+      expect(granted).toBe(false);
+      expect(openSettingsSpy).not.toHaveBeenCalled();
+      expect(mockSetLocationPermission).toHaveBeenCalledWith(false);
+    });
+
+    it('"blocked" with openSettingsIfBlocked opens settings via Linking.openSettings and returns false', async () => {
+      requestLocationSpy.mockResolvedValue('blocked');
+
+      const { result } = renderHook(() => useLocationPermission(), { wrapper });
+
+      let granted: boolean | undefined;
+      await act(async () => {
+        granted = await result.current.requestLocationPermission({
+          openSettingsIfBlocked: true,
+        });
+      });
+
+      expect(granted).toBe(false);
+      expect(openSettingsSpy).toHaveBeenCalledTimes(1);
+      expect(mockSetLocationPermission).toHaveBeenCalledWith(false);
+    });
+
+    it('"granted" returns true and does not open settings', async () => {
+      requestLocationSpy.mockResolvedValue('granted');
+
+      const { result } = renderHook(() => useLocationPermission(), { wrapper });
+
+      let granted: boolean | undefined;
+      await act(async () => {
+        granted = await result.current.requestLocationPermission({
+          openSettingsIfBlocked: true,
+        });
+      });
+
+      expect(granted).toBe(true);
+      expect(openSettingsSpy).not.toHaveBeenCalled();
+      expect(mockSetLocationPermission).toHaveBeenCalledWith(true);
+    });
   });
 });

@@ -1,4 +1,5 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { Alert } from 'react-native';
 import axios from 'axios';
 import notifee from '@notifee/react-native';
 import {
@@ -12,7 +13,27 @@ import '@app/localization/i18n';
 import { answerOffer } from './answerOffer';
 import { loadAnsweredOffers, offerKeyOf } from './answeredOffers';
 
-jest.mock('axios');
+jest.mock('axios', () => {
+  const fakeAxiosClient: any = {
+    interceptors: {
+      request: { use: jest.fn() },
+      response: { use: jest.fn() },
+    },
+    defaults: { headers: { common: {} } },
+    get: jest.fn(),
+    post: jest.fn(),
+    put: jest.fn(),
+    delete: jest.fn(),
+  };
+  return {
+    create: jest.fn(() => fakeAxiosClient),
+    post: jest.fn(),
+    get: jest.fn(),
+    put: jest.fn(),
+    delete: jest.fn(),
+    isAxiosError: jest.fn(),
+  };
+});
 const mockedAxios = axios as jest.Mocked<typeof axios>;
 
 describe('answerOffer (spec 0003, AC-5)', () => {
@@ -447,6 +468,27 @@ describe('answerOffer (spec 0003, AC-5)', () => {
 
       const outcome409 = await answerOffer(offer409Other, 'accept');
       expect(outcome409).toBe('failed');
+    });
+
+    it('runs upgrade gate before reading token: with another server BASE_URL, returns "failed" without HTTP request or alert (Clause 6)', async () => {
+      const alertSpy = jest.spyOn(Alert, 'alert');
+      await AsyncStorage.setItem(
+        'BASE_URL',
+        'https://other-instance.example.com/api/courier/v1',
+      );
+      await AsyncStorage.setItem('token', 'courier-auth-token-xyz');
+
+      const offer = {
+        deliveryId: 'del-other-server',
+        offeredAt: '2026-10-26T10:45:00.000Z',
+      };
+
+      const outcome = await answerOffer(offer, 'accept');
+
+      expect(outcome).toBe('failed');
+      expect(mockPost).not.toHaveBeenCalled();
+      expect(alertSpy).not.toHaveBeenCalled();
+      alertSpy.mockRestore();
     });
   });
 });

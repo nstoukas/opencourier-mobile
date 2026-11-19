@@ -6,9 +6,10 @@ import {
 import * as permissionsUtil from '@app/utilities/permissions';
 import i18n from '@app/localization/i18n';
 
-describe('confirmLocationForOnline and showLocationOffAlert (spec 0039, AC-16)', () => {
+describe('confirmLocationForOnline and showLocationOffAlert (spec 0039, AC-16, decision 17.22, Clause 4)', () => {
   let alertSpy: jest.SpyInstance;
   let openSettingsSpy: jest.SpyInstance;
+  let isApproximateSpy: jest.SpyInstance;
 
   beforeEach(() => {
     jest.clearAllMocks();
@@ -16,16 +17,22 @@ describe('confirmLocationForOnline and showLocationOffAlert (spec 0039, AC-16)',
     openSettingsSpy = jest
       .spyOn(Linking, 'openSettings')
       .mockImplementation(() => Promise.resolve() as any);
+    isApproximateSpy = jest
+      .spyOn(permissionsUtil, 'isApproximateLocationOnly')
+      .mockResolvedValue(false);
   });
 
   afterEach(() => {
     alertSpy.mockRestore();
     openSettingsSpy.mockRestore();
+    isApproximateSpy.mockRestore();
   });
 
-  describe('showLocationOffAlert', () => {
-    it('shows exact sentence and options "Open settings" and "Not now"', () => {
-      showLocationOffAlert();
+  describe('showLocationOffAlert (decision 17.22, Clause 4)', () => {
+    it('shows "Location is off..." sentence when approximate is false, with "Open settings" and "Not now"', async () => {
+      isApproximateSpy.mockResolvedValue(false);
+
+      await showLocationOffAlert();
 
       expect(alertSpy).toHaveBeenCalledWith(
         i18n.t('translations:location_off_title'),
@@ -37,6 +44,28 @@ describe('confirmLocationForOnline and showLocationOffAlert (spec 0039, AC-16)',
       );
 
       // Verify tapping Open settings calls Linking.openSettings()
+      const buttons = alertSpy.mock.calls[0][2];
+      const openSettingsButton = buttons.find(
+        (b: any) => b.text === 'Open settings',
+      );
+      openSettingsButton.onPress();
+      expect(openSettingsSpy).toHaveBeenCalledTimes(1);
+    });
+
+    it('shows "Choose Precise location..." sentence when only approximate is allowed, with "Open settings" and "Not now"', async () => {
+      isApproximateSpy.mockResolvedValue(true);
+
+      await showLocationOffAlert();
+
+      expect(alertSpy).toHaveBeenCalledWith(
+        i18n.t('translations:location_off_title'),
+        'Choose Precise location: dispatch and arrival need it.',
+        expect.arrayContaining([
+          expect.objectContaining({ text: 'Not now', style: 'cancel' }),
+          expect.objectContaining({ text: 'Open settings' }),
+        ]),
+      );
+
       const buttons = alertSpy.mock.calls[0][2];
       const openSettingsButton = buttons.find(
         (b: any) => b.text === 'Open settings',

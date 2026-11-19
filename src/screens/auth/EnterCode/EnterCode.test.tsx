@@ -187,6 +187,61 @@ describe('EnterCode screen (spec 0039, AC-6, AC-10, AC-11)', () => {
       });
       expect(alertSpy).not.toHaveBeenCalled();
     });
+
+    it('after successful reset, button never resends reset, and if loading user fails, shows retry button that refetches user (Clause 8)', async () => {
+      const resetSpy = jest
+        .spyOn(services.userService, 'resetPassword')
+        .mockResolvedValue({
+          result: { session: { accessToken: 'a', refreshToken: 'r' } },
+        } as any);
+
+      const getUserSpy = jest
+        .spyOn(services.userService, 'getUser')
+        .mockRejectedValue(new Error('User fetch network error'));
+
+      renderScreen();
+
+      fireEvent.changeText(
+        screen.getByPlaceholderText(i18n.t('translations:code_label')),
+        '004219',
+      );
+      fireEvent.changeText(
+        screen.getByPlaceholderText(i18n.t('translations:new_password')),
+        'my-new-password-123',
+      );
+
+      const submitButton = screen.getByText(
+        i18n.t('translations:set_password_and_log_in'),
+      );
+      fireEvent.press(submitButton);
+
+      await waitFor(() => {
+        expect(resetSpy).toHaveBeenCalledTimes(1);
+      });
+
+      // Pressing again or submitting via keyboard does NOT call resetPassword a second time
+      fireEvent.press(submitButton);
+      const passwordField = screen.getByPlaceholderText(
+        i18n.t('translations:new_password'),
+      );
+      fireEvent(passwordField, 'submitEditing');
+      expect(resetSpy).toHaveBeenCalledTimes(1);
+
+      // When loading user fails, "Password set. Tap to try logging in again" button appears
+      const retryButton = await screen.findByText(
+        i18n.t('translations:reset_done_try_again'),
+      );
+      expect(retryButton).toBeTruthy();
+
+      // Pressing retry button refetches the user, does not call resetPassword
+      getUserSpy.mockResolvedValueOnce({ id: 'courier-1' } as any);
+      fireEvent.press(retryButton);
+
+      await waitFor(() => {
+        expect(getUserSpy).toHaveBeenCalledTimes(2);
+      });
+      expect(resetSpy).toHaveBeenCalledTimes(1);
+    });
   });
 
   describe('Error handling (AC-10, AC-11)', () => {

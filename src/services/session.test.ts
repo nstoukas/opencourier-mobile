@@ -13,6 +13,7 @@ import {
   installSessionRefresh,
 } from './session';
 import { queryClient } from './queryClient';
+import { StackActions } from '@react-navigation/native';
 import { navigationRef } from '@app/navigation/navigationRef';
 import { RootScreen } from '@app/navigation/types';
 import { cancelAllOfferAlerts } from './offerPush/offerAlert';
@@ -175,34 +176,36 @@ describe('session service (Row 66, Clause 3)', () => {
       );
     });
 
-    it('navigates to Auth when current route is Loading', async () => {
+    it('dispatches StackActions.replace to Auth when current route is Loading (Clause 9)', async () => {
       jest.spyOn(navigationRef, 'isReady').mockReturnValue(true);
       jest.spyOn(navigationRef, 'getCurrentRoute').mockReturnValue({
         name: RootScreen.Loading,
         key: 'loading-key',
       });
-      const navigateSpy = jest
-        .spyOn(navigationRef, 'navigate')
+      const dispatchSpy = jest
+        .spyOn(navigationRef, 'dispatch')
         .mockImplementation(() => {});
 
       await endExpiredSession(mockHttp);
 
-      expect(navigateSpy).toHaveBeenCalledWith(RootScreen.Auth);
+      expect(dispatchSpy).toHaveBeenCalledWith(
+        StackActions.replace(RootScreen.Auth),
+      );
     });
 
-    it('does not navigate away when current route is not Loading', async () => {
+    it('does not dispatch replace when current route is not Loading', async () => {
       jest.spyOn(navigationRef, 'isReady').mockReturnValue(true);
       jest.spyOn(navigationRef, 'getCurrentRoute').mockReturnValue({
         name: RootScreen.Main,
         key: 'main-key',
       });
-      const navigateSpy = jest
-        .spyOn(navigationRef, 'navigate')
+      const dispatchSpy = jest
+        .spyOn(navigationRef, 'dispatch')
         .mockImplementation(() => {});
 
       await endExpiredSession(mockHttp);
 
-      expect(navigateSpy).not.toHaveBeenCalled();
+      expect(dispatchSpy).not.toHaveBeenCalled();
     });
   });
 

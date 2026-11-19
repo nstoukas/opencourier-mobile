@@ -12,7 +12,7 @@ import * as permissionsUtil from '@app/utilities/permissions';
 import { MainScreens } from '@app/navigation/main/types';
 import i18n from '@app/localization/i18n';
 
-describe('Permissions screen (spec 0039, AC-15)', () => {
+describe('Permissions screen (spec 0039, AC-15, decision 17.22, Clause 4)', () => {
   let openSettingsSpy: jest.SpyInstance;
   const originalPlatform = Platform.OS;
 
@@ -25,6 +25,9 @@ describe('Permissions screen (spec 0039, AC-15)', () => {
     openSettingsSpy = jest
       .spyOn(Linking, 'openSettings')
       .mockImplementation(() => Promise.resolve() as any);
+    jest
+      .spyOn(permissionsUtil, 'isApproximateLocationOnly')
+      .mockResolvedValue(false);
   });
 
   afterEach(() => {
@@ -94,7 +97,7 @@ describe('Permissions screen (spec 0039, AC-15)', () => {
 
     Platform.OS = 'android';
     jest
-      .spyOn(permissionsUtil, 'requestAndroidPermission')
+      .spyOn(permissionsUtil, 'requestAndroidLocation')
       .mockResolvedValue('granted');
 
     render(<Permissions navigation={mockNavigation} route={{} as any} />);
@@ -122,7 +125,7 @@ describe('Permissions screen (spec 0039, AC-15)', () => {
 
     Platform.OS = 'android';
     jest
-      .spyOn(permissionsUtil, 'requestAndroidPermission')
+      .spyOn(permissionsUtil, 'requestAndroidLocation')
       .mockResolvedValue('blocked');
 
     render(<Permissions navigation={mockNavigation} route={{} as any} />);
@@ -134,6 +137,52 @@ describe('Permissions screen (spec 0039, AC-15)', () => {
 
     await waitFor(() => {
       expect(openSettingsSpy).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  describe('precise location sentence under location card (decision 17.22, Clause 4)', () => {
+    it('shows the precise sentence under location card when only approximate is allowed', async () => {
+      jest.spyOn(permissionsUtil, 'isLocationGranted').mockResolvedValue(false);
+      jest
+        .spyOn(permissionsUtil, 'isNotificationsGranted')
+        .mockResolvedValue(false);
+      jest
+        .spyOn(permissionsUtil, 'isApproximateLocationOnly')
+        .mockResolvedValue(true);
+
+      render(<Permissions navigation={mockNavigation} route={{} as any} />);
+
+      await waitFor(() => {
+        expect(
+          screen.getByText(
+            'Choose Precise location: dispatch and arrival need it.',
+          ),
+        ).toBeTruthy();
+      });
+    });
+
+    it('does NOT show the precise sentence when location is allowed', async () => {
+      jest.spyOn(permissionsUtil, 'isLocationGranted').mockResolvedValue(true);
+      jest
+        .spyOn(permissionsUtil, 'isNotificationsGranted')
+        .mockResolvedValue(false);
+      jest
+        .spyOn(permissionsUtil, 'isApproximateLocationOnly')
+        .mockResolvedValue(false);
+
+      render(<Permissions navigation={mockNavigation} route={{} as any} />);
+
+      await waitFor(() => {
+        expect(
+          screen.getByText(i18n.t('translations:permission_location_title')),
+        ).toBeTruthy();
+      });
+
+      expect(
+        screen.queryByText(
+          'Choose Precise location: dispatch and arrival need it.',
+        ),
+      ).toBeNull();
     });
   });
 });

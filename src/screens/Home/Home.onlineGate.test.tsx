@@ -94,7 +94,7 @@ describe('Home screen going Online gate (spec 0039, AC-16)', () => {
       </QueryClientProvider>,
     );
 
-  it('going Online with location refused keeps the rider Offline', async () => {
+  it('going Online with location refused keeps the rider Offline and returns swipe knob to start (Clause 10)', async () => {
     jest
       .spyOn(locationForOnline, 'confirmLocationForOnline')
       .mockResolvedValue(false);
@@ -103,6 +103,7 @@ describe('Home screen going Online gate (spec 0039, AC-16)', () => {
 
     const homeCard = screen.UNSAFE_getByType(HomeCard);
     expect(homeCard.props.mode).toBe('offline');
+    expect(homeCard.props.goOnlineAttempt).toBe(0);
 
     // Trigger swipe to go Online
     await act(async () => {
@@ -110,6 +111,10 @@ describe('Home screen going Online gate (spec 0039, AC-16)', () => {
     });
 
     expect(mockUpdateStatus).not.toHaveBeenCalled();
+
+    // The attempt counter increments to change the ButtonSwipe key, springing the knob back
+    const updatedHomeCard = screen.UNSAFE_getByType(HomeCard);
+    expect(updatedHomeCard.props.goOnlineAttempt).toBe(1);
   });
 
   it('going Online with location granted sets the rider Online', async () => {
