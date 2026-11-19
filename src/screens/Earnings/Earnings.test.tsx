@@ -2,10 +2,19 @@ import React from 'react';
 import { render, screen, fireEvent } from '@testing-library/react-native';
 import { Earnings } from './Earnings';
 import { useEarnings } from '@app/hooks/useEarnings';
+import { useReviewRequests } from '@app/hooks/useReviewRequests';
+import { useReviewSeen } from '@app/services/reviewSeen';
+import { MainScreens } from '@app/navigation/main/types';
 import { EarningsSummaryDay } from '@app/types/types';
 import i18n from '@app/localization/i18n';
 
 jest.mock('@app/hooks/useEarnings');
+jest.mock('@app/hooks/useReviewRequests', () => ({
+  useReviewRequests: jest.fn(() => ({ data: { pages: [] } })),
+}));
+jest.mock('@app/services/reviewSeen', () => ({
+  useReviewSeen: jest.fn(() => []),
+}));
 
 describe('Earnings summary (row 112, decision 112.1)', () => {
   const mockNavigation: any = {
@@ -372,6 +381,78 @@ describe('Earnings summary (row 112, decision 112.1)', () => {
             `· ${i18n.t('translations:earnings_paid_without_deliveries')}`,
           ),
         ),
+      ).toBeNull();
+    });
+  });
+
+  describe('How offers and pay work link and New answer mark (spec 0038, AC-9, AC-11)', () => {
+    const baseMockEarnings = {
+      days: [],
+      totalEarnings: 250,
+      totalCompensation: 250,
+      totalTips: 0,
+      deliveryCount: 0,
+      currency: 'EUR',
+      isLoading: false,
+      isError: false,
+      isRefetching: false,
+      refetch: jest.fn(),
+    };
+
+    it('renders "How offers and pay work" link and navigates to HowItWorks on press', () => {
+      (useEarnings as jest.Mock).mockReturnValue(baseMockEarnings);
+
+      render(<Earnings {...defaultProps} />);
+
+      const howLink = screen.getByTestId('how-it-works-link');
+      expect(howLink).toBeTruthy();
+      expect(screen.getByText(i18n.t('translations:how_title'))).toBeTruthy();
+
+      fireEvent.press(howLink);
+      expect(mockNavigation.navigate).toHaveBeenCalledWith(
+        MainScreens.HowItWorks,
+      );
+    });
+
+    it('shows "New answer" badge when there is an answered review request not yet in seenAnswers', () => {
+      (useEarnings as jest.Mock).mockReturnValue(baseMockEarnings);
+      (useReviewRequests as jest.Mock).mockReturnValue({
+        data: {
+          pages: [
+            {
+              data: [{ id: 'rev-answered-1', status: 'ANSWERED' }],
+            },
+          ],
+        },
+      });
+      // Not seen yet
+      (useReviewSeen as jest.Mock).mockReturnValue([]);
+
+      render(<Earnings {...defaultProps} />);
+
+      expect(
+        screen.getByText(i18n.t('translations:review_new_answer')),
+      ).toBeTruthy();
+    });
+
+    it('hides "New answer" badge when answered review request is already in seenAnswers', () => {
+      (useEarnings as jest.Mock).mockReturnValue(baseMockEarnings);
+      (useReviewRequests as jest.Mock).mockReturnValue({
+        data: {
+          pages: [
+            {
+              data: [{ id: 'rev-answered-1', status: 'ANSWERED' }],
+            },
+          ],
+        },
+      });
+      // Already seen
+      (useReviewSeen as jest.Mock).mockReturnValue(['rev-answered-1']);
+
+      render(<Earnings {...defaultProps} />);
+
+      expect(
+        screen.queryByText(i18n.t('translations:review_new_answer')),
       ).toBeNull();
     });
   });
