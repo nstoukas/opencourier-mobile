@@ -54,7 +54,6 @@ jest.mock('@app/hooks/useLocationPermission', () => ({
   }),
 }));
 
-
 jest.mock('@app/hooks/useJobContact', () => ({
   useJobContact: jest.fn(),
 }));

@@ -1,5 +1,4 @@
 import React from 'react';
-import { View } from 'react-native';
 import { NavigationContainer } from '@react-navigation/native';
 import { render, screen } from '@testing-library/react-native';
 import { MainStack } from './MainNavigation';
@@ -46,5 +45,28 @@ describe('MainNavigation initial route decision (spec 0039, AC-15)', () => {
     );
 
     expect(screen.getByTestId('mock-permissions-screen')).toBeTruthy();
+  });
+
+  it('mount the stack after a login, unmount, mount again: Drawer not Permissions the second time', () => {
+    markJustLoggedIn();
+
+    const { unmount } = render(
+      <NavigationContainer>
+        <MainStack />
+      </NavigationContainer>,
+    );
+
+    expect(screen.getByTestId('mock-permissions-screen')).toBeTruthy();
+
+    unmount();
+
+    render(
+      <NavigationContainer>
+        <MainStack />
+      </NavigationContainer>,
+    );
+
+    expect(screen.getByTestId('mock-drawer-stack')).toBeTruthy();
+    expect(screen.queryByTestId('mock-permissions-screen')).toBeNull();
   });
 });

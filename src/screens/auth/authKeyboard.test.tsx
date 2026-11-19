@@ -31,7 +31,11 @@ describe('Auth screens keyboard padding (row 114, spec 0039, AC-17)', () => {
   });
 
   const renderWithProviders = (component: React.ReactElement) =>
-    render(<QueryClientProvider client={queryClient}>{component}</QueryClientProvider>);
+    render(
+      <QueryClientProvider client={queryClient}>
+        {component}
+      </QueryClientProvider>,
+    );
 
   describe('Login screen', () => {
     it('uses behavior "padding" on KeyboardAvoidingView on Android as well as iOS', () => {

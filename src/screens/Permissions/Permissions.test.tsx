@@ -1,6 +1,11 @@
 import React from 'react';
 import { Linking, Platform } from 'react-native';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react-native';
+import {
+  render,
+  screen,
+  fireEvent,
+  waitFor,
+} from '@testing-library/react-native';
 import { StackActions } from '@react-navigation/native';
 import { Permissions } from './Permissions';
 import * as permissionsUtil from '@app/utilities/permissions';
@@ -29,7 +34,9 @@ describe('Permissions screen (spec 0039, AC-15)', () => {
 
   it('if both location and notifications are already granted, immediately navigates to Home (AC-15)', async () => {
     jest.spyOn(permissionsUtil, 'isLocationGranted').mockResolvedValue(true);
-    jest.spyOn(permissionsUtil, 'isNotificationsGranted').mockResolvedValue(true);
+    jest
+      .spyOn(permissionsUtil, 'isNotificationsGranted')
+      .mockResolvedValue(true);
 
     render(<Permissions navigation={mockNavigation} route={{} as any} />);
 
@@ -42,7 +49,9 @@ describe('Permissions screen (spec 0039, AC-15)', () => {
 
   it('renders permission cards when at least one permission is not granted', async () => {
     jest.spyOn(permissionsUtil, 'isLocationGranted').mockResolvedValue(false);
-    jest.spyOn(permissionsUtil, 'isNotificationsGranted').mockResolvedValue(true);
+    jest
+      .spyOn(permissionsUtil, 'isNotificationsGranted')
+      .mockResolvedValue(true);
 
     render(<Permissions navigation={mockNavigation} route={{} as any} />);
 
@@ -61,11 +70,15 @@ describe('Permissions screen (spec 0039, AC-15)', () => {
 
   it('Continue always navigates to Home (AC-15)', async () => {
     jest.spyOn(permissionsUtil, 'isLocationGranted').mockResolvedValue(false);
-    jest.spyOn(permissionsUtil, 'isNotificationsGranted').mockResolvedValue(false);
+    jest
+      .spyOn(permissionsUtil, 'isNotificationsGranted')
+      .mockResolvedValue(false);
 
     render(<Permissions navigation={mockNavigation} route={{} as any} />);
 
-    const continueButton = await screen.findByText(i18n.t('translations:continue'));
+    const continueButton = await screen.findByText(
+      i18n.t('translations:continue'),
+    );
     fireEvent.press(continueButton);
 
     expect(mockNavigation.dispatch).toHaveBeenCalledWith(
@@ -75,7 +88,9 @@ describe('Permissions screen (spec 0039, AC-15)', () => {
 
   it('Allow shows "Allowed" once permission is granted (AC-15)', async () => {
     jest.spyOn(permissionsUtil, 'isLocationGranted').mockResolvedValue(false);
-    jest.spyOn(permissionsUtil, 'isNotificationsGranted').mockResolvedValue(false);
+    jest
+      .spyOn(permissionsUtil, 'isNotificationsGranted')
+      .mockResolvedValue(false);
 
     Platform.OS = 'android';
     jest
@@ -85,7 +100,9 @@ describe('Permissions screen (spec 0039, AC-15)', () => {
     render(<Permissions navigation={mockNavigation} route={{} as any} />);
 
     // Initially "Allow" buttons are shown
-    const allowButtons = await screen.findAllByText(i18n.t('translations:allow'));
+    const allowButtons = await screen.findAllByText(
+      i18n.t('translations:allow'),
+    );
     expect(allowButtons.length).toBeGreaterThanOrEqual(1);
 
     // Tap Allow on location
@@ -99,7 +116,9 @@ describe('Permissions screen (spec 0039, AC-15)', () => {
 
   it('on Android "never_ask_again" (blocked) Allow opens settings via Linking.openSettings (AC-15)', async () => {
     jest.spyOn(permissionsUtil, 'isLocationGranted').mockResolvedValue(false);
-    jest.spyOn(permissionsUtil, 'isNotificationsGranted').mockResolvedValue(false);
+    jest
+      .spyOn(permissionsUtil, 'isNotificationsGranted')
+      .mockResolvedValue(false);
 
     Platform.OS = 'android';
     jest
@@ -108,7 +127,9 @@ describe('Permissions screen (spec 0039, AC-15)', () => {
 
     render(<Permissions navigation={mockNavigation} route={{} as any} />);
 
-    const allowButtons = await screen.findAllByText(i18n.t('translations:allow'));
+    const allowButtons = await screen.findAllByText(
+      i18n.t('translations:allow'),
+    );
     fireEvent.press(allowButtons[0]);
 
     await waitFor(() => {

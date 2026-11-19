@@ -64,7 +64,6 @@ jest.mock('@app/hooks/useLocationPermission', () => ({
   }),
 }));
 
-
 const mockJob: Order = {
   id: 'del-job-chat-1',
   orderReference: 'ORD-9876',

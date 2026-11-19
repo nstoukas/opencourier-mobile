@@ -43,8 +43,14 @@ describe('Upgrade gate (spec 0039, AC-3)', () => {
 
   it('stored BASE_URL differing from API_URL signs out locally with no network request and no alert', async () => {
     // Pre-populate storage with another server's address, user session, and outbox steps
-    await AsyncStorage.setItem('BASE_URL', 'https://other-instance.example.com/api/courier/v1');
-    await AsyncStorage.setItem('SOCKET_BASE_URL', 'wss://other-instance.example.com');
+    await AsyncStorage.setItem(
+      'BASE_URL',
+      'https://other-instance.example.com/api/courier/v1',
+    );
+    await AsyncStorage.setItem(
+      'SOCKET_BASE_URL',
+      'wss://other-instance.example.com',
+    );
     await AsyncStorage.setItem('selected_org_key', 'some-org');
     await AsyncStorage.setItem('token', 'saved-courier-token');
     await AsyncStorage.setItem('refreshToken', 'saved-refresh-token');
@@ -90,7 +96,9 @@ describe('Upgrade gate (spec 0039, AC-3)', () => {
 
     // Tokens remain untouched
     expect(await AsyncStorage.getItem('token')).toBe('valid-courier-token');
-    expect(await AsyncStorage.getItem('refreshToken')).toBe('valid-refresh-token');
+    expect(await AsyncStorage.getItem('refreshToken')).toBe(
+      'valid-refresh-token',
+    );
 
     // No alert and no network requests
     expect(alertSpy).not.toHaveBeenCalled();

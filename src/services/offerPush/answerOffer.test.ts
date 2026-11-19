@@ -434,7 +434,9 @@ describe('answerOffer (spec 0003, AC-5)', () => {
         offeredAt: '2026-10-26T10:43:00.000Z',
       };
 
-      const error409Other: any = new Error('Request failed with status code 409');
+      const error409Other: any = new Error(
+        'Request failed with status code 409',
+      );
       error409Other.response = {
         status: 409,
         data: { error: true, result: [{ code: 'SOME_OTHER_ERROR' }] },

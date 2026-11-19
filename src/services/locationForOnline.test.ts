@@ -38,7 +38,9 @@ describe('confirmLocationForOnline and showLocationOffAlert (spec 0039, AC-16)',
 
       // Verify tapping Open settings calls Linking.openSettings()
       const buttons = alertSpy.mock.calls[0][2];
-      const openSettingsButton = buttons.find((b: any) => b.text === 'Open settings');
+      const openSettingsButton = buttons.find(
+        (b: any) => b.text === 'Open settings',
+      );
       openSettingsButton.onPress();
       expect(openSettingsSpy).toHaveBeenCalledTimes(1);
     });

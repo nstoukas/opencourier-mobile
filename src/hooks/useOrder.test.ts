@@ -325,7 +325,9 @@ describe('useOrder (spec 0009, spec 0021, AC-3, AC-5, AC-12)', () => {
       ]);
       const steps = addJobStepsSpy.mock.calls[0][0];
       expect(steps[0].detected).toBeUndefined();
-      expect(Math.abs(steps[0].tappedAt - steps[1].tappedAt)).toBeLessThanOrEqual(50);
+      expect(
+        Math.abs(steps[0].tappedAt - steps[1].tappedAt),
+      ).toBeLessThanOrEqual(50);
     });
 
     it('when at accepted without arrival: queues dispatched, arrived_at_pickup, then picked_up', async () => {

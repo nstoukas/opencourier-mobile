@@ -1,8 +1,18 @@
 import React from 'react';
 import { Alert } from 'react-native';
-import { render, screen, fireEvent, waitFor, act } from '@testing-library/react-native';
+import {
+  render,
+  screen,
+  fireEvent,
+  waitFor,
+  act,
+} from '@testing-library/react-native';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { EnterCode, isCodeComplete, isNewPasswordLongEnough } from './EnterCode';
+import {
+  EnterCode,
+  isCodeComplete,
+  isNewPasswordLongEnough,
+} from './EnterCode';
 import { services } from '@app/services/service';
 import * as afterLogin from '@app/services/afterLogin';
 import { Button } from '@app/components/Button/Button';
@@ -74,8 +84,7 @@ describe('EnterCode screen (spec 0039, AC-6, AC-10, AC-11)', () => {
   it('renders the AC-6 instruction sentence with the email', () => {
     renderScreen();
 
-    const expectedSentence =
-      `If ${testEmail} is a rider's login, a code is on its way. It works for 15 minutes. No mail after a few minutes? Ask the co-op.`;
+    const expectedSentence = `If ${testEmail} is a rider's login, a code is on its way. It works for 15 minutes. No mail after a few minutes? Ask the co-op.`;
     expect(screen.getByText(expectedSentence)).toBeTruthy();
   });
 
@@ -84,13 +93,21 @@ describe('EnterCode screen (spec 0039, AC-6, AC-10, AC-11)', () => {
       renderScreen();
 
       // At 0s: button shows countdown and is disabled
-      expect(screen.getByText(i18n.t('translations:send_new_code_in', { seconds: 60 }))).toBeTruthy();
+      expect(
+        screen.getByText(
+          i18n.t('translations:send_new_code_in', { seconds: 60 }),
+        ),
+      ).toBeTruthy();
 
       // Advance by 30s
       act(() => {
         jest.advanceTimersByTime(30000);
       });
-      expect(screen.getByText(i18n.t('translations:send_new_code_in', { seconds: 30 }))).toBeTruthy();
+      expect(
+        screen.getByText(
+          i18n.t('translations:send_new_code_in', { seconds: 30 }),
+        ),
+      ).toBeTruthy();
 
       // Advance another 30s (total 60s)
       act(() => {
@@ -98,7 +115,9 @@ describe('EnterCode screen (spec 0039, AC-6, AC-10, AC-11)', () => {
       });
 
       // Now wait has reached 0: shows "Send a new code"
-      const resendButton = screen.getByText(i18n.t('translations:send_new_code'));
+      const resendButton = screen.getByText(
+        i18n.t('translations:send_new_code'),
+      );
       expect(resendButton).toBeTruthy();
     });
   });
@@ -107,8 +126,12 @@ describe('EnterCode screen (spec 0039, AC-6, AC-10, AC-11)', () => {
     it('"Set password and log in" is disabled until code is 6 digits and password is 8 to 72 characters', () => {
       renderScreen();
 
-      const codeField = screen.getByPlaceholderText(i18n.t('translations:code_label'));
-      const passwordField = screen.getByPlaceholderText(i18n.t('translations:new_password'));
+      const codeField = screen.getByPlaceholderText(
+        i18n.t('translations:code_label'),
+      );
+      const passwordField = screen.getByPlaceholderText(
+        i18n.t('translations:new_password'),
+      );
       const getSubmitButton = () => screen.UNSAFE_getByType(Button);
 
       // Initially disabled
@@ -130,9 +153,11 @@ describe('EnterCode screen (spec 0039, AC-6, AC-10, AC-11)', () => {
     });
 
     it('sends email, code as a string preserving leading zeros, and password (AC-10, AC-11)', async () => {
-      const resetSpy = jest.spyOn(services.userService, 'resetPassword').mockResolvedValue({
-        result: { session: { accessToken: 'a', refreshToken: 'r' } },
-      } as any);
+      const resetSpy = jest
+        .spyOn(services.userService, 'resetPassword')
+        .mockResolvedValue({
+          result: { session: { accessToken: 'a', refreshToken: 'r' } },
+        } as any);
 
       renderScreen();
 
@@ -145,7 +170,9 @@ describe('EnterCode screen (spec 0039, AC-6, AC-10, AC-11)', () => {
         'my-new-password-123',
       );
 
-      fireEvent.press(screen.getByText(i18n.t('translations:set_password_and_log_in')));
+      fireEvent.press(
+        screen.getByText(i18n.t('translations:set_password_and_log_in')),
+      );
 
       await waitFor(() => {
         expect(resetSpy).toHaveBeenCalledWith(
@@ -166,7 +193,9 @@ describe('EnterCode screen (spec 0039, AC-6, AC-10, AC-11)', () => {
     it('every 400 shows "That code is wrong or has expired. Ask for a new one."', async () => {
       const error400: any = new Error('400 Bad Request');
       error400.response = { status: 400, data: {} };
-      jest.spyOn(services.userService, 'resetPassword').mockRejectedValue(error400);
+      jest
+        .spyOn(services.userService, 'resetPassword')
+        .mockRejectedValue(error400);
 
       renderScreen();
 
@@ -179,7 +208,9 @@ describe('EnterCode screen (spec 0039, AC-6, AC-10, AC-11)', () => {
         'new-password-123',
       );
 
-      fireEvent.press(screen.getByText(i18n.t('translations:set_password_and_log_in')));
+      fireEvent.press(
+        screen.getByText(i18n.t('translations:set_password_and_log_in')),
+      );
 
       await waitFor(() => {
         expect(alertSpy).toHaveBeenCalledWith(
@@ -192,7 +223,9 @@ describe('EnterCode screen (spec 0039, AC-6, AC-10, AC-11)', () => {
     it('429 shows "Too many tries. Wait a minute and try again."', async () => {
       const error429: any = new Error('429 Too Many Requests');
       error429.response = { status: 429, data: {} };
-      jest.spyOn(services.userService, 'resetPassword').mockRejectedValue(error429);
+      jest
+        .spyOn(services.userService, 'resetPassword')
+        .mockRejectedValue(error429);
 
       renderScreen();
 
@@ -205,7 +238,9 @@ describe('EnterCode screen (spec 0039, AC-6, AC-10, AC-11)', () => {
         'new-password-123',
       );
 
-      fireEvent.press(screen.getByText(i18n.t('translations:set_password_and_log_in')));
+      fireEvent.press(
+        screen.getByText(i18n.t('translations:set_password_and_log_in')),
+      );
 
       await waitFor(() => {
         expect(alertSpy).toHaveBeenCalledWith(

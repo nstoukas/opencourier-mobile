@@ -1,6 +1,11 @@
 import React from 'react';
 import { Alert } from 'react-native';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react-native';
+import {
+  render,
+  screen,
+  fireEvent,
+  waitFor,
+} from '@testing-library/react-native';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Login } from './Login';
 import { Button } from '@app/components/Button/Button';
@@ -55,8 +60,12 @@ describe('Login screen (spec 0039, AC-4, AC-5)', () => {
       renderScreen();
 
       const getButton = () => screen.UNSAFE_getByType(Button);
-      const emailField = screen.getByPlaceholderText(i18n.t('translations:email'));
-      const passwordField = screen.getByPlaceholderText(i18n.t('translations:password'));
+      const emailField = screen.getByPlaceholderText(
+        i18n.t('translations:email'),
+      );
+      const passwordField = screen.getByPlaceholderText(
+        i18n.t('translations:password'),
+      );
 
       // Both empty
       expect(getButton().props.disabled).toBe(true);
@@ -79,12 +88,20 @@ describe('Login screen (spec 0039, AC-4, AC-5)', () => {
       const loginPromise = new Promise(resolve => {
         resolveLogin = resolve;
       });
-      jest.spyOn(services.userService, 'login').mockImplementation(() => loginPromise as any);
+      jest
+        .spyOn(services.userService, 'login')
+        .mockImplementation(() => loginPromise as any);
 
       renderScreen();
 
-      fireEvent.changeText(screen.getByPlaceholderText(i18n.t('translations:email')), 'rider@example.com');
-      fireEvent.changeText(screen.getByPlaceholderText(i18n.t('translations:password')), 'secret123');
+      fireEvent.changeText(
+        screen.getByPlaceholderText(i18n.t('translations:email')),
+        'rider@example.com',
+      );
+      fireEvent.changeText(
+        screen.getByPlaceholderText(i18n.t('translations:password')),
+        'secret123',
+      );
 
       const button = screen.UNSAFE_getByType(Button);
       expect(button.props.disabled).toBe(false);
@@ -96,7 +113,9 @@ describe('Login screen (spec 0039, AC-4, AC-5)', () => {
         expect(screen.UNSAFE_getByType(Button).props.disabled).toBe(true);
       });
 
-      resolveLogin({ result: { session: { accessToken: 'tok', refreshToken: 'ref' } } });
+      resolveLogin({
+        result: { session: { accessToken: 'tok', refreshToken: 'ref' } },
+      });
       await waitFor(() => {
         expect(markJustLoggedInSpy).toHaveBeenCalled();
       });
@@ -111,8 +130,14 @@ describe('Login screen (spec 0039, AC-4, AC-5)', () => {
 
       renderScreen();
 
-      fireEvent.changeText(screen.getByPlaceholderText(i18n.t('translations:email')), 'rider@example.com');
-      fireEvent.changeText(screen.getByPlaceholderText(i18n.t('translations:password')), 'wrongpass');
+      fireEvent.changeText(
+        screen.getByPlaceholderText(i18n.t('translations:email')),
+        'rider@example.com',
+      );
+      fireEvent.changeText(
+        screen.getByPlaceholderText(i18n.t('translations:password')),
+        'wrongpass',
+      );
       fireEvent.press(screen.getByText(i18n.t('translations:log_in')));
 
       await waitFor(() => {
@@ -130,8 +155,14 @@ describe('Login screen (spec 0039, AC-4, AC-5)', () => {
 
       renderScreen();
 
-      fireEvent.changeText(screen.getByPlaceholderText(i18n.t('translations:email')), 'rider@example.com');
-      fireEvent.changeText(screen.getByPlaceholderText(i18n.t('translations:password')), 'password123');
+      fireEvent.changeText(
+        screen.getByPlaceholderText(i18n.t('translations:email')),
+        'rider@example.com',
+      );
+      fireEvent.changeText(
+        screen.getByPlaceholderText(i18n.t('translations:password')),
+        'password123',
+      );
       fireEvent.press(screen.getByText(i18n.t('translations:log_in')));
 
       await waitFor(() => {
@@ -149,8 +180,14 @@ describe('Login screen (spec 0039, AC-4, AC-5)', () => {
 
       renderScreen();
 
-      fireEvent.changeText(screen.getByPlaceholderText(i18n.t('translations:email')), 'rider@example.com');
-      fireEvent.changeText(screen.getByPlaceholderText(i18n.t('translations:password')), 'password123');
+      fireEvent.changeText(
+        screen.getByPlaceholderText(i18n.t('translations:email')),
+        'rider@example.com',
+      );
+      fireEvent.changeText(
+        screen.getByPlaceholderText(i18n.t('translations:password')),
+        'password123',
+      );
       fireEvent.press(screen.getByText(i18n.t('translations:log_in')));
 
       await waitFor(() => {
@@ -168,8 +205,14 @@ describe('Login screen (spec 0039, AC-4, AC-5)', () => {
 
       renderScreen();
 
-      fireEvent.changeText(screen.getByPlaceholderText(i18n.t('translations:email')), 'rider@example.com');
-      fireEvent.changeText(screen.getByPlaceholderText(i18n.t('translations:password')), 'password123');
+      fireEvent.changeText(
+        screen.getByPlaceholderText(i18n.t('translations:email')),
+        'rider@example.com',
+      );
+      fireEvent.changeText(
+        screen.getByPlaceholderText(i18n.t('translations:password')),
+        'password123',
+      );
       fireEvent.press(screen.getByText(i18n.t('translations:log_in')));
 
       await waitFor(() => {
@@ -188,8 +231,14 @@ describe('Login screen (spec 0039, AC-4, AC-5)', () => {
 
     renderScreen();
 
-    fireEvent.changeText(screen.getByPlaceholderText(i18n.t('translations:email')), 'rider@example.com');
-    fireEvent.changeText(screen.getByPlaceholderText(i18n.t('translations:password')), 'goodpassword');
+    fireEvent.changeText(
+      screen.getByPlaceholderText(i18n.t('translations:email')),
+      'rider@example.com',
+    );
+    fireEvent.changeText(
+      screen.getByPlaceholderText(i18n.t('translations:password')),
+      'goodpassword',
+    );
     fireEvent.press(screen.getByText(i18n.t('translations:log_in')));
 
     await waitFor(() => {
@@ -201,12 +250,18 @@ describe('Login screen (spec 0039, AC-4, AC-5)', () => {
   it('navigates to ForgotPassword with trimmed email when link is tapped (AC-6)', () => {
     renderScreen();
 
-    fireEvent.changeText(screen.getByPlaceholderText(i18n.t('translations:email')), '  rider@example.com  ');
+    fireEvent.changeText(
+      screen.getByPlaceholderText(i18n.t('translations:email')),
+      '  rider@example.com  ',
+    );
     fireEvent.press(screen.getByText(i18n.t('translations:forgot_password')));
 
-    expect(mockNavigation.navigate).toHaveBeenCalledWith(AuthScreen.ForgotPassword, {
-      email: 'rider@example.com',
-    });
+    expect(mockNavigation.navigate).toHaveBeenCalledWith(
+      AuthScreen.ForgotPassword,
+      {
+        email: 'rider@example.com',
+      },
+    );
   });
 
   describe('Release build without a safe address (AC-4)', () => {
@@ -221,11 +276,17 @@ describe('Login screen (spec 0039, AC-4, AC-5)', () => {
         renderScreen();
 
         expect(
-          screen.getByText("This app was built without the co-op's address. Tell the co-op."),
+          screen.getByText(
+            "This app was built without the co-op's address. Tell the co-op.",
+          ),
         ).toBeTruthy();
 
-        const emailField = screen.getByPlaceholderText(i18n.t('translations:email'));
-        const passwordField = screen.getByPlaceholderText(i18n.t('translations:password'));
+        const emailField = screen.getByPlaceholderText(
+          i18n.t('translations:email'),
+        );
+        const passwordField = screen.getByPlaceholderText(
+          i18n.t('translations:password'),
+        );
         expect(emailField.props.editable).toBe(false);
         expect(passwordField.props.editable).toBe(false);
 

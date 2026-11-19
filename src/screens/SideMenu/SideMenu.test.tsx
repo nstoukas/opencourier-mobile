@@ -69,7 +69,6 @@ jest.mock('@app/hooks/useLocationPermission', () => ({
   }),
 }));
 
-
 import { SideMenu } from './SideMenu';
 import { SideMenuItemPlain } from '@app/components/SideMenuItemPlain/SideMenuItemPlain';
 import { SideMenuItemSwitch } from '@app/components/SideMenuItemSwitch/SideMenuItemSwitch';

@@ -43,17 +43,22 @@ const DELETED_MODULE_NAMES = [
 ];
 
 const DELETED_IMPORT_REGEX = new RegExp(
-  `import\\s+[\\s\\S]*?\\b(${DELETED_MODULE_NAMES.map(n => n.replace('/', '\\/')).join(
-    '|',
-  )})\\b[\\s\\S]*?from\\s+['"]|from\\s+['"][^'"]*\\b(${DELETED_MODULE_NAMES.map(n =>
+  `import\\s+[\\s\\S]*?\\b(${DELETED_MODULE_NAMES.map(n =>
     n.replace('/', '\\/'),
+  ).join(
+    '|',
+  )})\\b[\\s\\S]*?from\\s+['"]|from\\s+['"][^'"]*\\b(${DELETED_MODULE_NAMES.map(
+    n => n.replace('/', '\\/'),
   ).join('|')})\\b`,
 );
 
 const OLD_URL_KEYS_REGEX = /\b(BASE_URL|SOCKET_BASE_URL)\b/;
 
 describe('AC-2 guard: no instance screens or old address keys in source (spec 0039)', () => {
-  const sourceFiles = [...getSourceFiles(srcDir), path.join(rootDir, 'App.tsx')];
+  const sourceFiles = [
+    ...getSourceFiles(srcDir),
+    path.join(rootDir, 'App.tsx'),
+  ];
 
   it('scans a substantial number of source files including App.tsx', () => {
     expect(sourceFiles.length).toBeGreaterThan(60);

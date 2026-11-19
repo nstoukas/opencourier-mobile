@@ -1,4 +1,10 @@
-import { toApiUrl, toSocketUrl, isAddressUsable, apiUrl, socketUrl } from './config';
+import {
+  toApiUrl,
+  toSocketUrl,
+  isAddressUsable,
+  apiUrl,
+  socketUrl,
+} from './config';
 import { client } from '@app/services/Client';
 
 describe('Config and Client URL configuration (spec 0039, AC-1, AC-4)', () => {
@@ -57,14 +63,22 @@ describe('Config and Client URL configuration (spec 0039, AC-1, AC-4)', () => {
 
   describe('isAddressUsable (AC-4)', () => {
     it('allows http in development mode (__DEV__ true)', () => {
-      expect(isAddressUsable('http://localhost:3000/api/courier/v1', true)).toBe(true);
-      expect(isAddressUsable('https://coop.example.com/api/courier/v1', true)).toBe(true);
+      expect(
+        isAddressUsable('http://localhost:3000/api/courier/v1', true),
+      ).toBe(true);
+      expect(
+        isAddressUsable('https://coop.example.com/api/courier/v1', true),
+      ).toBe(true);
       expect(isAddressUsable('', true)).toBe(false);
     });
 
     it('requires https in release mode (__DEV__ false)', () => {
-      expect(isAddressUsable('http://coop.example.com/api/courier/v1', false)).toBe(false);
-      expect(isAddressUsable('https://coop.example.com/api/courier/v1', false)).toBe(true);
+      expect(
+        isAddressUsable('http://coop.example.com/api/courier/v1', false),
+      ).toBe(false);
+      expect(
+        isAddressUsable('https://coop.example.com/api/courier/v1', false),
+      ).toBe(true);
       expect(isAddressUsable('', false)).toBe(false);
     });
   });

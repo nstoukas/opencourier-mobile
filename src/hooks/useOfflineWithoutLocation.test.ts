@@ -39,12 +39,14 @@ describe('useOfflineWithoutLocation (spec 0039, AC-16)', () => {
       .spyOn(services.orderService, 'getInProgressOrders')
       .mockResolvedValue([]);
 
-    jest.spyOn(AppState, 'addEventListener').mockImplementation((event, listener) => {
-      if (event === 'change') {
-        appStateListener = listener;
-      }
-      return { remove: jest.fn() } as any;
-    });
+    jest
+      .spyOn(AppState, 'addEventListener')
+      .mockImplementation((event, listener) => {
+        if (event === 'change') {
+          appStateListener = listener;
+        }
+        return { remove: jest.fn() } as any;
+      });
   });
 
   afterEach(() => {
@@ -93,7 +95,9 @@ describe('useOfflineWithoutLocation (spec 0039, AC-16)', () => {
 
   it('triggers check and sets Offline when returning to active foreground', async () => {
     // Initially granted
-    jest.spyOn(permissionsUtil, 'isLocationGranted').mockResolvedValueOnce(true);
+    jest
+      .spyOn(permissionsUtil, 'isLocationGranted')
+      .mockResolvedValueOnce(true);
     renderHook(() => useOfflineWithoutLocation(onlineUser));
 
     await act(async () => {});

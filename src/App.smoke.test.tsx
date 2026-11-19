@@ -159,9 +159,6 @@ describe('App smoke tests', () => {
     const home = await screen.findByTestId('home-screen');
     expect(home).toBeTruthy();
     expect(mockGetUser).toHaveBeenCalled();
-    expect(mockCreateCourierSocket).toHaveBeenCalledWith(
-      socketUrl,
-      fakeToken,
-    );
+    expect(mockCreateCourierSocket).toHaveBeenCalledWith(socketUrl, fakeToken);
   });
 });
