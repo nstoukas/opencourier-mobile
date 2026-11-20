@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   View,
   Text,
@@ -20,7 +20,12 @@ import { formatCurrencyFromCents } from '@app/utilities/currency';
 import { Button, ButtonType } from '@app/components/Button/Button';
 import { REASON_KEYS } from '@app/components/TimeWorkedSection/TimeWorkedSection';
 import { EarningsTimelineLine } from '@app/types/earnings';
-import { END_LABEL_KEYS, formatKm, waitMinutes } from '@app/utilities/earnings';
+import {
+  END_LABEL_KEYS,
+  asOfLabel,
+  formatKm,
+  waitMinutes,
+} from '@app/utilities/earnings';
 import { coopClock, coopDate } from '@app/utilities/timeWorked';
 
 type Props = MainScreenProp<MainScreens.EarningsDelivery>;
@@ -58,8 +63,15 @@ const day = (iso: string) =>
   moment(coopDate(Date.parse(iso)), 'YYYY-MM-DD').format('D MMM');
 
 // Decision 75.18: a label per event type in the translations; a type with none (a new one) reads
-// "Update" rather than breaking the screen.
-const TimelineRow = ({ line }: { line: EarningsTimelineLine }) => {
+// "Update" rather than breaking the screen. `showDay` puts the day before the time when this line falls
+// on another day than the line before it (a review or a payment can come days after the job).
+const TimelineRow = ({
+  line,
+  showDay,
+}: {
+  line: EarningsTimelineLine;
+  showDay: boolean;
+}) => {
   const { t } = useTranslation();
   const what = line.anotherRider
     ? t('translations:earnings_event_another_rider')
@@ -68,7 +80,9 @@ const TimelineRow = ({ line }: { line: EarningsTimelineLine }) => {
       });
   return (
     <View style={styles.timelineLine} testID="earnings-timeline-line">
-      <Text style={styles.timelineTime}>{clock(line.at)}</Text>
+      <Text style={styles.timelineTime}>
+        {showDay ? `${day(line.at)}, ${clock(line.at)}` : clock(line.at)}
+      </Text>
       <Text style={styles.timelineText}>
         {line.who
           ? t('translations:earnings_event_by', {
@@ -90,10 +104,17 @@ export const EarningsDelivery = ({ navigation, route }: Props) => {
     error,
     isLoading,
     isError,
-    isRefetching,
+    failureCount,
+    failureReason,
     refetch,
     dataUpdatedAt,
   } = useEarningsDelivery(deliveryId);
+  // Only the rider's own pull shows the spinner; background refetches and retries do not.
+  const [pulling, setPulling] = useState(false);
+  const onRefresh = () => {
+    setPulling(true);
+    refetch().finally(() => setPulling(false));
+  };
 
   const body = () => {
     if (isLoading) {
@@ -128,11 +149,16 @@ export const EarningsDelivery = ({ navigation, route }: Props) => {
 
     return (
       <>
-        {isError && (
+        {/* The note shows from the first failed try, not after every retry (`failureCount`); "No
+            connection" only when the server never answered (AC-13). */}
+        {(isError || failureCount > 0) && (
           <Text style={styles.note} testID="earnings-as-of">
-            {t('translations:earnings_as_of', {
-              time: coopClock(dataUpdatedAt),
-            })}
+            {t(
+              detailFailureOf(error ?? failureReason) === 'noConnection'
+                ? 'translations:earnings_as_of'
+                : 'translations:earnings_refresh_failed_as_of',
+              { time: asOfLabel(dataUpdatedAt) },
+            )}
           </Text>
         )}
         <View style={styles.card}>
@@ -167,7 +193,7 @@ export const EarningsDelivery = ({ navigation, route }: Props) => {
             label={t('translations:tips')}
             value={money(breakdown.tipsCents)}
           />
-          {breakdown.compensations.map(c => {
+          {breakdown.compensations.map((c, index) => {
             const reason = REASON_KEYS[c.reason]
               ? t(`translations:${REASON_KEYS[c.reason]}`)
               : c.reason;
@@ -180,7 +206,7 @@ export const EarningsDelivery = ({ navigation, route }: Props) => {
                 : reason;
             return (
               <DetailRow
-                key={`${c.reason}-${c.createdAt}`}
+                key={`${c.reason}-${c.createdAt}-${index}`}
                 label={
                   c.addedLater
                     ? t('translations:earnings_added_later', {
@@ -250,9 +276,20 @@ export const EarningsDelivery = ({ navigation, route }: Props) => {
           <Text style={styles.cardTitle} accessibilityRole="header">
             {t('translations:earnings_timeline')}
           </Text>
-          {data.timeline.map((line, index) => (
-            <TimelineRow key={`${line.at}-${line.type}-${index}`} line={line} />
-          ))}
+          {data.timeline.map((line, index) => {
+            // The first line shows its day when it is not the first job's accept day.
+            const before = data.timeline[index - 1]?.at ?? firstJob?.acceptedAt;
+            const showDay =
+              !!before &&
+              coopDate(Date.parse(line.at)) !== coopDate(Date.parse(before));
+            return (
+              <TimelineRow
+                key={`${line.at}-${line.type}-${index}`}
+                line={line}
+                showDay={showDay}
+              />
+            );
+          })}
         </View>
 
         {/* Spec 0038 (AC-1), kept by spec 0042 (AC-10): ask a person to look again at this delivery. */}
@@ -292,7 +329,7 @@ export const EarningsDelivery = ({ navigation, route }: Props) => {
         </View>
         <ScrollView
           refreshControl={
-            <RefreshControl refreshing={isRefetching} onRefresh={refetch} />
+            <RefreshControl refreshing={pulling} onRefresh={onRefresh} />
           }>
           {body()}
         </ScrollView>

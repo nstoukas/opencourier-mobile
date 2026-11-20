@@ -860,6 +860,9 @@ export default {
   earnings_needs_connection:
     'These days have not been opened on this phone yet. They need a connection to load. Pull down to try again.',
   earnings_as_of: 'No connection. As of {{time}}.',
+  earnings_refresh_failed_as_of: 'Could not refresh. As of {{time}}.',
+  earnings_could_not_load_days:
+    'These days could not be loaded. Pull down to try again.',
   earnings_end_cancelled_after_pickup: 'Cancelled after pickup',
   earnings_end_cancelled: 'Cancelled',
   earnings_end_removed: 'Removed',

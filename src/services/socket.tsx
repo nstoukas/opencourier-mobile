@@ -101,6 +101,12 @@ const SocketProvider = ({ children }: Props) => {
       onDeliveryStatusUpdated: () => {
         // cancelledJobs: a job of this rider's cancelled now shows its card at once (spec 0015).
         refetch([QueryKeys.newOrders, QueryKeys.cancelledJobs]);
+        // Spec 0042: a cancel, reassignment or end by dispatch changes the rider's Earnings rows and the
+        // job's detail; mark them stale so an open Earnings screen reads them again (AC-13).
+        queryClient.invalidateQueries({ queryKey: [QueryKeys.earningsMonth] });
+        queryClient.invalidateQueries({
+          queryKey: [QueryKeys.earningsDelivery],
+        });
         queryClient
           .invalidateQueries({ queryKey: [QueryKeys.inProgressOrders] })
           .then(() =>

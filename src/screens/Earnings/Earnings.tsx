@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   RefreshControl,
@@ -25,7 +25,11 @@ import {
 import { DrawerScreenProp, DrawerScreens } from '@app/navigation/drawer/types';
 import { MainScreens } from '@app/navigation/main/types';
 import { Colors } from '@app/styles/colors';
-import { useEarningsMonth, useEarningsMonths } from '@app/hooks/useEarnings';
+import {
+  detailFailureOf,
+  useEarningsMonth,
+  useEarningsMonths,
+} from '@app/hooks/useEarnings';
 import { useCoopTotals } from '@app/hooks/useTimeWorked';
 import { useReviewRequests } from '@app/hooks/useReviewRequests';
 import { queryClient } from '@app/services/queryClient';
@@ -40,6 +44,7 @@ import { formatCurrencyFromCents } from '@app/utilities/currency';
 import {
   END_LABEL_KEYS,
   EarningsMode,
+  asOfLabel,
   MergedMonths,
   formatKm,
   jobDate,
@@ -47,6 +52,7 @@ import {
   jobMoneyCents,
   mergeMonths,
   monthOf,
+  noShiftJobOn,
   monthsOfPeriod,
   periodDates,
   shiftsOnDay,
@@ -66,8 +72,9 @@ type Props = DrawerScreenProp<DrawerScreens.Earnings>;
 
 // Spec 0042: one Earnings screen in place of Earnings, Earnings day, the old delivery screen and History
 // (AC-6). The rider picks a day or a week; the screen shows that period's four figures (AC-1), the co-op
-// card (spec 0040 AC-12), and the period's jobs under their shift headers (AC-8). Every number comes
-// from the server: the phone only picks which days, shifts and jobs to show.
+// card (spec 0040 AC-12), and the period's jobs under their shift headers (AC-8). Every figure and rate
+// comes from the server; the phone picks which days, shifts and jobs to show, and adds up only a row's
+// own minutes and money from that job's own numbers.
 
 const dayLabel = (date: string) =>
   moment(date, 'YYYY-MM-DD').format('ddd D MMM');
@@ -288,10 +295,14 @@ export const Earnings = ({ navigation }: Props) => {
 
   // A week can reach into next month (not started yet), or back into a month wholly before the
   // rider's reach: the server refuses both, so they are never asked for.
+  // The newest reach any saved month carries: a month saved yesterday can hold yesterday's reach, which
+  // on the 1st of a month would let the screen ask for a month the server now refuses.
   const knownReach = queryClient
     .getQueriesData<EarningsMonth>({ queryKey: [QueryKeys.earningsMonth] })
     .map(([, data]) => data?.reachFrom)
-    .find(Boolean);
+    .filter((reach): reach is string => !!reach)
+    .sort()
+    .pop();
   const months = monthsOfPeriod(mode, date).filter(
     month =>
       month <= monthOf(today) && (!knownReach || month >= monthOf(knownReach)),
@@ -303,12 +314,25 @@ export const Earnings = ({ navigation }: Props) => {
   const merged = mergeMonths(loaded);
   const reachFrom = merged.reachFrom ?? knownReach ?? null;
   const isLoading = queries.some(query => query.isLoading);
-  const failed = queries.some(query => query.isError);
-  const isRefetching = queries.some(query => query.isRefetching);
-  // With no signal, the oldest of the saved months shown says how old the screen is (AC-13).
+  // A month whose last try failed, while its saved copy is shown. React Query counts failures from the
+  // first try (`failureCount`), so the note shows at once instead of after every retry; `failureReason`
+  // is the error of that try. "No connection" only when the server never answered (AC-13).
+  const failedOver = queries.filter(
+    query => query.data && (query.isError || query.failureCount > 0),
+  );
+  const offline = failedOver.some(
+    query =>
+      detailFailureOf(query.error ?? query.failureReason) === 'noConnection',
+  );
+  const refreshFailed = failedOver.length > 0;
+  // With no data at all, why: no signal, or the server answered with an error.
+  const failedEmpty = queries.find(query => !query.data && query.isError);
+  // The oldest of the saved months shown says how old the screen is (AC-13).
   const asOf = Math.min(
     ...queries.filter(query => query.data).map(query => query.dataUpdatedAt),
   );
+  // Only the rider's own pull shows the spinner; background refetches (focus, retries) do not.
+  const [pulling, setPulling] = useState(false);
 
   const calendar = useEarningsMonth(calendarMonth, calendarOpen);
   const marked = useMemo(
@@ -322,11 +346,22 @@ export const Earnings = ({ navigation }: Props) => {
   );
   const coop = useCoopTotals();
 
+  // Drawer screens stay mounted, so the screen keeps the day it was showing. After midnight, a screen
+  // that was showing "today" moves to the new today on coming back into view; a day the rider picked on
+  // purpose stays. A ref (a value kept between renders that does not cause one) holds the last today.
+  const lastToday = useRef(today);
+
   // Drawer screens stay mounted, so the month, the co-op card and the review answers are read again
   // each time Earnings comes into view (AC-13). An Offline rider gets no push for a review answer.
   useEffect(
     () =>
       navigation.addListener('focus', () => {
+        const now = coopDate(Date.now());
+        if (now !== lastToday.current) {
+          const old = lastToday.current;
+          setDate(current => (current === old ? now : current));
+          lastToday.current = now;
+        }
         [
           QueryKeys.earningsMonth,
           QueryKeys.coopTotals,
@@ -387,8 +422,11 @@ export const Earnings = ({ navigation }: Props) => {
     });
 
   const onRefresh = () => {
-    queries.forEach(query => query.refetch());
-    coop.refetch();
+    setPulling(true);
+    Promise.allSettled([
+      ...queries.map(query => query.refetch()),
+      coop.refetch(),
+    ]).finally(() => setPulling(false));
   };
 
   const recordedFromDay = merged.recordedFrom
@@ -400,8 +438,14 @@ export const Earnings = ({ navigation }: Props) => {
       return <ActivityIndicator />;
     }
     if (loaded.length === 0) {
-      // Never opened on this phone and no signal now (AC-13).
-      return (
+      // Never opened on this phone: no signal now (AC-13), or the server answered with an error.
+      const answered =
+        failedEmpty && detailFailureOf(failedEmpty.error) !== 'noConnection';
+      return answered ? (
+        <Text style={styles.notice} testID="earnings-could-not-load">
+          {t('translations:earnings_could_not_load_days')}
+        </Text>
+      ) : (
         <Text style={styles.notice} testID="earnings-needs-connection">
           {t('translations:earnings_needs_connection')}
         </Text>
@@ -419,16 +463,20 @@ export const Earnings = ({ navigation }: Props) => {
                   d =>
                     d.date === day && (d.workSeconds > 0 || d.moneyCents > 0),
                 ) ||
-                  shiftsOnDay(merged.shifts, day, Date.now()).length > 0),
+                  shiftsOnDay(merged.shifts, day, Date.now()).length > 0 ||
+                  noShiftJobOn(merged.jobsInNoShift, day)),
             )
             .reverse();
     return (
       <>
-        {failed && (
+        {refreshFailed && (
           <Text style={styles.notice} testID="earnings-as-of">
-            {t('translations:earnings_as_of', {
-              time: coopClock(asOf),
-            })}
+            {t(
+              offline
+                ? 'translations:earnings_as_of'
+                : 'translations:earnings_refresh_failed_as_of',
+              { time: asOfLabel(asOf) },
+            )}
           </Text>
         )}
         {figures && (
@@ -485,7 +533,7 @@ export const Earnings = ({ navigation }: Props) => {
         <ScrollView
           contentContainerStyle={styles.scrollContent}
           refreshControl={
-            <RefreshControl refreshing={isRefetching} onRefresh={onRefresh} />
+            <RefreshControl refreshing={pulling} onRefresh={onRefresh} />
           }>
           {/* Spec 0038 (AC-11): how offers and pay work. The mark says an answer to a review request
               has not been opened yet (kept on this phone only). */}

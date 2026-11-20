@@ -7,7 +7,7 @@ import {
   EarningsWeek,
   JobEndLabel,
 } from '@app/types/earnings';
-import { addDays, coopDate } from '@app/utilities/timeWorked';
+import { addDays, coopClock, coopDate } from '@app/utilities/timeWorked';
 
 // Spec 0042: small pure helpers for the Earnings screen. Every figure comes from the server; these only
 // pick which days, shifts and jobs a period shows, and how a value is written. Days are YYYY-MM-DD in
@@ -167,3 +167,17 @@ export const monthGrid = (month: string): (string | null)[][] => {
 // The month before or after a YYYY-MM month.
 export const addMonths = (month: string, count: number): string =>
   moment.utc(`${month}-01`, 'YYYY-MM-DD').add(count, 'month').format('YYYY-MM');
+
+// The time on an "As of" note (AC-13): the co-op's clock time, with the day in front when the saved copy
+// is from an earlier day than today (a saved copy can be up to 24 hours old).
+export const asOfLabel = (savedAt: number, now: number = Date.now()): string =>
+  coopDate(savedAt) === coopDate(now)
+    ? coopClock(savedAt)
+    : `${moment(coopDate(savedAt), 'YYYY-MM-DD').format('D MMM')}, ${coopClock(
+        savedAt,
+      )}`;
+
+// Whether a job in no recorded shift was accepted on this co-op day, so the Week view keeps its day even
+// when it earned nothing (AC-8).
+export const noShiftJobOn = (jobs: EarningsJob[], date: string): boolean =>
+  jobs.some(job => jobDate(job) === date);

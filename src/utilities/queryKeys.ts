@@ -8,7 +8,9 @@ export const QueryKeys = {
   // Spec 0042: one month of the Earnings screen, and one delivery's breakdown and timeline. Both saved
   // to disk, so what the rider opened stays readable with no signal (AC-13).
   earningsMonth: 'earningsMonth',
-  earningsDelivery: 'earningsDelivery',
+  // Not 'earningsDelivery': the old delivery screen saved a different shape under that name, and a copy
+  // restored from the phone within 24 hours would crash the new detail screen (review, decision 75.43).
+  earningsDelivery: 'earningsDeliveryDetail',
   // The co-op's dispatch number for the job screen (row 72); saved to disk with the deliveries.
   jobContact: 'jobContact',
   // The rider's jobs cancelled after they accepted them (spec 0015); saved to disk too.
