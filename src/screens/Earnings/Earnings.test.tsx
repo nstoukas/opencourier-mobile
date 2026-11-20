@@ -17,8 +17,78 @@ jest.mock('@app/hooks/useReviewRequests', () => ({
 jest.mock('@app/services/reviewSeen', () => ({
   useReviewSeen: jest.fn(() => []),
 }));
-jest.mock('@app/components/TimeWorkedSection/TimeWorkedSection', () => ({
-  TimeWorkedSection: () => null,
+jest.mock('@react-navigation/native', () => {
+  const actual = jest.requireActual('@react-navigation/native');
+  return {
+    ...actual,
+    useNavigation: () => ({
+      addListener: jest.fn(() => jest.fn()),
+    }),
+  };
+});
+const mockRefetchPages = jest.fn();
+const mockRefetchCoop = jest.fn();
+const sampleShift = {
+  startedAt: '2026-11-20T10:00:00.000Z',
+  startedBeforeRange: false,
+  endedAt: '2026-11-20T13:12:00.000Z',
+  onBreakSince: null,
+  workSeconds: 11520,
+  jobSeconds: 7200,
+  paidWaitSeconds: 720,
+  unpaidSeconds: 3600,
+  breaks: [],
+  moneyCents: 3850,
+  lateMoneyCents: 0,
+  centsPerHour: 1203,
+  currencyCode: 'EUR',
+  statusChanges: [
+    {
+      at: '2026-11-20T10:00:00.000Z',
+      fromStatus: 'OFFLINE',
+      toStatus: 'ONLINE',
+      cause: 'RIDER',
+      byAdmin: false,
+    },
+  ],
+  jobs: [],
+};
+
+jest.mock('@app/hooks/useTimeWorked', () => ({
+  useTimeWorkedPages: jest.fn(() => ({
+    data: {
+      pages: [
+        {
+          recordedFrom: '2026-11-19T00:00:00.000Z',
+          currencyCode: 'EUR',
+          days: [
+            {
+              date: '2026-11-20',
+              workSeconds: 11520,
+              jobSeconds: 7200,
+              paidWaitSeconds: 720,
+              unpaidSeconds: 3600,
+              moneyCents: 3850,
+              centsPerHour: 1203,
+              unlinkedMoneyCents: 0,
+            },
+          ],
+          shifts: [sampleShift],
+        },
+      ],
+    },
+    isLoading: false,
+    isError: false,
+    hasNextPage: false,
+    fetchNextPage: jest.fn(),
+    refetch: mockRefetchPages,
+  })),
+  useCoopTotals: jest.fn(() => ({
+    data: null,
+    isLoading: false,
+    isError: false,
+    refetch: mockRefetchCoop,
+  })),
 }));
 
 describe('Earnings summary (row 112, decision 112.1)', () => {
@@ -514,6 +584,48 @@ describe('Earnings summary (row 112, decision 112.1)', () => {
 
       unmount();
       expect(unsubscribe).toHaveBeenCalled();
+    });
+  });
+
+  describe('TimeWorkedSection footer persistence across re-renders (review 2026-11-20)', () => {
+    it('does not unmount TimeWorkedSection on re-render (opened shift stays open)', () => {
+      (useEarnings as jest.Mock).mockReturnValue({
+        days: [],
+        totalEarnings: 250,
+        totalCompensation: 250,
+        totalTips: 0,
+        deliveryCount: 0,
+        currency: 'EUR',
+        isLoading: false,
+        isError: false,
+        isRefetching: false,
+        refetch: jest.fn(),
+      });
+
+      render(<Earnings {...defaultProps} />);
+
+      // Find the shift in the footer
+      const shiftButton = screen.getByTestId('time-worked-shift');
+      expect(shiftButton.props.accessibilityState.expanded).toBe(false);
+
+      // Open the shift
+      fireEvent.press(shiftButton);
+      expect(shiftButton.props.accessibilityState.expanded).toBe(true);
+      expect(
+        screen.getByText(i18n.t('translations:time_worked_details_status')),
+      ).toBeTruthy();
+
+      // Trigger a re-render of Earnings by switching tabs to Weekly
+      fireEvent.press(screen.getByText(i18n.t('translations:weekly')));
+
+      // With ListFooterComponent={renderFooter()}, the section stays mounted so the shift remains open.
+      // If ListFooterComponent={renderFooter} were used, FlatList would treat the new function reference
+      // as a new component type and remount TimeWorkedSection, closing the shift.
+      const shiftButtonAfterTabChange = screen.getByTestId('time-worked-shift');
+      expect(shiftButtonAfterTabChange.props.accessibilityState.expanded).toBe(true);
+      expect(
+        screen.getByText(i18n.t('translations:time_worked_details_status')),
+      ).toBeTruthy();
     });
   });
 });

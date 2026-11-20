@@ -153,6 +153,45 @@ describe('HowItWorks screen (spec 0038, AC-7, AC-8, AC-9, AC-11, AC-13)', () => 
       ).toBeTruthy();
     });
 
+    it('shows no time worked card and no spinner when howItWorks answer has no timeWorked field (older server) (AC-13)', () => {
+      const olderServerData = {
+        ...sampleHowItWorks,
+      };
+      delete (olderServerData as any).timeWorked;
+
+      (useHowItWorks as jest.Mock).mockReturnValue({
+        data: olderServerData,
+        isLoading: false,
+        isError: false,
+        isRefetching: false,
+        refetch: mockRefetchHow,
+      });
+
+      render(<HowItWorks {...defaultProps} />);
+
+      // Section title must not be present, and no spinner
+      expect(
+        screen.queryByText(i18n.t('translations:how_time_worked')),
+      ).toBeNull();
+    });
+
+    it('shows time worked card with a spinner while loading (AC-13)', () => {
+      (useHowItWorks as jest.Mock).mockReturnValue({
+        data: undefined,
+        isLoading: true,
+        isError: false,
+        isRefetching: false,
+        refetch: mockRefetchHow,
+      });
+
+      render(<HowItWorks {...defaultProps} />);
+
+      // Section title is shown while loading
+      expect(
+        screen.getByText(i18n.t('translations:how_time_worked')),
+      ).toBeTruthy();
+    });
+
     it('renders the "How your time worked is counted" section from howItWorks.timeWorked (spec 0040, AC-13)', () => {
       (useHowItWorks as jest.Mock).mockReturnValue({
         data: {

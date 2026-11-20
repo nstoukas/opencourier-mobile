@@ -2,6 +2,7 @@ import {
   formatWorkDuration,
   centsPerHourOf,
   counterView,
+  coopClock,
   coopDate,
   addDays,
   pageRange,
@@ -233,6 +234,16 @@ describe('timeWorked utilities (spec 0040, AC-10, AC-7, AC-6)', () => {
       // Summer: Athens is UTC+3 (EEST). 2026-07-15T21:30:00Z -> 2026-07-16 00:30 in Athens.
       const summerUtc = Date.parse('2026-07-15T21:30:00.000Z');
       expect(coopDate(summerUtc)).toBe('2026-07-16');
+    });
+  });
+
+  describe('coopClock (decision 36.48)', () => {
+    it('formats a timestamp into HH:mm in Europe/Athens time, regardless of local timezone', () => {
+      // 2026-11-18T22:30:00Z in winter (EET = UTC+2) is 2026-11-19 00:30 in Athens
+      expect(coopClock(Date.parse('2026-11-18T22:30:00Z'))).toBe('00:30');
+
+      // Summer: Athens is UTC+3 (EEST). 2026-07-15T21:30:00Z -> 2026-07-16 00:30 in Athens
+      expect(coopClock(Date.parse('2026-07-15T21:30:00Z'))).toBe('00:30');
     });
   });
 

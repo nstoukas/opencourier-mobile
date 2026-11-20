@@ -10,6 +10,7 @@ import {
   useTimeWorkedPages,
   useCoopTotals,
 } from './useTimeWorked';
+import { services } from '@app/services/service';
 import {
   CoopTotals,
   CurrentTimeWorked,
@@ -213,6 +214,114 @@ describe('useTimeWorked hooks (spec 0040, AC-10, AC-11, AC-12)', () => {
           initialCalls + 1,
         ),
       );
+    });
+
+    it('does NOT refetch when queryClient.setQueryData updates user or inProgressOrders (manual updates are ignored) (AC-10)', async () => {
+      const getCurrentSpy = jest.spyOn(services.timeWorkedService, 'getCurrent');
+      (client.get as jest.Mock).mockResolvedValue({
+        data: { error: null, result: sampleWorkingShift },
+      });
+
+      const { result } = renderHook(() => useCurrentTimeWorked(true), {
+        wrapper,
+      });
+      await waitFor(() => expect(result.current.query.isSuccess).toBe(true));
+
+      const callsAfterMount = getCurrentSpy.mock.calls.length;
+
+      // 1. setQueryData on QueryKeys.user (simulating e.g. location update fix)
+      await act(async () => {
+        queryClient.setQueryData([QueryKeys.user], {
+          id: 'courier-1',
+          status: 'ONLINE',
+          lat: 39.36,
+          lng: 22.94,
+        });
+      });
+
+      // 2. setQueryData on QueryKeys.inProgressOrders
+      await act(async () => {
+        queryClient.setQueryData([QueryKeys.inProgressOrders], [{ id: 'del-1' }]);
+      });
+
+      // getCurrent must NOT have been called by manual setQueryData
+      expect(getCurrentSpy).toHaveBeenCalledTimes(callsAfterMount);
+
+      // 3. A real fetch (fetchQuery / refetch) of that key still DOES call getCurrent
+      await act(async () => {
+        await queryClient.fetchQuery({
+          queryKey: [QueryKeys.user],
+          queryFn: () => Promise.resolve({ id: 'courier-1', status: 'ONLINE' }),
+        });
+      });
+
+      await waitFor(() =>
+        expect(getCurrentSpy).toHaveBeenCalledTimes(callsAfterMount + 1),
+      );
+    });
+
+    it('does NOT refetch when a trigger key is fetched while AppState.currentState is not active (AC-10)', async () => {
+      const getCurrentSpy = jest.spyOn(services.timeWorkedService, 'getCurrent');
+      (client.get as jest.Mock).mockResolvedValue({
+        data: { error: null, result: sampleWorkingShift },
+      });
+
+      const { result } = renderHook(() => useCurrentTimeWorked(true), {
+        wrapper,
+      });
+      await waitFor(() => expect(result.current.query.isSuccess).toBe(true));
+
+      const callsAfterMount = getCurrentSpy.mock.calls.length;
+
+      // Put AppState into background
+      AppState.currentState = 'background';
+
+      // Real fetch of QueryKeys.user while in background
+      await act(async () => {
+        await queryClient.fetchQuery({
+          queryKey: [QueryKeys.user],
+          queryFn: () => Promise.resolve({ id: 'courier-1', status: 'ONLINE' }),
+        });
+      });
+
+      // Must not call getCurrent while not active
+      expect(getCurrentSpy).toHaveBeenCalledTimes(callsAfterMount);
+    });
+
+    it('refetches when inFront changes from false to true (Home back in front), calling getCurrent once more, but only once on mount with inFront true (AC-10)', async () => {
+      const getCurrentSpy = jest.spyOn(services.timeWorkedService, 'getCurrent');
+      (client.get as jest.Mock).mockResolvedValue({
+        data: { error: null, result: sampleWorkingShift },
+      });
+
+      // 1. Initial mount with inFront=true calls getCurrent only once
+      const { result: inFrontHook } = renderHook(
+        () => useCurrentTimeWorked(true),
+        { wrapper },
+      );
+      await waitFor(() => expect(inFrontHook.current.query.isSuccess).toBe(true));
+      expect(getCurrentSpy).toHaveBeenCalledTimes(1);
+
+      getCurrentSpy.mockClear();
+
+      // 2. Rendering hook with inFront=false initially calls getCurrent once on mount
+      const { result: togglingHook, rerender } = renderHook(
+        ({ inFront }) => useCurrentTimeWorked(inFront),
+        {
+          wrapper,
+          initialProps: { inFront: false },
+        },
+      );
+      await waitFor(() => expect(togglingHook.current.query.isSuccess).toBe(true));
+      expect(getCurrentSpy).toHaveBeenCalledTimes(1);
+
+      // Now bring Home back in front (inFront: true)
+      act(() => {
+        rerender({ inFront: true });
+      });
+
+      // Must call getCurrent once more
+      await waitFor(() => expect(getCurrentSpy).toHaveBeenCalledTimes(2));
     });
 
     it('refetchInterval is 5 minutes only while a shift is open, screen in front, and app active, false otherwise', async () => {

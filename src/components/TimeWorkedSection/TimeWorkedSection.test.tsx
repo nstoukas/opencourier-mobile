@@ -1,5 +1,5 @@
 import React from 'react';
-import { render, screen, fireEvent, act } from '@testing-library/react-native';
+import { render, screen, fireEvent, act, within } from '@testing-library/react-native';
 import '@app/localization/i18n';
 import i18n from '@app/localization/i18n';
 import { TimeWorkedSection } from './TimeWorkedSection';
@@ -370,7 +370,7 @@ describe('TimeWorkedSection (spec 0040, AC-8, AC-11, AC-12)', () => {
     ).toBeTruthy();
   });
 
-  it('renders "<amount> paid for work before recording began" when day has unlinkedMoneyCents > 0', () => {
+  it('renders "<amount> paid for work outside a recorded shift" when day has unlinkedMoneyCents > 0', () => {
     const dayWithUnlinked: WorkedDay = {
       ...sampleDay,
       unlinkedMoneyCents: 150, // €1.50
@@ -392,7 +392,213 @@ describe('TimeWorkedSection (spec 0040, AC-8, AC-11, AC-12)', () => {
     render(<TimeWorkedSection />);
 
     expect(
-      screen.getByText('€1.50 paid for work before recording began'),
+      screen.getByText('€1.50 paid for work outside a recorded shift'),
+    ).toBeTruthy();
+  });
+
+  it('groups a shift by Athens day (decision 36.48) and shows clock times in Athens time', () => {
+    // 2026-11-18T22:30:00Z in UTC:
+    // In Europe/Athens (UTC+2 in Nov): it is 2026-11-19 00:30.
+    // If phone/machine timezone is UTC, moment().format('YYYY-MM-DD') would be 2026-11-18.
+    // coopDate and coopClock ensure it is grouped under 2026-11-19 and starts at 00:30.
+    const athensShift: WorkedShift = {
+      ...sampleShift,
+      startedAt: '2026-11-18T22:30:00.000Z',
+      endedAt: '2026-11-19T02:00:00.000Z', // 04:00 in Athens
+      startedBeforeRange: false,
+    };
+
+    const day19: WorkedDay = {
+      ...sampleDay,
+      date: '2026-11-19',
+    };
+
+    (useTimeWorkedPages as jest.Mock).mockReturnValue({
+      data: {
+        pages: [
+          {
+            ...samplePage,
+            days: [day19],
+            shifts: [athensShift],
+          },
+        ],
+      },
+      isLoading: false,
+      isError: false,
+      hasNextPage: false,
+      fetchNextPage: mockFetchNextPage,
+      refetch: mockRefetchPages,
+    });
+
+    render(<TimeWorkedSection />);
+
+    const dayBlock = screen.getByTestId('time-worked-day');
+    expect(dayBlock).toBeTruthy();
+    expect(within(dayBlock).getByText('Thu 19 Nov')).toBeTruthy();
+
+    // The shift must be listed inside this day block, starting at 00:30
+    const shiftRow = within(dayBlock).getByTestId('time-worked-shift');
+    expect(shiftRow).toBeTruthy();
+    expect(within(shiftRow).getByText(/00:30 to 04:00/)).toBeTruthy();
+  });
+
+  it('deduplicates shifts: two pages that both list the same shift (same startedAt) show it once (AC-11)', () => {
+    const page1: TimeWorkedRange = {
+      ...samplePage,
+      days: [sampleDay],
+      shifts: [sampleShift],
+    };
+    const page2: TimeWorkedRange = {
+      ...samplePage,
+      days: [{ ...sampleDay, date: '2026-11-13' }],
+      shifts: [sampleShift],
+    };
+
+    (useTimeWorkedPages as jest.Mock).mockReturnValue({
+      data: { pages: [page1, page2] },
+      isLoading: false,
+      isError: false,
+      hasNextPage: false,
+      fetchNextPage: mockFetchNextPage,
+      refetch: mockRefetchPages,
+    });
+
+    render(<TimeWorkedSection />);
+
+    const shifts = screen.getAllByTestId('time-worked-shift');
+    expect(shifts).toHaveLength(1);
+  });
+
+  it('renders orphan shifts AFTER every day block, with multiple orphans sorted newest first (AC-11)', () => {
+    // todayShift starts at 10:00 UTC (12:00 Athens) on 2026-11-20
+    const todayShift: WorkedShift = {
+      ...sampleShift,
+      startedAt: '2026-11-20T10:00:00.000Z',
+      endedAt: '2026-11-20T11:00:00.000Z',
+    };
+
+    // orphanNewer starts at 08:00 UTC (10:00 Athens) on 2026-11-10
+    const orphanNewer: WorkedShift = {
+      ...sampleShift,
+      startedAt: '2026-11-10T08:00:00.000Z',
+      endedAt: '2026-11-10T10:00:00.000Z',
+    };
+
+    // orphanOlder starts at 07:00 UTC (09:00 Athens) on 2026-11-05
+    const orphanOlder: WorkedShift = {
+      ...sampleShift,
+      startedAt: '2026-11-05T07:00:00.000Z',
+      endedAt: '2026-11-05T08:30:00.000Z',
+    };
+
+    (useTimeWorkedPages as jest.Mock).mockReturnValue({
+      data: {
+        pages: [
+          {
+            ...samplePage,
+            days: [sampleDay], // only day 2026-11-20
+            shifts: [todayShift, orphanOlder, orphanNewer],
+          },
+        ],
+      },
+      isLoading: false,
+      isError: false,
+      hasNextPage: false,
+      fetchNextPage: mockFetchNextPage,
+      refetch: mockRefetchPages,
+    });
+
+    render(<TimeWorkedSection />);
+
+    const shiftRows = screen.getAllByTestId('time-worked-shift');
+    expect(shiftRows).toHaveLength(3);
+
+    // Day block must contain todayShift, so shiftRows[0] is today's shift (12:00 to 13:00 Athens)
+    expect(within(shiftRows[0]).getByText(/12:00 to 13:00/)).toBeTruthy();
+    expect(
+      within(screen.getByTestId('time-worked-day')).getByText(
+        /12:00 to 13:00/,
+      ),
+    ).toBeTruthy();
+
+    // After all day blocks come the orphans, sorted newest first:
+    // shiftRows[1] is orphanNewer (10:00 to 12:00 Athens, Nov 10)
+    expect(within(shiftRows[1]).getByText(/10:00 to 12:00/)).toBeTruthy();
+    // shiftRows[2] is orphanOlder (09:00 to 10:30 Athens, Nov 5)
+    expect(within(shiftRows[2]).getByText(/09:00 to 10:30/)).toBeTruthy();
+  });
+
+  it('shows "could not be loaded" line when pages.isError is true and no page is loaded (AC-11)', () => {
+    (useTimeWorkedPages as jest.Mock).mockReturnValue({
+      data: undefined,
+      isLoading: false,
+      isError: true,
+      hasNextPage: false,
+      fetchNextPage: mockFetchNextPage,
+      refetch: mockRefetchPages,
+    });
+
+    render(<TimeWorkedSection />);
+
+    expect(
+      screen.getByText(i18n.t('translations:time_worked_failed')),
+    ).toBeTruthy();
+  });
+
+  it('shows "no time worked" line when first page has no days and no shifts (AC-11)', () => {
+    (useTimeWorkedPages as jest.Mock).mockReturnValue({
+      data: {
+        pages: [
+          {
+            recordedFrom: '2026-11-19T00:00:00.000Z',
+            currencyCode: 'EUR',
+            days: [],
+            shifts: [],
+          },
+        ],
+      },
+      isLoading: false,
+      isError: false,
+      hasNextPage: false,
+      fetchNextPage: mockFetchNextPage,
+      refetch: mockRefetchPages,
+    });
+
+    render(<TimeWorkedSection />);
+
+    expect(
+      screen.getByText(i18n.t('translations:time_worked_none')),
+    ).toBeTruthy();
+  });
+
+  it('shows "added later" line when a shift has lateMoneyCents > 0 (AC-11)', () => {
+    const shiftWithLateMoney: WorkedShift = {
+      ...sampleShift,
+      lateMoneyCents: 250, // €2.50
+    };
+
+    (useTimeWorkedPages as jest.Mock).mockReturnValue({
+      data: {
+        pages: [
+          {
+            ...samplePage,
+            shifts: [shiftWithLateMoney],
+          },
+        ],
+      },
+      isLoading: false,
+      isError: false,
+      hasNextPage: false,
+      fetchNextPage: mockFetchNextPage,
+      refetch: mockRefetchPages,
+    });
+
+    render(<TimeWorkedSection />);
+
+    expect(
+      screen.getByText(
+        i18n.t('translations:time_worked_added_later', { amount: '€2.50' }),
+      ),
     ).toBeTruthy();
   });
 
