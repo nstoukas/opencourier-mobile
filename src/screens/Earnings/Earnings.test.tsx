@@ -274,7 +274,62 @@ describe('Earnings screen (spec 0042 AC-1, AC-2, AC-6, AC-8, AC-9, AC-13)', () =
       expect(dashes.length).toBeGreaterThanOrEqual(4);
 
       // noJobMoneyCents is not shown
-      expect(screen.queryByText(/for other work, no deliveries/i)).toBeNull();
+      expect(screen.queryByText(/not linked to a job/i)).toBeNull();
+    });
+
+    it('shows formatted amount for noJobMoneyCents when positive (150) and hides "not linked to a job" when 0', () => {
+      // 1. With 150 cents: shows formatted amount in "not linked to a job" sentence
+      const dayWith150: EarningsDay = {
+        ...sampleDay,
+        noJobMoneyCents: 150,
+      };
+
+      (useEarningsMonths as jest.Mock).mockReturnValue([
+        {
+          data: {
+            ...sampleMonthData,
+            days: [dayWith150],
+          },
+          isLoading: false,
+          isError: false,
+          isRefetching: false,
+          refetch: jest.fn(),
+          dataUpdatedAt: Date.now(),
+        },
+      ]);
+
+      const { rerender } = render(<Earnings {...defaultProps} />);
+
+      expect(
+        screen.getByText(
+          i18n.t('translations:earnings_money_no_job', {
+            amount: '€1.50',
+          }),
+        ),
+      ).toBeTruthy();
+
+      // 2. With 0 cents: "not linked to a job" sentence is absent
+      const dayWith0: EarningsDay = {
+        ...sampleDay,
+        noJobMoneyCents: 0,
+      };
+
+      (useEarningsMonths as jest.Mock).mockReturnValue([
+        {
+          data: {
+            ...sampleMonthData,
+            days: [dayWith0],
+          },
+          isLoading: false,
+          isError: false,
+          isRefetching: false,
+          refetch: jest.fn(),
+          dataUpdatedAt: Date.now(),
+        },
+      ]);
+
+      rerender(<Earnings {...defaultProps} />);
+      expect(screen.queryByText(/not linked to a job/i)).toBeNull();
     });
   });
 
@@ -456,6 +511,94 @@ describe('Earnings screen (spec 0042 AC-1, AC-2, AC-6, AC-8, AC-9, AC-13)', () =
 
       const forwardArrow = screen.getByTestId('earnings-next');
       expect(forwardArrow.props.accessibilityState.disabled).toBe(true);
+    });
+
+    it('disables back arrow (earnings-previous) when shown day is reachFrom and does not move period; enables it one day later', () => {
+      // 1. When shown day is reachFrom ('2026-11-20'), back arrow is disabled
+      (useEarningsMonths as jest.Mock).mockReturnValue([
+        {
+          data: {
+            ...sampleMonthData,
+            reachFrom: '2026-11-20',
+          },
+          isLoading: false,
+          isError: false,
+          isRefetching: false,
+          refetch: jest.fn(),
+          dataUpdatedAt: Date.now(),
+        },
+      ]);
+
+      const { rerender } = render(<Earnings {...defaultProps} />);
+
+      const prevArrowAtReach = screen.getByTestId('earnings-previous');
+      expect(prevArrowAtReach.props.accessibilityState.disabled).toBe(true);
+
+      // Pressing it does not move the period
+      expect(screen.getByText(/Today/i)).toBeTruthy();
+      fireEvent.press(prevArrowAtReach);
+      expect(screen.getByText(/Today/i)).toBeTruthy();
+
+      // 2. One day later (reachFrom is '2026-11-19', today is '2026-11-20'): back arrow is enabled
+      (useEarningsMonths as jest.Mock).mockReturnValue([
+        {
+          data: {
+            ...sampleMonthData,
+            reachFrom: '2026-11-19',
+          },
+          isLoading: false,
+          isError: false,
+          isRefetching: false,
+          refetch: jest.fn(),
+          dataUpdatedAt: Date.now(),
+        },
+      ]);
+
+      rerender(<Earnings {...defaultProps} />);
+
+      const prevArrowEnabled = screen.getByTestId('earnings-previous');
+      expect(prevArrowEnabled.props.accessibilityState.disabled).toBe(false);
+
+      // Pressing it moves the period to reachFrom ('2026-11-19')
+      fireEvent.press(prevArrowEnabled);
+      expect(screen.queryByText(/Today/i)).toBeNull();
+
+      // At reachFrom ('2026-11-19'): back arrow is now disabled
+      const prevArrowNowAtReach = screen.getByTestId('earnings-previous');
+      expect(prevArrowNowAtReach.props.accessibilityState.disabled).toBe(true);
+
+      // Pressing it again does not move the period
+      fireEvent.press(prevArrowNowAtReach);
+      expect(prevArrowNowAtReach.props.accessibilityState.disabled).toBe(true);
+    });
+
+    it('in Week mode, disables back arrow for the week holding reachFrom', () => {
+      // In Week mode, week starts 2026-11-16 and ends 2026-11-22; reachFrom is 2026-11-18 (inside the week)
+      (useEarningsMonths as jest.Mock).mockReturnValue([
+        {
+          data: {
+            ...sampleMonthData,
+            reachFrom: '2026-11-18',
+          },
+          isLoading: false,
+          isError: false,
+          isRefetching: false,
+          refetch: jest.fn(),
+          dataUpdatedAt: Date.now(),
+        },
+      ]);
+
+      render(<Earnings {...defaultProps} />);
+
+      // Switch to Week mode
+      fireEvent.press(screen.getByTestId('earnings-mode-week'));
+
+      const prevArrowInWeek = screen.getByTestId('earnings-previous');
+      expect(prevArrowInWeek.props.accessibilityState.disabled).toBe(true);
+
+      // Pressing it does not move the period
+      fireEvent.press(prevArrowInWeek);
+      expect(prevArrowInWeek.props.accessibilityState.disabled).toBe(true);
     });
 
     it('shows "For older work, ask the co-op." when first date is on or before reachFrom', () => {

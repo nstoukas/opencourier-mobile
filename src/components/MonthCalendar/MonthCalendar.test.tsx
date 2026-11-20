@@ -1,4 +1,5 @@
 import React from 'react';
+import { View, StyleSheet } from 'react-native';
 import { render, screen, fireEvent } from '@testing-library/react-native';
 import '@app/localization/i18n';
 import { MonthCalendar } from './MonthCalendar';
@@ -127,5 +128,23 @@ describe('MonthCalendar (spec 0042, AC-7)', () => {
 
     const unselectedBtn = screen.getByTestId('calendar-day-2026-11-19');
     expect(unselectedBtn.props.accessibilityState.selected).toBe(false);
+  });
+
+  it('renders visible dot on marked days and hidden dot on unmarked days', () => {
+    render(
+      <MonthCalendar {...defaultProps} marked={new Set(['2026-11-20'])} />,
+    );
+
+    const markedDayBtn = screen.getByTestId('calendar-day-2026-11-20');
+    const unmarkedDayBtn = screen.getByTestId('calendar-day-2026-11-19');
+
+    const markedDot = markedDayBtn.findByType(View);
+    const unmarkedDot = unmarkedDayBtn.findByType(View);
+
+    const markedDotStyle = StyleSheet.flatten(markedDot.props.style);
+    const unmarkedDotStyle = StyleSheet.flatten(unmarkedDot.props.style);
+
+    expect(unmarkedDotStyle.backgroundColor).toBe('transparent');
+    expect(markedDotStyle.backgroundColor).not.toBe('transparent');
   });
 });
