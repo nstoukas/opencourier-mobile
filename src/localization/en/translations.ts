@@ -803,6 +803,7 @@ export default {
   time_worked_shift_open: 'From {{start}}, still open',
   time_worked_started_before: 'Started before these days',
   time_worked_break: 'Break {{start}} to {{end}}',
+  time_worked_break_under_a_minute: 'Break at {{start}}, under a minute',
   time_worked_added_later: '{{amount}} of it added later',
   time_worked_details_status: 'Status changes',
   time_worked_details_jobs: 'Jobs',

@@ -37,6 +37,11 @@ export const REASON_KEYS: Record<string, string> = {
 // screens, whatever zone the phone is set to (review 2026-11-20, decision 36.48).
 const clock = (iso: string) => coopClock(Date.parse(iso));
 
+// A break shorter than a minute would read "Break 01:35 to 01:35", so it gets its own words. It is
+// never hidden: the rider still sees that the pause was recorded (row 120, decision 75.43).
+const isUnderAMinute = (b: { startedAt: string; endedAt: string }) =>
+  Date.parse(b.endedAt) - Date.parse(b.startedAt) < 60_000;
+
 // Spec 0040, AC-12: the co-op's week. A small week shows only the sentence, never a figure.
 export const CoopWeekLine = ({
   label,
@@ -170,10 +175,14 @@ export const ShiftRow = ({
           )}
           {shift.breaks.map(b => (
             <Text key={b.startedAt} style={styles.breakLine}>
-              {t('translations:time_worked_break', {
-                start: clock(b.startedAt),
-                end: clock(b.endedAt),
-              })}
+              {isUnderAMinute(b)
+                ? t('translations:time_worked_break_under_a_minute', {
+                    start: clock(b.startedAt),
+                  })
+                : t('translations:time_worked_break', {
+                    start: clock(b.startedAt),
+                    end: clock(b.endedAt),
+                  })}
             </Text>
           ))}
         </View>
