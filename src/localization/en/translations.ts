@@ -473,6 +473,10 @@ export default {
   slide_to_start: 'Slide to start accepting deliveries',
   // Offers with no deadline (spec 0002, AC-4) and offers that ended (AC-5).
   offer_waiting_minutes: 'Waiting {{minutes}} min',
+  // Spec 0043 (AC-7): the order's box size, on the offer and the job card.
+  box_size_order_SMALL: 'Small order',
+  box_size_order_MEDIUM: 'Medium order',
+  box_size_order_LARGE: 'Large order',
   offer_waiting_just_now: 'Waiting less than 1 min',
   offer_reminder_title: 'An offer is waiting for you',
   offer_has_ended: 'This offer has ended',
@@ -937,4 +941,6 @@ export default {
   earnings_event_REVIEW_REQUESTED: 'Review asked for',
   earnings_event_REVIEW_ANSWERED: 'Review answered',
   earnings_event_COURIER_PAID_FOR_REVIEW: 'Pay corrected after a review',
+  // Spec 0043: an admin gave you this order although it filled your box past 100 units.
+  earnings_event_BOX_OVER_CAPACITY_CONFIRMED: 'Given to you past a full box',
 };

@@ -15,6 +15,7 @@ import { Button, ButtonType } from '@app/components/Button/Button';
 import { StageStrip } from '@app/components/StageStrip/StageStrip';
 import { JobNotesLine } from '@app/components/JobNotesLine/JobNotesLine';
 import { JobItemsLine } from '@app/components/JobItemsLine/JobItemsLine';
+import { boxSizeLine } from '@app/utilities/boxSize';
 import { ReadyLine } from '@app/components/ReadyLine/ReadyLine';
 import { PhoneIcon } from 'phosphor-react-native/src/icons/Phone';
 import { ChatTextIcon } from 'phosphor-react-native/src/icons/ChatText';
@@ -180,6 +181,13 @@ export const InProgressCell = ({
             foodReadyAt={order.foodReadyAt}
             readyAtOnPhone={order.readyAtOnPhone}
           />
+          {/* Spec 0043 (AC-7): the size, at the restaurant where it matters
+              (after pickup it is already in the box). */}
+          {boxSizeLine(order.boxSize, t) !== '' ? (
+            <Text style={styles.secondary} testID="job-box-size">
+              {boxSizeLine(order.boxSize, t)}
+            </Text>
+          ) : null}
           <Text style={styles.secondary} numberOfLines={2}>
             {[restaurantName, restaurantAddress].filter(Boolean).join(' · ')}
           </Text>

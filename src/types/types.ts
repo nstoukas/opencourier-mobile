@@ -1,3 +1,4 @@
+import type { BoxSize } from '@app/utilities/boxSize';
 import { OfferTrip } from '@app/utilities/offerTrip';
 import { Point, Polygon } from 'geojson';
 import moment, { Moment } from 'moment';
@@ -291,6 +292,8 @@ export type Order = {
   foodReadyAt?: string | null;
   // `readyAt` moved onto this phone's clock when the job list arrived. Not sent by the server.
   readyAtOnPhone?: number | null;
+  // Spec 0043: the order's box size, worded on the offer and the job card.
+  boxSize?: BoxSize | null;
   // Spec 0035: this rider's newest removal request on this job, while it is open or was refused.
   // Null otherwise. Only the job list (deliveries/in-progress) sends it.
   removalRequest?: RemovalRequest | null;
