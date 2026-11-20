@@ -125,7 +125,13 @@ describe('EarningsDelivery (spec 0042, AC-10, AC-11, AC-13)', () => {
   };
 
   beforeEach(() => {
+    jest.useFakeTimers();
+    jest.setSystemTime(new Date('2026-11-20T12:00:00.000Z'));
     jest.clearAllMocks();
+  });
+
+  afterEach(() => {
+    jest.useRealTimers();
   });
 
   describe('Pay breakdown (AC-10)', () => {
@@ -320,6 +326,48 @@ describe('EarningsDelivery (spec 0042, AC-10, AC-11, AC-13)', () => {
       expect(
         screen.getByText(i18n.t('translations:earnings_event_update')),
       ).toBeTruthy();
+    });
+
+    it('words a BOX_OVER_CAPACITY_CONFIRMED line as "Given to you past a full box" (not the generic update text)', () => {
+      const deliveryWithOverCapacityEvent: EarningsDeliveryDetail = {
+        ...sampleDelivery,
+        timeline: [
+          {
+            type: 'BOX_OVER_CAPACITY_CONFIRMED',
+            at: '2026-11-20T12:05:00.000Z',
+            who: 'DISPATCH',
+            anotherRider: false,
+          },
+          {
+            type: 'BOX_OVER_CAPACITY_CONFIRMED',
+            at: '2026-11-20T12:06:00.000Z',
+            who: null,
+            anotherRider: false,
+          },
+        ],
+      };
+
+      (useEarningsDelivery as jest.Mock).mockReturnValue({
+        data: deliveryWithOverCapacityEvent,
+        isLoading: false,
+        isError: false,
+        isRefetching: false,
+        refetch: jest.fn(),
+      });
+
+      render(<EarningsDelivery {...defaultProps} />);
+
+      // Words "Given to you past a full box · Dispatch" when actor is DISPATCH
+      expect(
+        screen.getByText('Given to you past a full box · Dispatch'),
+      ).toBeTruthy();
+
+      // Words "Given to you past a full box" when actor is null
+      expect(screen.getByText('Given to you past a full box')).toBeTruthy();
+
+      // Never shows the fallback "Update" or "Update · Dispatch"
+      expect(screen.queryByText('Update · Dispatch')).toBeNull();
+      expect(screen.queryByText('Update')).toBeNull();
     });
 
     it('shows "D MMM, HH:mm" on another Athens day than line before, clock only on same day, and first line shows day when differing from first job accept day (AC-11)', () => {

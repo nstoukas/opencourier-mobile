@@ -171,6 +171,8 @@ describe('Earnings screen (spec 0042 AC-1, AC-2, AC-6, AC-8, AC-9, AC-13)', () =
   const mockCoopRefetch = jest.fn();
 
   beforeEach(() => {
+    jest.useFakeTimers();
+    jest.setSystemTime(new Date('2026-11-20T12:00:00.000Z'));
     jest.clearAllMocks();
     queryClient.clear();
     focusCallback = undefined;
@@ -201,6 +203,10 @@ describe('Earnings screen (spec 0042 AC-1, AC-2, AC-6, AC-8, AC-9, AC-13)', () =
     });
 
     (useReviewSeen as jest.Mock).mockReturnValue([]);
+  });
+
+  afterEach(() => {
+    jest.useRealTimers();
   });
 
   describe('AC-1: Figures card', () => {

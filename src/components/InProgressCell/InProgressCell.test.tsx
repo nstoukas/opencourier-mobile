@@ -363,4 +363,80 @@ describe('InProgressCell (spec 0021, AC-6 to AC-8, AC-14, spec 0016)', () => {
       expect(queryByTestId('route-unavailable')).toBeNull();
     });
   });
+
+  describe('Job card box size (spec 0043 AC-7, decision 9.8)', () => {
+    it.each([
+      OrderStatus.accepted,
+      OrderStatus.dispatched,
+      OrderStatus.courier_arrived_at_pickup_location,
+    ])(
+      'shows the size line for each size at the restaurant (pickup stage: %s)',
+      status => {
+        const sizes = [
+          ['SMALL', 'Small order'],
+          ['MEDIUM', 'Medium order'],
+          ['LARGE', 'Large order'],
+        ] as const;
+
+        for (const [boxSize, expectedText] of sizes) {
+          const order = {
+            ...baseOrder,
+            status,
+            boxSize,
+          } as unknown as Order;
+
+          const { getByTestId, unmount } = render(
+            <InProgressCell order={order} {...noopProps} />,
+          );
+
+          const node = getByTestId('job-box-size');
+          expect(node).toBeTruthy();
+          expect(node.props.children).toBe(expectedText);
+
+          unmount();
+        }
+      },
+    );
+
+    it('shows no size line at pickup when order has no size, null, or an unknown size', () => {
+      for (const boxSize of [undefined, null, 'HUGE' as any]) {
+        const order = {
+          ...baseOrder,
+          status: OrderStatus.dispatched,
+          boxSize,
+        } as unknown as Order;
+
+        const { queryByTestId, unmount } = render(
+          <InProgressCell order={order} {...noopProps} />,
+        );
+
+        expect(queryByTestId('job-box-size')).toBeNull();
+        unmount();
+      }
+    });
+
+    it.each([
+      OrderStatus.picked_up,
+      OrderStatus.on_the_way,
+      OrderStatus.courier_arrived_at_dropoff_location,
+    ])(
+      'does not show the size line after pickup (drop off stage: %s), even for a Large order',
+      status => {
+        const order = {
+          ...baseOrder,
+          status,
+          boxSize: 'LARGE',
+        } as unknown as Order;
+
+        const { queryByTestId, queryByText, unmount } = render(
+          <InProgressCell order={order} {...noopProps} />,
+        );
+
+        // Decision 9.8: after pickup the food is already in the box
+        expect(queryByTestId('job-box-size')).toBeNull();
+        expect(queryByText('Large order')).toBeNull();
+        unmount();
+      },
+    );
+  });
 });

@@ -730,4 +730,51 @@ describe('HomeScreen (spec 0018, AC-5 to AC-15)', () => {
       expect(fetchShiftsSpy).not.toHaveBeenCalled();
     });
   });
+
+  describe('Box model (spec 0043 AC-7): no box gauge or percentage anywhere on Home map', () => {
+    it('shows no box gauge, fill, or percentage when showing an offer or an in-progress job', () => {
+      // 1. With an active offer having boxSize: 'LARGE'
+      const offerWithBox: Order = {
+        ...mockOffer,
+        boxSize: 'LARGE',
+      } as unknown as Order;
+      mockHomeOrders.dataSourceNew = [offerWithBox];
+      mockHomeOrders.dataSourceInProgress = [];
+      mockHomeOrders.serverInProgress = [];
+
+      const { queryByTestId, queryAllByText, unmount } = renderHome();
+      expect(queryByTestId('box-gauge')).toBeNull();
+      expect(queryByTestId('box-fill')).toBeNull();
+      expect(queryAllByText(/%/)).toHaveLength(0);
+      unmount();
+
+      // 2. With an active job having boxSize: 'MEDIUM'
+      const jobWithBox: Order = {
+        ...mockJob,
+        boxSize: 'MEDIUM',
+      } as unknown as Order;
+      mockHomeOrders.dataSourceNew = [];
+      mockHomeOrders.dataSourceInProgress = [jobWithBox];
+      mockHomeOrders.serverInProgress = [jobWithBox];
+
+      const homeWithJob = renderHome();
+      expect(homeWithJob.queryByTestId('box-gauge')).toBeNull();
+      expect(homeWithJob.queryByTestId('box-fill')).toBeNull();
+      expect(homeWithJob.queryAllByText(/%/)).toHaveLength(0);
+      homeWithJob.unmount();
+    });
+
+    it('shows no box gauge, fill, or percentage on map when idle or waiting for offers', () => {
+      mockHomeOrders.dataSourceNew = [];
+      mockHomeOrders.dataSourceInProgress = [];
+      mockHomeOrders.serverInProgress = [];
+      mockUser!.status = UserStatus.Online;
+
+      const { queryByTestId, queryAllByText, unmount } = renderHome();
+      expect(queryByTestId('box-gauge')).toBeNull();
+      expect(queryByTestId('box-fill')).toBeNull();
+      expect(queryAllByText(/%/)).toHaveLength(0);
+      unmount();
+    });
+  });
 });

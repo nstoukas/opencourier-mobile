@@ -1,4 +1,5 @@
 import React from 'react';
+import { Text } from 'react-native';
 import renderer, { act } from 'react-test-renderer';
 import { Order } from '@app/types/types';
 import '@app/localization/i18n';
@@ -169,7 +170,9 @@ describe('NewOrderCell (spec 0002, spec 0018, spec 0019, AC-3, AC-5, AC-7, AC-8,
     });
 
     const rootString = JSON.stringify(component!.toJSON());
-    expect(rootString).toContain('1.2 km to the restaurant · 2.9 km to the customer');
+    expect(rootString).toContain(
+      '1.2 km to the restaurant · 2.9 km to the customer',
+    );
     expect(rootString).toContain('About 9 min');
     expect(rootString).not.toMatch(/\bmi\b/);
     expect(rootString).not.toContain('miles');
@@ -386,6 +389,100 @@ describe('NewOrderCell (spec 0002, spec 0018, spec 0019, AC-3, AC-5, AC-7, AC-8,
 
     act(() => {
       component.unmount();
+    });
+  });
+
+  describe('Offer card box size (spec 0043, AC-7)', () => {
+    it.each([
+      ['SMALL', 'Small order'],
+      ['MEDIUM', 'Medium order'],
+      ['LARGE', 'Large order'],
+    ] as const)(
+      'shows the size line for %s as "%s"',
+      (boxSize, expectedText) => {
+        let component: renderer.ReactTestRenderer;
+        act(() => {
+          component = renderer.create(
+            <NewOrderCell
+              order={{ ...dummyOrder, boxSize }}
+              autoAcceptOrders={false}
+              onAccept={jest.fn()}
+              onDecline={jest.fn()}
+            />,
+          );
+        });
+
+        const sizeNode = component!.root.findByProps({
+          testID: 'offer-box-size',
+        });
+        expect(sizeNode.props.children).toBe(expectedText);
+
+        act(() => {
+          component.unmount();
+        });
+      },
+    );
+
+    it('shows no size line when the offer has no size, null, or an unknown size', () => {
+      for (const boxSize of [undefined, null, 'HUGE' as any]) {
+        let component: renderer.ReactTestRenderer;
+        act(() => {
+          component = renderer.create(
+            <NewOrderCell
+              order={{ ...dummyOrder, boxSize }}
+              autoAcceptOrders={false}
+              onAccept={jest.fn()}
+              onDecline={jest.fn()}
+            />,
+          );
+        });
+
+        const sizeNodes = component!.root.findAllByProps({
+          testID: 'offer-box-size',
+        });
+        expect(sizeNodes).toHaveLength(0);
+
+        act(() => {
+          component.unmount();
+        });
+      }
+    });
+
+    it('shows no box gauge or fill and shows no percentage on the offer card', () => {
+      for (const boxSize of ['SMALL', 'MEDIUM', 'LARGE', undefined] as const) {
+        let component: renderer.ReactTestRenderer;
+        act(() => {
+          component = renderer.create(
+            <NewOrderCell
+              order={{ ...dummyOrder, boxSize }}
+              autoAcceptOrders={false}
+              onAccept={jest.fn()}
+              onDecline={jest.fn()}
+            />,
+          );
+        });
+
+        // No gauge or fill testIDs
+        expect(
+          component!.root.findAllByProps({ testID: 'box-gauge' }),
+        ).toHaveLength(0);
+        expect(
+          component!.root.findAllByProps({ testID: 'box-fill' }),
+        ).toHaveLength(0);
+
+        // No percentage character anywhere in rendered texts
+        const textNodes = component!.root.findAllByType(Text);
+        for (const node of textNodes) {
+          const content = Array.isArray(node.props.children)
+            ? node.props.children.join('')
+            : String(node.props.children ?? '');
+          expect(content).not.toContain('%');
+        }
+
+        act(() => {
+          component.unmount();
+        });
+      }
     });
   });
 });
