@@ -99,12 +99,12 @@ describe('SideMenu Shifts item (spec 0027, AC-1, AC-10)', () => {
     queryClient.clear();
   });
 
-  it('with shiftsEnabled true, lists Shifts right after History', () => {
+  it('with shiftsEnabled true, lists Shifts right after Chat', () => {
     contact({ dispatchPhoneNumber: null, shiftsEnabled: true });
     const list = items();
     expect(list).toContain(SideMenuItem.Shifts);
     expect(list.indexOf(SideMenuItem.Shifts)).toBe(
-      list.indexOf(SideMenuItem.History) + 1,
+      list.indexOf(SideMenuItem.Chat) + 1,
     );
     expect(list.filter(item => item === SideMenuItem.Shifts)).toHaveLength(1);
   });

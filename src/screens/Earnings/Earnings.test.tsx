@@ -1,577 +1,554 @@
 import React from 'react';
 import { render, screen, fireEvent, act } from '@testing-library/react-native';
+import '@app/localization/i18n';
+import i18n from '@app/localization/i18n';
 import { Earnings } from './Earnings';
-import { useEarnings } from '@app/hooks/useEarnings';
+import { useEarningsMonth, useEarningsMonths } from '@app/hooks/useEarnings';
+import { useCoopTotals } from '@app/hooks/useTimeWorked';
 import { useReviewRequests } from '@app/hooks/useReviewRequests';
 import { useReviewSeen } from '@app/services/reviewSeen';
 import { queryClient } from '@app/services/queryClient';
-import { QueryKeys } from '@app/utilities/queryKeys';
 import { MainScreens } from '@app/navigation/main/types';
-import { EarningsSummaryDay } from '@app/types/types';
-import i18n from '@app/localization/i18n';
+import { QueryKeys } from '@app/utilities/queryKeys';
+import {
+  EarningsDay,
+  EarningsJob,
+  EarningsMonth,
+  EarningsShift,
+  EarningsWeek,
+} from '@app/types/earnings';
 
 jest.mock('@app/hooks/useEarnings');
-jest.mock('@app/hooks/useReviewRequests', () => ({
-  useReviewRequests: jest.fn(() => ({ data: { pages: [] } })),
-}));
-jest.mock('@app/services/reviewSeen', () => ({
-  useReviewSeen: jest.fn(() => []),
-}));
-jest.mock('@react-navigation/native', () => {
-  const actual = jest.requireActual('@react-navigation/native');
-  return {
-    ...actual,
-    useNavigation: () => ({
-      addListener: jest.fn(() => jest.fn()),
-    }),
-  };
-});
-const mockRefetchPages = jest.fn();
-const mockRefetchCoop = jest.fn();
-const sampleShift = {
-  startedAt: '2026-11-20T10:00:00.000Z',
-  startedBeforeRange: false,
-  endedAt: '2026-11-20T13:12:00.000Z',
-  onBreakSince: null,
-  workSeconds: 11520,
-  jobSeconds: 7200,
-  paidWaitSeconds: 720,
-  unpaidSeconds: 3600,
-  breaks: [],
-  moneyCents: 3850,
-  lateMoneyCents: 0,
-  centsPerHour: 1203,
-  currencyCode: 'EUR',
-  statusChanges: [
-    {
-      at: '2026-11-20T10:00:00.000Z',
-      fromStatus: 'OFFLINE',
-      toStatus: 'ONLINE',
-      cause: 'RIDER',
-      byAdmin: false,
-    },
-  ],
-  jobs: [],
-};
+jest.mock('@app/hooks/useTimeWorked');
+jest.mock('@app/hooks/useReviewRequests');
+jest.mock('@app/services/reviewSeen');
 
-jest.mock('@app/hooks/useTimeWorked', () => ({
-  useTimeWorkedPages: jest.fn(() => ({
-    data: {
-      pages: [
-        {
-          recordedFrom: '2026-11-19T00:00:00.000Z',
-          currencyCode: 'EUR',
-          days: [
-            {
-              date: '2026-11-20',
-              workSeconds: 11520,
-              jobSeconds: 7200,
-              paidWaitSeconds: 720,
-              unpaidSeconds: 3600,
-              moneyCents: 3850,
-              centsPerHour: 1203,
-              unlinkedMoneyCents: 0,
-            },
-          ],
-          shifts: [sampleShift],
-        },
-      ],
-    },
-    isLoading: false,
-    isError: false,
-    hasNextPage: false,
-    fetchNextPage: jest.fn(),
-    refetch: mockRefetchPages,
-  })),
-  useCoopTotals: jest.fn(() => ({
-    data: null,
-    isLoading: false,
-    isError: false,
-    refetch: mockRefetchCoop,
-  })),
-}));
-
-describe('Earnings summary (row 112, decision 112.1)', () => {
+describe('Earnings screen (spec 0042 AC-1, AC-2, AC-6, AC-8, AC-9, AC-13)', () => {
+  let focusCallback: (() => void) | undefined;
   const mockNavigation: any = {
-    toggleDrawer: jest.fn(),
     navigate: jest.fn(),
-    // The screen asks for the review list again on focus (row 30 review); nothing to check here.
-    addListener: jest.fn(() => jest.fn()),
+    toggleDrawer: jest.fn(),
+    addListener: jest.fn((event: string, cb: () => void) => {
+      if (event === 'focus') {
+        focusCallback = cb;
+      }
+      return jest.fn();
+    }),
   };
 
   const defaultProps: any = {
     navigation: mockNavigation,
   };
 
+  const sampleJobDelivered: EarningsJob = {
+    deliveryId: 'del-job-1',
+    acceptedAt: '2026-11-20T12:00:00.000Z', // 14:00 Athens
+    endedAt: '2026-11-20T12:20:00.000Z',
+    endEventType: 'DROPPED_OFF',
+    droppedOff: true,
+    deliveryMoneyCents: 400,
+    paidWaitSeconds: 66,
+    compensations: [
+      {
+        id: 'comp-1',
+        reason: 'WAITING',
+        amountCents: 50,
+        createdAt: '2026-11-20T12:15:00.000Z',
+        addedLater: false,
+      },
+    ],
+    paidKm: 2.482,
+    dropoffArea: 'Center Area',
+    pickupWaitSeconds: 66,
+    cancelledAfterPickup: false,
+    endLabel: null, // Delivered
+    pickupName: 'Souvlaki House',
+  };
+
+  const sampleJobCancelled: EarningsJob = {
+    deliveryId: 'del-job-2',
+    acceptedAt: '2026-11-20T13:00:00.000Z', // 15:00 Athens
+    endedAt: '2026-11-20T13:10:00.000Z',
+    endEventType: 'CANCELED',
+    droppedOff: false,
+    deliveryMoneyCents: 0,
+    paidWaitSeconds: 0,
+    compensations: [
+      {
+        id: 'comp-2',
+        reason: 'CANCELLATION',
+        amountCents: 200,
+        createdAt: '2026-11-20T13:10:00.000Z',
+        addedLater: false,
+      },
+    ],
+    paidKm: null,
+    dropoffArea: null,
+    pickupWaitSeconds: null,
+    cancelledAfterPickup: true,
+    endLabel: 'CANCELLED_AFTER_PICKUP',
+    pickupName: 'Pizza Bistro',
+  };
+
+  const sampleShift: EarningsShift = {
+    startedAt: '2026-11-20T10:00:00.000Z', // In Athens: Nov 20 12:00
+    startedBeforeRange: false,
+    endedAt: '2026-11-20T15:00:00.000Z', // In Athens: Nov 20 17:00
+    onBreakSince: null,
+    workSeconds: 18000,
+    jobSeconds: 7200,
+    paidWaitSeconds: 300,
+    unpaidSeconds: 10500,
+    breaks: [],
+    moneyCents: 650,
+    lateMoneyCents: 0,
+    centsPerHour: 1300,
+    currencyCode: 'EUR',
+    statusChanges: [],
+    jobs: [sampleJobDelivered, sampleJobCancelled],
+  };
+
+  const sampleDay: EarningsDay = {
+    date: '2026-11-20',
+    workSeconds: 18000,
+    jobSeconds: 7200,
+    paidWaitSeconds: 300,
+    unpaidSeconds: 10500,
+    moneyCents: 750,
+    unlinkedMoneyCents: 100,
+    noJobMoneyCents: 100,
+    centsPerHour: 1500,
+    activeCentsPerHour: 2200,
+    paidKm: 2.5,
+    centsPerPaidKm: 339,
+    medianPickupWaitSeconds: 66,
+    pickupWaitCount: 1,
+    dropOffCount: 1,
+  };
+
+  const sampleWeek: EarningsWeek = {
+    weekStart: '2026-11-16',
+    soFar: true,
+    cutAtReach: false,
+    workSeconds: 36000,
+    jobSeconds: 14400,
+    paidWaitSeconds: 600,
+    unpaidSeconds: 21000,
+    moneyCents: 1500,
+    unlinkedMoneyCents: 100,
+    noJobMoneyCents: 100,
+    centsPerHour: 1500,
+    activeCentsPerHour: 2200,
+    paidKm: 5.0,
+    centsPerPaidKm: 340,
+    medianPickupWaitSeconds: 66,
+    pickupWaitCount: 2,
+    dropOffCount: 2,
+  };
+
+  const sampleMonthData: EarningsMonth = {
+    month: '2026-11',
+    from: '2026-11-01',
+    to: '2026-11-20',
+    reachFrom: '2026-09-20',
+    recordedFrom: '2026-10-01T00:00:00.000Z',
+    currencyCode: 'EUR',
+    days: [sampleDay],
+    weeks: [sampleWeek],
+    shifts: [sampleShift],
+    jobsInNoShift: [],
+  };
+
+  const mockCoopRefetch = jest.fn();
+
   beforeEach(() => {
     jest.clearAllMocks();
-  });
+    focusCallback = undefined;
 
-  describe('with deliveryCount 0 and totalEarnings > 0', () => {
-    const baseMockEarnings = {
-      days: [],
-      totalEarnings: 250,
-      totalCompensation: 250,
-      totalTips: 0,
-      deliveryCount: 0,
-      currency: 'EUR',
+    (useEarningsMonths as jest.Mock).mockReturnValue([
+      {
+        data: sampleMonthData,
+        isLoading: false,
+        isError: false,
+        isRefetching: false,
+        refetch: jest.fn(),
+        dataUpdatedAt: Date.parse('2026-11-20T11:46:00.000Z'),
+      },
+    ]);
+
+    (useEarningsMonth as jest.Mock).mockReturnValue({
+      data: sampleMonthData,
       isLoading: false,
-      isError: false,
-      isRefetching: false,
-      refetch: jest.fn(),
-    };
-
-    it('on Today tab: header says "Paid for other work, no deliveries" (never "No Orders Today") and pay and tips line shows', () => {
-      (useEarnings as jest.Mock).mockReturnValue(baseMockEarnings);
-
-      render(<Earnings {...defaultProps} />);
-
-      // Header says "Paid for other work, no deliveries"
-      expect(
-        screen.getByText(
-          i18n.t('translations:earnings_paid_without_deliveries'),
-        ),
-      ).toBeTruthy();
-
-      // Never "No Orders Today"
-      expect(
-        screen.queryByText(i18n.t('translations:no_orders_today')),
-      ).toBeNull();
-
-      // Pay and tips line shows
-      expect(
-        screen.getByText(
-          i18n.t('translations:pay_tips_breakdown', {
-            pay: '€2.50',
-            tips: '€0.00',
-          }),
-        ),
-      ).toBeTruthy();
     });
 
-    it('on Weekly tab: header says "Paid for other work, no deliveries" (never "No Orders This Week") and pay and tips line shows', () => {
-      (useEarnings as jest.Mock).mockReturnValue(baseMockEarnings);
-
-      render(<Earnings {...defaultProps} />);
-
-      fireEvent.press(screen.getByText(i18n.t('translations:weekly')));
-
-      expect(
-        screen.getByText(
-          i18n.t('translations:earnings_paid_without_deliveries'),
-        ),
-      ).toBeTruthy();
-      expect(
-        screen.queryByText(i18n.t('translations:no_orders_this_week')),
-      ).toBeNull();
-      expect(
-        screen.getByText(
-          i18n.t('translations:pay_tips_breakdown', {
-            pay: '€2.50',
-            tips: '€0.00',
-          }),
-        ),
-      ).toBeTruthy();
+    (useCoopTotals as jest.Mock).mockReturnValue({
+      data: null,
+      refetch: mockCoopRefetch,
     });
 
-    it('on All tab: header says "Paid for other work, no deliveries" (never "No Orders") and pay and tips line shows', () => {
-      (useEarnings as jest.Mock).mockReturnValue(baseMockEarnings);
-
-      render(<Earnings {...defaultProps} />);
-
-      fireEvent.press(screen.getByText(i18n.t('translations:all')));
-
-      expect(
-        screen.getByText(
-          i18n.t('translations:earnings_paid_without_deliveries'),
-        ),
-      ).toBeTruthy();
-      expect(screen.queryByText(i18n.t('translations:no_orders'))).toBeNull();
-      expect(
-        screen.getByText(
-          i18n.t('translations:pay_tips_breakdown', {
-            pay: '€2.50',
-            tips: '€0.00',
-          }),
-        ),
-      ).toBeTruthy();
+    (useReviewRequests as jest.Mock).mockReturnValue({
+      data: { pages: [] },
     });
+
+    (useReviewSeen as jest.Mock).mockReturnValue([]);
   });
 
-  describe('with deliveryCount 0 and totalEarnings 0', () => {
-    const zeroMockEarnings = {
-      days: [],
-      totalEarnings: 0,
-      totalCompensation: 0,
-      totalTips: 0,
-      deliveryCount: 0,
-      currency: 'EUR',
-      isLoading: false,
-      isError: false,
-      isRefetching: false,
-      refetch: jest.fn(),
-    };
-
-    it('on Today tab: header says "No Orders Today" and breakdown line is hidden', () => {
-      (useEarnings as jest.Mock).mockReturnValue(zeroMockEarnings);
-
+  describe('AC-1: Figures card', () => {
+    it('shows the server figures: money, dropOffCount, work time, centsPerHour, activeCentsPerHour, centsPerPaidKm ("/km"), medianPickupWaitSeconds in minutes with count', () => {
       render(<Earnings {...defaultProps} />);
 
+      expect(screen.getByTestId('earnings-figures')).toBeTruthy();
+
+      // Total money
+      expect(screen.getByText('€7.50')).toBeTruthy();
+
+      // Drop offs and work time note
+      expect(screen.getByText(/1 drop off · 5h00 worked/)).toBeTruthy();
+
+      // Per hour worked
+      const perHour = screen.getByTestId('figure-per-hour');
+      expect(perHour).toBeTruthy();
+      expect(screen.getByText('€15.00/h')).toBeTruthy();
+
+      // Per hour on job (active)
+      const perHourOnJob = screen.getByTestId('figure-per-hour-on-job');
+      expect(perHourOnJob).toBeTruthy();
+      expect(screen.getByText('€22.00/h')).toBeTruthy();
+
+      // Per paid km
+      const perKm = screen.getByTestId('figure-per-km');
+      expect(perKm).toBeTruthy();
+      expect(screen.getByText('€3.39/km')).toBeTruthy();
+
+      // Median pickup wait
+      const pickupWait = screen.getByTestId('figure-pickup-wait');
+      expect(pickupWait).toBeTruthy();
+      expect(screen.getByText('1 min')).toBeTruthy();
+      expect(screen.getByText(/typical pickup wait, of 1 wait/i)).toBeTruthy();
+
+      // Time split
       expect(
-        screen.getByText(i18n.t('translations:no_orders_today')),
-      ).toBeTruthy();
-      expect(
-        screen.queryByText(
-          i18n.t('translations:earnings_paid_without_deliveries'),
-        ),
-      ).toBeNull();
-      expect(
-        screen.queryByText(
-          i18n.t('translations:pay_tips_breakdown', {
-            pay: '€0.00',
-            tips: '€0.00',
-          }),
-        ),
-      ).toBeNull();
-    });
+        screen.getAllByText(/Jobs 2h00 · Paid waiting 5 min · Unpaid 2h55/)
+          .length,
+      ).toBeGreaterThanOrEqual(1);
 
-    it('on Weekly tab: header says "No Orders This Week" and breakdown line is hidden', () => {
-      (useEarnings as jest.Mock).mockReturnValue(zeroMockEarnings);
-
-      render(<Earnings {...defaultProps} />);
-
-      fireEvent.press(screen.getByText(i18n.t('translations:weekly')));
-
-      expect(
-        screen.getByText(i18n.t('translations:no_orders_this_week')),
-      ).toBeTruthy();
-      expect(
-        screen.queryByText(
-          i18n.t('translations:earnings_paid_without_deliveries'),
-        ),
-      ).toBeNull();
-      expect(
-        screen.queryByText(
-          i18n.t('translations:pay_tips_breakdown', {
-            pay: '€0.00',
-            tips: '€0.00',
-          }),
-        ),
-      ).toBeNull();
-    });
-
-    it('on All tab: header says "No Orders" and breakdown line is hidden', () => {
-      (useEarnings as jest.Mock).mockReturnValue(zeroMockEarnings);
-
-      render(<Earnings {...defaultProps} />);
-
-      fireEvent.press(screen.getByText(i18n.t('translations:all')));
-
-      expect(screen.getByText(i18n.t('translations:no_orders'))).toBeTruthy();
-      expect(
-        screen.queryByText(
-          i18n.t('translations:earnings_paid_without_deliveries'),
-        ),
-      ).toBeNull();
-      expect(
-        screen.queryByText(
-          i18n.t('translations:pay_tips_breakdown', {
-            pay: '€0.00',
-            tips: '€0.00',
-          }),
-        ),
-      ).toBeNull();
-    });
-  });
-
-  describe('with deliveries (deliveryCount > 0)', () => {
-    it('says "<n> orders" and shows the pay and tips breakdown line', () => {
-      (useEarnings as jest.Mock).mockReturnValue({
-        days: [],
-        totalEarnings: 850,
-        totalCompensation: 700,
-        totalTips: 150,
-        deliveryCount: 3,
-        currency: 'EUR',
-        isLoading: false,
-        isError: false,
-        isRefetching: false,
-        refetch: jest.fn(),
-      });
-
-      render(<Earnings {...defaultProps} />);
-
-      expect(
-        screen.getByText(`3 ${i18n.t('translations:orders_small')}`),
-      ).toBeTruthy();
+      // noJobMoneyCents shows apart when > 0
       expect(
         screen.getByText(
-          i18n.t('translations:pay_tips_breakdown', {
-            pay: '€7.00',
-            tips: '€1.50',
+          i18n.t('translations:earnings_money_no_job', {
+            amount: '€1.00',
           }),
         ),
       ).toBeTruthy();
     });
 
-    it('says "1 orders" when deliveryCount is 1 and shows the pay and tips breakdown line', () => {
-      (useEarnings as jest.Mock).mockReturnValue({
-        days: [],
-        totalEarnings: 350,
-        totalCompensation: 300,
-        totalTips: 50,
-        deliveryCount: 1,
-        currency: 'EUR',
-        isLoading: false,
-        isError: false,
-        isRefetching: false,
-        refetch: jest.fn(),
-      });
-
-      render(<Earnings {...defaultProps} />);
-
-      expect(
-        screen.getByText(`1 ${i18n.t('translations:orders_small')}`),
-      ).toBeTruthy();
-      expect(
-        screen.getByText(
-          i18n.t('translations:pay_tips_breakdown', {
-            pay: '€3.00',
-            tips: '€0.50',
-          }),
-        ),
-      ).toBeTruthy();
-    });
-  });
-
-  describe('day rows in summary list (row 112 review)', () => {
-    it('a day row with deliveryCount 0 and total > 0 reads "Paid for other work, no deliveries", with 1 delivery reads "1 delivery", and with 3 reads "3 deliveries"', () => {
-      const days: EarningsSummaryDay[] = [
-        {
-          date: '2026-11-18',
-          deliveryCount: 0,
-          compensation: 200,
-          tips: 0,
-          total: 200,
-        },
-        {
-          date: '2026-11-17',
-          deliveryCount: 1,
-          compensation: 300,
-          tips: 50,
-          total: 350,
-        },
-        {
-          date: '2026-11-16',
-          deliveryCount: 3,
-          compensation: 900,
-          tips: 150,
-          total: 1050,
-        },
-      ];
-
-      (useEarnings as jest.Mock).mockReturnValue({
-        days,
-        totalEarnings: 1600,
-        totalCompensation: 1400,
-        totalTips: 200,
-        deliveryCount: 4,
-        currency: 'EUR',
-        isLoading: false,
-        isError: false,
-        isRefetching: false,
-        refetch: jest.fn(),
-      });
-
-      render(<Earnings {...defaultProps} />);
-
-      // A day row with deliveryCount 0 and total > 0 reads "Paid for other work, no deliveries"
-      expect(
-        screen.getByText(
-          new RegExp(
-            `· ${i18n.t('translations:earnings_paid_without_deliveries')}`,
-          ),
-        ),
-      ).toBeTruthy();
-
-      // Does not say "0 deliveries"
-      expect(
-        screen.queryByText(
-          new RegExp(`· 0 ${i18n.t('translations:deliveries_small')}`),
-        ),
-      ).toBeNull();
-
-      // A day with 1 delivery reads "1 delivery"
-      expect(
-        screen.getByText(
-          new RegExp(`· 1 ${i18n.t('translations:delivery_small')}`),
-        ),
-      ).toBeTruthy();
-
-      // A day with 3 reads "3 deliveries"
-      expect(
-        screen.getByText(
-          new RegExp(`· 3 ${i18n.t('translations:deliveries_small')}`),
-        ),
-      ).toBeTruthy();
-
-      // Formatted day amounts are shown
-      expect(screen.getByText('€2.00')).toBeTruthy();
-      expect(screen.getByText('€3.50')).toBeTruthy();
-      expect(screen.getByText('€10.50')).toBeTruthy();
-    });
-
-    it('a day row with deliveryCount 0 and total 0 reads "0 deliveries"', () => {
-      const days: EarningsSummaryDay[] = [
-        {
-          date: '2026-11-18',
-          deliveryCount: 0,
-          compensation: 0,
-          tips: 0,
-          total: 0,
-        },
-      ];
-
-      (useEarnings as jest.Mock).mockReturnValue({
-        days,
-        totalEarnings: 0,
-        totalCompensation: 0,
-        totalTips: 0,
-        deliveryCount: 0,
-        currency: 'EUR',
-        isLoading: false,
-        isError: false,
-        isRefetching: false,
-        refetch: jest.fn(),
-      });
-
-      render(<Earnings {...defaultProps} />);
-
-      expect(
-        screen.getByText(
-          new RegExp(`· 0 ${i18n.t('translations:deliveries_small')}`),
-        ),
-      ).toBeTruthy();
-      expect(
-        screen.queryByText(
-          new RegExp(
-            `· ${i18n.t('translations:earnings_paid_without_deliveries')}`,
-          ),
-        ),
-      ).toBeNull();
-    });
-  });
-
-  describe('How offers and pay work link and New answer mark (spec 0038, AC-9, AC-11)', () => {
-    const baseMockEarnings = {
-      days: [],
-      totalEarnings: 250,
-      totalCompensation: 250,
-      totalTips: 0,
-      deliveryCount: 0,
-      currency: 'EUR',
-      isLoading: false,
-      isError: false,
-      isRefetching: false,
-      refetch: jest.fn(),
-    };
-
-    it('renders "How offers and pay work" link and navigates to HowItWorks on press', () => {
-      (useEarnings as jest.Mock).mockReturnValue(baseMockEarnings);
-
-      render(<Earnings {...defaultProps} />);
-
-      const howLink = screen.getByTestId('how-it-works-link');
-      expect(howLink).toBeTruthy();
-      expect(screen.getByText(i18n.t('translations:how_title'))).toBeTruthy();
-
-      fireEvent.press(howLink);
-      expect(mockNavigation.navigate).toHaveBeenCalledWith(
-        MainScreens.HowItWorks,
-      );
-    });
-
-    it('shows "New answer" badge when there is an answered review request not yet in seenAnswers', () => {
-      (useEarnings as jest.Mock).mockReturnValue(baseMockEarnings);
-      (useReviewRequests as jest.Mock).mockReturnValue({
-        data: {
-          pages: [
-            {
-              data: [{ id: 'rev-answered-1', status: 'ANSWERED' }],
-            },
-          ],
-        },
-      });
-      // Not seen yet
-      (useReviewSeen as jest.Mock).mockReturnValue([]);
-
-      render(<Earnings {...defaultProps} />);
-
-      expect(
-        screen.getByText(i18n.t('translations:review_new_answer')),
-      ).toBeTruthy();
-    });
-
-    it('hides "New answer" badge when answered review request is already in seenAnswers', () => {
-      (useEarnings as jest.Mock).mockReturnValue(baseMockEarnings);
-      (useReviewRequests as jest.Mock).mockReturnValue({
-        data: {
-          pages: [
-            {
-              data: [{ id: 'rev-answered-1', status: 'ANSWERED' }],
-            },
-          ],
-        },
-      });
-      // Already seen
-      (useReviewSeen as jest.Mock).mockReturnValue(['rev-answered-1']);
-
-      render(<Earnings {...defaultProps} />);
-
-      expect(
-        screen.queryByText(i18n.t('translations:review_new_answer')),
-      ).toBeNull();
-    });
-  });
-
-  describe('Review requests refreshed on focus (spec 0038, AC-9, row 30 review)', () => {
-    it('invalidates reviewRequests when the screen gets focus', () => {
-      let focusCallback: (() => void) | undefined;
-      const unsubscribe = jest.fn();
-      const nav: any = {
-        toggleDrawer: jest.fn(),
-        navigate: jest.fn(),
-        addListener: jest.fn((event: string, cb: () => void) => {
-          if (event === 'focus') {
-            focusCallback = cb;
-          }
-          return unsubscribe;
-        }),
+    it('shows "—" for each null rate or wait figure, and hides noJobMoneyCents when 0', () => {
+      const dayWithNullFigures: EarningsDay = {
+        ...sampleDay,
+        centsPerHour: null,
+        activeCentsPerHour: null,
+        centsPerPaidKm: null,
+        medianPickupWaitSeconds: null,
+        pickupWaitCount: 0,
+        noJobMoneyCents: 0,
       };
 
-      (useEarnings as jest.Mock).mockReturnValue({
-        days: [],
-        totalEarnings: 0,
-        totalCompensation: 0,
-        totalTips: 0,
-        deliveryCount: 0,
-        currency: 'EUR',
-        isLoading: false,
-        isError: false,
-        isRefetching: false,
-        refetch: jest.fn(),
-      });
+      (useEarningsMonths as jest.Mock).mockReturnValue([
+        {
+          data: {
+            ...sampleMonthData,
+            days: [dayWithNullFigures],
+          },
+          isLoading: false,
+          isError: false,
+          isRefetching: false,
+          refetch: jest.fn(),
+          dataUpdatedAt: Date.now(),
+        },
+      ]);
 
+      render(<Earnings {...defaultProps} />);
+
+      // All 4 figures show "—"
+      const dashes = screen.getAllByText('—');
+      expect(dashes.length).toBeGreaterThanOrEqual(4);
+
+      // noJobMoneyCents is not shown
+      expect(screen.queryByText(/for other work, no deliveries/i)).toBeNull();
+    });
+  });
+
+  describe('AC-2 & AC-8: Co-op timezone and Job rows', () => {
+    it('displays accept time in Europe/Athens time, restaurant -> area, km, minutes, money and label', () => {
+      render(<Earnings {...defaultProps} />);
+
+      const jobRows = screen.getAllByTestId('earnings-job');
+      expect(jobRows.length).toBe(2);
+
+      // Job 1: accepted at 12:00 UTC -> 14:00 Athens
+      expect(screen.getByText('14:00')).toBeTruthy();
+      expect(screen.getByText('Souvlaki House → Center Area')).toBeTruthy();
+      expect(screen.getByText(/2.5 km/)).toBeTruthy();
+      expect(screen.getByText(/20 min/)).toBeTruthy();
+      expect(screen.getByText('€4.50')).toBeTruthy(); // 400 + 50 cents
+
+      // Job 2: accepted at 13:00 UTC -> 15:00 Athens
+      expect(screen.getByText('15:00')).toBeTruthy();
+      expect(screen.getByText('Pizza Bistro → —')).toBeTruthy(); // null area shows "—"
+      expect(screen.getByText(/— · 10 min/)).toBeTruthy(); // null km shows "—"
+      expect(screen.getByText('€2.00')).toBeTruthy(); // 200 cents
+      expect(
+        screen.getByText(
+          new RegExp(
+            i18n.t('translations:earnings_end_cancelled_after_pickup'),
+          ),
+        ),
+      ).toBeTruthy();
+    });
+
+    it('pressing a job navigates to EarningsDelivery with deliveryId', () => {
+      render(<Earnings {...defaultProps} />);
+
+      const jobRows = screen.getAllByTestId('earnings-job');
+      fireEvent.press(jobRows[0]);
+
+      expect(mockNavigation.navigate).toHaveBeenCalledWith(
+        MainScreens.EarningsDelivery,
+        { deliveryId: 'del-job-1' },
+      );
+    });
+  });
+
+  describe('AC-6: Day view and Week view grouping (decision 75.37)', () => {
+    it('shows "Continues from <day>" when a shift began the day before', () => {
+      const shiftFromYesterday: EarningsShift = {
+        ...sampleShift,
+        startedAt: '2026-11-19T21:00:00.000Z', // Nov 19 23:00 Athens
+        endedAt: '2026-11-20T03:00:00.000Z', // Nov 20 05:00 Athens
+        jobs: [sampleJobDelivered],
+      };
+
+      (useEarningsMonths as jest.Mock).mockReturnValue([
+        {
+          data: {
+            ...sampleMonthData,
+            shifts: [shiftFromYesterday],
+          },
+          isLoading: false,
+          isError: false,
+          isRefetching: false,
+          refetch: jest.fn(),
+          dataUpdatedAt: Date.now(),
+        },
+      ]);
+
+      render(<Earnings {...defaultProps} />);
+
+      expect(
+        screen.getByText(
+          i18n.t('translations:earnings_continues_from', {
+            day: 'Thu 19 Nov',
+          }),
+        ),
+      ).toBeTruthy();
+    });
+
+    it('groups jobs in no recorded shift under "Not in a recorded shift"', () => {
+      (useEarningsMonths as jest.Mock).mockReturnValue([
+        {
+          data: {
+            ...sampleMonthData,
+            shifts: [],
+            jobsInNoShift: [sampleJobDelivered],
+          },
+          isLoading: false,
+          isError: false,
+          isRefetching: false,
+          refetch: jest.fn(),
+          dataUpdatedAt: Date.now(),
+        },
+      ]);
+
+      render(<Earnings {...defaultProps} />);
+
+      expect(
+        screen.getByText(i18n.t('translations:earnings_not_in_shift')),
+      ).toBeTruthy();
+      expect(screen.getByText('Souvlaki House → Center Area')).toBeTruthy();
+    });
+
+    it('shows "No work this day" when day has no shifts and no jobs', () => {
+      (useEarningsMonths as jest.Mock).mockReturnValue([
+        {
+          data: {
+            ...sampleMonthData,
+            shifts: [],
+            jobsInNoShift: [],
+          },
+          isLoading: false,
+          isError: false,
+          isRefetching: false,
+          refetch: jest.fn(),
+          dataUpdatedAt: Date.now(),
+        },
+      ]);
+
+      render(<Earnings {...defaultProps} />);
+
+      expect(
+        screen.getByText(i18n.t('translations:earnings_no_work_day')),
+      ).toBeTruthy();
+    });
+
+    it('switching to Week view lists days with work newest first', () => {
+      render(<Earnings {...defaultProps} />);
+
+      const weekTab = screen.getByTestId('earnings-mode-week');
+      fireEvent.press(weekTab);
+
+      // Now in week mode, shows week label and day headers
+      expect(screen.getByText(/so far/i)).toBeTruthy();
+      expect(screen.getByText('Fri 20 Nov')).toBeTruthy();
+    });
+
+    it('shows "No work this week" when week has no days with work', () => {
+      (useEarningsMonths as jest.Mock).mockReturnValue([
+        {
+          data: {
+            ...sampleMonthData,
+            days: [],
+            shifts: [],
+            jobsInNoShift: [],
+          },
+          isLoading: false,
+          isError: false,
+          isRefetching: false,
+          refetch: jest.fn(),
+          dataUpdatedAt: Date.now(),
+        },
+      ]);
+
+      render(<Earnings {...defaultProps} />);
+
+      const weekTab = screen.getByTestId('earnings-mode-week');
+      fireEvent.press(weekTab);
+
+      expect(
+        screen.getByText(i18n.t('translations:earnings_no_work_week')),
+      ).toBeTruthy();
+    });
+  });
+
+  describe('AC-7: Calendar interaction', () => {
+    it('tapping period label opens month calendar', () => {
+      render(<Earnings {...defaultProps} />);
+
+      expect(screen.queryByTestId('earnings-calendar')).toBeNull();
+
+      fireEvent.press(screen.getByTestId('earnings-period'));
+      expect(screen.getByTestId('earnings-calendar')).toBeTruthy();
+    });
+  });
+
+  describe('AC-9: Reach and limit notes', () => {
+    it('forward arrow is disabled at today', () => {
+      render(<Earnings {...defaultProps} />);
+
+      const forwardArrow = screen.getByTestId('earnings-next');
+      expect(forwardArrow.props.accessibilityState.disabled).toBe(true);
+    });
+
+    it('shows "For older work, ask the co-op." when first date is on or before reachFrom', () => {
+      (useEarningsMonths as jest.Mock).mockReturnValue([
+        {
+          data: {
+            ...sampleMonthData,
+            reachFrom: '2026-11-20', // reachFrom is today
+          },
+          isLoading: false,
+          isError: false,
+          isRefetching: false,
+          refetch: jest.fn(),
+          dataUpdatedAt: Date.now(),
+        },
+      ]);
+
+      render(<Earnings {...defaultProps} />);
+
+      expect(
+        screen.getByText(i18n.t('translations:earnings_older_ask_coop')),
+      ).toBeTruthy();
+    });
+
+    it('shows "Time worked is recorded from <date>" when date is before recordedFrom', () => {
+      (useEarningsMonths as jest.Mock).mockReturnValue([
+        {
+          data: {
+            ...sampleMonthData,
+            recordedFrom: '2026-11-25T00:00:00.000Z', // recordedFrom is in the future
+          },
+          isLoading: false,
+          isError: false,
+          isRefetching: false,
+          refetch: jest.fn(),
+          dataUpdatedAt: Date.now(),
+        },
+      ]);
+
+      render(<Earnings {...defaultProps} />);
+
+      expect(screen.getByText(/Time worked is recorded from/i)).toBeTruthy();
+    });
+  });
+
+  describe('AC-13: Offline, error, and cache invalidation', () => {
+    it('shows "No connection. As of <time>" when refetch fails over cached data', () => {
+      (useEarningsMonths as jest.Mock).mockReturnValue([
+        {
+          data: sampleMonthData,
+          isLoading: false,
+          isError: true, // Failed refetch
+          isRefetching: false,
+          refetch: jest.fn(),
+          dataUpdatedAt: Date.parse('2026-11-20T11:46:00.000Z'),
+        },
+      ]);
+
+      render(<Earnings {...defaultProps} />);
+
+      expect(screen.getByTestId('earnings-as-of')).toBeTruthy();
+      expect(
+        screen.getByText(
+          i18n.t('translations:earnings_as_of', { time: '13:46' }),
+        ),
+      ).toBeTruthy();
+    });
+
+    it('shows needs connection notice when no data is loaded and query fails', () => {
+      (useEarningsMonths as jest.Mock).mockReturnValue([
+        {
+          data: undefined,
+          isLoading: false,
+          isError: true,
+          isRefetching: false,
+          refetch: jest.fn(),
+          dataUpdatedAt: 0,
+        },
+      ]);
+
+      render(<Earnings {...defaultProps} />);
+
+      expect(screen.getByTestId('earnings-needs-connection')).toBeTruthy();
+      expect(
+        screen.getByText(i18n.t('translations:earnings_needs_connection')),
+      ).toBeTruthy();
+    });
+
+    it('focus listener invalidates earningsMonth, coopTotals, and reviewRequests', () => {
       const invalidateSpy = jest.spyOn(queryClient, 'invalidateQueries');
 
-      const { unmount } = render(
-        <Earnings {...defaultProps} navigation={nav} />,
-      );
+      render(<Earnings {...defaultProps} />);
 
-      expect(nav.addListener).toHaveBeenCalledWith(
-        'focus',
-        expect.any(Function),
-      );
       expect(focusCallback).toBeDefined();
 
       act(() => {
@@ -579,55 +556,14 @@ describe('Earnings summary (row 112, decision 112.1)', () => {
       });
 
       expect(invalidateSpy).toHaveBeenCalledWith({
+        queryKey: [QueryKeys.earningsMonth],
+      });
+      expect(invalidateSpy).toHaveBeenCalledWith({
+        queryKey: [QueryKeys.coopTotals],
+      });
+      expect(invalidateSpy).toHaveBeenCalledWith({
         queryKey: [QueryKeys.reviewRequests],
       });
-
-      unmount();
-      expect(unsubscribe).toHaveBeenCalled();
-    });
-  });
-
-  describe('TimeWorkedSection footer persistence across re-renders (review 2026-11-20)', () => {
-    it('does not unmount TimeWorkedSection on re-render (opened shift stays open)', () => {
-      (useEarnings as jest.Mock).mockReturnValue({
-        days: [],
-        totalEarnings: 250,
-        totalCompensation: 250,
-        totalTips: 0,
-        deliveryCount: 0,
-        currency: 'EUR',
-        isLoading: false,
-        isError: false,
-        isRefetching: false,
-        refetch: jest.fn(),
-      });
-
-      render(<Earnings {...defaultProps} />);
-
-      // Find the shift in the footer
-      const shiftButton = screen.getByTestId('time-worked-shift');
-      expect(shiftButton.props.accessibilityState.expanded).toBe(false);
-
-      // Open the shift
-      fireEvent.press(shiftButton);
-      expect(shiftButton.props.accessibilityState.expanded).toBe(true);
-      expect(
-        screen.getByText(i18n.t('translations:time_worked_details_status')),
-      ).toBeTruthy();
-
-      // Trigger a re-render of Earnings by switching tabs to Weekly
-      fireEvent.press(screen.getByText(i18n.t('translations:weekly')));
-
-      // With ListFooterComponent={renderFooter()}, the section stays mounted so the shift remains open.
-      // If ListFooterComponent={renderFooter} were used, FlatList would treat the new function reference
-      // as a new component type and remount TimeWorkedSection, closing the shift.
-      const shiftButtonAfterTabChange = screen.getByTestId('time-worked-shift');
-      expect(shiftButtonAfterTabChange.props.accessibilityState.expanded).toBe(
-        true,
-      );
-      expect(
-        screen.getByText(i18n.t('translations:time_worked_details_status')),
-      ).toBeTruthy();
     });
   });
 });

@@ -215,15 +215,9 @@ describe('useJobStepOutbox hook (spec 0009, AC-3)', () => {
     // 1. Hides in progress order after delivery
     expect(hideOrderSpy).toHaveBeenCalledWith('del-deliv-1');
 
-    // 2. Invalidates history and earnings
+    // 2. Invalidates earnings (spec 0042 AC-13)
     expect(invalidateQueriesSpy).toHaveBeenCalledWith({
-      queryKey: [QueryKeys.orderHistory],
-    });
-    expect(invalidateQueriesSpy).toHaveBeenCalledWith({
-      queryKey: [QueryKeys.earningsSummary],
-    });
-    expect(invalidateQueriesSpy).toHaveBeenCalledWith({
-      queryKey: [QueryKeys.earningsDay],
+      queryKey: [QueryKeys.earningsMonth],
     });
     expect(invalidateQueriesSpy).toHaveBeenCalledWith({
       queryKey: [QueryKeys.earningsDelivery],
@@ -275,9 +269,12 @@ describe('useJobStepOutbox hook (spec 0009, AC-3)', () => {
       queryKey: [QueryKeys.inProgressOrders],
     });
 
-    // History and earnings NOT invalidated
+    // Earnings NOT invalidated
     expect(invalidateQueriesSpy).not.toHaveBeenCalledWith({
-      queryKey: [QueryKeys.orderHistory],
+      queryKey: [QueryKeys.earningsMonth],
+    });
+    expect(invalidateQueriesSpy).not.toHaveBeenCalledWith({
+      queryKey: [QueryKeys.earningsDelivery],
     });
     expect(hideOrderSpy).not.toHaveBeenCalled();
   });

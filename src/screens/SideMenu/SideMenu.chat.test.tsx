@@ -75,7 +75,7 @@ describe('SideMenu Chat entry point (spec 0034, AC-12)', () => {
     return { tree, nav: mockNav };
   };
 
-  it('lists Chat between Orders and History in the side menu (standard menu)', () => {
+  it('lists Chat between Orders and Earnings in the side menu (standard menu)', () => {
     mockShiftsEnabled = false;
     const { tree } = renderSideMenu();
 
@@ -84,14 +84,14 @@ describe('SideMenu Chat entry point (spec 0034, AC-12)', () => {
 
     const ordersIndex = itemKeys.indexOf(SideMenuItem.Orders);
     const chatIndex = itemKeys.indexOf(SideMenuItem.Chat);
-    const historyIndex = itemKeys.indexOf(SideMenuItem.History);
+    const earningsIndex = itemKeys.indexOf(SideMenuItem.Earnings);
 
     expect(ordersIndex).toBeGreaterThanOrEqual(0);
     expect(chatIndex).toBe(ordersIndex + 1);
-    expect(historyIndex).toBe(chatIndex + 1);
+    expect(earningsIndex).toBe(chatIndex + 1);
   });
 
-  it('lists Chat between Orders and History when shifts are available', () => {
+  it('lists Chat between Orders and Shifts when shifts are available', () => {
     mockShiftsEnabled = true;
     const { tree } = renderSideMenu();
 
@@ -100,13 +100,13 @@ describe('SideMenu Chat entry point (spec 0034, AC-12)', () => {
 
     const ordersIndex = itemKeys.indexOf(SideMenuItem.Orders);
     const chatIndex = itemKeys.indexOf(SideMenuItem.Chat);
-    const historyIndex = itemKeys.indexOf(SideMenuItem.History);
     const shiftsIndex = itemKeys.indexOf(SideMenuItem.Shifts);
+    const earningsIndex = itemKeys.indexOf(SideMenuItem.Earnings);
 
     expect(ordersIndex).toBeGreaterThanOrEqual(0);
     expect(chatIndex).toBe(ordersIndex + 1);
-    expect(historyIndex).toBe(chatIndex + 1);
-    expect(shiftsIndex).toBe(historyIndex + 1);
+    expect(shiftsIndex).toBe(chatIndex + 1);
+    expect(earningsIndex).toBe(shiftsIndex + 1);
   });
 
   it('navigates to MainScreens.Chat with no params when Chat item is pressed', () => {

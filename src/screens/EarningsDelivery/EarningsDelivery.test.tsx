@@ -1,84 +1,129 @@
 import React from 'react';
-import { render, screen } from '@testing-library/react-native';
-import { EarningsDelivery } from './EarningsDelivery';
-import { useEarningsDelivery } from '@app/hooks/useEarningsDelivery';
-import { EarningsDeliveryDetail } from '@app/types/types';
+import { render, screen, fireEvent } from '@testing-library/react-native';
+import '@app/localization/i18n';
 import i18n from '@app/localization/i18n';
+import { EarningsDelivery } from './EarningsDelivery';
+import { useEarningsDelivery } from '@app/hooks/useEarnings';
+import { MainScreens } from '@app/navigation/main/types';
+import { EarningsDeliveryDetail } from '@app/types/earnings';
 
-jest.mock('@app/hooks/useEarningsDelivery');
+jest.mock('@app/hooks/useEarnings');
 
-describe('EarningsDelivery (spec 0009, AC-1)', () => {
-  const mockDeliveryDetail: EarningsDeliveryDetail = {
-    deliveryId: 'del-123',
-    pickupBusinessName: 'Souvlaki Express',
-    dropoffAddress: 'Dimitriadis 25, Volos',
-    droppedOffAt: '2026-10-31T20:00:00Z',
-    compensation: 350,
-    tips: 100,
-    total: 450,
-    currency: 'EUR',
+describe('EarningsDelivery (spec 0042, AC-10, AC-11, AC-13)', () => {
+  const mockNavigation: any = {
+    goBack: jest.fn(),
+    navigate: jest.fn(),
   };
 
   const defaultProps: any = {
-    navigation: { goBack: jest.fn() },
+    navigation: mockNavigation,
     route: { params: { deliveryId: 'del-123' } },
+  };
+
+  const sampleDelivery: EarningsDeliveryDetail = {
+    deliveryId: 'del-123',
+    currencyCode: 'EUR',
+    pickupName: 'Souvlaki Bar',
+    dropoffArea: 'Dimitriadis',
+    paidKm: 2.5,
+    jobs: [
+      {
+        acceptedAt: '2026-11-20T12:00:00.000Z',
+        endedAt: '2026-11-20T12:20:00.000Z',
+        endLabel: null, // Delivered
+        minutes: 20,
+        pickupWaitSeconds: 120, // 2 min
+      },
+    ],
+    breakdown: {
+      baseFeeCents: 200,
+      distanceFeeCents: 150,
+      deliveryPayCents: 350,
+      tipsCents: 100,
+      compensations: [
+        {
+          reason: 'WAITING',
+          amountCents: 80,
+          waitMinutes: 5,
+          createdAt: '2026-11-20T12:10:00.000Z',
+          addedLater: false,
+        },
+        {
+          reason: 'REVIEW',
+          amountCents: 50,
+          waitMinutes: null,
+          createdAt: '2026-11-21T10:00:00.000Z',
+          addedLater: true,
+        },
+      ],
+      totalCents: 580,
+    },
+    timeline: [
+      {
+        type: 'ACCEPTED',
+        at: '2026-11-20T12:00:00.000Z',
+        who: 'YOU',
+        anotherRider: false,
+      },
+      {
+        type: 'ARRIVED_AT_PICKUP_LOCATION',
+        at: '2026-11-20T12:08:00.000Z',
+        who: 'YOU',
+        anotherRider: false,
+      },
+      {
+        type: 'FOOD_READY',
+        at: '2026-11-20T12:10:00.000Z',
+        who: 'RESTAURANT',
+        anotherRider: false,
+      },
+      {
+        type: 'PICKED_UP',
+        at: '2026-11-20T12:10:00.000Z',
+        who: 'YOU',
+        anotherRider: false,
+      },
+      {
+        type: 'DISPATCH_CALL',
+        at: '2026-11-20T12:15:00.000Z',
+        who: 'DISPATCH',
+        anotherRider: false,
+      },
+      {
+        type: 'SYSTEM_EVENT',
+        at: '2026-11-20T12:16:00.000Z',
+        who: 'SYSTEM',
+        anotherRider: false,
+      },
+      {
+        type: 'DROPPED_OFF',
+        at: '2026-11-20T12:20:00.000Z',
+        who: 'YOU',
+        anotherRider: false,
+      },
+      {
+        type: 'ACCEPTED',
+        at: '2026-11-20T11:50:00.000Z',
+        who: null,
+        anotherRider: true,
+      },
+      {
+        type: 'SOME_NEW_FUTURE_EVENT_TYPE',
+        at: '2026-11-20T12:25:00.000Z',
+        who: null,
+        anotherRider: false,
+      },
+    ],
   };
 
   beforeEach(() => {
     jest.clearAllMocks();
   });
 
-  it('keeps showing a loaded delivery when a refetch fails (AC-1)', () => {
-    // Delivery is in cache, but a background refetch failed (e.g. no signal)
-    (useEarningsDelivery as jest.Mock).mockReturnValue({
-      delivery: mockDeliveryDetail,
-      isLoading: false,
-      isError: true,
-      isRefetching: false,
-      refetch: jest.fn().mockRejectedValue(new Error('Network request failed')),
-    });
-
-    render(<EarningsDelivery {...defaultProps} />);
-
-    // Screen keeps displaying the cached delivery details
-    expect(screen.getByText('Souvlaki Express')).toBeTruthy();
-    expect(screen.getByText('Dimitriadis 25, Volos')).toBeTruthy();
-    expect(screen.getByText('del-123')).toBeTruthy();
-    expect(screen.getByText('€4.50')).toBeTruthy();
-
-    // Does NOT show the empty "delivery not found" error
-    expect(
-      screen.queryByText(i18n.t('translations:delivery_not_found')),
-    ).toBeNull();
-  });
-
-  it('shows delivery_not_found when there is no cached delivery data and loading has finished', () => {
-    (useEarningsDelivery as jest.Mock).mockReturnValue({
-      delivery: undefined,
-      isLoading: false,
-      isError: true,
-      isRefetching: false,
-      refetch: jest.fn(),
-    });
-
-    render(<EarningsDelivery {...defaultProps} />);
-
-    expect(
-      screen.getByText(i18n.t('translations:delivery_not_found')),
-    ).toBeTruthy();
-    expect(screen.queryByText('Souvlaki Express')).toBeNull();
-  });
-
-  describe('Waiting amount on delivered detail (spec 0033, AC-5, decision 23.11)', () => {
-    it('shows Waiting row with formatted currency when waitingPay is present', () => {
-      const deliveryWithWait: EarningsDeliveryDetail = {
-        ...mockDeliveryDetail,
-        waitingPay: 150, // €1.50
-        total: 600,
-      };
-
+  describe('Pay breakdown (AC-10)', () => {
+    it('shows base fee and distance fee when both are present and not null', () => {
       (useEarningsDelivery as jest.Mock).mockReturnValue({
-        delivery: deliveryWithWait,
+        data: sampleDelivery,
         isLoading: false,
         isError: false,
         isRefetching: false,
@@ -87,177 +132,35 @@ describe('EarningsDelivery (spec 0009, AC-1)', () => {
 
       render(<EarningsDelivery {...defaultProps} />);
 
-      // Shows "Waiting" label and formatted currency value "€1.50"
       expect(
-        screen.getByText(i18n.t('translations:earnings_waiting')),
+        screen.getByText(i18n.t('translations:earnings_base_fee')),
+      ).toBeTruthy();
+      expect(screen.getByText('€2.00')).toBeTruthy();
+
+      expect(
+        screen.getByText(i18n.t('translations:earnings_distance_fee')),
       ).toBeTruthy();
       expect(screen.getByText('€1.50')).toBeTruthy();
-    });
 
-    it('hides Waiting row when waitingPay is 0, undefined, or null', () => {
-      // 1. undefined
-      (useEarningsDelivery as jest.Mock).mockReturnValue({
-        delivery: { ...mockDeliveryDetail, waitingPay: undefined },
-        isLoading: false,
-        isError: false,
-        isRefetching: false,
-        refetch: jest.fn(),
-      });
-
-      const { rerender } = render(<EarningsDelivery {...defaultProps} />);
+      // Does not show single Delivery pay line
       expect(
-        screen.queryByText(i18n.t('translations:earnings_waiting')),
-      ).toBeNull();
-
-      // 2. 0
-      (useEarningsDelivery as jest.Mock).mockReturnValue({
-        delivery: { ...mockDeliveryDetail, waitingPay: 0 },
-        isLoading: false,
-        isError: false,
-        isRefetching: false,
-        refetch: jest.fn(),
-      });
-
-      rerender(<EarningsDelivery {...defaultProps} />);
-      expect(
-        screen.queryByText(i18n.t('translations:earnings_waiting')),
+        screen.queryByText(i18n.t('translations:earnings_delivery_pay')),
       ).toBeNull();
     });
-  });
 
-  describe('Kind WAITING vs normal delivery presentation (spec 0033, review ruling)', () => {
-    it('with kind WAITING labels the amount Waiting, shows Paid on, and shows no Delivered to', () => {
-      const waitCompensationDetail: EarningsDeliveryDetail = {
-        ...mockDeliveryDetail,
-        kind: 'WAITING',
+    it('shows one "Delivery pay" line when baseFeeCents or distanceFeeCents is null', () => {
+      const deliveryWithNullBase: EarningsDeliveryDetail = {
+        ...sampleDelivery,
+        breakdown: {
+          ...sampleDelivery.breakdown,
+          baseFeeCents: null,
+          distanceFeeCents: null,
+          deliveryPayCents: 350,
+        },
       };
 
       (useEarningsDelivery as jest.Mock).mockReturnValue({
-        delivery: waitCompensationDetail,
-        isLoading: false,
-        isError: false,
-        isRefetching: false,
-        refetch: jest.fn(),
-      });
-
-      render(<EarningsDelivery {...defaultProps} />);
-
-      // 1. Labels the compensation amount "Waiting", not "Piece-rate pay"
-      expect(
-        screen.getByText(i18n.t('translations:earnings_waiting')),
-      ).toBeTruthy();
-      expect(
-        screen.queryByText(i18n.t('translations:piece_rate_pay')),
-      ).toBeNull();
-
-      // 2. Shows "Paid on", not "Delivered on"
-      expect(
-        screen.getByText(i18n.t('translations:earnings_paid_on')),
-      ).toBeTruthy();
-      expect(
-        screen.queryByText(i18n.t('translations:delivered_on')),
-      ).toBeNull();
-
-      // 3. Shows no "Delivered to" row or dropoff address
-      expect(
-        screen.queryByText(i18n.t('translations:delivered_to')),
-      ).toBeNull();
-      expect(screen.queryByText('Dimitriadis 25, Volos')).toBeNull();
-
-      // 4. Pickup business is still shown
-      expect(screen.getByText('Souvlaki Express')).toBeTruthy();
-    });
-
-    it('normal delivery is unchanged: labels amount Piece-rate pay, shows Delivered to, and shows Delivered on', () => {
-      const normalDeliveryDetail: EarningsDeliveryDetail = {
-        ...mockDeliveryDetail,
-        kind: undefined,
-      };
-
-      (useEarningsDelivery as jest.Mock).mockReturnValue({
-        delivery: normalDeliveryDetail,
-        isLoading: false,
-        isError: false,
-        isRefetching: false,
-        refetch: jest.fn(),
-      });
-
-      render(<EarningsDelivery {...defaultProps} />);
-
-      // 1. Labels the compensation amount "Piece-rate pay"
-      expect(
-        screen.getByText(i18n.t('translations:piece_rate_pay')),
-      ).toBeTruthy();
-
-      // 2. Shows "Delivered to" and the dropoff address
-      expect(
-        screen.getByText(i18n.t('translations:delivered_to')),
-      ).toBeTruthy();
-      expect(screen.getByText('Dimitriadis 25, Volos')).toBeTruthy();
-
-      // 3. Shows "Delivered on", not "Paid on"
-      expect(
-        screen.getByText(i18n.t('translations:delivered_on')),
-      ).toBeTruthy();
-      expect(
-        screen.queryByText(i18n.t('translations:earnings_paid_on')),
-      ).toBeNull();
-    });
-  });
-
-  describe('Honest labels for undelivered compensation kinds (row 112, decision 112.1)', () => {
-    const compensationKinds: NonNullable<EarningsDeliveryDetail['kind']>[] = [
-      'WAITING',
-      'REMOVAL_COMPENSATION',
-      'RETURN_TRIP',
-      'CANCELLATION_COMPENSATION',
-      'REASSIGNMENT_COMPENSATION',
-    ];
-
-    it.each(compensationKinds)(
-      'for kind %s: hides Delivered to, Delivered on, and dropoff address; shows Paid on',
-      kind => {
-        const detail: EarningsDeliveryDetail = {
-          ...mockDeliveryDetail,
-          kind,
-        };
-
-        (useEarningsDelivery as jest.Mock).mockReturnValue({
-          delivery: detail,
-          isLoading: false,
-          isError: false,
-          isRefetching: false,
-          refetch: jest.fn(),
-        });
-
-        render(<EarningsDelivery {...defaultProps} />);
-
-        // No "Delivered to" or "Delivered on" text appears
-        expect(
-          screen.queryByText(i18n.t('translations:delivered_to')),
-        ).toBeNull();
-        expect(
-          screen.queryByText(i18n.t('translations:delivered_on')),
-        ).toBeNull();
-
-        // "Paid on" DOES appear
-        expect(
-          screen.getByText(i18n.t('translations:earnings_paid_on')),
-        ).toBeTruthy();
-
-        // The dropoff address row is absent
-        expect(screen.queryByText('Dimitriadis 25, Volos')).toBeNull();
-      },
-    );
-
-    it('shows "Cancelled job" as the first line label for CANCELLATION_COMPENSATION', () => {
-      const detail: EarningsDeliveryDetail = {
-        ...mockDeliveryDetail,
-        kind: 'CANCELLATION_COMPENSATION',
-      };
-
-      (useEarningsDelivery as jest.Mock).mockReturnValue({
-        delivery: detail,
+        data: deliveryWithNullBase,
         isLoading: false,
         isError: false,
         isRefetching: false,
@@ -267,51 +170,20 @@ describe('EarningsDelivery (spec 0009, AC-1)', () => {
       render(<EarningsDelivery {...defaultProps} />);
 
       expect(
-        screen.getByText(i18n.t('translations:earnings_cancelled_job')),
+        screen.getByText(i18n.t('translations:earnings_delivery_pay')),
       ).toBeTruthy();
-      expect(
-        screen.queryByText(i18n.t('translations:piece_rate_pay')),
-      ).toBeNull();
-    });
-
-    it('shows "Reassigned job" (not "Piece-rate pay") as the first line label for REASSIGNMENT_COMPENSATION', () => {
-      const detail: EarningsDeliveryDetail = {
-        ...mockDeliveryDetail,
-        kind: 'REASSIGNMENT_COMPENSATION',
-      };
-
-      (useEarningsDelivery as jest.Mock).mockReturnValue({
-        delivery: detail,
-        isLoading: false,
-        isError: false,
-        isRefetching: false,
-        refetch: jest.fn(),
-      });
-
-      render(<EarningsDelivery {...defaultProps} />);
-
-      // First line says "Reassigned job"
-      expect(
-        screen.getByText(i18n.t('translations:earnings_reassigned_job')),
-      ).toBeTruthy();
-
-      // Does NOT say "Piece-rate pay"
-      expect(
-        screen.queryByText(i18n.t('translations:piece_rate_pay')),
-      ).toBeNull();
-
-      // Formatted compensation value is shown
       expect(screen.getByText('€3.50')).toBeTruthy();
+      expect(
+        screen.queryByText(i18n.t('translations:earnings_base_fee')),
+      ).toBeNull();
+      expect(
+        screen.queryByText(i18n.t('translations:earnings_distance_fee')),
+      ).toBeNull();
     });
 
-    it('plain delivery (kind absent) shows Delivered to, Delivered on, dropoff address, no Paid on, and first line is piece rate label', () => {
-      const detail: EarningsDeliveryDetail = {
-        ...mockDeliveryDetail,
-        kind: undefined,
-      };
-
+    it('shows tips, compensations with minutes, and "added later on <day>" for late payments', () => {
       (useEarningsDelivery as jest.Mock).mockReturnValue({
-        delivery: detail,
+        data: sampleDelivery,
         isLoading: false,
         isError: false,
         isRefetching: false,
@@ -320,34 +192,45 @@ describe('EarningsDelivery (spec 0009, AC-1)', () => {
 
       render(<EarningsDelivery {...defaultProps} />);
 
-      // First line is piece-rate pay, not reassigned job
-      expect(
-        screen.getByText(i18n.t('translations:piece_rate_pay')),
-      ).toBeTruthy();
-      expect(
-        screen.queryByText(i18n.t('translations:earnings_reassigned_job')),
-      ).toBeNull();
+      // Tips
+      expect(screen.getByText(i18n.t('translations:tips'))).toBeTruthy();
+      expect(screen.getByText('€1.00')).toBeTruthy();
 
+      // Waiting with minutes
       expect(
-        screen.getByText(i18n.t('translations:delivered_to')),
+        screen.getByText(
+          i18n.t('translations:earnings_reason_minutes', {
+            reason: i18n.t('translations:earnings_waiting'),
+            minutes: 5,
+          }),
+        ),
+      ).toBeTruthy();
+      expect(screen.getByText('€0.80')).toBeTruthy();
+
+      // Added later compensation
+      expect(
+        screen.getByText(
+          i18n.t('translations:earnings_added_later', {
+            what: i18n.t('translations:earnings_review_correction'),
+            day: '21 Nov',
+          }),
+        ),
+      ).toBeTruthy();
+      expect(screen.getByText('€0.50')).toBeTruthy();
+
+      // Total money
+      expect(
+        screen.getByText(i18n.t('translations:total_earned')),
       ).toBeTruthy();
       expect(
-        screen.getByText(i18n.t('translations:delivered_on')),
+        screen.getByText(i18n.t('translations:earnings_total')),
       ).toBeTruthy();
-      expect(screen.getByText('Dimitriadis 25, Volos')).toBeTruthy();
-      expect(
-        screen.queryByText(i18n.t('translations:earnings_paid_on')),
-      ).toBeNull();
+      expect(screen.getAllByText('€5.80')).toHaveLength(2); // In total card and in breakdown
     });
 
-    it('kind null behaves like absent (delivered): shows Delivered to, Delivered on, dropoff address, no Paid on, and first line is piece rate label', () => {
-      const detail: EarningsDeliveryDetail = {
-        ...mockDeliveryDetail,
-        kind: null as any,
-      };
-
+    it('shows pickup business, dropoff area ("—" if null), paid km, delivery id, and rider job holds', () => {
       (useEarningsDelivery as jest.Mock).mockReturnValue({
-        delivery: detail,
+        data: sampleDelivery,
         isLoading: false,
         isError: false,
         isRefetching: false,
@@ -356,24 +239,171 @@ describe('EarningsDelivery (spec 0009, AC-1)', () => {
 
       render(<EarningsDelivery {...defaultProps} />);
 
-      // First line is piece-rate pay, not reassigned job
+      expect(screen.getByText('Souvlaki Bar')).toBeTruthy();
+      expect(screen.getByText('Dimitriadis')).toBeTruthy();
+      expect(screen.getByText('2.5 km')).toBeTruthy();
+      expect(screen.getByText('del-123')).toBeTruthy();
+
+      // Rider job line
       expect(
-        screen.getByText(i18n.t('translations:piece_rate_pay')),
+        screen.getByText('20 min · pickup wait 2 min · Delivered'),
       ).toBeTruthy();
-      expect(
-        screen.queryByText(i18n.t('translations:earnings_reassigned_job')),
-      ).toBeNull();
+    });
+
+    it('shows "—" when dropoffArea is null', () => {
+      const deliveryNullArea: EarningsDeliveryDetail = {
+        ...sampleDelivery,
+        dropoffArea: null,
+      };
+
+      (useEarningsDelivery as jest.Mock).mockReturnValue({
+        data: deliveryNullArea,
+        isLoading: false,
+        isError: false,
+        isRefetching: false,
+        refetch: jest.fn(),
+      });
+
+      render(<EarningsDelivery {...defaultProps} />);
+
+      expect(screen.getByText('—')).toBeTruthy();
+    });
+  });
+
+  describe('Timeline (AC-11)', () => {
+    it('lists timeline events with tap time, who acted, another rider, and falls back to Update for unknown types', () => {
+      (useEarningsDelivery as jest.Mock).mockReturnValue({
+        data: sampleDelivery,
+        isLoading: false,
+        isError: false,
+        isRefetching: false,
+        refetch: jest.fn(),
+      });
+
+      render(<EarningsDelivery {...defaultProps} />);
 
       expect(
-        screen.getByText(i18n.t('translations:delivered_to')),
+        screen.getByText(i18n.t('translations:earnings_timeline')),
+      ).toBeTruthy();
+
+      const lines = screen.getAllByTestId('earnings-timeline-line');
+      expect(lines.length).toBe(sampleDelivery.timeline.length);
+
+      // "You" actor
+      expect(screen.getByText('Accepted · You')).toBeTruthy();
+
+      // "Restaurant" actor
+      expect(
+        screen.getByText('Restaurant marked the food ready · Restaurant'),
+      ).toBeTruthy();
+
+      // "Dispatch" actor
+      expect(screen.getByText('Update · Dispatch')).toBeTruthy();
+
+      // "System" actor
+      expect(screen.getByText('Update · System')).toBeTruthy();
+
+      // "Another rider took it"
+      expect(
+        screen.getByText(i18n.t('translations:earnings_event_another_rider')),
+      ).toBeTruthy();
+
+      // Unknown event type falls back to "Update"
+      expect(
+        screen.getByText(i18n.t('translations:earnings_event_update')),
+      ).toBeTruthy();
+    });
+  });
+
+  describe('Review button navigation (AC-10)', () => {
+    it('navigates to RequestReview with deliveryId and pickupName label', () => {
+      (useEarningsDelivery as jest.Mock).mockReturnValue({
+        data: sampleDelivery,
+        isLoading: false,
+        isError: false,
+        isRefetching: false,
+        refetch: jest.fn(),
+      });
+
+      render(<EarningsDelivery {...defaultProps} />);
+
+      const reviewButton = screen.getByText(i18n.t('translations:review_ask'));
+      fireEvent.press(reviewButton);
+
+      expect(mockNavigation.navigate).toHaveBeenCalledWith(
+        MainScreens.RequestReview,
+        {
+          deliveryId: 'del-123',
+          deliveryLabel: 'Souvlaki Bar, 20 Nov',
+        },
+      );
+    });
+  });
+
+  describe('Back navigation button', () => {
+    it('calls navigation.goBack() when back button is pressed', () => {
+      (useEarningsDelivery as jest.Mock).mockReturnValue({
+        data: sampleDelivery,
+        isLoading: false,
+        isError: false,
+        isRefetching: false,
+        refetch: jest.fn(),
+      });
+
+      render(<EarningsDelivery {...defaultProps} />);
+
+      const backNav = screen.getByTestId(
+        'phosphor-react-native-arrow-left-bold',
+      );
+      fireEvent.press(backNav);
+
+      expect(mockNavigation.goBack).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  describe('Offline and error states (AC-10, AC-13)', () => {
+    it('shows delivery_not_found and earnings_detail_unavailable when data is missing / 404', () => {
+      (useEarningsDelivery as jest.Mock).mockReturnValue({
+        data: null,
+        isLoading: false,
+        isError: true,
+        isRefetching: false,
+        refetch: jest.fn(),
+      });
+
+      render(<EarningsDelivery {...defaultProps} />);
+
+      expect(
+        screen.getByText(i18n.t('translations:delivery_not_found')),
       ).toBeTruthy();
       expect(
-        screen.getByText(i18n.t('translations:delivered_on')),
+        screen.getByText(i18n.t('translations:earnings_detail_unavailable')),
       ).toBeTruthy();
-      expect(screen.getByText('Dimitriadis 25, Volos')).toBeTruthy();
+    });
+
+    it('shows "No connection. As of <time>" when refetch fails over cached data', () => {
+      const updatedAt = Date.parse('2026-11-20T11:46:00.000Z');
+      (useEarningsDelivery as jest.Mock).mockReturnValue({
+        data: sampleDelivery,
+        isLoading: false,
+        isError: true,
+        isRefetching: false,
+        refetch: jest.fn(),
+        dataUpdatedAt: updatedAt,
+      });
+
+      render(<EarningsDelivery {...defaultProps} />);
+
+      expect(screen.getByTestId('earnings-as-of')).toBeTruthy();
       expect(
-        screen.queryByText(i18n.t('translations:earnings_paid_on')),
-      ).toBeNull();
+        screen.getByText(
+          i18n.t('translations:earnings_as_of', { time: '13:46' }),
+        ),
+      ).toBeTruthy();
+
+      // Screen still shows the cached delivery details!
+      expect(screen.getByText('Souvlaki Bar')).toBeTruthy();
+      expect(screen.getAllByText('€5.80').length).toBeGreaterThanOrEqual(1);
     });
   });
 });

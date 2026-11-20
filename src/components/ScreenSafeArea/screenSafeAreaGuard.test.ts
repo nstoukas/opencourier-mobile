@@ -66,7 +66,7 @@ describe('Screen safe area guard (row 104)', () => {
   it('scans the app source', () => {
     // A wrong srcDir would make the guard below pass over nothing.
     expect(files.length).toBeGreaterThan(50);
-    expect(files.map(rel)).toContain('src/screens/History/History.tsx');
+    expect(files.map(rel)).toContain('src/screens/Earnings/Earnings.tsx');
   });
 
   it("no file under src takes SafeAreaView from 'react-native'", () => {
@@ -95,9 +95,7 @@ describe('Screen safe area guard (row 104)', () => {
   // The screens moved off React Native's SafeAreaView (row 104, updated row 17).
   const screens = [
     'screens/Earnings/Earnings.tsx',
-    'screens/EarningsDay/EarningsDay.tsx',
     'screens/EarningsDelivery/EarningsDelivery.tsx',
-    'screens/History/History.tsx',
     'screens/Licences/Licences.tsx',
     'screens/OfferAlert/OfferAlertScreen.tsx',
     'screens/PaymentMethods/PaymentMethods.tsx',
@@ -116,8 +114,8 @@ describe('Screen safe area guard (row 104)', () => {
     'screens/Permissions/Permissions.tsx',
   ];
 
-  it('lists 20 screens', () => {
-    expect(new Set(screens).size).toBe(20);
+  it('lists 18 screens', () => {
+    expect(new Set(screens).size).toBe(18);
   });
 
   it.each(screens)('src/%s imports and renders ScreenSafeArea', screen => {

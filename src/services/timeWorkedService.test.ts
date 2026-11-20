@@ -1,11 +1,7 @@
 import timeWorkedService, { TimeWorkedService } from './timeWorkedService';
 import type { UClient } from './Client';
 import { services } from './service';
-import {
-  CoopTotals,
-  CurrentTimeWorked,
-  TimeWorkedRange,
-} from '@app/types/timeWorked';
+import { CurrentTimeWorked } from '@app/types/timeWorked';
 
 describe('timeWorkedService (spec 0040, AC-10, AC-11, AC-12, AC-18)', () => {
   let mockClient: jest.Mocked<UClient>;
@@ -55,78 +51,10 @@ describe('timeWorkedService (spec 0040, AC-10, AC-11, AC-12, AC-18)', () => {
     });
   });
 
-  describe('getRange (AC-11, AC-18)', () => {
-    it("calls bare GET 'time-worked' with { params: { from, to } }, unwraps data.result, and takes no rider id", async () => {
-      const mockResult: TimeWorkedRange = {
-        recordedFrom: '2026-11-19T00:00:00.000Z',
-        currencyCode: 'EUR',
-        days: [
-          {
-            date: '2026-11-20',
-            workSeconds: 11520,
-            jobSeconds: 7200,
-            paidWaitSeconds: 720,
-            unpaidSeconds: 3600,
-            moneyCents: 3850,
-            centsPerHour: 1203,
-            unlinkedMoneyCents: 0,
-          },
-        ],
-        shifts: [],
-      };
-
-      mockClient.get.mockResolvedValueOnce({
-        data: { error: null, result: mockResult },
-      } as any);
-
-      const from = '2026-11-14';
-      const to = '2026-11-20';
-      const result = await service.getRange(from, to);
-
-      expect(mockClient.get).toHaveBeenCalledTimes(1);
-      expect(mockClient.get).toHaveBeenCalledWith('time-worked', {
-        params: { from, to },
-      });
-      // The function takes only (from, to), never a rider id
-      expect(service.getRange.length).toBe(2);
-      expect(result).toEqual(mockResult);
-    });
-  });
-
-  describe('getCoopTotals (AC-12, AC-18)', () => {
-    it("calls bare GET 'time-worked/coop-totals', unwraps data.result, and takes no rider id", async () => {
-      const mockResult: CoopTotals = {
-        thisWeek: {
-          weekStart: '2026-11-16',
-          tooFewRiders: false,
-          workSeconds: 152000,
-          unpaidShare: 0.25,
-          centsPerHour: 1250,
-        },
-        lastWeek: {
-          weekStart: '2026-11-09',
-          tooFewRiders: true,
-        },
-      };
-
-      mockClient.get.mockResolvedValueOnce({
-        data: { error: null, result: mockResult },
-      } as any);
-
-      const result = await service.getCoopTotals();
-
-      expect(mockClient.get).toHaveBeenCalledTimes(1);
-      expect(mockClient.get).toHaveBeenCalledWith('time-worked/coop-totals');
-      expect(service.getCoopTotals.length).toBe(0);
-      expect(result).toEqual(mockResult);
-    });
-  });
-
   describe('Services wiring', () => {
-    it('services.timeWorkedService is exposed with all three methods', () => {
+    it('services.timeWorkedService is exposed with both methods', () => {
       expect(services.timeWorkedService).toBeDefined();
       expect(typeof services.timeWorkedService.getCurrent).toBe('function');
-      expect(typeof services.timeWorkedService.getRange).toBe('function');
       expect(typeof services.timeWorkedService.getCoopTotals).toBe('function');
     });
   });

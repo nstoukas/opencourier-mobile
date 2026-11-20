@@ -5,7 +5,6 @@ import {
   coopClock,
   coopDate,
   addDays,
-  pageRange,
   formatShare,
 } from './timeWorked';
 import { CurrentTimeWorked } from '@app/types/timeWorked';
@@ -247,33 +246,12 @@ describe('timeWorked utilities (spec 0040, AC-10, AC-7, AC-6)', () => {
     });
   });
 
-  describe('addDays and pageRange (AC-11)', () => {
+  describe('addDays', () => {
     it('addDays shifts a YYYY-MM-DD date by whole days without timezone shift', () => {
       expect(addDays('2026-11-20', 0)).toBe('2026-11-20');
       expect(addDays('2026-11-20', 1)).toBe('2026-11-21');
       expect(addDays('2026-11-20', -6)).toBe('2026-11-14');
       expect(addDays('2026-11-20', -7)).toBe('2026-11-13');
-    });
-
-    it('pageRange(today, 0) is the 7 days ending today, and page 1 is the 7 days before', () => {
-      const today = '2026-11-20';
-      // Page 0: Nov 14 to Nov 20 (7 days)
-      expect(pageRange(today, 0)).toEqual({
-        from: '2026-11-14',
-        to: '2026-11-20',
-      });
-
-      // Page 1: Nov 07 to Nov 13 (7 days before)
-      expect(pageRange(today, 1)).toEqual({
-        from: '2026-11-07',
-        to: '2026-11-13',
-      });
-
-      // Page 2: Oct 31 to Nov 06
-      expect(pageRange(today, 2)).toEqual({
-        from: '2026-10-31',
-        to: '2026-11-06',
-      });
     });
   });
 

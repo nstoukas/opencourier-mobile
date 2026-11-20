@@ -27,15 +27,15 @@ describe('queryPersistence (spec 0009, AC-1, AC-11)', () => {
         state: { status, data },
       } as unknown as Query);
 
-    it('keeps a user, inProgressOrders, earnings, jobContact or cancelledJobs query when data is defined, whatever its status (AC-1, row 72 decision 72.7, spec 0015 AC-12)', () => {
+    it('keeps a user, inProgressOrders, earnings, jobContact or cancelledJobs query when data is defined, whatever its status (AC-1, row 72 decision 72.7, spec 0015 AC-12, spec 0042 AC-13)', () => {
       const allowedKeys = [
         QueryKeys.user,
         QueryKeys.inProgressOrders,
-        QueryKeys.earningsSummary,
-        QueryKeys.earningsDay,
+        QueryKeys.earningsMonth,
         QueryKeys.earningsDelivery,
         QueryKeys.jobContact,
         QueryKeys.cancelledJobs,
+        QueryKeys.shifts,
       ];
 
       for (const key of allowedKeys) {
@@ -58,11 +58,11 @@ describe('queryPersistence (spec 0009, AC-1, AC-11)', () => {
       const allowedKeys = [
         QueryKeys.user,
         QueryKeys.inProgressOrders,
-        QueryKeys.earningsSummary,
-        QueryKeys.earningsDay,
+        QueryKeys.earningsMonth,
         QueryKeys.earningsDelivery,
         QueryKeys.jobContact,
         QueryKeys.cancelledJobs,
+        QueryKeys.shifts,
       ];
 
       for (const key of allowedKeys) {
@@ -119,13 +119,19 @@ describe('queryPersistence (spec 0009, AC-1, AC-11)', () => {
       ).toBe(false);
       expect(
         shouldKeepQuery(
-          makeQuery(QueryKeys.orderHistory, [{ id: 'hist-1' }], 'success'),
+          makeQuery('orderHistory', [{ id: 'hist-1' }], 'success'),
         ),
       ).toBe(false);
       expect(
+        shouldKeepQuery(makeQuery('orderHistory', [{ id: 'hist-1' }], 'error')),
+      ).toBe(false);
+      expect(
         shouldKeepQuery(
-          makeQuery(QueryKeys.orderHistory, [{ id: 'hist-1' }], 'error'),
+          makeQuery('earningsSummary', { total: 100 }, 'success'),
         ),
+      ).toBe(false);
+      expect(
+        shouldKeepQuery(makeQuery('earningsDay', { total: 100 }, 'success')),
       ).toBe(false);
       expect(
         shouldKeepQuery(
@@ -169,7 +175,7 @@ describe('queryPersistence (spec 0009, AC-1, AC-11)', () => {
 
       const cases: [string, unknown][] = [
         [QueryKeys.timeWorkedCurrent, sampleCurrent],
-        [QueryKeys.timeWorked, sampleRange],
+        ['timeWorked', sampleRange],
         [QueryKeys.coopTotals, sampleCoop],
       ];
 

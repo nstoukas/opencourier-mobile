@@ -651,4 +651,53 @@ describe('HowItWorks screen (spec 0038, AC-7, AC-8, AC-9, AC-11, AC-13)', () => 
       ).toBeTruthy();
     });
   });
+
+  describe('How your earnings figures are counted section (spec 0042, AC-14)', () => {
+    it('shows the earnings figures section with the server sentences when present', () => {
+      const earningsLines = [
+        '€ per hour worked divides money by work time.',
+        'Paid km leaves out the ride to the restaurant.',
+        'You can reach back 2 calendar months; for older work ask the co-op.',
+      ];
+
+      (useHowItWorks as jest.Mock).mockReturnValue({
+        data: {
+          ...sampleHowItWorks,
+          earningsFigures: earningsLines,
+        },
+        isLoading: false,
+        isError: false,
+        isRefetching: false,
+        refetch: mockRefetchHow,
+      });
+
+      render(<HowItWorks {...defaultProps} />);
+
+      expect(
+        screen.getByText(i18n.t('translations:how_earnings_figures')),
+      ).toBeTruthy();
+      for (const line of earningsLines) {
+        expect(screen.getByText(line)).toBeTruthy();
+      }
+    });
+
+    it('leaves out the earnings figures section when the server sends no earningsFigures', () => {
+      (useHowItWorks as jest.Mock).mockReturnValue({
+        data: {
+          ...sampleHowItWorks,
+          earningsFigures: undefined,
+        },
+        isLoading: false,
+        isError: false,
+        isRefetching: false,
+        refetch: mockRefetchHow,
+      });
+
+      render(<HowItWorks {...defaultProps} />);
+
+      expect(
+        screen.queryByText(i18n.t('translations:how_earnings_figures')),
+      ).toBeNull();
+    });
+  });
 });

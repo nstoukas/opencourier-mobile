@@ -5,17 +5,9 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { client } from '@app/services/Client';
 import { QueryKeys } from '@app/utilities/queryKeys';
 import { CURRENT_REFETCH_MS } from '@app/utilities/timeWorked';
-import {
-  useCurrentTimeWorked,
-  useTimeWorkedPages,
-  useCoopTotals,
-} from './useTimeWorked';
+import { useCurrentTimeWorked, useCoopTotals } from './useTimeWorked';
 import { services } from '@app/services/service';
-import {
-  CoopTotals,
-  CurrentTimeWorked,
-  TimeWorkedRange,
-} from '@app/types/timeWorked';
+import { CoopTotals, CurrentTimeWorked } from '@app/types/timeWorked';
 
 jest.mock('@app/services/Client', () => ({
   client: {
@@ -178,7 +170,7 @@ describe('useTimeWorked hooks (spec 0040, AC-10, AC-11, AC-12)', () => {
           queryFn: () => Promise.resolve({ some: 'data' }),
         });
         await queryClient.fetchQuery({
-          queryKey: [QueryKeys.earningsSummary],
+          queryKey: [QueryKeys.earningsMonth, '2026-11'],
           queryFn: () => Promise.resolve({ totalEarnings: 100 }),
         });
       });
@@ -440,102 +432,6 @@ describe('useTimeWorked hooks (spec 0040, AC-10, AC-11, AC-12)', () => {
       } finally {
         jest.useRealTimers();
       }
-    });
-  });
-
-  describe('useTimeWorkedPages (AC-11, AC-18)', () => {
-    it('fetches time-worked range for initial page 0', async () => {
-      const sampleRange: TimeWorkedRange = {
-        recordedFrom: '2026-11-19T00:00:00.000Z',
-        currencyCode: 'EUR',
-        days: [],
-        shifts: [],
-      };
-
-      (client.get as jest.Mock).mockResolvedValueOnce({
-        data: { error: null, result: sampleRange },
-      });
-
-      const { result } = renderHook(() => useTimeWorkedPages(), { wrapper });
-
-      await waitFor(() => expect(result.current.isSuccess).toBe(true));
-
-      expect(client.get).toHaveBeenCalledWith(
-        'time-worked',
-        expect.objectContaining({
-          params: expect.objectContaining({
-            from: expect.any(String),
-            to: expect.any(String),
-          }),
-        }),
-      );
-    });
-
-    it('getNextPageParam returns undefined when recordedFrom is null', async () => {
-      const pageWithoutRecordedFrom: TimeWorkedRange = {
-        recordedFrom: null,
-        currencyCode: 'EUR',
-        days: [],
-        shifts: [],
-      };
-
-      (client.get as jest.Mock).mockResolvedValueOnce({
-        data: { error: null, result: pageWithoutRecordedFrom },
-      });
-
-      const { result } = renderHook(() => useTimeWorkedPages(), { wrapper });
-      await waitFor(() => expect(result.current.isSuccess).toBe(true));
-
-      expect(result.current.hasNextPage).toBe(false);
-    });
-
-    it('getNextPageParam returns next page number when recordedFrom is older than the page from date, and stops (returns undefined) when page reaches recordedFrom', async () => {
-      // Suppose today is 2026-11-20.
-      // Page 0 from is 2026-11-14.
-      // If recordedFrom is 2026-11-01, it is older than 2026-11-14 -> has next page!
-      const page0: TimeWorkedRange = {
-        recordedFrom: '2026-11-01T00:00:00.000Z',
-        currencyCode: 'EUR',
-        days: [],
-        shifts: [],
-      };
-
-      (client.get as jest.Mock).mockResolvedValueOnce({
-        data: { error: null, result: page0 },
-      });
-
-      const { result } = renderHook(() => useTimeWorkedPages(), { wrapper });
-      await waitFor(() => expect(result.current.isSuccess).toBe(true));
-
-      expect(result.current.hasNextPage).toBe(true);
-
-      // Now if page 0 had recordedFrom set to '2026-11-18' (within page 0 from: 2026-11-14):
-      const pageReached: TimeWorkedRange = {
-        recordedFrom: '2026-11-18T00:00:00.000Z',
-        currencyCode: 'EUR',
-        days: [],
-        shifts: [],
-      };
-
-      const queryClient2 = new QueryClient({
-        defaultOptions: { queries: { retry: false, gcTime: 0 } },
-      });
-      const wrapper2 = ({ children }: { children: React.ReactNode }) => (
-        <QueryClientProvider client={queryClient2}>
-          {children}
-        </QueryClientProvider>
-      );
-
-      (client.get as jest.Mock).mockResolvedValueOnce({
-        data: { error: null, result: pageReached },
-      });
-
-      const { result: result2 } = renderHook(() => useTimeWorkedPages(), {
-        wrapper: wrapper2,
-      });
-      await waitFor(() => expect(result2.current.isSuccess).toBe(true));
-
-      expect(result2.current.hasNextPage).toBe(false);
     });
   });
 

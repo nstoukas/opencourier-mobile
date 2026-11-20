@@ -61,13 +61,12 @@ describe('removalNotice service (spec 0035, AC-11, decision 24.22, decision 24.2
         receiveRemovalDecision(message, queryClient),
       ).rejects.toThrow('Notifee failed to post');
 
-      // Check all 6 queries were invalidated
+      // Check all 5 queries were invalidated (spec 0042 AC-13)
       const expectedKeys = [
         QueryKeys.inProgressOrders,
         QueryKeys.newOrders,
         QueryKeys.cancelledJobs,
-        QueryKeys.earningsSummary,
-        QueryKeys.earningsDay,
+        QueryKeys.earningsMonth,
         QueryKeys.earningsDelivery,
       ];
 

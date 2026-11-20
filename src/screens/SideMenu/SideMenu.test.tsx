@@ -457,8 +457,8 @@ describe('SideMenu Location switch (Row 67, Clause 3)', () => {
     expect(mockRequestLocationPermission).not.toHaveBeenCalled();
   });
 
-  describe('SideMenu navigation items (spec 0018, AC-13)', () => {
-    it('has History item and pressing it navigates to DrawerScreens.History', () => {
+  describe('SideMenu navigation items (spec 0018, AC-13, spec 0042 AC-6)', () => {
+    it('has Earnings item and pressing it navigates to DrawerScreens.Earnings, and History is gone', () => {
       const mockNav = {
         navigate: jest.fn(),
         closeDrawer: jest.fn(),
@@ -466,16 +466,19 @@ describe('SideMenu Location switch (Row 67, Clause 3)', () => {
 
       const component = renderSideMenu(mockNav);
       const plainItems = component.root.findAllByType(SideMenuItemPlain);
-      const historyItem = plainItems.find(
-        item => item.props.item === SideMenuItem.History,
+      const itemKeys = plainItems.map(item => item.props.item);
+      expect(itemKeys).not.toContain('History');
+
+      const earningsItem = plainItems.find(
+        item => item.props.item === SideMenuItem.Earnings,
       );
-      expect(historyItem).toBeDefined();
+      expect(earningsItem).toBeDefined();
 
       act(() => {
-        historyItem!.props.onPress(SideMenuItem.History);
+        earningsItem!.props.onPress(SideMenuItem.Earnings);
       });
 
-      expect(mockNav.navigate).toHaveBeenCalledWith(DrawerScreens.History);
+      expect(mockNav.navigate).toHaveBeenCalledWith(DrawerScreens.Earnings);
     });
   });
 });

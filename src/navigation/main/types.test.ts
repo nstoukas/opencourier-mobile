@@ -13,6 +13,7 @@ describe('MainScreens navigation routes (Row 18, spec 0021: no photos, trimmed s
     'OrderPreferenceScreen',
     'ItemsCollected',
     'MarkAsDelivered',
+    'EarningsDay',
   ];
 
   const keptScreens = [
@@ -28,7 +29,6 @@ describe('MainScreens navigation routes (Row 18, spec 0021: no photos, trimmed s
     'VehicleTypeScreen',
     'ShiftAvailabilityScreen',
     'ReportIssue',
-    'EarningsDay',
     'EarningsDelivery',
   ];
 

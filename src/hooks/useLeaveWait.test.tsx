@@ -257,7 +257,7 @@ describe('useLeaveWait & useWaitClock (spec 0033, AC-5, AC-6)', () => {
       ]);
       expect(cachedJobs).toEqual([otherJob]);
 
-      // 4. inProgressOrders, newOrders, earningsSummary, earningsDay, and earningsDelivery queries invalidated
+      // 4. inProgressOrders, newOrders, earningsMonth, and earningsDelivery queries invalidated
       expect(invalidateSpy).toHaveBeenCalledWith({
         queryKey: [QueryKeys.inProgressOrders],
       });
@@ -265,17 +265,14 @@ describe('useLeaveWait & useWaitClock (spec 0033, AC-5, AC-6)', () => {
         queryKey: [QueryKeys.newOrders],
       });
       expect(invalidateSpy).toHaveBeenCalledWith({
-        queryKey: [QueryKeys.earningsSummary],
-      });
-      expect(invalidateSpy).toHaveBeenCalledWith({
-        queryKey: [QueryKeys.earningsDay],
+        queryKey: [QueryKeys.earningsMonth],
       });
       expect(invalidateSpy).toHaveBeenCalledWith({
         queryKey: [QueryKeys.earningsDelivery],
       });
     });
 
-    it('on failed Leave: newOrders, earningsSummary, earningsDay, and earningsDelivery queries are not refreshed', async () => {
+    it('on failed Leave: newOrders, earningsMonth, and earningsDelivery queries are not refreshed', async () => {
       const wrapper = createWrapper();
       queryClient.setQueryData<Order[]>(
         [QueryKeys.inProgressOrders],
@@ -322,10 +319,7 @@ describe('useLeaveWait & useWaitClock (spec 0033, AC-5, AC-6)', () => {
         queryKey: [QueryKeys.newOrders],
       });
       expect(invalidateSpy).not.toHaveBeenCalledWith({
-        queryKey: [QueryKeys.earningsSummary],
-      });
-      expect(invalidateSpy).not.toHaveBeenCalledWith({
-        queryKey: [QueryKeys.earningsDay],
+        queryKey: [QueryKeys.earningsMonth],
       });
       expect(invalidateSpy).not.toHaveBeenCalledWith({
         queryKey: [QueryKeys.earningsDelivery],
