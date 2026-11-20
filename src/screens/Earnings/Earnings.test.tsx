@@ -622,7 +622,9 @@ describe('Earnings summary (row 112, decision 112.1)', () => {
       // If ListFooterComponent={renderFooter} were used, FlatList would treat the new function reference
       // as a new component type and remount TimeWorkedSection, closing the shift.
       const shiftButtonAfterTabChange = screen.getByTestId('time-worked-shift');
-      expect(shiftButtonAfterTabChange.props.accessibilityState.expanded).toBe(true);
+      expect(shiftButtonAfterTabChange.props.accessibilityState.expanded).toBe(
+        true,
+      );
       expect(
         screen.getByText(i18n.t('translations:time_worked_details_status')),
       ).toBeTruthy();

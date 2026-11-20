@@ -1,5 +1,11 @@
 import React from 'react';
-import { render, screen, fireEvent, act, within } from '@testing-library/react-native';
+import {
+  render,
+  screen,
+  fireEvent,
+  act,
+  within,
+} from '@testing-library/react-native';
 import '@app/localization/i18n';
 import i18n from '@app/localization/i18n';
 import { TimeWorkedSection } from './TimeWorkedSection';
@@ -516,9 +522,7 @@ describe('TimeWorkedSection (spec 0040, AC-8, AC-11, AC-12)', () => {
     // Day block must contain todayShift, so shiftRows[0] is today's shift (12:00 to 13:00 Athens)
     expect(within(shiftRows[0]).getByText(/12:00 to 13:00/)).toBeTruthy();
     expect(
-      within(screen.getByTestId('time-worked-day')).getByText(
-        /12:00 to 13:00/,
-      ),
+      within(screen.getByTestId('time-worked-day')).getByText(/12:00 to 13:00/),
     ).toBeTruthy();
 
     // After all day blocks come the orphans, sorted newest first:

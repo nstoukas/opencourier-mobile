@@ -217,7 +217,10 @@ describe('useTimeWorked hooks (spec 0040, AC-10, AC-11, AC-12)', () => {
     });
 
     it('does NOT refetch when queryClient.setQueryData updates user or inProgressOrders (manual updates are ignored) (AC-10)', async () => {
-      const getCurrentSpy = jest.spyOn(services.timeWorkedService, 'getCurrent');
+      const getCurrentSpy = jest.spyOn(
+        services.timeWorkedService,
+        'getCurrent',
+      );
       (client.get as jest.Mock).mockResolvedValue({
         data: { error: null, result: sampleWorkingShift },
       });
@@ -241,7 +244,10 @@ describe('useTimeWorked hooks (spec 0040, AC-10, AC-11, AC-12)', () => {
 
       // 2. setQueryData on QueryKeys.inProgressOrders
       await act(async () => {
-        queryClient.setQueryData([QueryKeys.inProgressOrders], [{ id: 'del-1' }]);
+        queryClient.setQueryData(
+          [QueryKeys.inProgressOrders],
+          [{ id: 'del-1' }],
+        );
       });
 
       // getCurrent must NOT have been called by manual setQueryData
@@ -261,7 +267,10 @@ describe('useTimeWorked hooks (spec 0040, AC-10, AC-11, AC-12)', () => {
     });
 
     it('does NOT refetch when a trigger key is fetched while AppState.currentState is not active (AC-10)', async () => {
-      const getCurrentSpy = jest.spyOn(services.timeWorkedService, 'getCurrent');
+      const getCurrentSpy = jest.spyOn(
+        services.timeWorkedService,
+        'getCurrent',
+      );
       (client.get as jest.Mock).mockResolvedValue({
         data: { error: null, result: sampleWorkingShift },
       });
@@ -289,7 +298,10 @@ describe('useTimeWorked hooks (spec 0040, AC-10, AC-11, AC-12)', () => {
     });
 
     it('refetches when inFront changes from false to true (Home back in front), calling getCurrent once more, but only once on mount with inFront true (AC-10)', async () => {
-      const getCurrentSpy = jest.spyOn(services.timeWorkedService, 'getCurrent');
+      const getCurrentSpy = jest.spyOn(
+        services.timeWorkedService,
+        'getCurrent',
+      );
       (client.get as jest.Mock).mockResolvedValue({
         data: { error: null, result: sampleWorkingShift },
       });
@@ -299,7 +311,9 @@ describe('useTimeWorked hooks (spec 0040, AC-10, AC-11, AC-12)', () => {
         () => useCurrentTimeWorked(true),
         { wrapper },
       );
-      await waitFor(() => expect(inFrontHook.current.query.isSuccess).toBe(true));
+      await waitFor(() =>
+        expect(inFrontHook.current.query.isSuccess).toBe(true),
+      );
       expect(getCurrentSpy).toHaveBeenCalledTimes(1);
 
       getCurrentSpy.mockClear();
@@ -312,7 +326,9 @@ describe('useTimeWorked hooks (spec 0040, AC-10, AC-11, AC-12)', () => {
           initialProps: { inFront: false },
         },
       );
-      await waitFor(() => expect(togglingHook.current.query.isSuccess).toBe(true));
+      await waitFor(() =>
+        expect(togglingHook.current.query.isSuccess).toBe(true),
+      );
       expect(getCurrentSpy).toHaveBeenCalledTimes(1);
 
       // Now bring Home back in front (inFront: true)
