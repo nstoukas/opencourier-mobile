@@ -1,5 +1,6 @@
 import React from 'react';
-import { render, screen, fireEvent } from '@testing-library/react-native';
+import { RefreshControl } from 'react-native';
+import { render, screen, fireEvent, act } from '@testing-library/react-native';
 import { AxiosError } from 'axios';
 import '@app/localization/i18n';
 import i18n from '@app/localization/i18n';
@@ -320,6 +321,114 @@ describe('EarningsDelivery (spec 0042, AC-10, AC-11, AC-13)', () => {
         screen.getByText(i18n.t('translations:earnings_event_update')),
       ).toBeTruthy();
     });
+
+    it('shows "D MMM, HH:mm" on another Athens day than line before, clock only on same day, and first line shows day when differing from first job accept day (AC-11)', () => {
+      // First job accepted on 2026-11-20T12:00:00Z (Athens day: 20 Nov)
+      const deliveryWithMultiDayTimeline: EarningsDeliveryDetail = {
+        ...sampleDelivery,
+        jobs: [
+          {
+            acceptedAt: '2026-11-20T12:00:00.000Z',
+            endedAt: '2026-11-20T12:20:00.000Z',
+            endLabel: null,
+            minutes: 20,
+            pickupWaitSeconds: 120,
+          },
+        ],
+        timeline: [
+          // Line 0: same day as firstJob.acceptedAt (20 Nov) -> clock only
+          {
+            type: 'ACCEPTED',
+            at: '2026-11-20T12:05:00.000Z', // 14:05 Athens
+            who: 'YOU',
+            anotherRider: false,
+          },
+          // Line 1: same day as line 0 (20 Nov) -> clock only
+          {
+            type: 'PICKED_UP',
+            at: '2026-11-20T12:15:00.000Z', // 14:15 Athens
+            who: 'YOU',
+            anotherRider: false,
+          },
+          // Line 2: another Athens day than line 1 (23 Nov !== 20 Nov) -> "D MMM, HH:mm"
+          {
+            type: 'REVIEW',
+            at: '2026-11-23T09:30:00.000Z', // 11:30 Athens
+            who: 'DISPATCH',
+            anotherRider: false,
+          },
+          // Line 3: same day as line 2 (23 Nov) -> clock only
+          {
+            type: 'DROPPED_OFF',
+            at: '2026-11-23T10:00:00.000Z', // 12:00 Athens
+            who: 'YOU',
+            anotherRider: false,
+          },
+        ],
+      };
+
+      (useEarningsDelivery as jest.Mock).mockReturnValue({
+        data: deliveryWithMultiDayTimeline,
+        isLoading: false,
+        isError: false,
+        isRefetching: false,
+        refetch: jest.fn(),
+      });
+
+      render(<EarningsDelivery {...defaultProps} />);
+
+      // Line 0 (same day as accept): clock only
+      expect(screen.getByText('14:05')).toBeTruthy();
+      expect(screen.queryByText('20 Nov, 14:05')).toBeNull();
+
+      // Line 1 (same day as line 0): clock only
+      expect(screen.getByText('14:15')).toBeTruthy();
+
+      // Line 2 (another day than line 1): "D MMM, HH:mm"
+      expect(screen.getByText('23 Nov, 11:30')).toBeTruthy();
+
+      // Line 3 (same day as line 2): clock only
+      expect(screen.getByText('12:00')).toBeTruthy();
+      expect(screen.queryByText('23 Nov, 12:00')).toBeNull();
+    });
+
+    it('first timeline line shows its day when it is not the first job accept day (AC-11)', () => {
+      // First job accepted on 2026-11-19T21:00:00Z (Athens: 23:00 Nov 19)
+      // First timeline event at 2026-11-20T00:30:00Z (Athens: 02:30 Nov 20)
+      const deliveryWithLateEvent: EarningsDeliveryDetail = {
+        ...sampleDelivery,
+        jobs: [
+          {
+            acceptedAt: '2026-11-19T21:00:00.000Z',
+            endedAt: '2026-11-20T01:00:00.000Z',
+            endLabel: null,
+            minutes: 120,
+            pickupWaitSeconds: 120,
+          },
+        ],
+        timeline: [
+          {
+            type: 'PICKED_UP',
+            at: '2026-11-20T00:30:00.000Z', // 02:30 Athens Nov 20
+            who: 'YOU',
+            anotherRider: false,
+          },
+        ],
+      };
+
+      (useEarningsDelivery as jest.Mock).mockReturnValue({
+        data: deliveryWithLateEvent,
+        isLoading: false,
+        isError: false,
+        isRefetching: false,
+        refetch: jest.fn(),
+      });
+
+      render(<EarningsDelivery {...defaultProps} />);
+
+      // First line differs from firstJob accept day (20 Nov vs 19 Nov): shows "D MMM, HH:mm"
+      expect(screen.getByText('20 Nov, 02:30')).toBeTruthy();
+    });
   });
 
   describe('Review button navigation (AC-10)', () => {
@@ -451,8 +560,10 @@ describe('EarningsDelivery (spec 0042, AC-10, AC-11, AC-13)', () => {
 
     it('shows "No connection. As of <time>" when refetch fails over cached data', () => {
       const updatedAt = Date.parse('2026-11-20T11:46:00.000Z');
+      const networkError = new AxiosError('Network Error', 'ERR_NETWORK');
       (useEarningsDelivery as jest.Mock).mockReturnValue({
         data: sampleDelivery,
+        error: networkError,
         isLoading: false,
         isError: true,
         isRefetching: false,
@@ -472,6 +583,130 @@ describe('EarningsDelivery (spec 0042, AC-10, AC-11, AC-13)', () => {
       // Screen still shows the cached delivery details!
       expect(screen.getByText('Souvlaki Bar')).toBeTruthy();
       expect(screen.getAllByText('€5.80').length).toBeGreaterThanOrEqual(1);
+    });
+
+    it('shows "No connection. As of <time>." on first failed try (isError: false, failureCount: 1, network error)', () => {
+      const updatedAt = Date.parse('2026-11-20T11:46:00.000Z');
+      const networkError = new AxiosError('Network Error', 'ERR_NETWORK');
+      (useEarningsDelivery as jest.Mock).mockReturnValue({
+        data: sampleDelivery,
+        error: undefined,
+        failureReason: networkError,
+        failureCount: 1,
+        isLoading: false,
+        isError: false,
+        isRefetching: false,
+        refetch: jest.fn(),
+        dataUpdatedAt: updatedAt,
+      });
+
+      render(<EarningsDelivery {...defaultProps} />);
+
+      expect(screen.getByTestId('earnings-as-of')).toBeTruthy();
+      expect(
+        screen.getByText(
+          i18n.t('translations:earnings_as_of', { time: '13:46' }),
+        ),
+      ).toBeTruthy();
+    });
+
+    it('shows "Could not refresh. As of <time>." when server answered 500 (isError: false, failureCount: 1)', () => {
+      const updatedAt = Date.parse('2026-11-20T11:46:00.000Z');
+      const serverError = new AxiosError(
+        'Internal Server Error',
+        'ERR_BAD_RESPONSE',
+        undefined,
+        undefined,
+        { status: 500 } as any,
+      );
+      (useEarningsDelivery as jest.Mock).mockReturnValue({
+        data: sampleDelivery,
+        error: undefined,
+        failureReason: serverError,
+        failureCount: 1,
+        isLoading: false,
+        isError: false,
+        isRefetching: false,
+        refetch: jest.fn(),
+        dataUpdatedAt: updatedAt,
+      });
+
+      render(<EarningsDelivery {...defaultProps} />);
+
+      expect(screen.getByTestId('earnings-as-of')).toBeTruthy();
+      expect(
+        screen.getByText(
+          i18n.t('translations:earnings_refresh_failed_as_of', {
+            time: '13:46',
+          }),
+        ),
+      ).toBeTruthy();
+    });
+
+    it('shows no "As of" note when failureCount is 0 and isError is false', () => {
+      const updatedAt = Date.parse('2026-11-20T11:46:00.000Z');
+      (useEarningsDelivery as jest.Mock).mockReturnValue({
+        data: sampleDelivery,
+        error: undefined,
+        failureReason: undefined,
+        failureCount: 0,
+        isLoading: false,
+        isError: false,
+        isRefetching: false,
+        refetch: jest.fn(),
+        dataUpdatedAt: updatedAt,
+      });
+
+      render(<EarningsDelivery {...defaultProps} />);
+
+      expect(screen.queryByTestId('earnings-as-of')).toBeNull();
+    });
+  });
+
+  describe('Pull to refresh (decision 75.43)', () => {
+    it('refreshing prop is false during background refetch, true after onRefresh, and false after refetch resolves', async () => {
+      let resolveRefetch!: (value?: any) => void;
+      const refetchPromise = new Promise<any>(resolve => {
+        resolveRefetch = resolve;
+      });
+      const mockRefetch = jest.fn().mockReturnValue(refetchPromise);
+
+      (useEarningsDelivery as jest.Mock).mockReturnValue({
+        data: sampleDelivery,
+        isLoading: false,
+        isError: false,
+        isRefetching: true, // background refetch running
+        refetch: mockRefetch,
+        dataUpdatedAt: Date.now(),
+      });
+
+      render(<EarningsDelivery {...defaultProps} />);
+
+      const refreshControl = screen.UNSAFE_getByType(RefreshControl);
+      expect(refreshControl).toBeTruthy();
+      // refreshing is false during background refetch
+      expect(refreshControl.props.refreshing).toBe(false);
+
+      // Trigger onRefresh
+      act(() => {
+        refreshControl.props.onRefresh();
+      });
+
+      expect(mockRefetch).toHaveBeenCalledTimes(1);
+      // refreshing turns true immediately after onRefresh
+      expect(screen.UNSAFE_getByType(RefreshControl).props.refreshing).toBe(
+        true,
+      );
+
+      // Resolve refetch
+      await act(async () => {
+        resolveRefetch();
+      });
+
+      // refreshing turns false again after resolving
+      expect(screen.UNSAFE_getByType(RefreshControl).props.refreshing).toBe(
+        false,
+      );
     });
   });
 });

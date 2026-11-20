@@ -140,6 +140,27 @@ describe('queryPersistence (spec 0009, AC-1, AC-11)', () => {
       ).toBe(false);
     });
 
+    it('saves earnings delivery detail under earningsDeliveryDetail, not the old earningsDelivery key (decision 75.43)', () => {
+      // The old delivery screen saved a different shape under 'earningsDelivery'.
+      // QueryKeys.earningsDelivery is renamed to 'earningsDeliveryDetail' so old saved caches are never read as the new shape.
+      expect(QueryKeys.earningsDelivery).toBe('earningsDeliveryDetail');
+      expect(QueryKeys.earningsDelivery).not.toBe('earningsDelivery');
+
+      // The new key is kept when data is present
+      expect(
+        shouldKeepQuery(
+          makeQuery(QueryKeys.earningsDelivery, { sample: 'data' }, 'success'),
+        ),
+      ).toBe(true);
+
+      // The old key is NOT kept
+      expect(
+        shouldKeepQuery(
+          makeQuery('earningsDelivery', { sample: 'data' }, 'success'),
+        ),
+      ).toBe(false);
+    });
+
     it('never keeps dispatchState query even with data and whatever its status (spec 0014, AC-7)', () => {
       const sampleState = {
         current: {

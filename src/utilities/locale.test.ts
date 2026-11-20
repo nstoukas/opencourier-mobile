@@ -1,6 +1,7 @@
 import moment from 'moment';
 import { APP_LOCALE, FALLBACK_CURRENCY } from './locale';
-import { formatEarnings, formatShift, formatTime } from './dates';
+import { formatShift } from './dates';
+import { coopClock } from './timeWorked';
 import { formatDistance } from './geo';
 
 describe('Locale, dates, and distance formatting (Row 66, Clause 4)', () => {
@@ -20,9 +21,8 @@ describe('Locale, dates, and distance formatting (Row 66, Clause 4)', () => {
   });
 
   describe('dates formatting', () => {
-    it('formatEarnings puts day first as "D MMM" (e.g. 27 Oct, not US Oct 27)', () => {
-      expect(formatEarnings).toBe('D MMM');
-      const formatted = moment('2026-10-27T14:30:00Z').format(formatEarnings);
+    it('formats dates with day first as "D MMM" (e.g. 27 Oct, not US Oct 27)', () => {
+      const formatted = moment('2026-10-27T14:30:00Z').format('D MMM');
       expect(formatted).toBe('27 Oct');
     });
 
@@ -32,12 +32,12 @@ describe('Locale, dates, and distance formatting (Row 66, Clause 4)', () => {
       expect(formatted).toBe('14:30');
     });
 
-    it('formatTime formats times in 24-hour style without AM/PM in APP_LOCALE', () => {
-      const timeStr = '2026-10-27T14:30:00Z';
-      const formatted = formatTime(timeStr);
-      // In en-GB, short time style is HH:mm (e.g. 14:30), never contains AM or PM
+    it('coopClock formats times in 24-hour style without AM/PM in Europe/Athens (e.g. 14:30, never 2:30 PM)', () => {
+      // 12:30 UTC is 14:30 in Athens (winter time UTC+2)
+      const timeMs = Date.parse('2026-10-27T12:30:00Z');
+      const formatted = coopClock(timeMs);
       expect(formatted).not.toMatch(/AM|PM|am|pm/);
-      expect(formatted).toMatch(/14:30|15:30|16:30|17:30/); // depending on runner timezone
+      expect(formatted).toBe('14:30');
     });
   });
 

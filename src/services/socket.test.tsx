@@ -247,8 +247,8 @@ describe('SocketProvider and useConnectionStatus', () => {
         });
       });
 
-      // newOrders, cancelledJobs, and inProgressOrders are called in the first wave
-      expect(invalidateQueriesSpy).toHaveBeenCalledTimes(3);
+      // newOrders, cancelledJobs, earningsMonth, earningsDelivery, and inProgressOrders are called in the first wave
+      expect(invalidateQueriesSpy).toHaveBeenCalledTimes(5);
       expect(invalidateQueriesSpy).toHaveBeenNthCalledWith(1, {
         queryKey: [QueryKeys.newOrders],
       });
@@ -256,6 +256,12 @@ describe('SocketProvider and useConnectionStatus', () => {
         queryKey: [QueryKeys.cancelledJobs],
       });
       expect(invalidateQueriesSpy).toHaveBeenNthCalledWith(3, {
+        queryKey: [QueryKeys.earningsMonth],
+      });
+      expect(invalidateQueriesSpy).toHaveBeenNthCalledWith(4, {
+        queryKey: [QueryKeys.earningsDelivery],
+      });
+      expect(invalidateQueriesSpy).toHaveBeenNthCalledWith(5, {
         queryKey: [QueryKeys.inProgressOrders],
       });
 
@@ -269,9 +275,9 @@ describe('SocketProvider and useConnectionStatus', () => {
         resolveInProgress();
       });
 
-      // Now user must be invalidated (4th call, strictly after inProgressOrders resolves)
-      expect(invalidateQueriesSpy).toHaveBeenCalledTimes(4);
-      expect(invalidateQueriesSpy).toHaveBeenNthCalledWith(4, {
+      // Now user must be invalidated (6th call, strictly after inProgressOrders resolves)
+      expect(invalidateQueriesSpy).toHaveBeenCalledTimes(6);
+      expect(invalidateQueriesSpy).toHaveBeenNthCalledWith(6, {
         queryKey: [QueryKeys.user],
       });
 

@@ -1,5 +1,6 @@
 import {
   addMonths,
+  asOfLabel,
   END_LABEL_KEYS,
   formatKm,
   jobDate,
@@ -9,6 +10,7 @@ import {
   monthGrid,
   monthOf,
   monthsOfPeriod,
+  noShiftJobOn,
   periodDates,
   shiftsOnDay,
   waitMinutes,
@@ -447,6 +449,56 @@ describe('earnings pure helpers (spec 0042 AC-1, AC-2, AC-5, AC-7, AC-8)', () =>
       expect(END_LABEL_KEYS.FAILED).toBe('earnings_end_failed');
       expect(END_LABEL_KEYS.ENDED).toBe('earnings_end_ended');
       expect(END_LABEL_KEYS.IN_PROGRESS).toBe('earnings_end_in_progress');
+    });
+  });
+
+  describe('noShiftJobOn (AC-8: Week view keeps day with job in no shift)', () => {
+    it('matches a job to its Athens day (22:30 UTC belongs to the next Athens day)', () => {
+      // 2026-11-19 22:30 UTC is 2026-11-20 00:30 in Athens (UTC+2 in November)
+      const job: EarningsJob = {
+        deliveryId: 'del-no-shift',
+        acceptedAt: '2026-11-19T22:30:00.000Z',
+        endedAt: '2026-11-19T23:00:00.000Z',
+        endEventType: 'DROPPED_OFF',
+        droppedOff: true,
+        deliveryMoneyCents: 0,
+        paidWaitSeconds: 0,
+        compensations: [],
+        paidKm: 2.0,
+        dropoffArea: 'Exarcheia',
+        pickupWaitSeconds: 60,
+        cancelledAfterPickup: false,
+        endLabel: null,
+        pickupName: 'Test Resto',
+      };
+
+      expect(noShiftJobOn([job], '2026-11-20')).toBe(true);
+      expect(noShiftJobOn([job], '2026-11-19')).toBe(false);
+      expect(noShiftJobOn([job], '2026-11-21')).toBe(false);
+    });
+
+    it('returns false when no jobs fall on the given date', () => {
+      expect(noShiftJobOn([], '2026-11-20')).toBe(false);
+    });
+  });
+
+  describe('asOfLabel (AC-13)', () => {
+    it('returns "HH:mm" when savedAt is on the same Athens day as now', () => {
+      // Both on 2026-11-20 in Athens (UTC+2)
+      // savedAt: 11:46 UTC = 13:46 Athens
+      const savedAt = Date.parse('2026-11-20T11:46:00.000Z');
+      const now = Date.parse('2026-11-20T14:00:00.000Z');
+
+      expect(asOfLabel(savedAt, now)).toBe('13:46');
+    });
+
+    it('returns "D MMM, HH:mm" when savedAt is on an earlier Athens day than now', () => {
+      // savedAt: 2026-11-19 21:00 UTC = 2026-11-19 23:00 Athens
+      // now: 2026-11-20 08:00 UTC = 2026-11-20 10:00 Athens
+      const savedAt = Date.parse('2026-11-19T21:00:00.000Z');
+      const now = Date.parse('2026-11-20T08:00:00.000Z');
+
+      expect(asOfLabel(savedAt, now)).toBe('19 Nov, 23:00');
     });
   });
 });

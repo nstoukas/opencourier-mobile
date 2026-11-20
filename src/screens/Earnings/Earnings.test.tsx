@@ -1,6 +1,7 @@
 import React from 'react';
 import { RefreshControl } from 'react-native';
 import { render, screen, fireEvent, act } from '@testing-library/react-native';
+import { AxiosError } from 'axios';
 import '@app/localization/i18n';
 import i18n from '@app/localization/i18n';
 import { Earnings } from './Earnings';
@@ -19,7 +20,14 @@ import {
   EarningsWeek,
 } from '@app/types/earnings';
 
-jest.mock('@app/hooks/useEarnings');
+jest.mock('@app/hooks/useEarnings', () => {
+  const actual = jest.requireActual('@app/hooks/useEarnings');
+  return {
+    ...actual,
+    useEarningsMonth: jest.fn(),
+    useEarningsMonths: jest.fn(),
+  };
+});
 jest.mock('@app/hooks/useTimeWorked');
 jest.mock('@app/hooks/useReviewRequests');
 jest.mock('@app/services/reviewSeen');
@@ -494,6 +502,54 @@ describe('Earnings screen (spec 0042 AC-1, AC-2, AC-6, AC-8, AC-9, AC-13)', () =
         screen.getByText(i18n.t('translations:earnings_no_work_week')),
       ).toBeTruthy();
     });
+
+    it('Week view lists a day whose only job is in jobsInNoShift with 0 work and 0 money (AC-8)', () => {
+      const zeroJobInNoShift: EarningsJob = {
+        ...sampleJobCancelled,
+        deliveryId: 'del-no-shift-zero',
+        acceptedAt: '2026-11-18T12:00:00.000Z', // 2026-11-18 in Athens
+        endedAt: '2026-11-18T12:05:00.000Z',
+        pickupName: 'No Shift Zero Resto',
+        deliveryMoneyCents: 0,
+        compensations: [],
+      };
+
+      const monthWithZeroJob: EarningsMonth = {
+        ...sampleMonthData,
+        days: [
+          {
+            ...sampleDay,
+            date: '2026-11-18',
+            workSeconds: 0,
+            moneyCents: 0,
+            centsPerHour: null,
+            activeCentsPerHour: null,
+          },
+        ],
+        shifts: [],
+        jobsInNoShift: [zeroJobInNoShift],
+      };
+
+      (useEarningsMonths as jest.Mock).mockReturnValue([
+        {
+          data: monthWithZeroJob,
+          isLoading: false,
+          isError: false,
+          isRefetching: false,
+          refetch: jest.fn(),
+          dataUpdatedAt: Date.now(),
+        },
+      ]);
+
+      render(<Earnings {...defaultProps} />);
+
+      // Switch to Week view
+      fireEvent.press(screen.getByTestId('earnings-mode-week'));
+
+      // The day 2026-11-18 is kept, and its job row is shown
+      expect(screen.getByText('Wed 18 Nov')).toBeTruthy();
+      expect(screen.getByText(/No Shift Zero Resto/)).toBeTruthy();
+    });
   });
 
   describe('AC-7: Calendar interaction', () => {
@@ -648,11 +704,14 @@ describe('Earnings screen (spec 0042 AC-1, AC-2, AC-6, AC-8, AC-9, AC-13)', () =
 
   describe('AC-13: Offline, error, and cache invalidation', () => {
     it('shows "No connection. As of <time>" when refetch fails over cached data', () => {
+      const networkError = new AxiosError('Network Error', 'ERR_NETWORK');
       (useEarningsMonths as jest.Mock).mockReturnValue([
         {
           data: sampleMonthData,
           isLoading: false,
           isError: true, // Failed refetch
+          error: networkError,
+          failureReason: networkError,
           isRefetching: false,
           refetch: jest.fn(),
           dataUpdatedAt: Date.parse('2026-11-20T11:46:00.000Z'),
@@ -669,12 +728,91 @@ describe('Earnings screen (spec 0042 AC-1, AC-2, AC-6, AC-8, AC-9, AC-13)', () =
       ).toBeTruthy();
     });
 
-    it('shows needs connection notice when no data is loaded and query fails', () => {
+    it('shows "No connection. As of <time>." on first failed try (isError: false, failureCount: 1, network error)', () => {
+      const networkError = new AxiosError('Network Error', 'ERR_NETWORK');
+      (useEarningsMonths as jest.Mock).mockReturnValue([
+        {
+          data: sampleMonthData,
+          isLoading: false,
+          isError: false,
+          failureCount: 1,
+          failureReason: networkError,
+          isRefetching: false,
+          refetch: jest.fn(),
+          dataUpdatedAt: Date.parse('2026-11-20T11:46:00.000Z'),
+        },
+      ]);
+
+      render(<Earnings {...defaultProps} />);
+
+      expect(screen.getByTestId('earnings-as-of')).toBeTruthy();
+      expect(
+        screen.getByText(
+          i18n.t('translations:earnings_as_of', { time: '13:46' }),
+        ),
+      ).toBeTruthy();
+    });
+
+    it('shows "Could not refresh. As of <time>." when failureReason is 500 (isError: false, failureCount: 1)', () => {
+      const serverError = new AxiosError(
+        'Internal Server Error',
+        'ERR_BAD_RESPONSE',
+        undefined,
+        undefined,
+        { status: 500 } as any,
+      );
+      (useEarningsMonths as jest.Mock).mockReturnValue([
+        {
+          data: sampleMonthData,
+          isLoading: false,
+          isError: false,
+          failureCount: 1,
+          failureReason: serverError,
+          isRefetching: false,
+          refetch: jest.fn(),
+          dataUpdatedAt: Date.parse('2026-11-20T11:46:00.000Z'),
+        },
+      ]);
+
+      render(<Earnings {...defaultProps} />);
+
+      expect(screen.getByTestId('earnings-as-of')).toBeTruthy();
+      expect(
+        screen.getByText(
+          i18n.t('translations:earnings_refresh_failed_as_of', {
+            time: '13:46',
+          }),
+        ),
+      ).toBeTruthy();
+    });
+
+    it('shows no "As of" note when failureCount is 0 and isError is false', () => {
+      (useEarningsMonths as jest.Mock).mockReturnValue([
+        {
+          data: sampleMonthData,
+          isLoading: false,
+          isError: false,
+          failureCount: 0,
+          isRefetching: false,
+          refetch: jest.fn(),
+          dataUpdatedAt: Date.parse('2026-11-20T11:46:00.000Z'),
+        },
+      ]);
+
+      render(<Earnings {...defaultProps} />);
+
+      expect(screen.queryByTestId('earnings-as-of')).toBeNull();
+    });
+
+    it('shows needs connection notice when no data is loaded and query fails with network error', () => {
+      const networkError = new AxiosError('Network Error', 'ERR_NETWORK');
       (useEarningsMonths as jest.Mock).mockReturnValue([
         {
           data: undefined,
           isLoading: false,
           isError: true,
+          error: networkError,
+          failureReason: networkError,
           isRefetching: false,
           refetch: jest.fn(),
           dataUpdatedAt: 0,
@@ -687,6 +825,36 @@ describe('Earnings screen (spec 0042 AC-1, AC-2, AC-6, AC-8, AC-9, AC-13)', () =
       expect(
         screen.getByText(i18n.t('translations:earnings_needs_connection')),
       ).toBeTruthy();
+    });
+
+    it('shows earnings-could-not-load when server answered 400 with no saved data (AC-13)', () => {
+      const badRequestError = new AxiosError(
+        'Bad Request',
+        'ERR_BAD_REQUEST',
+        undefined,
+        undefined,
+        { status: 400 } as any,
+      );
+      (useEarningsMonths as jest.Mock).mockReturnValue([
+        {
+          data: undefined,
+          isLoading: false,
+          isError: true,
+          error: badRequestError,
+          failureReason: badRequestError,
+          isRefetching: false,
+          refetch: jest.fn(),
+          dataUpdatedAt: 0,
+        },
+      ]);
+
+      render(<Earnings {...defaultProps} />);
+
+      expect(screen.getByTestId('earnings-could-not-load')).toBeTruthy();
+      expect(
+        screen.getByText(i18n.t('translations:earnings_could_not_load_days')),
+      ).toBeTruthy();
+      expect(screen.queryByTestId('earnings-needs-connection')).toBeNull();
     });
 
     it('focus listener invalidates earningsMonth, coopTotals, and reviewRequests', () => {
@@ -782,6 +950,37 @@ describe('Earnings screen (spec 0042 AC-1, AC-2, AC-6, AC-8, AC-9, AC-13)', () =
       // 2026-09 is wholly before reachFrom's month (2026-10), so it is not asked
       expect(useEarningsMonths).toHaveBeenLastCalledWith(['2026-10']);
     });
+
+    it('uses the newest reachFrom among saved months so a week crossing into a stale reach month never asks for it (decision 75.43)', () => {
+      // Fix today to 2026-10-02 (in October)
+      // Week crossing 28 Sep to 4 Oct: Monday 2026-09-28 to Sunday 2026-10-04.
+      jest.setSystemTime(new Date('2026-10-02T10:00:00.000Z'));
+
+      // Seed two saved months in QueryClient:
+      // Older reach: '2026-09-30' (e.g. cached yesterday)
+      // Newer reach: '2026-10-01' (cached today)
+      queryClient.setQueryData([QueryKeys.earningsMonth, '2026-09'], {
+        ...sampleMonthData,
+        month: '2026-09',
+        reachFrom: '2026-09-30',
+      });
+      queryClient.setQueryData([QueryKeys.earningsMonth, '2026-10'], {
+        ...sampleMonthData,
+        month: '2026-10',
+        reachFrom: '2026-10-01',
+      });
+
+      render(<Earnings {...defaultProps} />);
+
+      // Switch to Week mode
+      fireEvent.press(screen.getByTestId('earnings-mode-week'));
+
+      // The newest reach '2026-10-01' makes monthOf(knownReach) '2026-10', so '2026-09' is never asked for.
+      expect(useEarningsMonths).toHaveBeenLastCalledWith(['2026-10']);
+      expect(useEarningsMonths).not.toHaveBeenCalledWith(
+        expect.arrayContaining(['2026-09']),
+      );
+    });
   });
 
   describe('Screen logic: calendar pick (AC-7, Review Major 2)', () => {
@@ -874,6 +1073,165 @@ describe('Earnings screen (spec 0042 AC-1, AC-2, AC-6, AC-8, AC-9, AC-13)', () =
       expect(mockRefetchMonth1).toHaveBeenCalledTimes(1);
       expect(mockRefetchMonth2).toHaveBeenCalledTimes(1);
       expect(mockCoopRefetch).toHaveBeenCalledTimes(1);
+    });
+
+    it('refreshing prop is false during background refetch, true after onRefresh, and false after refetches resolve', async () => {
+      let resolveRefetch1!: (value?: any) => void;
+      let resolveRefetch2!: (value?: any) => void;
+      const refetchPromise1 = new Promise<any>(resolve => {
+        resolveRefetch1 = resolve;
+      });
+      const refetchPromise2 = new Promise<any>(resolve => {
+        resolveRefetch2 = resolve;
+      });
+      const mockRefetch1 = jest.fn().mockReturnValue(refetchPromise1);
+      const mockRefetch2 = jest.fn().mockReturnValue(refetchPromise2);
+
+      (useEarningsMonths as jest.Mock).mockReturnValue([
+        {
+          data: sampleMonthData,
+          isLoading: false,
+          isError: false,
+          isRefetching: true, // background refetch running
+          refetch: mockRefetch1,
+          dataUpdatedAt: Date.now(),
+        },
+        {
+          data: { ...sampleMonthData, month: '2026-10' },
+          isLoading: false,
+          isError: false,
+          isRefetching: false,
+          refetch: mockRefetch2,
+          dataUpdatedAt: Date.now(),
+        },
+      ]);
+
+      render(<Earnings {...defaultProps} />);
+
+      const refreshControl = screen.UNSAFE_getByType(RefreshControl);
+      expect(refreshControl).toBeTruthy();
+      // refreshing is false during background refetch
+      expect(refreshControl.props.refreshing).toBe(false);
+
+      // Trigger onRefresh
+      act(() => {
+        refreshControl.props.onRefresh();
+      });
+
+      expect(mockRefetch1).toHaveBeenCalledTimes(1);
+      expect(mockRefetch2).toHaveBeenCalledTimes(1);
+      // refreshing turns true immediately after onRefresh
+      expect(screen.UNSAFE_getByType(RefreshControl).props.refreshing).toBe(
+        true,
+      );
+
+      // Settle promises
+      await act(async () => {
+        resolveRefetch1();
+        resolveRefetch2();
+      });
+
+      // refreshing turns false after promises settle
+      expect(screen.UNSAFE_getByType(RefreshControl).props.refreshing).toBe(
+        false,
+      );
+    });
+
+    it('refreshing prop turns false even when one of the refetches rejects', async () => {
+      let rejectRefetch1!: (err: any) => void;
+      const refetchPromise1 = new Promise<any>((_, reject) => {
+        rejectRefetch1 = reject;
+      });
+      const mockRefetch1 = jest.fn().mockReturnValue(refetchPromise1);
+
+      (useEarningsMonths as jest.Mock).mockReturnValue([
+        {
+          data: sampleMonthData,
+          isLoading: false,
+          isError: false,
+          isRefetching: false,
+          refetch: mockRefetch1,
+          dataUpdatedAt: Date.now(),
+        },
+      ]);
+
+      render(<Earnings {...defaultProps} />);
+
+      const refreshControl = screen.UNSAFE_getByType(RefreshControl);
+
+      act(() => {
+        refreshControl.props.onRefresh();
+      });
+
+      expect(screen.UNSAFE_getByType(RefreshControl).props.refreshing).toBe(
+        true,
+      );
+
+      await act(async () => {
+        rejectRefetch1(new Error('Network failure'));
+      });
+
+      expect(screen.UNSAFE_getByType(RefreshControl).props.refreshing).toBe(
+        false,
+      );
+    });
+  });
+
+  describe('After midnight focus behavior (decision 75.43)', () => {
+    beforeEach(() => {
+      jest.useFakeTimers();
+    });
+
+    afterEach(() => {
+      jest.useRealTimers();
+      queryClient.clear();
+    });
+
+    it('moves to the new today on focus after midnight if the screen was showing the old today', () => {
+      // Start at 23:00 on 2026-11-20 in Athens (21:00 UTC)
+      jest.setSystemTime(new Date('2026-11-20T21:00:00.000Z'));
+
+      render(<Earnings {...defaultProps} />);
+
+      // Period shows old today: Today, Fri 20 Nov
+      expect(screen.getByTestId('earnings-period')).toBeTruthy();
+      expect(screen.getByText('Today, Fri 20 Nov')).toBeTruthy();
+
+      // Advance clock past Athens midnight to 01:00 on 2026-11-21 in Athens (23:00 UTC Nov 20)
+      jest.setSystemTime(new Date('2026-11-20T23:00:00.000Z'));
+
+      // Fire focus listener
+      act(() => {
+        focusCallback!();
+      });
+
+      // Period now shows new today: Today, Sat 21 Nov
+      expect(screen.getByText('Today, Sat 21 Nov')).toBeTruthy();
+    });
+
+    it('stays on the picked day on focus after midnight if the rider picked an earlier day before midnight', () => {
+      // Start at 23:00 on 2026-11-20 in Athens (21:00 UTC)
+      jest.setSystemTime(new Date('2026-11-20T21:00:00.000Z'));
+
+      render(<Earnings {...defaultProps} />);
+
+      expect(screen.getByText('Today, Fri 20 Nov')).toBeTruthy();
+
+      // Rider picks earlier day before midnight: taps previous arrow to go to Thu 19 Nov
+      fireEvent.press(screen.getByTestId('earnings-previous'));
+      expect(screen.getByText('Thu 19 Nov')).toBeTruthy();
+
+      // Advance clock past Athens midnight to 01:00 on 2026-11-21 in Athens (23:00 UTC Nov 20)
+      jest.setSystemTime(new Date('2026-11-20T23:00:00.000Z'));
+
+      // Fire focus listener
+      act(() => {
+        focusCallback!();
+      });
+
+      // The picked day stays on Thu 19 Nov (does not move to Today, Sat 21 Nov)
+      expect(screen.getByText('Thu 19 Nov')).toBeTruthy();
+      expect(screen.queryByText('Today, Sat 21 Nov')).toBeNull();
     });
   });
 });
