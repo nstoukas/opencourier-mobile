@@ -6,7 +6,6 @@ import { SideMenu } from '@app/screens/SideMenu/SideMenu';
 import { Earnings } from '@app/screens/Earnings/Earnings';
 import { PaymentMethods } from '@app/screens/PaymentMethods/PaymentMethods';
 import { SettingsScreen } from '@app/screens/Settings/Settings';
-import { HistoryScreen } from '@app/screens/History/History';
 import { ShiftsScreen } from '@app/screens/Shifts/Shifts';
 
 // Same idea as the main stack: the param list types each drawer screen's route.
@@ -27,11 +26,6 @@ export const DrawerStack = () => {
       <DrawerNavigator.Screen
         name={DrawerScreens.Earnings}
         component={Earnings}
-        options={DEFAULT_OPTIONS}
-      />
-      <DrawerNavigator.Screen
-        name={DrawerScreens.History}
-        component={HistoryScreen}
         options={DEFAULT_OPTIONS}
       />
       <DrawerNavigator.Screen

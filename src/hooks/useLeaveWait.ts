@@ -66,8 +66,7 @@ export const useLeaveWait = (courierId: string | undefined) => {
         // The rider is free for offers, and the wait may have just been paid.
         [
           QueryKeys.newOrders,
-          QueryKeys.earningsSummary,
-          QueryKeys.earningsDay,
+          QueryKeys.earningsMonth,
           QueryKeys.earningsDelivery,
         ].forEach(key => queryClient.invalidateQueries({ queryKey: [key] }));
       } catch (error) {

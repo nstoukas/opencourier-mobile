@@ -1,51 +1,12 @@
-import moment, { Moment } from 'moment';
 import { APP_LOCALE } from './locale';
 
+// Spec 0042 removed the phone timezone helpers and the week helpers with the old Earnings screens: every
+// day and time on those screens is now the co-op's (Europe/Athens, `utilities/timeWorked.ts`).
+// `formatEarnings` and `formatTime` have no caller left but stay, because `locale.test.ts` pins the
+// app's 24 hour clock through them.
 export const formatEarnings = 'D MMM';
-export const formatDayName = 'dddd';
 export const formatShift = 'HH:mm';
 export const formatSpaced = 'D MMM YYYY';
-// Date-only format the earnings API expects for its `from`/`to` window.
-export const formatApiDate = 'YYYY-MM-DD';
-
-/**
- * The phone's IANA timezone, e.g. 'Europe/Athens'.
- * The earnings API needs it to draw day boundaries on the courier's own day instead of
- * the server's — otherwise a late-evening delivery can land on "yesterday". Returns
- * undefined when the JS engine can't report one, in which case we send nothing and the
- * backend falls back to UTC.
- */
-export const deviceTimezone = (): string | undefined => {
-  try {
-    return Intl.DateTimeFormat().resolvedOptions().timeZone || undefined;
-  } catch {
-    return undefined;
-  }
-};
-
-export const startOfThisWeek = (): Moment => {
-  return moment().subtract(0, 'weeks').startOf('week');
-};
-
-export const endOfThisWeek = (): Moment => {
-  return moment().subtract(0, 'weeks').endOf('week');
-};
-
-export const startOfWeek = (weeksFromThisWeek: number): Moment => {
-  return moment().subtract(weeksFromThisWeek, 'weeks').startOf('week');
-};
-
-export const endOfWeek = (weeksFromThisWeek: number): Moment => {
-  return moment().subtract(weeksFromThisWeek, 'weeks').endOf('week');
-};
-
-export const nameOfDay = (date: Moment): string => {
-  return date.format(formatDayName);
-};
-
-export const shortDate = (date: Moment): string => {
-  return date.format(formatEarnings);
-};
 
 export const formatTime = (time: string) =>
   new Date(time).toLocaleTimeString(APP_LOCALE, { timeStyle: 'short' });

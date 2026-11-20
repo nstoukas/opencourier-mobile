@@ -19,11 +19,6 @@ export enum UserStatus {
   LastCall = 'LAST_CALL',
 }
 
-// Only the History screen shows an empty list since spec 0018 (home is a map).
-export enum HomeEmptyState {
-  History = 'History',
-}
-
 export enum SideMenuItem {
   Location = 'real_time_location',
   AutoOrders = 'auto_accept_orders',
@@ -31,8 +26,6 @@ export enum SideMenuItem {
   // Spec 0034: the chat with dispatch, with no delivery tag.
   Chat = 'chat',
   Earnings = 'earnings',
-  // Spec 0018: the delivery history, moved off home.
-  History = 'history',
   // Spec 0027: booking shifts, only while the co-op runs them.
   Shifts = 'shifts',
   Payout = 'payout_method',
@@ -76,93 +69,6 @@ export enum CustomerNotes {
   HandleWithCare = 'handle_with_care',
   DontBlockDoor = 'dont_block_door',
 }
-
-export enum EarningsTabItem {
-  Today = 'today',
-  Weekly = 'weekly',
-  All = 'all',
-}
-
-/**
- * One day of the courier earnings report, as returned by
- * `GET /courier/earnings-summary`. The backend groups completed deliveries into days
- * using the timezone we ask for, so `date` is the courier's own day, not the server's.
- * Every money field is an **integer number of cents**.
- */
-export type EarningsSummaryDay = {
-  date: string; // 'YYYY-MM-DD' in the requested timezone
-  deliveryCount: number;
-  compensation: number; // piece-rate pay
-  tips: number;
-  total: number; // compensation + tips
-};
-
-/**
- * One completed delivery inside a day's earnings, from
- * `GET /courier/earnings/day`. Money is in integer cents.
- */
-export type EarningsDelivery = {
-  deliveryId: string;
-  droppedOffAt: string; // ISO timestamp
-  dropoffAddress: string | null;
-  pickupBusinessName: string;
-  compensation: number; // piece-rate pay
-  tips: number;
-  total: number;
-  // A pay that is not a drop off: a reassigned rider's payout, a cancelled job's (spec 0015),
-  // a wait at the restaurant (spec 0033), or a removal or a return trip (spec 0035).
-  kind?:
-    | 'REASSIGNMENT_COMPENSATION'
-    | 'CANCELLATION_COMPENSATION'
-    | 'WAITING'
-    | 'REMOVAL_COMPENSATION'
-    | 'RETURN_TRIP'
-    // Spec 0038: pay a person added when answering the rider's review request.
-    | 'REVIEW_CORRECTION';
-  // Spec 0033, on the detail of a delivered order: what its wait paid, inside `total`.
-  waitingPay?: number;
-  // Spec 0035, on the detail of a job cancelled after pickup: the return trip's pay, inside `total`.
-  returnTripPay?: number;
-  // Spec 0035, decision 24.43: what a removal from this order paid, inside `total`. The `?` means the
-  // backend leaves the key out when there is none.
-  removalPay?: number;
-  // Spec 0038: what review corrections added to this order, inside `total`.
-  reviewPay?: number;
-};
-
-/**
- * The deliveries that made up one day's earnings. The totals are summed by the backend
- * from the same ledger the per-day summary uses, so this list always reconciles with the
- * day row it was opened from.
- */
-export type EarningsDay = {
-  date: string; // 'YYYY-MM-DD'
-  timezone: string;
-  currency: string;
-  deliveryCount: number;
-  compensation: number;
-  tips: number;
-  total: number;
-  deliveries: EarningsDelivery[];
-};
-
-/** One delivery's full breakdown, from `GET /courier/earnings/delivery/:deliveryId`. */
-export type EarningsDeliveryDetail = EarningsDelivery & {
-  currency: string;
-};
-
-/** The whole earnings report for one window. Totals are summed by the backend. */
-export type EarningsSummary = {
-  from: string;
-  to: string;
-  timezone: string;
-  currency: string; // instance currency, voted on in Config — never assume USD
-  totalDeliveryCount: number;
-  totalCompensation: number;
-  totalTips: number;
-  totalEarnings: number;
-  days: EarningsSummaryDay[];
-};
 
 export enum PaymentTabItem {
   Bank = 'bank',
@@ -680,6 +586,8 @@ export type HowItWorks = {
   appRecords: string[];
   // Spec 0040 (AC-13): how time worked is counted. Optional: a server before spec 0040 leaves it out.
   timeWorked?: string[];
+  // Spec 0042 (AC-14): how the Earnings figures are counted. Optional for the same reason.
+  earningsFigures?: string[];
   reviewAnswerDays: number;
 };
 

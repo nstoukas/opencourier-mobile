@@ -1,6 +1,6 @@
 import { Colors } from '@app/styles/colors';
 import { StyleSheet } from 'react-native';
-import { color, radius, typeScale } from '@app/styles/theme';
+import { color, control, radius, space, typeScale } from '@app/styles/theme';
 
 export const styles = StyleSheet.create({
   container: {
@@ -31,7 +31,7 @@ export const styles = StyleSheet.create({
     paddingVertical: 12,
     paddingHorizontal: 16,
     marginBottom: 12,
-    minHeight: 48,
+    minHeight: control.xl,
   },
   howLinkText: {
     fontSize: typeScale.body.fontSize,
@@ -49,67 +49,169 @@ export const styles = StyleSheet.create({
     paddingVertical: 2,
     overflow: 'hidden',
   },
-  containerEarnings: {
-    borderRadius: radius['2xl'],
-    backgroundColor: Colors.white,
-    flexDirection: 'row',
-    paddingVertical: 10,
-    paddingHorizontal: 8,
-    alignItems: 'center',
-  },
   gradient: {
     position: 'absolute',
     top: 0,
     left: 0,
     right: 0,
   },
-  textEarned: {
-    fontSize: typeScale.h1.fontSize,
-    fontWeight: '700',
-    color: Colors.black1,
+  scrollContent: {
+    paddingBottom: space['8'],
   },
-  textCount: {
-    fontSize: typeScale.h3.fontSize,
-    color: Colors.black1,
+  // Spec 0042 (AC-6): the Day | Week switch.
+  modeSwitch: {
+    flexDirection: 'row',
+    borderRadius: radius.lg,
+    backgroundColor: color.secondary,
+    padding: space['1'],
+    marginBottom: space['3'],
   },
-  textBreakdown: {
-    fontSize: typeScale['body-sm'].fontSize,
-    color: Colors.gray13,
-    marginTop: 2,
-  },
-  earningsText: {
+  modeButton: {
     flex: 1,
+    height: control.lg,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: radius.md,
   },
-  containerEmptyCell: {
+  modeButtonActive: {
+    backgroundColor: color.card,
+  },
+  modeText: {
+    fontSize: typeScale['body-sm'].fontSize,
+    fontWeight: '600',
+    color: color['muted-foreground'],
+  },
+  modeTextActive: {
+    color: color.foreground,
+  },
+  // The picked period with its back and forward arrows; tapping it opens the calendar.
+  periodRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: space['3'],
+  },
+  periodArrow: {
+    width: control.xl,
+    height: control.xl,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  textEmptyCellTitle: {
+  periodLabel: {
+    flex: 1,
+    minHeight: control.xl,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: space['2'],
+  },
+  periodText: {
+    fontSize: typeScale.h4.fontSize,
+    fontWeight: '600',
+    color: color.foreground,
+  },
+  calendar: {
+    marginBottom: space['3'],
+  },
+  // The figures (AC-1).
+  card: {
+    borderRadius: radius['2xl'],
+    backgroundColor: color.card,
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+    marginBottom: space['4'],
+  },
+  total: {
+    fontSize: typeScale.h1.fontSize,
     fontWeight: '700',
-    color: Colors.black1,
+    color: color.foreground,
   },
-  textEmptyCellSubtitle: {
-    color: Colors.black1,
-    marginTop: 10,
-    marginBottom: 22,
+  totalNote: {
+    fontSize: typeScale['body-sm'].fontSize,
+    color: color['muted-foreground'],
+    marginBottom: space['3'],
   },
-  footer: {},
-  buttonFooter: {
-    marginBottom: 22,
+  figureGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
   },
-  footerSeparator: {
-    height: 1,
-    backgroundColor: Colors.gray1,
-    marginBottom: 22,
+  figure: {
+    width: '50%',
+    paddingVertical: space['2'],
+    paddingRight: space['2'],
   },
-  topMargin: {
-    marginTop: 22,
+  figureValue: {
+    fontSize: typeScale.h3.fontSize,
+    fontWeight: '700',
+    color: color.foreground,
   },
-  veticalMargin: {
-    marginVertical: 22,
+  figureLabel: {
+    fontSize: typeScale.caption.fontSize,
+    color: color['muted-foreground'],
   },
-  // Keeps the last card clear of the screen edge once the list scrolls.
-  listContent: {
-    paddingBottom: 24,
+  line: {
+    fontSize: typeScale['body-sm'].fontSize,
+    color: color.foreground,
+  },
+  muted: {
+    fontSize: typeScale.caption.fontSize,
+    color: color['muted-foreground'],
+    marginTop: 2,
+  },
+  notice: {
+    fontSize: typeScale['body-sm'].fontSize,
+    color: color['muted-foreground'],
+    marginVertical: space['2'],
+  },
+  // A day's title in the Week view.
+  dayTitle: {
+    fontSize: typeScale.body.fontSize,
+    fontWeight: '700',
+    color: color.foreground,
+    marginTop: space['4'],
+    marginBottom: space['1'],
+  },
+  group: {
+    borderRadius: radius['2xl'],
+    backgroundColor: color.card,
+    marginBottom: space['3'],
+    overflow: 'hidden',
+  },
+  shiftInGroup: {
+    marginTop: 0,
+  },
+  groupTitle: {
+    fontSize: typeScale['body-sm'].fontSize,
+    fontWeight: '700',
+    color: color.foreground,
+    padding: space['3'],
+  },
+  // One job row (AC-8).
+  job: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    minHeight: control.xl,
+    paddingVertical: space['2'],
+    paddingHorizontal: space['3'],
+    borderTopWidth: 1,
+    borderTopColor: color.border,
+  },
+  jobTime: {
+    width: 48,
+    fontSize: typeScale['body-sm'].fontSize,
+    fontWeight: '600',
+    color: color.foreground,
+  },
+  jobMain: {
+    flex: 1,
+    paddingRight: space['2'],
+  },
+  jobPlaces: {
+    fontSize: typeScale['body-sm'].fontSize,
+    color: color.foreground,
+  },
+  jobMoney: {
+    fontSize: typeScale['body-sm'].fontSize,
+    fontWeight: '700',
+    color: color.foreground,
   },
 });

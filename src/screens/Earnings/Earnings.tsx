@@ -1,222 +1,343 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import {
-  View,
-  Text,
-  FlatList,
-  Image,
-  RefreshControl,
   ActivityIndicator,
+  RefreshControl,
+  ScrollView,
+  Text,
   TouchableOpacity,
+  View,
 } from 'react-native';
-import { ScreenSafeArea } from '@app/components/ScreenSafeArea/ScreenSafeArea';
-import { styles } from './Earnings.styles';
-import { DrawerScreenProp, DrawerScreens } from '@app/navigation/drawer/types';
-import { BackNavButton } from '@app/components/BackNavButton/BackNavButton';
-import LinearGradient from 'react-native-linear-gradient';
-import { Colors } from '@app/styles/colors';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Cashout } from '@app/components/CashOut/Cashout';
-import { EarningsTabs } from '@app/components/EarningsTabs/EarningsTabs';
-import { EarningsSummaryDay, EarningsTabItem } from '@app/types/types';
-import { WeekSelector } from '@app/components/WeekSelector/WeekSelector';
-import { EarningsCell } from '@app/components/EarningsCell/EarningsCell';
-import moment, { Moment } from 'moment';
-import { CELL_EARNINGS_EMPTY } from '@app/utilities/constants';
-import { Images } from '@app/utilities/images';
-import { Button, ButtonType } from '@app/components/Button/Button';
-import {
-  formatApiDate,
-  startOfThisWeek,
-  endOfThisWeek,
-} from '@app/utilities/dates';
-import { formatCurrencyFromCents } from '@app/utilities/currency';
-import { MainScreens } from '@app/navigation/main/types';
 import { useTranslation } from 'react-i18next';
-import { useEarnings } from '@app/hooks/useEarnings';
-import { TimeWorkedSection } from '@app/components/TimeWorkedSection/TimeWorkedSection';
+import LinearGradient from 'react-native-linear-gradient';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import moment from 'moment';
+import { CalendarBlankIcon } from 'phosphor-react-native/src/icons/CalendarBlank';
+import { CaretLeftIcon } from 'phosphor-react-native/src/icons/CaretLeft';
+import { CaretRightIcon } from 'phosphor-react-native/src/icons/CaretRight';
+import { ScreenSafeArea } from '@app/components/ScreenSafeArea/ScreenSafeArea';
+import { BackNavButton } from '@app/components/BackNavButton/BackNavButton';
+import { Icon } from '@app/components/Icon/Icon';
+import { MonthCalendar } from '@app/components/MonthCalendar/MonthCalendar';
+import {
+  CoopWeekCard,
+  ShiftRow,
+} from '@app/components/TimeWorkedSection/TimeWorkedSection';
+import { DrawerScreenProp, DrawerScreens } from '@app/navigation/drawer/types';
+import { MainScreens } from '@app/navigation/main/types';
+import { Colors } from '@app/styles/colors';
+import { useEarningsMonth, useEarningsMonths } from '@app/hooks/useEarnings';
+import { useCoopTotals } from '@app/hooks/useTimeWorked';
 import { useReviewRequests } from '@app/hooks/useReviewRequests';
 import { queryClient } from '@app/services/queryClient';
-import { QueryKeys } from '@app/utilities/queryKeys';
 import { useReviewSeen } from '@app/services/reviewSeen';
+import {
+  EarningsFigures,
+  EarningsJob,
+  EarningsMonth,
+  EarningsShift,
+} from '@app/types/earnings';
+import { formatCurrencyFromCents } from '@app/utilities/currency';
+import {
+  END_LABEL_KEYS,
+  EarningsMode,
+  MergedMonths,
+  formatKm,
+  jobDate,
+  jobMinutes,
+  jobMoneyCents,
+  mergeMonths,
+  monthOf,
+  monthsOfPeriod,
+  periodDates,
+  shiftsOnDay,
+  waitMinutes,
+  weekStartOf,
+} from '@app/utilities/earnings';
+import { QueryKeys } from '@app/utilities/queryKeys';
+import {
+  addDays,
+  coopClock,
+  coopDate,
+  formatWorkDuration,
+} from '@app/utilities/timeWorked';
+import { styles } from './Earnings.styles';
 
 type Props = DrawerScreenProp<DrawerScreens.Earnings>;
 
-type DataSourceType = EarningsSummaryDay | string;
+// Spec 0042: one Earnings screen in place of Earnings, Earnings day, the old delivery screen and History
+// (AC-6). The rider picks a day or a week; the screen shows that period's four figures (AC-1), the co-op
+// card (spec 0040 AC-12), and the period's jobs under their shift headers (AC-8). Every number comes
+// from the server: the phone only picks which days, shifts and jobs to show.
+
+const dayLabel = (date: string) =>
+  moment(date, 'YYYY-MM-DD').format('ddd D MMM');
+
+// One figure of the grid, "—" when there is nothing to divide by (AC-1).
+const Figure = ({
+  value,
+  label,
+  testID,
+}: {
+  value: string;
+  label: string;
+  testID: string;
+}) => (
+  <View style={styles.figure} testID={testID}>
+    <Text style={styles.figureValue}>{value}</Text>
+    <Text style={styles.figureLabel}>{label}</Text>
+  </View>
+);
+
+const FiguresCard = ({
+  figures,
+  currencyCode,
+  soFar,
+  cutFrom,
+}: {
+  figures: EarningsFigures;
+  currencyCode: string;
+  soFar: boolean;
+  // A week cut at the rider's first reachable day counts from there (AC-5).
+  cutFrom: string | null;
+}) => {
+  const { t } = useTranslation();
+  const money = (cents: number) => formatCurrencyFromCents(cents, currencyCode);
+  const rate = (cents: number | null) =>
+    cents === null
+      ? '—'
+      : t('translations:time_worked_per_hour', { amount: money(cents) });
+  return (
+    <View style={styles.card} testID="earnings-figures">
+      <Text style={styles.total}>{money(figures.moneyCents)}</Text>
+      <Text style={styles.totalNote}>
+        {t('translations:earnings_period_note', {
+          count: figures.dropOffCount,
+          time: formatWorkDuration(figures.workSeconds),
+        })}
+        {soFar ? ` · ${t('translations:earnings_so_far')}` : ''}
+        {cutFrom
+          ? ` · ${t('translations:earnings_counted_from', {
+              day: moment(cutFrom, 'YYYY-MM-DD').format('D MMM'),
+            })}`
+          : ''}
+      </Text>
+      <View style={styles.figureGrid}>
+        <Figure
+          value={rate(figures.centsPerHour)}
+          label={t('translations:earnings_per_hour_worked')}
+          testID="figure-per-hour"
+        />
+        <Figure
+          value={rate(figures.activeCentsPerHour)}
+          label={t('translations:earnings_per_hour_on_job')}
+          testID="figure-per-hour-on-job"
+        />
+        <Figure
+          value={
+            figures.centsPerPaidKm === null
+              ? '—'
+              : t('translations:earnings_per_km', {
+                  amount: money(figures.centsPerPaidKm),
+                })
+          }
+          label={t('translations:earnings_per_paid_km')}
+          testID="figure-per-km"
+        />
+        <Figure
+          value={
+            figures.medianPickupWaitSeconds === null
+              ? '—'
+              : t('translations:earnings_minutes', {
+                  minutes: waitMinutes(figures.medianPickupWaitSeconds),
+                })
+          }
+          label={t('translations:earnings_pickup_wait', {
+            count: figures.pickupWaitCount,
+          })}
+          testID="figure-pickup-wait"
+        />
+      </View>
+      <Text style={styles.muted}>
+        {t('translations:time_worked_split', {
+          job: formatWorkDuration(figures.jobSeconds),
+          wait: formatWorkDuration(figures.paidWaitSeconds),
+          unpaid: formatWorkDuration(figures.unpaidSeconds),
+        })}
+      </Text>
+      {figures.noJobMoneyCents > 0 && (
+        <Text style={styles.muted}>
+          {t('translations:earnings_money_no_job', {
+            amount: money(figures.noJobMoneyCents),
+          })}
+        </Text>
+      )}
+    </View>
+  );
+};
+
+// AC-8: accept time, restaurant → drop off area, paid km, minutes, money, and how it ended.
+const JobRow = ({
+  job,
+  currencyCode,
+  onPress,
+}: {
+  job: EarningsJob;
+  currencyCode: string;
+  onPress: () => void;
+}) => {
+  const { t } = useTranslation();
+  const meta = [
+    job.paidKm === null ? '—' : formatKm(job.paidKm),
+    t('translations:earnings_minutes', {
+      minutes: jobMinutes(job, Date.now()),
+    }),
+    ...(job.endLabel
+      ? [t(`translations:${END_LABEL_KEYS[job.endLabel]}`)]
+      : []),
+  ].join(' · ');
+  return (
+    <TouchableOpacity
+      style={styles.job}
+      onPress={onPress}
+      accessibilityRole="button"
+      testID="earnings-job">
+      <Text style={styles.jobTime}>
+        {coopClock(Date.parse(job.acceptedAt))}
+      </Text>
+      <View style={styles.jobMain}>
+        <Text style={styles.jobPlaces} numberOfLines={1}>
+          {t('translations:earnings_job_places', {
+            from: job.pickupName,
+            to: job.dropoffArea ?? '—',
+          })}
+        </Text>
+        <Text style={styles.muted}>{meta}</Text>
+      </View>
+      <Text style={styles.jobMoney}>
+        {formatCurrencyFromCents(jobMoneyCents(job), currencyCode)}
+      </Text>
+    </TouchableOpacity>
+  );
+};
+
+// One day's jobs: under each shift that touched the day, then those in no recorded shift (AC-6).
+const DayJobs = ({
+  date,
+  merged,
+  onOpenJob,
+}: {
+  date: string;
+  merged: MergedMonths;
+  onOpenJob: (job: EarningsJob) => void;
+}) => {
+  const { t } = useTranslation();
+  const shifts: EarningsShift[] = shiftsOnDay(merged.shifts, date, Date.now());
+  const loose = merged.jobsInNoShift
+    .filter(job => jobDate(job) === date)
+    .sort((a, b) => (a.acceptedAt < b.acceptedAt ? -1 : 1));
+  if (shifts.length === 0 && loose.length === 0) {
+    return (
+      <Text style={styles.notice} testID="earnings-no-work">
+        {t('translations:earnings_no_work_day')}
+      </Text>
+    );
+  }
+  const row = (job: EarningsJob) => (
+    <JobRow
+      key={`${job.deliveryId}-${job.acceptedAt}`}
+      job={job}
+      currencyCode={merged.currencyCode}
+      onPress={() => onOpenJob(job)}
+    />
+  );
+  return (
+    <>
+      {shifts.map(shift => {
+        const startDay = coopDate(Date.parse(shift.startedAt));
+        return (
+          <View key={shift.startedAt} style={styles.group}>
+            <ShiftRow
+              shift={shift}
+              continuesFrom={startDay < date ? startDay : undefined}
+              style={styles.shiftInGroup}
+            />
+            {shift.jobs.map(row)}
+          </View>
+        );
+      })}
+      {loose.length > 0 && (
+        <View style={styles.group}>
+          <Text style={styles.groupTitle}>
+            {t('translations:earnings_not_in_shift')}
+          </Text>
+          {loose.map(row)}
+        </View>
+      )}
+    </>
+  );
+};
 
 export const Earnings = ({ navigation }: Props) => {
   const { t } = useTranslation();
-  const [selectedTab, setSelectedTab] = useState<EarningsTabItem>(
-    EarningsTabItem.Today,
-  );
-  // The week the WeekSelector is pointing at, kept as plain 'YYYY-MM-DD' strings so the
-  // query key below only changes when the week really changes.
-  const [week, setWeek] = useState({
-    start: startOfThisWeek().format(formatApiDate),
-    end: endOfThisWeek().format(formatApiDate),
-  });
   const { top } = useSafeAreaInsets();
+  const today = coopDate(Date.now());
+  const [mode, setMode] = useState<EarningsMode>('day');
+  const [date, setDate] = useState(today);
+  const [calendarOpen, setCalendarOpen] = useState(false);
+  const [calendarMonth, setCalendarMonth] = useState(monthOf(today));
 
-  const {
-    days,
-    totalEarnings,
-    totalCompensation,
-    totalTips,
-    deliveryCount,
-    currency,
-    isLoading,
-    isError,
-    isRefetching,
-    refetch,
-  } = useEarnings(selectedTab, week);
-
-  // A day row per entry, or the single sentinel string that renders the empty state.
-  const dataSource: DataSourceType[] = useMemo(
-    () => (days.length > 0 ? days : [CELL_EARNINGS_EMPTY]),
-    [days],
+  // A week can reach into next month (not started yet), or back into a month wholly before the
+  // rider's reach: the server refuses both, so they are never asked for.
+  const knownReach = queryClient
+    .getQueriesData<EarningsMonth>({ queryKey: [QueryKeys.earningsMonth] })
+    .map(([, data]) => data?.reachFrom)
+    .find(Boolean);
+  const months = monthsOfPeriod(mode, date).filter(
+    month =>
+      month <= monthOf(today) && (!knownReach || month >= monthOf(knownReach)),
+  );
+  const queries = useEarningsMonths(months);
+  const loaded = queries
+    .map(query => query.data)
+    .filter((data): data is EarningsMonth => data !== undefined);
+  const merged = mergeMonths(loaded);
+  const reachFrom = merged.reachFrom ?? knownReach ?? null;
+  const isLoading = queries.some(query => query.isLoading);
+  const failed = queries.some(query => query.isError);
+  const isRefetching = queries.some(query => query.isRefetching);
+  // With no signal, the oldest of the saved months shown says how old the screen is (AC-13).
+  const asOf = Math.min(
+    ...queries.filter(query => query.data).map(query => query.dataUpdatedAt),
   );
 
-  const emptyCell = () => {
-    if (isError) {
-      return (
-        <View style={styles.containerEmptyCell}>
-          <Image source={Images.Car} />
-          <Text style={styles.textEmptyCellTitle}>
-            {t('translations:earnings_load_failed')}
-          </Text>
-          <Text style={styles.textEmptyCellSubtitle}>
-            {t('translations:earnings_load_failed_subtitle')}
-          </Text>
-        </View>
-      );
-    }
-
-    const title = () => {
-      switch (selectedTab) {
-        case EarningsTabItem.Today:
-          return t('translations:no_earnings_today');
-        case EarningsTabItem.Weekly:
-          return t('translations:no_weekly_earnings');
-        case EarningsTabItem.All:
-          return t('translations:no_earnings');
-      }
-    };
-
-    const subtitle = () => {
-      switch (selectedTab) {
-        case EarningsTabItem.Today:
-          return t('translations:no_orders_made_today');
-        case EarningsTabItem.Weekly:
-          return t('translations:no_orders_made_this_week');
-        case EarningsTabItem.All:
-          return t('translations:no_orders_made_yet');
-      }
-    };
-
-    return (
-      <View style={styles.containerEmptyCell}>
-        <Image source={Images.Car} />
-        <Text style={styles.textEmptyCellTitle}>{title()}</Text>
-        <Text style={styles.textEmptyCellSubtitle}>{subtitle()}</Text>
-      </View>
-    );
-  };
-
-  // Spec 0040 (AC-11): the Time worked section closes the list on every tab.
-  const renderFooter = () => (
-    <>
-      {renderWeeklyFooter()}
-      <TimeWorkedSection />
-    </>
+  const calendar = useEarningsMonth(calendarMonth, calendarOpen);
+  const marked = useMemo(
+    () =>
+      new Set(
+        (calendar.data?.days ?? [])
+          .filter(day => day.workSeconds > 0 || day.moneyCents > 0)
+          .map(day => day.date),
+      ),
+    [calendar.data],
   );
+  const coop = useCoopTotals();
 
-  // Pulling down reloads the earnings and the time worked together.
-  const onRefresh = () => {
-    refetch();
-    queryClient.invalidateQueries({ queryKey: [QueryKeys.timeWorked] });
-    queryClient.invalidateQueries({ queryKey: [QueryKeys.coopTotals] });
-  };
-
-  const renderWeeklyFooter = () => {
-    if (selectedTab !== EarningsTabItem.Weekly) {
-      // FlatList's ListFooterComponent types reject undefined, so return null.
-      return null;
-    }
-
-    return (
-      <View style={styles.footer}>
-        <View style={styles.footerSeparator} />
-        <Button
-          style={styles.buttonFooter}
-          title={t('translations:download_weekly_summary')}
-          onPress={() => undefined}
-          type={ButtonType.white}
-        />
-        <Button
-          title={t('translations:see_payout_history')}
-          onPress={() => navigation.navigate(MainScreens.PayoutActivity)}
-          type={ButtonType.white}
-        />
-      </View>
-    );
-  };
-
-  const renderItem = ({ item }: { item: DataSourceType }) => {
-    if (typeof item === 'string') {
-      return emptyCell();
-    }
-
-    return (
-      <EarningsCell
-        date={moment(item.date, formatApiDate)}
-        earned={item.total}
-        currency={currency}
-        // Row 112 review: a day of pay with no drop off reads like the header, not "0 deliveries".
-        detail={
-          item.deliveryCount === 0 && item.total > 0
-            ? t('translations:earnings_paid_without_deliveries')
-            : `${item.deliveryCount} ${
-                item.deliveryCount === 1
-                  ? t('translations:delivery_small')
-                  : t('translations:deliveries_small')
-              }`
-        }
-        onPress={() =>
-          navigation.navigate(MainScreens.EarningsDay, { date: item.date })
-        }
-      />
-    );
-  };
-
-  const headerTitle = useMemo(() => {
-    if (deliveryCount > 0) {
-      return `${deliveryCount} ${t('translations:orders_small')}`;
-    }
-    // Row 112: money with no delivery (a wait, a removal, a cancelled job) is not "No Orders".
-    if (totalEarnings > 0) {
-      return t('translations:earnings_paid_without_deliveries');
-    }
-    switch (selectedTab) {
-      case EarningsTabItem.Today:
-        return t('translations:no_orders_today');
-      case EarningsTabItem.Weekly:
-        return t('translations:no_orders_this_week');
-      case EarningsTabItem.All:
-        return t('translations:no_orders');
-    }
-  }, [selectedTab, deliveryCount, totalEarnings, t]);
-
-  // Spec 0038: an answered review request this phone has not shown yet.
-  const reviewRequests = useReviewRequests();
-  // An Offline rider gets no push for an answer, so the list is asked again each time this screen
-  // comes back into view; otherwise the "New answer" mark would wait for the page to be opened.
-  // `addListener` returns the function that removes the listener, which React calls on unmount.
+  // Drawer screens stay mounted, so the month, the co-op card and the review answers are read again
+  // each time Earnings comes into view (AC-13). An Offline rider gets no push for a review answer.
   useEffect(
     () =>
       navigation.addListener('focus', () => {
-        queryClient.invalidateQueries({ queryKey: [QueryKeys.reviewRequests] });
+        [
+          QueryKeys.earningsMonth,
+          QueryKeys.coopTotals,
+          QueryKeys.reviewRequests,
+        ].forEach(key => queryClient.invalidateQueries({ queryKey: [key] }));
       }),
     [navigation],
   );
+
+  // Spec 0038: an answered review request this phone has not shown yet.
+  const reviewRequests = useReviewRequests();
   const seenAnswers = useReviewSeen();
   const hasNewAnswer = (reviewRequests.data?.pages ?? []).some(page =>
     page.data.some(
@@ -225,11 +346,129 @@ export const Earnings = ({ navigation }: Props) => {
     ),
   );
 
-  const handleWeekChange = (start: Moment, end: Moment) => {
-    setWeek({
-      start: start.format(formatApiDate),
-      end: end.format(formatApiDate),
+  const dates = periodDates(mode, date);
+  const first = dates[0] ?? date;
+  const last = dates[dates.length - 1] ?? date;
+  const figures =
+    mode === 'day'
+      ? merged.days.find(day => day.date === date)
+      : merged.weeks.find(week => week.weekStart === weekStartOf(date));
+  const shownWeek =
+    mode === 'week'
+      ? merged.weeks.find(week => week.weekStart === weekStartOf(date))
+      : undefined;
+  const soFar = shownWeek?.soFar === true;
+  const cutFrom = shownWeek?.cutAtReach ? reachFrom : null;
+
+  // Back stops at the first day the rider can open, forward at today (AC-9).
+  const step = mode === 'day' ? 1 : 7;
+  const canGoBack = !reachFrom || addDays(first, -1) >= reachFrom;
+  const canGoForward = addDays(first, step) <= today;
+  const move = (direction: 1 | -1) => {
+    const next = addDays(date, direction * step);
+    setDate(
+      next > today ? today : reachFrom && next < reachFrom ? reachFrom : next,
+    );
+  };
+
+  const periodText =
+    mode === 'day'
+      ? date === today
+        ? t('translations:earnings_today', { day: dayLabel(date) })
+        : dayLabel(date)
+      : t('translations:earnings_week_label', {
+          from: moment(first, 'YYYY-MM-DD').format('D MMM'),
+          to: moment(last, 'YYYY-MM-DD').format('D MMM'),
+        });
+
+  const openJob = (job: EarningsJob) =>
+    navigation.navigate(MainScreens.EarningsDelivery, {
+      deliveryId: job.deliveryId,
     });
+
+  const onRefresh = () => {
+    queries.forEach(query => query.refetch());
+    coop.refetch();
+  };
+
+  const recordedFromDay = merged.recordedFrom
+    ? coopDate(Date.parse(merged.recordedFrom))
+    : null;
+
+  const body = () => {
+    if (isLoading && loaded.length === 0) {
+      return <ActivityIndicator />;
+    }
+    if (loaded.length === 0) {
+      // Never opened on this phone and no signal now (AC-13).
+      return (
+        <Text style={styles.notice} testID="earnings-needs-connection">
+          {t('translations:earnings_needs_connection')}
+        </Text>
+      );
+    }
+    const shownDays =
+      mode === 'day'
+        ? [date]
+        : dates
+            .filter(
+              day =>
+                day <= today &&
+                (!reachFrom || day >= reachFrom) &&
+                (merged.days.some(
+                  d =>
+                    d.date === day && (d.workSeconds > 0 || d.moneyCents > 0),
+                ) ||
+                  shiftsOnDay(merged.shifts, day, Date.now()).length > 0),
+            )
+            .reverse();
+    return (
+      <>
+        {failed && (
+          <Text style={styles.notice} testID="earnings-as-of">
+            {t('translations:earnings_as_of', {
+              time: coopClock(asOf),
+            })}
+          </Text>
+        )}
+        {figures && (
+          <FiguresCard
+            figures={figures}
+            currencyCode={merged.currencyCode}
+            soFar={soFar}
+            cutFrom={cutFrom}
+          />
+        )}
+        {coop.data && (
+          <CoopWeekCard totals={coop.data} currencyCode={merged.currencyCode} />
+        )}
+        {mode === 'week' && shownDays.length === 0 && (
+          <Text style={styles.notice} testID="earnings-no-work">
+            {t('translations:earnings_no_work_week')}
+          </Text>
+        )}
+        {shownDays.map(day => (
+          <View key={day}>
+            {mode === 'week' && (
+              <Text style={styles.dayTitle}>{dayLabel(day)}</Text>
+            )}
+            <DayJobs date={day} merged={merged} onOpenJob={openJob} />
+          </View>
+        ))}
+        {recordedFromDay && first < recordedFromDay && (
+          <Text style={styles.notice}>
+            {t('translations:time_worked_recorded_from', {
+              date: moment(recordedFromDay, 'YYYY-MM-DD').format('D MMM YYYY'),
+            })}
+          </Text>
+        )}
+        {reachFrom && first <= reachFrom && (
+          <Text style={styles.notice} testID="earnings-ask-coop">
+            {t('translations:earnings_older_ask_coop')}
+          </Text>
+        )}
+      </>
+    );
   };
 
   return (
@@ -243,68 +482,114 @@ export const Earnings = ({ navigation }: Props) => {
           <BackNavButton onPress={() => navigation.toggleDrawer()} />
           <Text style={styles.title}>{t('translations:earnings')}</Text>
         </View>
-        {/* Spec 0038 (AC-11): how offers and pay work, from the settings in effect now. The dot says
-            an answer to a review request has not been opened yet (kept on this phone only). */}
-        <TouchableOpacity
-          style={styles.howLink}
-          onPress={() => navigation.navigate(MainScreens.HowItWorks)}
-          accessibilityRole="link"
-          testID="how-it-works-link">
-          <Text style={styles.howLinkText}>{t('translations:how_title')}</Text>
-          {hasNewAnswer ? (
-            <Text style={styles.howLinkNew}>
-              {t('translations:review_new_answer')}
+        <ScrollView
+          contentContainerStyle={styles.scrollContent}
+          refreshControl={
+            <RefreshControl refreshing={isRefetching} onRefresh={onRefresh} />
+          }>
+          {/* Spec 0038 (AC-11): how offers and pay work. The mark says an answer to a review request
+              has not been opened yet (kept on this phone only). */}
+          <TouchableOpacity
+            style={styles.howLink}
+            onPress={() => navigation.navigate(MainScreens.HowItWorks)}
+            accessibilityRole="link"
+            testID="how-it-works-link">
+            <Text style={styles.howLinkText}>
+              {t('translations:how_title')}
             </Text>
-          ) : null}
-        </TouchableOpacity>
-        <View style={styles.containerEarnings}>
-          <View style={styles.earningsText}>
-            <Text style={styles.textEarned}>
-              {formatCurrencyFromCents(totalEarnings, currency)}
-            </Text>
-            <Text style={styles.textCount}>{headerTitle}</Text>
-            {(deliveryCount > 0 || totalEarnings > 0) && (
-              // Piece-rate pay and tips are different things: pay is what the co-op owes
-              // for the work, tips are the customer's. Showing only the sum would let a
-              // good tips week hide a bad rate, so the split is always visible.
-              <Text style={styles.textBreakdown}>
-                {t('translations:pay_tips_breakdown', {
-                  pay: formatCurrencyFromCents(totalCompensation, currency),
-                  tips: formatCurrencyFromCents(totalTips, currency),
-                })}
+            {hasNewAnswer ? (
+              <Text style={styles.howLinkNew}>
+                {t('translations:review_new_answer')}
               </Text>
-            )}
+            ) : null}
+          </TouchableOpacity>
+
+          <View style={styles.modeSwitch} accessibilityRole="tablist">
+            {(['day', 'week'] as EarningsMode[]).map(item => (
+              <TouchableOpacity
+                key={item}
+                style={[
+                  styles.modeButton,
+                  mode === item && styles.modeButtonActive,
+                ]}
+                onPress={() => setMode(item)}
+                accessibilityRole="tab"
+                accessibilityState={{ selected: mode === item }}
+                testID={`earnings-mode-${item}`}>
+                <Text
+                  style={[
+                    styles.modeText,
+                    mode === item && styles.modeTextActive,
+                  ]}>
+                  {t(`translations:earnings_mode_${item}`)}
+                </Text>
+              </TouchableOpacity>
+            ))}
           </View>
-          <Cashout onPress={() => undefined} />
-        </View>
-        <EarningsTabs
-          style={styles.topMargin}
-          selectedTab={selectedTab}
-          onTabSelected={setSelectedTab}
-        />
-        <WeekSelector
-          onWeekRangeChange={handleWeekChange}
-          type={selectedTab}
-          earned={totalEarnings}
-          currency={currency}
-          style={styles.veticalMargin}
-        />
-        {isLoading ? (
-          <ActivityIndicator />
-        ) : (
-          <FlatList
-            keyExtractor={item => (typeof item === 'string' ? item : item.date)}
-            data={dataSource}
-            renderItem={renderItem}
-            contentContainerStyle={styles.listContent}
-            // An element, not the function: FlatList treats a function as a component type, and a new
-            // function each render would throw the footer (and an opened shift) away (review 2026-11-20).
-            ListFooterComponent={renderFooter()}
-            refreshControl={
-              <RefreshControl refreshing={isRefetching} onRefresh={onRefresh} />
-            }
-          />
-        )}
+
+          <View style={styles.periodRow}>
+            <TouchableOpacity
+              style={styles.periodArrow}
+              disabled={!canGoBack}
+              onPress={() => move(-1)}
+              accessibilityRole="button"
+              accessibilityLabel={t('translations:earnings_previous_period')}
+              accessibilityState={{ disabled: !canGoBack }}
+              testID="earnings-previous">
+              <Icon
+                icon={CaretLeftIcon}
+                size={22}
+                tone={canGoBack ? 'foreground' : 'input'}
+              />
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.periodLabel}
+              onPress={() => {
+                setCalendarMonth(monthOf(date));
+                setCalendarOpen(open => !open);
+              }}
+              accessibilityRole="button"
+              accessibilityState={{ expanded: calendarOpen }}
+              accessibilityHint={t('translations:earnings_open_calendar')}
+              testID="earnings-period">
+              <Icon icon={CalendarBlankIcon} size={20} />
+              <Text style={styles.periodText}>{periodText}</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.periodArrow}
+              disabled={!canGoForward}
+              onPress={() => move(1)}
+              accessibilityRole="button"
+              accessibilityLabel={t('translations:earnings_next_period')}
+              accessibilityState={{ disabled: !canGoForward }}
+              testID="earnings-next">
+              <Icon
+                icon={CaretRightIcon}
+                size={22}
+                tone={canGoForward ? 'foreground' : 'input'}
+              />
+            </TouchableOpacity>
+          </View>
+
+          {calendarOpen && (
+            <View style={styles.calendar}>
+              <MonthCalendar
+                month={calendarMonth}
+                selected={dates}
+                marked={marked}
+                minDate={reachFrom}
+                maxDate={today}
+                onPick={picked => {
+                  setDate(picked);
+                  setCalendarOpen(false);
+                }}
+                onMonthChange={setCalendarMonth}
+              />
+            </View>
+          )}
+
+          {body()}
+        </ScrollView>
       </ScreenSafeArea>
     </View>
   );

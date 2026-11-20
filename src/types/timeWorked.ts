@@ -76,25 +76,6 @@ export interface WorkedShift {
   jobs: WorkedJob[];
 }
 
-export interface WorkedDay {
-  date: string;
-  workSeconds: number;
-  jobSeconds: number;
-  paidWaitSeconds: number;
-  unpaidSeconds: number;
-  // Includes unlinkedMoneyCents; € per hour leaves it out.
-  moneyCents: number;
-  centsPerHour: number | null;
-  unlinkedMoneyCents: number;
-}
-
-export interface TimeWorkedRange {
-  recordedFrom: string | null;
-  currencyCode: string;
-  days: WorkedDay[];
-  shifts: WorkedShift[];
-}
-
 // A week with fewer than 3 riders carries no figure at all (AC-12).
 export type CoopWeek =
   | { weekStart: string; tooFewRiders: true }

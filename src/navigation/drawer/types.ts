@@ -6,8 +6,6 @@ import { MainNavigationProp } from '../main/types';
 export enum DrawerScreens {
   Home = 'Home',
   Earnings = 'Earnings',
-  // Spec 0018: History left home's tabs for the side menu.
-  History = 'History',
   // Spec 0027: booking shifts, shown only while the co-op runs them.
   Shifts = 'Shifts',
   PaymentMethods = 'PaymentMethods',
@@ -17,7 +15,6 @@ export enum DrawerScreens {
 export type DrawerStackParamList = {
   Home: undefined;
   Earnings: undefined;
-  History: undefined;
   Shifts: undefined;
   PaymentMethods: undefined;
   Settings: undefined;
@@ -26,7 +23,7 @@ export type DrawerStackParamList = {
 /**
  * The drawer sits inside the main stack, so a drawer screen can navigate to either.
  * CompositeNavigationProp unions the two, which is what lets Earnings push the stack
- * screens EarningsDay / PayoutActivity without TypeScript rejecting the route name.
+ * screens EarningsDelivery / PayoutActivity without TypeScript rejecting the route name.
  */
 export type DrawerNavigationProp = CompositeNavigationProp<
   // The drawer library's own prop type adds openDrawer, closeDrawer and toggleDrawer,

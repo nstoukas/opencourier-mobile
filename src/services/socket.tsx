@@ -100,11 +100,7 @@ const SocketProvider = ({ children }: Props) => {
       // moment, and Android may refuse the restart in the background.
       onDeliveryStatusUpdated: () => {
         // cancelledJobs: a job of this rider's cancelled now shows its card at once (spec 0015).
-        refetch([
-          QueryKeys.newOrders,
-          QueryKeys.orderHistory,
-          QueryKeys.cancelledJobs,
-        ]);
+        refetch([QueryKeys.newOrders, QueryKeys.cancelledJobs]);
         queryClient
           .invalidateQueries({ queryKey: [QueryKeys.inProgressOrders] })
           .then(() =>

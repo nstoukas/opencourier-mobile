@@ -53,12 +53,9 @@ export const useJobStepOutbox = (
         if (outcome === 'sent' && item.step === 'delivered') {
           // Its row must not come back from a list fetched a moment too early.
           hideInProgressOrderAfterDelivery(item.deliveryId);
-          [
-            QueryKeys.orderHistory,
-            QueryKeys.earningsSummary,
-            QueryKeys.earningsDay,
-            QueryKeys.earningsDelivery,
-          ].forEach(key => queryClient.invalidateQueries({ queryKey: [key] }));
+          [QueryKeys.earningsMonth, QueryKeys.earningsDelivery].forEach(key =>
+            queryClient.invalidateQueries({ queryKey: [key] }),
+          );
         }
         // Sent or refused, the server has the last word on the list.
         queryClient.invalidateQueries({

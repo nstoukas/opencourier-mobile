@@ -26,7 +26,6 @@ export enum MainScreens {
   RequestRemoval = 'RequestRemoval',
   // The rider's chat with dispatch (spec 0034).
   Chat = 'Chat',
-  EarningsDay = 'EarningsDay',
   EarningsDelivery = 'EarningsDelivery',
   // How offers and pay work, the rider's review requests and what changed (spec 0038).
   HowItWorks = 'HowItWorks',
@@ -63,10 +62,6 @@ export type MainStackParamList = {
         orderReference?: string | null;
       }
     | undefined;
-  // Only the day is passed; the screen re-fetches so the list always matches the ledger.
-  EarningsDay: {
-    date: string; // 'YYYY-MM-DD'
-  };
   EarningsDelivery: {
     deliveryId: string;
   };

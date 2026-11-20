@@ -48,8 +48,6 @@ export const MAP_ACTION_SHEET_OPTIONS_ANDROID = [
 
 export const ADD_NOTE_CELL = 'const_add_note_cell';
 
-export const CELL_EARNINGS_EMPTY = 'const_earnings_empty';
-
 export const SUPPORTED_LANGUAGES: Language[] = [
   {
     id: '1',

@@ -11,7 +11,6 @@ import { OperatingArea } from '@app/screens/SettingsStack/OperatingArea/Operatin
 import { DefaultSound } from '@app/screens/SettingsStack/DefaultSound/DefaultSound';
 import { VolumeScreen } from '@app/screens/SettingsStack/Volume/Volume';
 import { VehicleTypeScreen } from '@app/screens/SettingsStack/VehicleType/VehicleType';
-import { EarningsDay } from '@app/screens/EarningsDay/EarningsDay';
 import { EarningsDelivery } from '@app/screens/EarningsDelivery/EarningsDelivery';
 import { ShiftAvailabilityScreen } from '@app/screens/SettingsStack/ShiftAvailability/ShiftAvailabilityScreen';
 import { ReportIssue } from '@app/screens/ReportIssue/ReportIssue';
@@ -91,11 +90,6 @@ export const MainStack = () => {
       <MainStackNavigator.Screen
         name={MainScreens.VehicleTypeScreen}
         component={VehicleTypeScreen}
-        options={DEFAULT_OPTIONS}
-      />
-      <MainStackNavigator.Screen
-        name={MainScreens.EarningsDay}
-        component={EarningsDay}
         options={DEFAULT_OPTIONS}
       />
       <MainStackNavigator.Screen

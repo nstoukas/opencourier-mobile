@@ -229,6 +229,13 @@ export const HowItWorks = ({ navigation }: Props) => {
               t('translations:how_time_worked'),
               howItWorks.data?.timeWorked,
             )}
+          {/* Spec 0042 (AC-14): how the Earnings figures are counted. Shown the same way as above, so
+              a server before spec 0042, which leaves it out, never leaves a card spinning. */}
+          {(!howItWorks.data || howItWorks.data.earningsFigures) &&
+            section(
+              t('translations:how_earnings_figures'),
+              howItWorks.data?.earningsFigures,
+            )}
 
           <View style={styles.card}>
             <Text style={styles.cardTitle} accessibilityRole="header">

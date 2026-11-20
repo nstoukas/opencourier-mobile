@@ -15,15 +15,22 @@ import { BackNavButton } from '@app/components/BackNavButton/BackNavButton';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Colors } from '@app/styles/colors';
 import { useTranslation } from 'react-i18next';
-import { useEarningsDelivery } from '@app/hooks/useEarningsDelivery';
+import { useEarningsDelivery } from '@app/hooks/useEarnings';
 import { formatCurrencyFromCents } from '@app/utilities/currency';
-import { formatShift, formatSpaced } from '@app/utilities/dates';
 import { Button, ButtonType } from '@app/components/Button/Button';
+import { REASON_KEYS } from '@app/components/TimeWorkedSection/TimeWorkedSection';
+import { EarningsTimelineLine } from '@app/types/earnings';
+import { END_LABEL_KEYS, formatKm, waitMinutes } from '@app/utilities/earnings';
+import { coopClock, coopDate } from '@app/utilities/timeWorked';
 
 type Props = MainScreenProp<MainScreens.EarningsDelivery>;
 
-/** One label/value line in the breakdown. Separators sit between rows, never above the
- *  first one, so a card doesn't open with a stray hairline. */
+// Spec 0042 (AC-10, AC-11): one delivery as this rider held it. The pay breakdown, line by line in
+// cents from the records, adds up to the total; the timeline shows what happened, in fixed words, with
+// who acted only as "You", "Restaurant", "Dispatch" or "System". Never another rider, the customer, an
+// amount on the timeline, or an event's own message: the server sends none of them.
+
+/** One label/value line. Separators sit between rows, never above the first one. */
 const DetailRow = ({
   label,
   value,
@@ -46,12 +53,39 @@ const DetailRow = ({
   </>
 );
 
+const clock = (iso: string) => coopClock(Date.parse(iso));
+const day = (iso: string) =>
+  moment(coopDate(Date.parse(iso)), 'YYYY-MM-DD').format('D MMM');
+
+// Decision 75.18: a label per event type in the translations; a type with none (a new one) reads
+// "Update" rather than breaking the screen.
+const TimelineRow = ({ line }: { line: EarningsTimelineLine }) => {
+  const { t } = useTranslation();
+  const what = line.anotherRider
+    ? t('translations:earnings_event_another_rider')
+    : t(`translations:earnings_event_${line.type}`, {
+        defaultValue: t('translations:earnings_event_update'),
+      });
+  return (
+    <View style={styles.timelineLine} testID="earnings-timeline-line">
+      <Text style={styles.timelineTime}>{clock(line.at)}</Text>
+      <Text style={styles.timelineText}>
+        {line.who
+          ? t('translations:earnings_event_by', {
+              what,
+              who: t(`translations:earnings_who_${line.who}`),
+            })
+          : what}
+      </Text>
+    </View>
+  );
+};
+
 export const EarningsDelivery = ({ navigation, route }: Props) => {
   const { t } = useTranslation();
   const { top } = useSafeAreaInsets();
   const { deliveryId } = route.params;
-
-  const { delivery, isLoading, isRefetching, refetch } =
+  const { data, isLoading, isError, isRefetching, refetch, dataUpdatedAt } =
     useEarningsDelivery(deliveryId);
 
   const body = () => {
@@ -59,144 +93,156 @@ export const EarningsDelivery = ({ navigation, route }: Props) => {
       return <ActivityIndicator />;
     }
 
-    // A 404 here means the delivery is not this courier's or never completed — the
-    // backend deliberately does not distinguish the two, so neither do we.
-    // A failed refetch over data already loaded keeps showing it: with no
-    // signal the last loaded earnings stay readable (spec 0009, AC-1).
-    if (!delivery) {
+    // A failed refetch over data already loaded keeps showing it, with how old it is (AC-13). With no
+    // data: never opened with signal, or not this rider's (the server answers both with a plain 404).
+    if (!data) {
       return (
         <View style={styles.empty}>
           <Text style={styles.emptyTitle}>
             {t('translations:delivery_not_found')}
           </Text>
           <Text style={styles.emptySubtitle}>
-            {t('translations:delivery_not_found_subtitle')}
+            {t('translations:earnings_detail_unavailable')}
           </Text>
         </View>
       );
     }
 
-    const currency = delivery.currency;
-    const droppedOff = moment(delivery.droppedOffAt);
-    const isWait = delivery.kind === 'WAITING';
-    // Spec 0035, AC-17: a removal or a return trip is not a drop off either.
-    const isRemoval = delivery.kind === 'REMOVAL_COMPENSATION';
-    const isReturnTrip = delivery.kind === 'RETURN_TRIP';
-    const isCancelled = delivery.kind === 'CANCELLATION_COMPENSATION';
-    const isReassigned = delivery.kind === 'REASSIGNMENT_COMPENSATION';
-    // Spec 0038: a pay correction from a review, on a delivery that paid nothing else to this rider.
-    const isReviewCorrection = delivery.kind === 'REVIEW_CORRECTION';
-    // Row 112: every pay that is not a drop off carries a `kind` (a wait, a removal, a return trip, a
-    // cancelled or reassigned job), so none of them may say "Delivered".
-    const notDelivered = Boolean(delivery.kind);
+    const money = (cents: number) =>
+      formatCurrencyFromCents(cents, data.currencyCode);
+    const { breakdown } = data;
+    const firstJob = data.jobs[0];
 
     return (
       <>
-        <View style={styles.card}>
-          <Text style={styles.total}>
-            {formatCurrencyFromCents(delivery.total, currency)}
+        {isError && (
+          <Text style={styles.note} testID="earnings-as-of">
+            {t('translations:earnings_as_of', {
+              time: coopClock(dataUpdatedAt),
+            })}
           </Text>
+        )}
+        <View style={styles.card}>
+          <Text style={styles.total}>{money(breakdown.totalCents)}</Text>
           <Text style={styles.totalLabel}>
             {t('translations:total_earned')}
           </Text>
         </View>
 
-        <View style={styles.card}>
-          <DetailRow
-            label={t(
-              isWait
-                ? 'translations:earnings_waiting'
-                : isRemoval
-                ? 'translations:earnings_removal'
-                : isReturnTrip
-                ? 'translations:earnings_return_trip'
-                : isCancelled
-                ? 'translations:earnings_cancelled_job'
-                : isReassigned
-                ? 'translations:earnings_reassigned_job'
-                : isReviewCorrection
-                ? 'translations:earnings_review_correction'
-                : 'translations:piece_rate_pay',
-            )}
-            value={formatCurrencyFromCents(delivery.compensation, currency)}
-            strong
-            first
-          />
+        <View style={styles.card} testID="earnings-breakdown">
+          {breakdown.baseFeeCents !== null &&
+          breakdown.distanceFeeCents !== null ? (
+            <>
+              <DetailRow
+                label={t('translations:earnings_base_fee')}
+                value={money(breakdown.baseFeeCents)}
+                first
+              />
+              <DetailRow
+                label={t('translations:earnings_distance_fee')}
+                value={money(breakdown.distanceFeeCents)}
+              />
+            </>
+          ) : (
+            <DetailRow
+              label={t('translations:earnings_delivery_pay')}
+              value={money(breakdown.deliveryPayCents)}
+              first
+            />
+          )}
           <DetailRow
             label={t('translations:tips')}
-            value={formatCurrencyFromCents(delivery.tips, currency)}
+            value={money(breakdown.tipsCents)}
+          />
+          {breakdown.compensations.map(c => {
+            const reason = REASON_KEYS[c.reason]
+              ? t(`translations:${REASON_KEYS[c.reason]}`)
+              : c.reason;
+            const withMinutes =
+              c.waitMinutes !== null
+                ? t('translations:earnings_reason_minutes', {
+                    reason,
+                    minutes: c.waitMinutes,
+                  })
+                : reason;
+            return (
+              <DetailRow
+                key={`${c.reason}-${c.createdAt}`}
+                label={
+                  c.addedLater
+                    ? t('translations:earnings_added_later', {
+                        what: withMinutes,
+                        day: day(c.createdAt),
+                      })
+                    : withMinutes
+                }
+                value={money(c.amountCents)}
+              />
+            );
+          })}
+          <DetailRow
+            label={t('translations:earnings_total')}
+            value={money(breakdown.totalCents)}
             strong
           />
-          {/* Spec 0033, AC-5: a delivered order's wait is its own line. */}
-          {delivery.waitingPay ? (
-            <DetailRow
-              label={t('translations:earnings_waiting')}
-              value={formatCurrencyFromCents(delivery.waitingPay, currency)}
-              strong
-            />
-          ) : null}
-          {/* Spec 0035, AC-17: the return trip is its own line too. */}
-          {delivery.returnTripPay ? (
-            <DetailRow
-              label={t('translations:earnings_return_trip')}
-              value={formatCurrencyFromCents(delivery.returnTripPay, currency)}
-              strong
-            />
-          ) : null}
-          {/* Decision 24.43: each kind of pay is its own line, so the lines add up to the total. */}
-          {delivery.removalPay ? (
-            <DetailRow
-              label={t('translations:earnings_removal')}
-              value={formatCurrencyFromCents(delivery.removalPay, currency)}
-              strong
-            />
-          ) : null}
-          {/* Spec 0038 (AC-7): a review's pay correction is its own line too. */}
-          {delivery.reviewPay ? (
-            <DetailRow
-              label={t('translations:earnings_review_correction')}
-              value={formatCurrencyFromCents(delivery.reviewPay, currency)}
-              strong
-            />
-          ) : null}
         </View>
 
         <View style={styles.card}>
           <DetailRow
             label={t('translations:picked_up_from')}
-            value={delivery.pickupBusinessName}
+            value={data.pickupName}
             first
           />
-          {/* Spec 0033: a rider who left never delivered this order. */}
-          {notDelivered ? null : (
-            <DetailRow
-              label={t('translations:delivered_to')}
-              value={
-                delivery.dropoffAddress ?? t('translations:address_unknown')
-              }
-            />
-          )}
           <DetailRow
-            label={t(
-              notDelivered
-                ? 'translations:earnings_paid_on'
-                : 'translations:delivered_on',
-            )}
-            value={`${droppedOff.format(formatSpaced)}, ${droppedOff.format(
-              formatShift,
-            )}`}
+            label={t('translations:earnings_dropoff_area')}
+            value={data.dropoffArea ?? '—'}
           />
+          <DetailRow
+            label={t('translations:earnings_paid_km')}
+            value={formatKm(data.paidKm)}
+          />
+          {data.jobs.map(job => (
+            <DetailRow
+              key={job.acceptedAt}
+              label={t('translations:earnings_your_job', {
+                day: day(job.acceptedAt),
+                time: clock(job.acceptedAt),
+              })}
+              value={[
+                t('translations:earnings_minutes', { minutes: job.minutes }),
+                job.pickupWaitSeconds === null
+                  ? null
+                  : t('translations:earnings_job_wait', {
+                      minutes: waitMinutes(job.pickupWaitSeconds),
+                    }),
+                job.endLabel
+                  ? t(`translations:${END_LABEL_KEYS[job.endLabel]}`)
+                  : t('translations:earnings_end_delivered'),
+              ]
+                .filter(Boolean)
+                .join(' · ')}
+            />
+          ))}
           <View style={styles.rowSeparator} />
           <View style={styles.idRow}>
             <Text style={styles.rowLabel}>{t('translations:delivery_id')}</Text>
-            {/* selectable lets a courier copy the id when raising it with the co-op. */}
+            {/* selectable lets a rider copy the id when raising it with the co-op. */}
             <Text style={styles.idValue} selectable>
-              {delivery.deliveryId}
+              {data.deliveryId}
             </Text>
           </View>
         </View>
 
-        {/* Spec 0038 (AC-1): ask a person to look again at this delivery's offer or pay. */}
+        <View style={styles.card} testID="earnings-timeline">
+          <Text style={styles.cardTitle} accessibilityRole="header">
+            {t('translations:earnings_timeline')}
+          </Text>
+          {data.timeline.map((line, index) => (
+            <TimelineRow key={`${line.at}-${line.type}-${index}`} line={line} />
+          ))}
+        </View>
+
+        {/* Spec 0038 (AC-1), kept by spec 0042 (AC-10): ask a person to look again at this delivery. */}
         <View style={styles.card}>
           <Text style={styles.rowLabel}>
             {t('translations:review_from_delivery_hint')}
@@ -207,10 +253,10 @@ export const EarningsDelivery = ({ navigation, route }: Props) => {
               title={t('translations:review_ask')}
               onPress={() =>
                 navigation.navigate(MainScreens.RequestReview, {
-                  deliveryId: delivery.deliveryId,
-                  deliveryLabel: `${
-                    delivery.pickupBusinessName
-                  }, ${droppedOff.format(formatSpaced)}`,
+                  deliveryId: data.deliveryId,
+                  deliveryLabel: firstJob
+                    ? `${data.pickupName}, ${day(firstJob.acceptedAt)}`
+                    : data.pickupName,
                 })
               }
             />

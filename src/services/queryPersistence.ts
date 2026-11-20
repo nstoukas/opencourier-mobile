@@ -14,8 +14,8 @@ export const QUERY_CACHE_MAX_AGE_MS = 24 * 60 * 60 * 1000;
 const KEPT_QUERIES = new Set<string>([
   QueryKeys.user,
   QueryKeys.inProgressOrders,
-  QueryKeys.earningsSummary,
-  QueryKeys.earningsDay,
+  // Spec 0042 (AC-13): the Earnings months and delivery details the rider opened.
+  QueryKeys.earningsMonth,
   QueryKeys.earningsDelivery,
   QueryKeys.jobContact,
   // A cancelled job's card must survive a restart with no signal (spec 0015, AC-12).

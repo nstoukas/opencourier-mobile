@@ -1,58 +1,31 @@
-import {
-  EarningsDay,
-  EarningsDeliveryDetail,
-  EarningsSummary,
-} from '@app/types/types';
+import { EarningsDeliveryDetail, EarningsMonth } from '@app/types/earnings';
 import { UClient } from './Client';
-import { EarningsDayParams, EarningsSummaryParams } from './types';
 
+// Spec 0042: the Earnings screen's two reads. No call takes a rider id: the server reads the rider from
+// the session, so asking for a delivery this rider never held answers 404.
 export interface EarningsService {
-  getEarningsSummary: (
-    params: EarningsSummaryParams,
-  ) => Promise<EarningsSummary>;
-  getEarningsDay: (params: EarningsDayParams) => Promise<EarningsDay>;
-  getEarningsDeliveryDetail: (
-    deliveryId: string,
-  ) => Promise<EarningsDeliveryDetail>;
+  // `month` is YYYY-MM; the server clamps it to the rider's 2 month reach and to today.
+  getMonth: (month: string) => Promise<EarningsMonth>;
+  getDelivery: (deliveryId: string) => Promise<EarningsDeliveryDetail>;
 }
 
 const earningsService = (client: UClient): EarningsService => {
-  /**
-   * The one authoritative source for what a courier was paid. The backend derives it
-   * from the DeliveryEvent ledger, so what shows here is what an auditor would find.
-   */
-  const getEarningsSummary = async (
-    params: EarningsSummaryParams,
-  ): Promise<EarningsSummary> => {
-    // axios omits params whose value is undefined, so the backend applies its own
-    // defaults for anything we leave out.
-    const { data } = await client.get('courier/earnings-summary', { params });
-    // Every response is wrapped by the backend as { error, result }.
+  // Every response is wrapped by the backend as { error, result }.
+  const getMonth = async (month: string): Promise<EarningsMonth> => {
+    const { data } = await client.get('earnings', { params: { month } });
     return data.result;
   };
 
-  /** The individual deliveries behind one day of the summary. */
-  const getEarningsDay = async (
-    params: EarningsDayParams,
-  ): Promise<EarningsDay> => {
-    const { data } = await client.get('courier/earnings/day', { params });
-    return data.result;
-  };
-
-  /**
-   * One delivery's full breakdown. The courier id comes from the auth token, so asking
-   * for someone else's delivery id returns 404 rather than another courier's earnings.
-   */
-  const getEarningsDeliveryDetail = async (
+  const getDelivery = async (
     deliveryId: string,
   ): Promise<EarningsDeliveryDetail> => {
     const { data } = await client.get(
-      `courier/earnings/delivery/${deliveryId}`,
+      `earnings/deliveries/${encodeURIComponent(deliveryId)}`,
     );
     return data.result;
   };
 
-  return { getEarningsSummary, getEarningsDay, getEarningsDeliveryDetail };
+  return { getMonth, getDelivery };
 };
 
 export default earningsService;

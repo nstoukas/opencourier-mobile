@@ -1,10 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { AppState } from 'react-native';
-import {
-  useInfiniteQuery,
-  useQuery,
-  useQueryClient,
-} from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { services } from '@app/services/service';
 import { QueryKeys } from '@app/utilities/queryKeys';
 import {
@@ -12,8 +8,6 @@ import {
   CURRENT_REFETCH_MS,
   CounterView,
   counterView,
-  coopDate,
-  pageRange,
 } from '@app/utilities/timeWorked';
 
 // Spec 0040: the rider's time worked. None of these queries is saved to disk: `queryPersistence.ts`
@@ -99,30 +93,6 @@ export const useCurrentTimeWorked = (inFront: boolean = true) => {
   }, [counting, dataUpdatedAt]);
 
   return { view, query };
-};
-
-// The Earnings section's days and shifts (AC-11): the last 7 days first, "Earlier" loads the 7 before,
-// until the page would end before recording began.
-export const useTimeWorkedPages = () => {
-  const today = coopDate(Date.now());
-  return useInfiniteQuery({
-    queryKey: [QueryKeys.timeWorked, today],
-    queryFn: ({ pageParam }) => {
-      const { from, to } = pageRange(today, pageParam);
-      return services.timeWorkedService.getRange(from, to);
-    },
-    initialPageParam: 0,
-    getNextPageParam: (last, pages) => {
-      if (!last.recordedFrom) {
-        return undefined;
-      }
-      const { from } = pageRange(today, pages.length - 1);
-      return coopDate(Date.parse(last.recordedFrom)) < from
-        ? pages.length
-        : undefined;
-    },
-    staleTime: 0,
-  });
 };
 
 // The Co-op this week card (AC-12).

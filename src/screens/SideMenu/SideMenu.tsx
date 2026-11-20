@@ -44,7 +44,6 @@ const section1 = [SideMenuItem.Location, SideMenuItem.AutoOrders];
 const section2 = [
   SideMenuItem.Orders,
   SideMenuItem.Chat,
-  SideMenuItem.History,
   SideMenuItem.Earnings,
   SideMenuItem.Payout,
   SideMenuItem.Support,
@@ -52,11 +51,11 @@ const section2 = [
   SideMenuItem.Logout,
 ];
 
-// Spec 0027: Shifts sits after History, only while the co-op runs shifts.
+// Spec 0027: Shifts sits before Earnings, only while the co-op runs shifts. Spec 0042 took History out:
+// the Earnings screen lists every job.
 const section2WithShifts = [
   SideMenuItem.Orders,
   SideMenuItem.Chat,
-  SideMenuItem.History,
   SideMenuItem.Shifts,
   SideMenuItem.Earnings,
   SideMenuItem.Payout,
@@ -219,9 +218,6 @@ export const SideMenu = ({ navigation }: Props) => {
       case SideMenuItem.Chat:
         // A screen of the main stack, which holds the drawer: no delivery tag (AC-12).
         navigation.navigate(MainScreens.Chat);
-        break;
-      case SideMenuItem.History:
-        navigation.navigate(DrawerScreens.History);
         break;
       case SideMenuItem.Shifts:
         navigation.navigate(DrawerScreens.Shifts);

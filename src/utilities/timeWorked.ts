@@ -3,8 +3,6 @@ import { CurrentTimeWorked } from '@app/types/timeWorked';
 
 // Spec 0040: the co-op's days run midnight to midnight in this timezone, as the server counts them.
 export const COOP_TIMEZONE = 'Europe/Athens';
-// The Earnings section shows 7 days at a time; "Earlier" loads the 7 before (AC-11).
-export const TIME_WORKED_PAGE_DAYS = 7;
 // While a shift is open the counter asks the server again this often (AC-10): an admin's change or a
 // cut off sends no socket message.
 export const CURRENT_REFETCH_MS = 5 * 60 * 1000;
@@ -119,15 +117,6 @@ export const coopClock = (ms: number): string => {
 // A YYYY-MM-DD day moved by whole days, with no timezone involved.
 export const addDays = (date: string, days: number): string =>
   moment.utc(date, 'YYYY-MM-DD').add(days, 'day').format('YYYY-MM-DD');
-
-// The page of days for "Earlier" number `page` (0 = the last 7 days, ending today).
-export const pageRange = (
-  today: string,
-  page: number,
-): { from: string; to: string } => {
-  const to = addDays(today, -page * TIME_WORKED_PAGE_DAYS);
-  return { from: addDays(to, -(TIME_WORKED_PAGE_DAYS - 1)), to };
-};
 
 // "38%" for a share between 0 and 1.
 export const formatShare = (share: number | null): string =>

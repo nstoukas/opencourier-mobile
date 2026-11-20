@@ -2,17 +2,6 @@ import { StyleSheet } from 'react-native';
 import { color, radius, typeScale } from '@app/styles/theme';
 
 export const styles = StyleSheet.create({
-  section: {
-    paddingHorizontal: 16,
-    paddingTop: 24,
-    paddingBottom: 32,
-  },
-  title: {
-    fontSize: typeScale.h3.fontSize,
-    fontWeight: '700',
-    color: color.foreground,
-    marginBottom: 12,
-  },
   card: {
     borderRadius: radius['2xl'],
     backgroundColor: color.card,
@@ -43,17 +32,6 @@ export const styles = StyleSheet.create({
     color: color['muted-foreground'],
     marginTop: 2,
   },
-  day: {
-    paddingVertical: 12,
-    borderTopWidth: 1,
-    borderTopColor: color.border,
-  },
-  dayTitle: {
-    fontSize: typeScale.body.fontSize,
-    fontWeight: '700',
-    color: color.foreground,
-    marginBottom: 4,
-  },
   shift: {
     marginTop: 10,
     borderRadius: radius.md,
@@ -82,17 +60,5 @@ export const styles = StyleSheet.create({
     fontWeight: '700',
     color: color.foreground,
     marginTop: 8,
-  },
-  job: {
-    marginTop: 4,
-  },
-  earlier: {
-    alignSelf: 'flex-start',
-    paddingVertical: 12,
-  },
-  earlierText: {
-    fontSize: typeScale['body-sm'].fontSize,
-    fontWeight: '700',
-    color: color.primary,
   },
 });

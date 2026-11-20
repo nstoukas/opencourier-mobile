@@ -1,6 +1,6 @@
 import { Colors } from '@app/styles/colors';
 import { StyleSheet } from 'react-native';
-import { radius, typeScale } from '@app/styles/theme';
+import { color, radius, typeScale } from '@app/styles/theme';
 
 export const styles = StyleSheet.create({
   container: {
@@ -95,5 +95,31 @@ export const styles = StyleSheet.create({
     color: Colors.black1,
     marginTop: 10,
     textAlign: 'center',
+  },
+  // Spec 0042: the card titles and the timeline lines.
+  cardTitle: {
+    fontSize: typeScale.body.fontSize,
+    fontWeight: '700',
+    color: color.foreground,
+    marginBottom: 6,
+  },
+  note: {
+    fontSize: typeScale.caption.fontSize,
+    color: color['muted-foreground'],
+  },
+  timelineLine: {
+    flexDirection: 'row',
+    paddingVertical: 6,
+  },
+  timelineTime: {
+    width: 52,
+    fontSize: typeScale['body-sm'].fontSize,
+    fontWeight: '600',
+    color: color.foreground,
+  },
+  timelineText: {
+    flex: 1,
+    fontSize: typeScale['body-sm'].fontSize,
+    color: color.foreground,
   },
 });

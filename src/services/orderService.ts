@@ -73,7 +73,6 @@ export interface OrderService {
   // its end moved onto the phone's clock (`handBackUntilOnPhone`, spec 0020).
   getInProgressOrders: () => Promise<Order[]>;
   // Returns `data.result.data`, the same orders array as getNewOrders.
-  getOrdersHistory: () => Promise<Order[]>;
   // Accepts, then marks as dispatched. A 409 CANT_UPDATE_DELIVERY_STATUS on
   // the second call counts as done (spec 0020, AC-10).
   acceptOrder: (params: AcceptOrderParams) => Promise<OrderServiceReponse>;
@@ -199,11 +198,6 @@ const orderService = (client: UClient): OrderService => {
       }
       return shown;
     });
-  };
-
-  const getOrdersHistory = async (): Promise<Order[]> => {
-    const { data } = await client.get('deliveries/done?page=0&perPage=50');
-    return data.result.data;
   };
 
   const acceptOrder = async ({
@@ -351,7 +345,6 @@ const orderService = (client: UClient): OrderService => {
   return {
     reportProduct,
     getNewOrders,
-    getOrdersHistory,
     getInProgressOrders,
     acceptOrder,
     handBack,

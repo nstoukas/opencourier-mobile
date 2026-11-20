@@ -132,8 +132,7 @@ export const receiveRemovalDecision = async (
     QueryKeys.inProgressOrders,
     QueryKeys.newOrders,
     QueryKeys.cancelledJobs,
-    QueryKeys.earningsSummary,
-    QueryKeys.earningsDay,
+    QueryKeys.earningsMonth,
     QueryKeys.earningsDelivery,
   ].forEach(key => queryClient.invalidateQueries({ queryKey: [key] }));
   await showRemovalDecision(decision);

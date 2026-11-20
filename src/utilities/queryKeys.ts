@@ -3,11 +3,11 @@ export const QueryKeys = {
   userSettings: 'userSettings',
   newOrders: 'newOrders',
   inProgressOrders: 'inProgressOrders',
-  orderHistory: 'orderHistory',
-  earningsSummary: 'earningsSummary',
   // Whether dispatch is stopped for heat or a storm (spec 0014); never saved to disk.
   dispatchState: 'dispatchState',
-  earningsDay: 'earningsDay',
+  // Spec 0042: one month of the Earnings screen, and one delivery's breakdown and timeline. Both saved
+  // to disk, so what the rider opened stays readable with no signal (AC-13).
+  earningsMonth: 'earningsMonth',
   earningsDelivery: 'earningsDelivery',
   // The co-op's dispatch number for the job screen (row 72); saved to disk with the deliveries.
   jobContact: 'jobContact',
@@ -31,9 +31,8 @@ export const QueryKeys = {
   howItWorks: 'howItWorks',
   reviewRequests: 'reviewRequests',
   settingChanges: 'settingChanges',
-  // Spec 0040: the home counter's snapshot, the rider's time worked and the co-op totals. Never saved to
-  // disk (AC-10): a snapshot from yesterday would show a shift that has ended.
+  // Spec 0040: the home counter's snapshot and the co-op totals. Never saved to disk (AC-10): a snapshot
+  // from yesterday would show a shift that has ended.
   timeWorkedCurrent: 'timeWorkedCurrent',
-  timeWorked: 'timeWorked',
   coopTotals: 'coopTotals',
 };
