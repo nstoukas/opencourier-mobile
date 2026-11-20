@@ -1,13 +1,27 @@
 import React from 'react';
 import { renderHook, waitFor } from '@testing-library/react-native';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { AxiosError } from 'axios';
 import { services } from '@app/services/service';
 import {
+  detailFailureOf,
   useEarningsDelivery,
   useEarningsMonth,
   useEarningsMonths,
 } from './useEarnings';
 import { EarningsDeliveryDetail, EarningsMonth } from '@app/types/earnings';
+
+let capturedQueryOptions: any = null;
+jest.mock('@tanstack/react-query', () => {
+  const actual = jest.requireActual('@tanstack/react-query');
+  return {
+    ...actual,
+    useQuery: jest.fn((options: any) => {
+      capturedQueryOptions = options;
+      return actual.useQuery(options);
+    }),
+  };
+});
 
 jest.mock('@app/services/service', () => ({
   services: {
@@ -105,6 +119,82 @@ describe('useEarnings hooks (spec 0042, AC-6, AC-7, AC-10, AC-13)', () => {
         'del-42',
       );
       expect(result.current.data).toEqual(mockDelivery);
+    });
+  });
+
+  describe('detailFailureOf (AC-13)', () => {
+    it('returns "noConnection" for axios error with no response', () => {
+      const error = new AxiosError('Network Error', 'ERR_NETWORK');
+      expect(detailFailureOf(error)).toBe('noConnection');
+    });
+
+    it('returns "notFound" for axios error with status 404', () => {
+      const error = new AxiosError(
+        'Not Found',
+        'ERR_BAD_REQUEST',
+        undefined,
+        undefined,
+        { status: 404 } as any,
+      );
+      expect(detailFailureOf(error)).toBe('notFound');
+    });
+
+    it('returns "other" for axios error with status 500', () => {
+      const error = new AxiosError(
+        'Server Error',
+        'ERR_BAD_RESPONSE',
+        undefined,
+        undefined,
+        { status: 500 } as any,
+      );
+      expect(detailFailureOf(error)).toBe('other');
+    });
+
+    it('returns "other" for plain Error', () => {
+      expect(detailFailureOf(new Error('Boom'))).toBe('other');
+    });
+  });
+
+  describe('useEarningsDelivery retry rule (AC-13)', () => {
+    it('never retries a 404 and retries other failures up to 3 times', () => {
+      capturedQueryOptions = null;
+      renderHook(() => useEarningsDelivery('del-test'), { wrapper });
+
+      expect(capturedQueryOptions).toBeTruthy();
+      expect(typeof capturedQueryOptions.retry).toBe('function');
+      const retry = capturedQueryOptions.retry as (
+        failureCount: number,
+        error: unknown,
+      ) => boolean;
+
+      const error404 = new AxiosError(
+        'Not Found',
+        'ERR_BAD_REQUEST',
+        undefined,
+        undefined,
+        { status: 404 } as any,
+      );
+      const networkError = new AxiosError('Network Error', 'ERR_NETWORK');
+      const error500 = new AxiosError(
+        'Server Error',
+        'ERR_BAD_RESPONSE',
+        undefined,
+        undefined,
+        { status: 500 } as any,
+      );
+
+      // Never retries a 404
+      expect(retry(0, error404)).toBe(false);
+
+      // Retries other failures up to 3 times (failureCount 0, 1, 2 => true; 3 => false)
+      expect(retry(0, networkError)).toBe(true);
+      expect(retry(1, networkError)).toBe(true);
+      expect(retry(2, networkError)).toBe(true);
+      expect(retry(3, networkError)).toBe(false);
+
+      expect(retry(0, error500)).toBe(true);
+      expect(retry(2, error500)).toBe(true);
+      expect(retry(3, error500)).toBe(false);
     });
   });
 });

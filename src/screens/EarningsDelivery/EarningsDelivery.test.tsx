@@ -1,5 +1,6 @@
 import React from 'react';
 import { render, screen, fireEvent } from '@testing-library/react-native';
+import { AxiosError } from 'axios';
 import '@app/localization/i18n';
 import i18n from '@app/localization/i18n';
 import { EarningsDelivery } from './EarningsDelivery';
@@ -7,7 +8,13 @@ import { useEarningsDelivery } from '@app/hooks/useEarnings';
 import { MainScreens } from '@app/navigation/main/types';
 import { EarningsDeliveryDetail } from '@app/types/earnings';
 
-jest.mock('@app/hooks/useEarnings');
+jest.mock('@app/hooks/useEarnings', () => {
+  const actual = jest.requireActual('@app/hooks/useEarnings');
+  return {
+    ...actual,
+    useEarningsDelivery: jest.fn(),
+  };
+});
 
 describe('EarningsDelivery (spec 0042, AC-10, AC-11, AC-13)', () => {
   const mockNavigation: any = {
@@ -362,9 +369,43 @@ describe('EarningsDelivery (spec 0042, AC-10, AC-11, AC-13)', () => {
   });
 
   describe('Offline and error states (AC-10, AC-13)', () => {
-    it('shows delivery_not_found and earnings_detail_unavailable when data is missing / 404', () => {
+    it('shows "No connection" and needs connection text (not "Delivery not found") when network error with no response', () => {
+      const networkError = new AxiosError('Network Error', 'ERR_NETWORK');
       (useEarningsDelivery as jest.Mock).mockReturnValue({
         data: null,
+        error: networkError,
+        isLoading: false,
+        isError: true,
+        isRefetching: false,
+        refetch: jest.fn(),
+      });
+
+      render(<EarningsDelivery {...defaultProps} />);
+
+      expect(
+        screen.getByText(i18n.t('translations:earnings_no_connection')),
+      ).toBeTruthy();
+      expect(
+        screen.getByText(
+          i18n.t('translations:earnings_detail_needs_connection'),
+        ),
+      ).toBeTruthy();
+      expect(
+        screen.queryByText(i18n.t('translations:delivery_not_found')),
+      ).toBeNull();
+    });
+
+    it('shows "Delivery not found" and 2 months sentence when server answers 404', () => {
+      const notFoundError = new AxiosError(
+        'Not Found',
+        'ERR_BAD_REQUEST',
+        undefined,
+        undefined,
+        { status: 404 } as any,
+      );
+      (useEarningsDelivery as jest.Mock).mockReturnValue({
+        data: null,
+        error: notFoundError,
         isLoading: false,
         isError: true,
         isRefetching: false,
@@ -377,7 +418,34 @@ describe('EarningsDelivery (spec 0042, AC-10, AC-11, AC-13)', () => {
         screen.getByText(i18n.t('translations:delivery_not_found')),
       ).toBeTruthy();
       expect(
-        screen.getByText(i18n.t('translations:earnings_detail_unavailable')),
+        screen.getByText(i18n.t('translations:earnings_detail_not_found')),
+      ).toBeTruthy();
+    });
+
+    it('shows "Could not load this job" and pull down to retry when server answers 500', () => {
+      const serverError = new AxiosError(
+        'Internal Server Error',
+        'ERR_BAD_RESPONSE',
+        undefined,
+        undefined,
+        { status: 500 } as any,
+      );
+      (useEarningsDelivery as jest.Mock).mockReturnValue({
+        data: null,
+        error: serverError,
+        isLoading: false,
+        isError: true,
+        isRefetching: false,
+        refetch: jest.fn(),
+      });
+
+      render(<EarningsDelivery {...defaultProps} />);
+
+      expect(
+        screen.getByText(i18n.t('translations:earnings_detail_could_not_load')),
+      ).toBeTruthy();
+      expect(
+        screen.getByText(i18n.t('translations:earnings_pull_to_retry')),
       ).toBeTruthy();
     });
 

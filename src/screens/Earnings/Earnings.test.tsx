@@ -1,4 +1,5 @@
 import React from 'react';
+import { RefreshControl } from 'react-native';
 import { render, screen, fireEvent, act } from '@testing-library/react-native';
 import '@app/localization/i18n';
 import i18n from '@app/localization/i18n';
@@ -163,6 +164,7 @@ describe('Earnings screen (spec 0042 AC-1, AC-2, AC-6, AC-8, AC-9, AC-13)', () =
 
   beforeEach(() => {
     jest.clearAllMocks();
+    queryClient.clear();
     focusCallback = undefined;
 
     (useEarningsMonths as jest.Mock).mockReturnValue([
@@ -707,6 +709,171 @@ describe('Earnings screen (spec 0042 AC-1, AC-2, AC-6, AC-8, AC-9, AC-13)', () =
       expect(invalidateSpy).toHaveBeenCalledWith({
         queryKey: [QueryKeys.reviewRequests],
       });
+    });
+  });
+
+  describe('Screen logic: month requests (AC-5, AC-9, AC-13, Review Major 2)', () => {
+    beforeEach(() => {
+      jest.useFakeTimers();
+    });
+
+    afterEach(() => {
+      jest.useRealTimers();
+      queryClient.clear();
+    });
+
+    it('Day view on today asks only this month', () => {
+      // Fix clock to 2026-11-20 in Athens (14:00 Athens is 12:00 UTC)
+      jest.setSystemTime(new Date('2026-11-20T12:00:00.000Z'));
+
+      render(<Earnings {...defaultProps} />);
+
+      expect(useEarningsMonths).toHaveBeenCalledWith(['2026-11']);
+    });
+
+    it('Week view on a week crossing into next month asks only this month, never next month', () => {
+      // Pick a "today" near month's end: 2026-11-30 is Monday (Athens 12:00 is 10:00 UTC)
+      // The week runs Monday 2026-11-30 to Sunday 2026-12-06.
+      // Next month (2026-12) has not started yet, so it is filtered out.
+      jest.setSystemTime(new Date('2026-11-30T10:00:00.000Z'));
+
+      render(<Earnings {...defaultProps} />);
+
+      // Switch to Week mode
+      fireEvent.press(screen.getByTestId('earnings-mode-week'));
+
+      expect(useEarningsMonths).toHaveBeenLastCalledWith(['2026-11']);
+    });
+
+    it('Week view on a week crossing a month end inside the reach asks both months', () => {
+      // Fix today to 2026-12-03 (inside December).
+      // The week holding 2026-12-03 runs Monday 2026-11-30 to Sunday 2026-12-06.
+      // Both 2026-11 and 2026-12 are <= monthOf(today) ('2026-12') and >= reachFrom ('2026-09-20').
+      jest.setSystemTime(new Date('2026-12-03T10:00:00.000Z'));
+
+      render(<Earnings {...defaultProps} />);
+
+      // Switch to Week mode
+      fireEvent.press(screen.getByTestId('earnings-mode-week'));
+
+      expect(useEarningsMonths).toHaveBeenLastCalledWith([
+        '2026-11',
+        '2026-12',
+      ]);
+    });
+
+    it('a week crossing back past the reach month never asks the month wholly before reachFrom', () => {
+      // Fix today to 2026-10-02 (Friday, October 2).
+      // Week holding 2026-10-02 runs Monday 2026-09-28 to Sunday 2026-10-04.
+      // Cache a month in QueryClient with reachFrom on the first days of October (2026-10-03).
+      jest.setSystemTime(new Date('2026-10-02T10:00:00.000Z'));
+
+      queryClient.setQueryData([QueryKeys.earningsMonth, '2026-10'], {
+        ...sampleMonthData,
+        month: '2026-10',
+        reachFrom: '2026-10-03',
+      });
+
+      render(<Earnings {...defaultProps} />);
+
+      // Switch to Week mode
+      fireEvent.press(screen.getByTestId('earnings-mode-week'));
+
+      // 2026-09 is wholly before reachFrom's month (2026-10), so it is not asked
+      expect(useEarningsMonths).toHaveBeenLastCalledWith(['2026-10']);
+    });
+  });
+
+  describe('Screen logic: calendar pick (AC-7, Review Major 2)', () => {
+    beforeEach(() => {
+      jest.useFakeTimers();
+      jest.setSystemTime(new Date('2026-11-20T12:00:00.000Z'));
+    });
+
+    afterEach(() => {
+      jest.useRealTimers();
+      queryClient.clear();
+    });
+
+    it('in Day mode, picking a day shows that day in the period label and closes the calendar', () => {
+      render(<Earnings {...defaultProps} />);
+
+      // Initially today: "Today, Fri 20 Nov"
+      expect(screen.getByText('Today, Fri 20 Nov')).toBeTruthy();
+      expect(screen.queryByTestId('earnings-calendar')).toBeNull();
+
+      // Open calendar by tapping the period
+      fireEvent.press(screen.getByTestId('earnings-period'));
+      expect(screen.getByTestId('earnings-calendar')).toBeTruthy();
+
+      // Pick Wednesday 2026-11-18
+      fireEvent.press(screen.getByTestId('calendar-day-2026-11-18'));
+
+      // The period label shows that day (Wed 18 Nov) and not today
+      expect(screen.getByText('Wed 18 Nov')).toBeTruthy();
+      expect(screen.queryByText(/Today/i)).toBeNull();
+
+      // The calendar is closed
+      expect(screen.queryByTestId('earnings-calendar')).toBeNull();
+    });
+
+    it('in Week mode, picking a day shows the Monday to Sunday week holding it and closes the calendar', () => {
+      render(<Earnings {...defaultProps} />);
+
+      // Switch to Week mode
+      fireEvent.press(screen.getByTestId('earnings-mode-week'));
+
+      // Open calendar
+      fireEvent.press(screen.getByTestId('earnings-period'));
+      expect(screen.getByTestId('earnings-calendar')).toBeTruthy();
+
+      // Pick day 2026-11-10 (Tuesday, falling in week Mon 9 Nov - Sun 15 Nov)
+      fireEvent.press(screen.getByTestId('calendar-day-2026-11-10'));
+
+      // Period label shows the Monday to Sunday week: "9 Nov to 15 Nov"
+      expect(screen.getByText('9 Nov to 15 Nov')).toBeTruthy();
+
+      // The calendar is closed
+      expect(screen.queryByTestId('earnings-calendar')).toBeNull();
+    });
+  });
+
+  describe('Screen logic: pull to refresh (AC-13, Review Major 2)', () => {
+    it('firing onRefresh on ScrollView RefreshControl calls refetch on each month query and on the co-op card query', () => {
+      const mockRefetchMonth1 = jest.fn();
+      const mockRefetchMonth2 = jest.fn();
+
+      (useEarningsMonths as jest.Mock).mockReturnValue([
+        {
+          data: sampleMonthData,
+          isLoading: false,
+          isError: false,
+          isRefetching: false,
+          refetch: mockRefetchMonth1,
+          dataUpdatedAt: Date.now(),
+        },
+        {
+          data: { ...sampleMonthData, month: '2026-10' },
+          isLoading: false,
+          isError: false,
+          isRefetching: false,
+          refetch: mockRefetchMonth2,
+          dataUpdatedAt: Date.now(),
+        },
+      ]);
+
+      render(<Earnings {...defaultProps} />);
+
+      const refreshControl = screen.UNSAFE_getByType(RefreshControl);
+      expect(refreshControl).toBeTruthy();
+
+      act(() => {
+        refreshControl.props.onRefresh();
+      });
+
+      expect(mockRefetchMonth1).toHaveBeenCalledTimes(1);
+      expect(mockRefetchMonth2).toHaveBeenCalledTimes(1);
+      expect(mockCoopRefetch).toHaveBeenCalledTimes(1);
     });
   });
 });
