@@ -15,7 +15,7 @@ import { BackNavButton } from '@app/components/BackNavButton/BackNavButton';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Colors } from '@app/styles/colors';
 import { useTranslation } from 'react-i18next';
-import { useEarningsDelivery } from '@app/hooks/useEarnings';
+import { detailFailureOf, useEarningsDelivery } from '@app/hooks/useEarnings';
 import { formatCurrencyFromCents } from '@app/utilities/currency';
 import { Button, ButtonType } from '@app/components/Button/Button';
 import { REASON_KEYS } from '@app/components/TimeWorkedSection/TimeWorkedSection';
@@ -85,8 +85,15 @@ export const EarningsDelivery = ({ navigation, route }: Props) => {
   const { t } = useTranslation();
   const { top } = useSafeAreaInsets();
   const { deliveryId } = route.params;
-  const { data, isLoading, isError, isRefetching, refetch, dataUpdatedAt } =
-    useEarningsDelivery(deliveryId);
+  const {
+    data,
+    error,
+    isLoading,
+    isError,
+    isRefetching,
+    refetch,
+    dataUpdatedAt,
+  } = useEarningsDelivery(deliveryId);
 
   const body = () => {
     if (isLoading) {
@@ -94,15 +101,21 @@ export const EarningsDelivery = ({ navigation, route }: Props) => {
     }
 
     // A failed refetch over data already loaded keeps showing it, with how old it is (AC-13). With no
-    // data: never opened with signal, or not this rider's (the server answers both with a plain 404).
+    // data, say why: no signal and never opened on this phone, not this rider's job (a 404), or any
+    // other answer from the server.
     if (!data) {
+      const failure = detailFailureOf(error);
+      const [title, subtitle] =
+        failure === 'noConnection'
+          ? ['earnings_no_connection', 'earnings_detail_needs_connection']
+          : failure === 'notFound'
+          ? ['delivery_not_found', 'earnings_detail_not_found']
+          : ['earnings_detail_could_not_load', 'earnings_pull_to_retry'];
       return (
         <View style={styles.empty}>
-          <Text style={styles.emptyTitle}>
-            {t('translations:delivery_not_found')}
-          </Text>
+          <Text style={styles.emptyTitle}>{t(`translations:${title}`)}</Text>
           <Text style={styles.emptySubtitle}>
-            {t('translations:earnings_detail_unavailable')}
+            {t(`translations:${subtitle}`)}
           </Text>
         </View>
       );

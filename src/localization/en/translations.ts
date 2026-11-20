@@ -869,8 +869,13 @@ export default {
   earnings_end_ended: 'Ended',
   earnings_end_in_progress: 'In progress',
   earnings_end_delivered: 'Delivered',
-  earnings_detail_unavailable:
-    'It is not one of your jobs from the last 2 months, or it has not been opened on this phone and there is no connection.',
+  earnings_detail_not_found:
+    'It is not one of your jobs from the last 2 months.',
+  earnings_no_connection: 'No connection',
+  earnings_detail_needs_connection:
+    'This job has not been opened on this phone yet. It needs a connection to load. Pull down to try again.',
+  earnings_detail_could_not_load: 'Could not load this job',
+  earnings_pull_to_retry: 'Pull down to try again.',
   earnings_base_fee: 'Base fee',
   earnings_distance_fee: 'Distance fee',
   earnings_delivery_pay: 'Delivery pay',
