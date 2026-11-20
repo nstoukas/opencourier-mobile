@@ -265,6 +265,23 @@ describe('TimeWorkedSection exports (spec 0040 AC-11, AC-12, spec 0042 AC-6)', (
         expect(screen.queryByText(/under a minute/)).toBeNull();
       });
 
+      // Edge: a break of 59 seconds inside the same clock minute reads as under a minute.
+      it('renders a break of 59 seconds inside the same clock minute as under a minute', () => {
+        const shift59sBreak: WorkedShift = {
+          ...sampleShift,
+          breaks: [
+            {
+              startedAt: '2026-11-20T11:35:00.000Z',
+              endedAt: '2026-11-20T11:35:59.000Z', // 59s
+            },
+          ],
+        };
+        render(<ShiftRow shift={shift59sBreak} />);
+
+        expect(screen.getByText('Break at 13:35, under a minute')).toBeTruthy();
+        expect(screen.queryByText('Break 13:35 to 13:35')).toBeNull();
+      });
+
       // Edge: a short break that crosses a minute boundary (01:35:50 to 01:36:10) still reads as under a minute.
       it('renders a short break that crosses a minute boundary as under a minute', () => {
         const shiftCrossingMinute: WorkedShift = {
