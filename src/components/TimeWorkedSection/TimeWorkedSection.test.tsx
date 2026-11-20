@@ -186,6 +186,139 @@ describe('TimeWorkedSection exports (spec 0040 AC-11, AC-12, spec 0042 AC-6)', (
       fireEvent.press(screen.getByTestId('time-worked-shift'));
       expect(screen.queryByTestId('time-worked-shift-details')).toBeNull();
     });
+
+    describe('Break wording under a minute (row 120, decision 75.43)', () => {
+      // Clause 1: A break under a minute (endedAt minus startedAt below 60 seconds) reads
+      // "Break at HH:MM, under a minute", with HH:MM the break's start in the co-op's clock
+      // (Europe/Athens), and it is still shown (never dropped).
+      it('renders a break under a minute as "Break at HH:MM, under a minute" and never drops it (clause 1)', () => {
+        const shiftWithShortBreak: WorkedShift = {
+          ...sampleShift,
+          breaks: [
+            {
+              startedAt: '2026-11-20T11:35:10.000Z',
+              endedAt: '2026-11-20T11:35:40.000Z', // 30s
+            },
+          ],
+        };
+        render(<ShiftRow shift={shiftWithShortBreak} />);
+
+        // Europe/Athens is UTC+2 in November, so 11:35 UTC -> 13:35
+        expect(screen.getByText('Break at 13:35, under a minute')).toBeTruthy();
+        // Ensure it is not formatted with the UTC hour when run under other zones
+        expect(screen.queryByText('Break at 11:35, under a minute')).toBeNull();
+      });
+
+      // Clause 2: Longer breaks (60 seconds or more) read as before: "Break HH:MM to HH:MM".
+      it('renders longer breaks (60 seconds or more) as "Break HH:MM to HH:MM" (clause 2)', () => {
+        const shiftWithLongBreak: WorkedShift = {
+          ...sampleShift,
+          breaks: [
+            {
+              startedAt: '2026-11-20T11:00:00.000Z',
+              endedAt: '2026-11-20T11:15:00.000Z', // 15 min
+            },
+          ],
+        };
+        render(<ShiftRow shift={shiftWithLongBreak} />);
+
+        expect(screen.getByText('Break 13:00 to 13:15')).toBeTruthy();
+        expect(screen.queryByText(/under a minute/)).toBeNull();
+      });
+
+      // Clause 3: A test fails if the same minute wording ("Break 01:35 to 01:35") comes back for a short break.
+      it('fails if the same minute wording ("Break HH:MM to HH:MM") comes back for a short break (clause 3)', () => {
+        const shiftWithShortBreak: WorkedShift = {
+          ...sampleShift,
+          breaks: [
+            {
+              startedAt: '2026-11-20T11:35:10.000Z',
+              endedAt: '2026-11-20T11:35:40.000Z', // 30s
+            },
+          ],
+        };
+        render(<ShiftRow shift={shiftWithShortBreak} />);
+
+        // The old wording "Break 13:35 to 13:35" must not appear
+        expect(screen.queryByText('Break 13:35 to 13:35')).toBeNull();
+        expect(
+          screen.queryByText(/Break \d{2}:\d{2} to \d{2}:\d{2}/),
+        ).toBeNull();
+        expect(screen.getByText('Break at 13:35, under a minute')).toBeTruthy();
+      });
+
+      // Edge: exactly 60 seconds counts as a normal break.
+      it('treats a break of exactly 60 seconds as a normal break, not under a minute', () => {
+        const shiftWith60sBreak: WorkedShift = {
+          ...sampleShift,
+          breaks: [
+            {
+              startedAt: '2026-11-20T11:00:00.000Z',
+              endedAt: '2026-11-20T11:01:00.000Z', // exactly 60_000 ms
+            },
+          ],
+        };
+        render(<ShiftRow shift={shiftWith60sBreak} />);
+
+        expect(screen.getByText('Break 13:00 to 13:01')).toBeTruthy();
+        expect(screen.queryByText('Break at 13:00, under a minute')).toBeNull();
+        expect(screen.queryByText(/under a minute/)).toBeNull();
+      });
+
+      // Edge: a short break that crosses a minute boundary (01:35:50 to 01:36:10) still reads as under a minute.
+      it('renders a short break that crosses a minute boundary as under a minute', () => {
+        const shiftCrossingMinute: WorkedShift = {
+          ...sampleShift,
+          breaks: [
+            {
+              startedAt: '2026-11-20T11:35:50.000Z',
+              endedAt: '2026-11-20T11:36:10.000Z', // 20s
+            },
+          ],
+        };
+        render(<ShiftRow shift={shiftCrossingMinute} />);
+
+        expect(screen.getByText('Break at 13:35, under a minute')).toBeTruthy();
+        expect(screen.queryByText('Break 13:35 to 13:36')).toBeNull();
+      });
+
+      // Edge: a zero length break (start equals end) reads as under a minute.
+      it('renders a zero length break (start equals end) as under a minute', () => {
+        const shiftZeroLength: WorkedShift = {
+          ...sampleShift,
+          breaks: [
+            {
+              startedAt: '2026-11-20T11:35:00.000Z',
+              endedAt: '2026-11-20T11:35:00.000Z', // 0s
+            },
+          ],
+        };
+        render(<ShiftRow shift={shiftZeroLength} />);
+
+        expect(screen.getByText('Break at 13:35, under a minute')).toBeTruthy();
+        expect(screen.queryByText('Break 13:35 to 13:35')).toBeNull();
+      });
+
+      it('renders both normal and short breaks when a shift has multiple breaks', () => {
+        const shiftWithBoth: WorkedShift = {
+          ...sampleShift,
+          breaks: [
+            {
+              startedAt: '2026-11-20T11:00:00.000Z',
+              endedAt: '2026-11-20T11:15:00.000Z', // 15m
+            },
+            {
+              startedAt: '2026-11-20T11:35:10.000Z',
+              endedAt: '2026-11-20T11:35:40.000Z', // 30s
+            },
+          ],
+        };
+        render(<ShiftRow shift={shiftWithBoth} />);
+
+        expect(screen.getByText('Break 13:00 to 13:15')).toBeTruthy();
+        expect(screen.getByText('Break at 13:35, under a minute')).toBeTruthy();
+      });
+    });
   });
 
   describe('ShiftDetails', () => {
