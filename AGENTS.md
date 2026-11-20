@@ -68,7 +68,7 @@ the error count is above `typecheck-baseline.json`, and lowers the file when the
   location permission, which the emulator can lose: `adb shell pm grant com.opendeli android.permission.ACCESS_FINE_LOCATION`.
 
 - Home is a full screen map (spec 0018): `RouteMap` behind, `HomeCard` (one of Offline, Online, Last call, an offer, a job)
-  at the bottom, `HomeTopSlot` (status, connection dot, banners) on top; History is a side menu screen. Routes come only
+  at the bottom, `HomeTopSlot` (status, connection dot, banners) on top; History is gone, Earnings is the one history (spec 0042). Routes come only
   from the backend's `deliveries/:id/route`, asked by the SERVER status (not the outbox's); no routing server is ever called
   from the app (`routingSourceGuard.test.ts` fails on `project-osrm`). The rider marker is the phone's own newest fix
   (`ownPosition.ts`, memory only, cleared at logout), never the `user` cache, which each refetch resets to the server copy.
@@ -120,6 +120,10 @@ the error count is above `typecheck-baseline.json`, and lowers the file when the
 
 - Chat (spec 0034): unsent messages live in the module store `services/chat/chatOutgoing.ts`, so leaving the screen keeps them; logout and `endExpiredSession` clear it, the chat notice and the seen mark. What the rider has seen is worked out on the phone only.
 
+- Earnings (spec 0042) shows only the server's figures; every day and clock time is the co-op's (`coopDate`, `coopClock`,
+  Europe/Athens), never the phone's zone, and the reach comes from the server's `reachFrom`. A saved query whose answer
+  changes shape needs a new key name (`earningsDelivery` became `earningsDeliveryDetail`), or a copy restored from the phone
+  crashes the screen. Tell no connection from a 404 with `detailFailureOf` (`hooks/useEarnings.ts`).
 - Anything kept per rider on the phone is cleared in two places, `logout()` in `services/Services.ts` and `endExpiredSession` in `services/session.ts`; the review marks and notice (spec 0038) were first added to only one. Drawer screens stay mounted, so a screen that must refresh each time it is shown listens to `navigation.addListener('focus', …)` rather than refetching on mount (Earnings, spec 0038).
 
 - Logout ends with `queryClient.resetQueries()`, which empties the `user` query while the drawer and the main stack are still drawn, for a moment before `router.tsx` swaps to the login screens. Anything on screen then must cope with no user: read it with `user?.` or a check first, never `user!` (that threw in the side menu and left a blank screen, row 116).
