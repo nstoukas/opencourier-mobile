@@ -165,4 +165,22 @@ describe('SettingsScreen (Row 18, settings trimmed to wishlist item 35; spec 001
       MainScreens.OperatingArea,
     );
   });
+
+  // Spec 0051 (AC-7, AC-8, cross check 12): the account screens are reached from Settings.
+  it.each([
+    ['Change password', MainScreens.ChangePassword],
+    ['Changes by the co-op', MainScreens.AccountChanges],
+    ['Emergency Contact', MainScreens.EmergencyContact],
+  ])(
+    'Settings lists "%s" and pressing it opens its screen (spec 0051)',
+    (title, target) => {
+      render(<SettingsScreen navigation={mockNavigation} route={{} as any} />);
+      mockNavigation.navigate.mockClear();
+
+      fireEvent.press(screen.getByText(title));
+
+      expect(mockNavigation.navigate).toHaveBeenCalledTimes(1);
+      expect(mockNavigation.navigate).toHaveBeenCalledWith(target);
+    },
+  );
 });
