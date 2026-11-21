@@ -149,6 +149,12 @@
         "licenseUrl": "https://github.com/yfuks/react-native-action-sheet/raw/master/LICENSE",
         "parents": "opencourier"
     },
+    "react-native-blob-util@0.19.11": {
+        "licenses": "MIT",
+        "repository": "https://github.com/RonRadtke/react-native-blob-util",
+        "licenseUrl": "https://github.com/RonRadtke/react-native-blob-util/raw/master/LICENSE",
+        "parents": "opencourier"
+    },
     "react-native-dashed-line@1.1.0": {
         "licenses": "MIT",
         "repository": "https://github.com/RBrNx/react-native-dashed-line",

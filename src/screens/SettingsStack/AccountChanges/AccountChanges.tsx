@@ -32,6 +32,11 @@ export const accountChangeLine = (
       return t('translations:account_change_reactivated', { by });
     case 'PASSWORD_CHANGED':
       return t('translations:account_change_password', { by });
+    // Spec 0050 (cross check 14): an admin downloaded this rider's statement ("2026-10 PDF").
+    case 'STATEMENT_DOWNLOADED':
+      return t('translations:account_change_statement', {
+        month: change.newValue ?? '',
+      });
     default: {
       const empty = t('translations:account_change_empty');
       return t('translations:account_change_field', {

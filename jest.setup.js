@@ -139,6 +139,25 @@ jest.mock('react-native-maps', () => {
 });
 
 // GPS: never reports a position unless a test calls the success callback itself.
+// Spec 0050: react-native-blob-util is native (downloads a statement and opens it). A test that needs its
+// behaviour overrides these with jest.mocked(...).
+jest.mock('react-native-blob-util', () => {
+  const fetch = jest.fn(() =>
+    Promise.resolve({
+      info: () => ({ status: 200 }),
+      path: () => '/cache/statement.pdf',
+    }),
+  );
+  return {
+    __esModule: true,
+    default: {
+      fs: { dirs: { CacheDir: '/cache' } },
+      config: jest.fn(() => ({ fetch })),
+      android: { actionViewIntent: jest.fn(() => Promise.resolve()) },
+    },
+  };
+});
+
 jest.mock('react-native-geolocation-service', () => ({
   __esModule: true,
   default: {

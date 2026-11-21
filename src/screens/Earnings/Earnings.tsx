@@ -67,6 +67,7 @@ import {
   formatWorkDuration,
 } from '@app/utilities/timeWorked';
 import { styles } from './Earnings.styles';
+import { StatementsSection } from '@app/components/StatementsSection/StatementsSection';
 
 type Props = DrawerScreenProp<DrawerScreens.Earnings>;
 
@@ -637,6 +638,9 @@ export const Earnings = ({ navigation }: Props) => {
           )}
 
           {body()}
+
+          {/* Spec 0050 (AC-8): monthly statements as PDF and CSV. */}
+          <StatementsSection />
         </ScrollView>
       </ScreenSafeArea>
     </View>

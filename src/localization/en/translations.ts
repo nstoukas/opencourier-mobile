@@ -230,6 +230,15 @@ export default {
   session_credentials_body:
     'Your password or login email was changed. Log in again.',
   session_notice_ok: 'OK',
+  // Spec 0050 (row 76, AC-8): monthly statements on Earnings.
+  statements_title: 'Statements',
+  statements_note:
+    'Each complete month as a PDF to read or a CSV to calculate with: every job with its pay parts, the totals and your hours. Your record of work, not an invoice.',
+  statements_none: 'Your first statement comes after your first full month.',
+  statements_failed: 'The statement could not be opened. Try again.',
+  statements_load_failed: 'Could not load your statements. Pull to try again.',
+  statements_open: '{{format}} statement for {{month}}',
+  account_change_statement: 'The co-op downloaded your statement for {{month}}',
   // Spec 0051 (AC-7, AC-8, cross check 12): the account screens in Settings.
   change_password: 'Change password',
   account_changes: 'Changes by the co-op',
