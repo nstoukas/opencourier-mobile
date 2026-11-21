@@ -1,5 +1,5 @@
 import { client } from '@app/services/Client';
-import { saveSession } from '@app/services/session';
+import { saveSession, whileChangingCredentials } from '@app/services/session';
 import {
   changePassword,
   fetchAccountChanges,
@@ -12,7 +12,11 @@ jest.mock('@app/services/Client', () => ({
 }));
 jest.mock('@app/services/session', () => ({
   saveSession: jest.fn().mockResolvedValue(undefined),
+  // Row 108 review: the change runs inside this hold. Here it only hands the work back.
+  whileChangingCredentials: jest.fn((work: Promise<unknown>) => work),
 }));
+
+const mockHold = whileChangingCredentials as jest.Mock;
 
 const http = client as unknown as {
   get: jest.Mock;
@@ -160,6 +164,91 @@ describe('accountApi (spec 0051)', () => {
         }),
       ).rejects.toBe(refusal);
       expect(saveSession).not.toHaveBeenCalled();
+    });
+
+    // Row 108 review (ruling: "A request in flight during the change logs the rider out"): the server
+    // refuses the old token from the moment it saves the new password, so the whole change, from the
+    // request to the new tokens being saved, runs inside the session's hold.
+    describe('runs inside the credentials hold (row 108 review)', () => {
+      // Whether a promise has settled yet, without waiting for it.
+      const stateOf = async (promise: Promise<unknown>) => {
+        let state = 'pending';
+        promise.then(
+          () => (state = 'done'),
+          () => (state = 'failed'),
+        );
+        await new Promise(resolve => setImmediate(resolve));
+        return state;
+      };
+
+      it('the hold is taken once, and lasts until the new tokens are saved', async () => {
+        let tokensAreSaved!: () => void;
+        (saveSession as jest.Mock).mockReturnValueOnce(
+          new Promise<void>(resolve => {
+            tokensAreSaved = resolve;
+          }),
+        );
+        http.post.mockResolvedValueOnce(answer);
+
+        const change = changePassword({
+          currentPassword: 'current-password',
+          newPassword: 'a-new-password',
+        });
+
+        expect(mockHold).toHaveBeenCalledTimes(1);
+        const held = mockHold.mock.calls[0][0] as Promise<unknown>;
+        expect(typeof held.then).toBe('function');
+        // The server has answered, the tokens are not saved yet: the hold is still on.
+        expect(await stateOf(held)).toBe('pending');
+        expect(saveSession).toHaveBeenCalledTimes(1);
+
+        tokensAreSaved();
+        await change;
+        expect(await stateOf(held)).toBe('done');
+      });
+
+      it('the hold is already on when the request is sent', async () => {
+        let holdsWhenSent = -1;
+        http.post.mockImplementationOnce(async () => {
+          // The hold is asked for in the same turn the request leaves in.
+          await Promise.resolve();
+          holdsWhenSent = mockHold.mock.calls.length;
+          return answer;
+        });
+
+        await changePassword({
+          currentPassword: 'current-password',
+          newPassword: 'a-new-password',
+        });
+
+        expect(holdsWhenSent).toBe(1);
+      });
+
+      it('a refused change ends the hold with that refusal', async () => {
+        const refusal = { response: { status: 400, data: { error: true } } };
+        http.post.mockRejectedValueOnce(refusal);
+
+        await expect(
+          changePassword({
+            currentPassword: 'not-it',
+            newPassword: 'a-new-password',
+          }),
+        ).rejects.toBe(refusal);
+
+        expect(mockHold).toHaveBeenCalledTimes(1);
+        await expect(mockHold.mock.calls[0][0]).rejects.toBe(refusal);
+      });
+
+      it('no other account call takes the hold', async () => {
+        http.get.mockResolvedValue({ data: { error: null, result: [] } });
+        http.put.mockResolvedValue({ data: { error: null, result: {} } });
+
+        await fetchAccountChanges();
+        await fetchEmergencyContact();
+        await saveEmergencyContact({ name: null, phone: null });
+
+        expect(mockHold).not.toHaveBeenCalled();
+      });
     });
   });
 });
