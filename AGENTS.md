@@ -140,4 +140,9 @@ the error count is above `typecheck-baseline.json`, and lowers the file when the
 - Shift Offline records (spec 0049) come worded by the server in the schedule's optional `offlineRecords`; the Shifts screen
   shows them as sent and words nothing itself, and shows nothing when the field is missing (an older server).
 
+- A session the co-op ended (spec 0051) is said on the full screen `SessionEndedNotice`, driven by the error code
+  (`ACCOUNT_DEACTIVATED`, `CREDENTIALS_CHANGED`) from a refused renewal or a refused socket, never by message text.
+  `saveSession` bumps a counter the socket provider watches, so new tokens reopen the live connection; a credential change
+  runs inside `whileChangingCredentials`, so a request refused meanwhile retries with the new token.
+
 _Drafted by /audit from the repo, worth a quick human pass. Edit freely: once a line stops matching this draft, later runs treat it as curated and will flag rather than overwrite it._
