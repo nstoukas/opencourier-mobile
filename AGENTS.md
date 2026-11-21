@@ -145,4 +145,9 @@ the error count is above `typecheck-baseline.json`, and lowers the file when the
   `saveSession` bumps a counter the socket provider watches, so new tokens reopen the live connection; a credential change
   runs inside `whileChangingCredentials`, so a request refused meanwhile retries with the new token.
 
+- Monthly statements (spec 0050) download through the native `react-native-blob-util` (a change to it needs a native rebuild,
+  JDK 17) into the cache and open in the phone's viewer; statement files are deleted on a failed download and in both clear
+  places above. The permissions the library declares and the app does not need are removed with `tools:node="remove"` in
+  `AndroidManifest.xml` (a test reads it); keep `WAKE_LOCK`, which Firebase messaging needs. `jest.setup.js` mocks the module.
+
 _Drafted by /audit from the repo, worth a quick human pass. Edit freely: once a line stops matching this draft, later runs treat it as curated and will flag rather than overwrite it._
