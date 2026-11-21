@@ -31,15 +31,21 @@ export const EmergencyContact = ({ navigation }: Props) => {
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
   const [busy, setBusy] = useState(false);
+  // Review fix: Save stays off until the stored contact has loaded, so a failed load can never save blanks
+  // over it.
+  const [loaded, setLoaded] = useState<'loading' | 'ok' | 'failed'>('loading');
 
-  useEffect(() => {
+  const load = () => {
+    setLoaded('loading');
     fetchEmergencyContact()
       .then(contact => {
         setName(contact.name ?? '');
         setPhone(contact.phone ?? '');
+        setLoaded('ok');
       })
-      .catch(() => undefined);
-  }, []);
+      .catch(() => setLoaded('failed'));
+  };
+  useEffect(load, []);
 
   const save = async () => {
     setBusy(true);
@@ -90,11 +96,19 @@ export const EmergencyContact = ({ navigation }: Props) => {
                 {t('translations:include_code')}
               </Text>
             </View>
+            {loaded === 'failed' ? (
+              <Text
+                style={styles.error}
+                accessibilityRole="alert"
+                onPress={load}>
+                {t('translations:emergency_contact_load_failed')}
+              </Text>
+            ) : null}
             <Button
               type={ButtonType.green}
               title={t('translations:save')}
               onPress={save}
-              disabled={busy}
+              disabled={busy || loaded !== 'ok'}
               icon={FloppyDiskBackIcon}
               iconWeight="fill"
             />

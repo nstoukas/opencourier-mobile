@@ -107,6 +107,8 @@ export type LiveConnectionHandlers = {
   // `isFromDispatch`), or dispatch reading it.
   onChatMessage?: (message: unknown) => void;
   onChatReadByDispatch?: () => void;
+  // Spec 0051: the server refused the connection and named why (its error's data.code), with its sentence.
+  onRefusedWithCode?: (code: string, message: string | undefined) => void;
   // Runs on every (re)connect, so anything sent while the phone was away is
   // fetched again.
   onConnected: () => void;
@@ -151,8 +153,15 @@ export class LiveConnection {
     socket.on('disconnect', () => this.setStatus('disconnected'));
     // `socket.active` is false when socket.io has given up retrying (a refused
     // login); true while it is still retrying a dropped connection.
-    socket.on('connect_error', () =>
-      this.setStatus(socket.active ? 'disconnected' : 'refused'),
+    socket.on(
+      'connect_error',
+      (error?: { message?: string; data?: { code?: unknown } }) => {
+        this.setStatus(socket.active ? 'disconnected' : 'refused');
+        const code = error?.data?.code;
+        if (typeof code === 'string') {
+          this.handlers.onRefusedWithCode?.(code, error?.message);
+        }
+      },
     );
     socket.on(OFFER_EVENT, () => this.handlers.onOffer());
     socket.on(DELIVERY_STATUS_UPDATED_EVENT, () =>

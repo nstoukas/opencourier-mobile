@@ -1,5 +1,5 @@
 import { client } from '@app/services/Client';
-import { saveSession } from '@app/services/session';
+import { saveSession, whileChangingCredentials } from '@app/services/session';
 
 // Spec 0051 (row 108): the rider's own account. Every answer is wrapped by the backend as { error, result }.
 
@@ -40,8 +40,11 @@ export const changePassword = async (params: {
   currentPassword: string;
   newPassword: string;
   pushToken?: string;
-}): Promise<void> => {
-  const { data } = await client.post('auth/change-password', params);
-  const { accessToken, refreshToken } = data.result.session;
-  await saveSession(accessToken, refreshToken, client);
-};
+}): Promise<void> =>
+  whileChangingCredentials(
+    (async () => {
+      const { data } = await client.post('auth/change-password', params);
+      const { accessToken, refreshToken } = data.result.session;
+      await saveSession(accessToken, refreshToken, client);
+    })(),
+  );

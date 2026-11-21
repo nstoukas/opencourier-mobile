@@ -54,6 +54,18 @@ let ending: Promise<void> | null = null;
 
 // Saves both tokens of a fresh session and puts the access token on every
 // request from now on.
+// Spec 0051 (row 108 review): a counter that goes up each time new tokens are saved, so the live
+// connection reopens with them (a password change closes this phone's socket too).
+let tokensSaved = 0;
+const tokenListeners = new Set<() => void>();
+export const getTokensSaved = (): number => tokensSaved;
+export const subscribeTokensSaved = (listener: () => void): (() => void) => {
+  tokenListeners.add(listener);
+  return () => {
+    tokenListeners.delete(listener);
+  };
+};
+
 export const saveSession = async (
   accessToken: string,
   refreshToken: string,
@@ -64,6 +76,23 @@ export const saveSession = async (
     ['token', accessToken],
     ['refreshToken', refreshToken],
   ]);
+  tokensSaved += 1;
+  tokenListeners.forEach(listener => listener());
+};
+
+// Spec 0051 (row 108 review): while the rider's own password change runs, the server already refuses the
+// old token. A request refused in that moment waits for the change and retries with the new token,
+// instead of ending the session.
+let credentialChange: Promise<unknown> | null = null;
+export const whileChangingCredentials = async <T>(
+  work: Promise<T>,
+): Promise<T> => {
+  credentialChange = work;
+  try {
+    return await work;
+  } finally {
+    if (credentialChange === work) credentialChange = null;
+  }
 };
 
 // Asks the backend for a new access token. Requests that fail together share
@@ -195,6 +224,14 @@ export const onResponseError =
       return Promise.reject(error);
     }
     config.sessionRetried = true;
+    if (credentialChange) {
+      await credentialChange.catch(() => undefined);
+      const fresh = await AsyncStorage.getItem('token');
+      if (fresh && config.headers.Authorization !== `Bearer ${fresh}`) {
+        config.headers.Authorization = `Bearer ${fresh}`;
+        return http(config);
+      }
+    }
     try {
       const accessToken = await refreshSession(http);
       config.headers.Authorization = `Bearer ${accessToken}`;

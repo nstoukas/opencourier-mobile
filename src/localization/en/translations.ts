@@ -259,7 +259,8 @@ export default {
   account_field_deliverySetting: 'Offers',
   emergency_contact_name: 'Name',
   emergency_contact_phone: 'Phone',
-  emergency_contact_saved: 'Saved. The co-op sees it if you send an SOS.',
+  emergency_contact_saved: 'Saved. The co-op can see it.',
+  emergency_contact_load_failed: 'Could not load your contact. Tap here to try again.',
   emergency_contact_failed: 'Could not save. Try again.',
   session_ended_title: 'Please log in again',
   session_ended_body:

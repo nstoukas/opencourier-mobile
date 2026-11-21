@@ -13,6 +13,7 @@ import React, {
   ReactNode,
   useContext,
   useEffect,
+  useSyncExternalStore,
   useRef,
   useState,
 } from 'react';
@@ -28,6 +29,13 @@ import {
   shouldBeConnected,
 } from './liveConnection';
 import { socketUrl } from '@app/utilities/config';
+import { client } from '@app/services/Client';
+import {
+  endExpiredSession,
+  getTokensSaved,
+  subscribeTokensSaved,
+} from '@app/services/session';
+import { noticeForRefusal } from '@app/services/account/sessionEndNotice';
 
 // A React context hands one value to every screen below the provider without
 // passing it through each screen's props. Here the value is the connection status.
@@ -76,6 +84,16 @@ const SocketProvider = ({ children }: Props) => {
   if (connectionRef.current === null) {
     connectionRef.current = new LiveConnection(createCourierSocket, {
       onStatus: setStatus,
+      // Spec 0051: a connection refused because the account was deactivated or the login changed ends the
+      // session with the same full screen notice as a refused renewal.
+      onRefusedWithCode: (code, message) => {
+        const notice = noticeForRefusal({
+          response: { data: { result: [{ code, message }] } },
+        });
+        if (notice) {
+          endExpiredSession(client, notice).catch(() => undefined);
+        }
+      },
       onOffer: () => refetch([QueryKeys.newOrders]),
       // The server ended an offer (spec 0002): take it off the screen at
       // once, then fetch the list again so the server has the last word.
@@ -159,6 +177,11 @@ const SocketProvider = ({ children }: Props) => {
   const connection = connectionRef.current;
 
   const wanted = shouldBeConnected(user?.status, inProgressOrders?.length ?? 0);
+  // `useSyncExternalStore` reads a store outside React and redraws when it changes.
+  const tokensSaved = useSyncExternalStore(
+    subscribeTokensSaved,
+    getTokensSaved,
+  );
 
   useEffect(() => {
     if (!wanted) {
@@ -179,7 +202,9 @@ const SocketProvider = ({ children }: Props) => {
     return () => {
       cancelled = true;
     };
-  }, [wanted, user?.id, connection]);
+    // Spec 0051 (row 108 review): `tokensSaved` changes when new tokens are saved (a password change), so
+    // the socket reopens with them.
+  }, [wanted, user?.id, connection, tokensSaved]);
 
   // When the app comes back to the foreground, reconnect if the socket is down.
   useEffect(() => {
