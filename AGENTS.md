@@ -128,4 +128,8 @@ the error count is above `typecheck-baseline.json`, and lowers the file when the
 
 - Logout ends with `queryClient.resetQueries()`, which empties the `user` query while the drawer and the main stack are still drawn, for a moment before `router.tsx` swaps to the login screens. Anything on screen then must cope with no user: read it with `user?.` or a check first, never `user!` (that threw in the side menu and left a blank screen, row 116).
 
+- The order's box size (spec 0043) is worded only by `boxSizeLine` (`src/utilities/boxSize.ts`): "Medium order" on the offer card
+  and on the job card at the restaurant, nothing for an unknown size. No box gauge or fill anywhere (operator decision); the
+  full screen offer alert does not show the size yet (decision 9.8).
+
 _Drafted by /audit from the repo, worth a quick human pass. Edit freely: once a line stops matching this draft, later runs treat it as curated and will flag rather than overwrite it._
