@@ -153,5 +153,9 @@ the error count is above `typecheck-baseline.json`, and lowers the file when the
 - "Leg 1 of 2" (spec 0046) is worded only by `legLine` (`src/utilities/legs.ts`), on the offer card and the job card at every step;
   nothing for a single delivery. Push data carries the labels as strings ('' for a single delivery): convert with `Number()`
   if a card is ever built from push data.
+- Split at pickup (spec 0047): the rules the footer follows are `src/utilities/splitRequest.ts`; the answer (live message or push)
+  goes through `receiveSplitDecision` (`src/services/splitNotice/`), which reads the jobs again and posts once per answer on its own
+  channel (`split-decided`), cleared in both clear places. A sent request's times go on the phone's clock at once
+  (`splitTimesOnPhone`); while a request is open the split line is the only clock on the card.
 
 _Drafted by /audit from the repo, worth a quick human pass. Edit freely: once a line stops matching this draft, later runs treat it as curated and will flag rather than overwrite it._
