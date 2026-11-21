@@ -132,4 +132,9 @@ the error count is above `typecheck-baseline.json`, and lowers the file when the
   and on the job card at the restaurant, nothing for an unknown size. No box gauge or fill anywhere (operator decision); the
   full screen offer alert does not show the size yet (decision 9.8).
 
+- "Why you got this" (spec 0045) is worded only by `whyYouLines` (`src/components/WhyYouSection/WhyYouSection.tsx`) from the
+  server's `whyYou`: a FAIRNESS factor gets a line only when its weight was sent (above 0), and a strategy the app does not know
+  says it cannot be shown yet, never "No reason was recorded" (that is for a null reason only). Never show a score, a rank or
+  a count of riders compared.
+
 _Drafted by /audit from the repo, worth a quick human pass. Edit freely: once a line stops matching this draft, later runs treat it as curated and will flag rather than overwrite it._
