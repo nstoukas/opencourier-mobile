@@ -301,6 +301,28 @@ export type Order = {
   // Spec 0035: this rider's newest removal request on this job, while it is open or was refused.
   // Null otherwise. Only the job list (deliveries/in-progress) sends it.
   removalRequest?: RemovalRequest | null;
+  // Spec 0047: this rider's newest split request on the job, while open, refused or confirmed.
+  splitRequest?: SplitRequest | null;
+  // The request's flag and leave times, moved onto the phone's clock when the job list arrived.
+  splitCreatedAtOnPhone?: number | null;
+  splitLeaveFromOnPhone?: number | null;
+};
+
+export type SplitBoxSize = 'SMALL' | 'MEDIUM' | 'LARGE';
+
+// Spec 0047: a rider's request to split an order that does not fit one box (`splitRequest` on a job).
+export type SplitRequest = {
+  id: string;
+  deliveryId: string;
+  status: 'OPEN' | 'CONFIRMED' | 'REFUSED' | 'LEFT' | 'VOID';
+  proposedLegs: { boxSize: SplitBoxSize }[];
+  // The boxes dispatch confirmed; the rider keeps the first.
+  finalLegs: { boxSize: SplitBoxSize }[] | null;
+  createdAt: string;
+  // When the rider may leave without an answer, on the server's clock.
+  leaveFrom: string;
+  // Dispatch's sentence with a refusal; null when they wrote none.
+  adminNote: string | null;
 };
 
 // A reason a rider can give for asking to come off an order (`GET removal-reasons`, spec 0035).

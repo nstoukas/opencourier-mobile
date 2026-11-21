@@ -2,7 +2,13 @@ import { DeliveryIssueReason } from '@app/types/enums';
 import axios from 'axios';
 import { UClient } from './Client';
 import { OrderServiceReponse } from './types';
-import { Order, RemovalReason, RemovalRequest } from '@app/types/types';
+import {
+  Order,
+  RemovalReason,
+  RemovalRequest,
+  SplitBoxSize,
+  SplitRequest,
+} from '@app/types/types';
 import { offerTimesOnPhone } from '@app/utilities/offerClock';
 import { handBackUntilOnPhone } from '@app/utilities/handBackWindow';
 import { JOB_STEP_ROUTE, JobStep } from '@app/utilities/jobSteps';
@@ -94,6 +100,13 @@ export interface OrderService {
   }) => Promise<RemovalRequest>;
   // Spec 0035: takes back an open request. Online only, like the send.
   withdrawRemovalRequest: (id: string) => Promise<{ status: string }>;
+  // Spec 0047: tells dispatch the order does not fit one box, with the boxes it needs. Online only.
+  sendSplitRequest: (params: {
+    id: string;
+    legs: { boxSize: SplitBoxSize }[];
+  }) => Promise<SplitRequest>;
+  // Spec 0047 (AC-8): leaves an order dispatch did not split in time. Online only.
+  leaveSplit: (id: string) => Promise<{ status: string }>;
   // Sends one job step from the outbox (spec 0009) and reports the answer;
   // it never throws. `tapAgeMs` is how long ago the rider tapped.
   sendJobStep: (
@@ -188,6 +201,14 @@ const orderService = (client: UClient): OrderService => {
         time
           ? handBackUntilOnPhone(time, data.result.serverNow, phoneNow)
           : null;
+      // Spec 0047: a split request's flag and leave times, on the phone's clock too.
+      if (order.splitRequest) {
+        shown = {
+          ...shown,
+          splitCreatedAtOnPhone: onPhone(order.splitRequest.createdAt),
+          splitLeaveFromOnPhone: onPhone(order.splitRequest.leaveFrom),
+        };
+      }
       if (order.arrivedAt) {
         shown = {
           ...shown,
@@ -264,6 +285,24 @@ const orderService = (client: UClient): OrderService => {
     const { data } = await client.post(
       `deliveries/${id}/removal-request/withdraw`,
     );
+    return data.result;
+  };
+
+  const sendSplitRequest = async (params: {
+    id: string;
+    legs: { boxSize: SplitBoxSize }[];
+  }): Promise<SplitRequest> => {
+    const { data } = await client.post(
+      `deliveries/${params.id}/split-requests`,
+      {
+        legs: params.legs,
+      },
+    );
+    return data.result;
+  };
+
+  const leaveSplit = async (id: string): Promise<{ status: string }> => {
+    const { data } = await client.post(`deliveries/${id}/split-requests/leave`);
     return data.result;
   };
 
@@ -356,6 +395,8 @@ const orderService = (client: UClient): OrderService => {
     getRemovalReasons,
     sendRemovalRequest,
     withdrawRemovalRequest,
+    sendSplitRequest,
+    leaveSplit,
   };
 };
 

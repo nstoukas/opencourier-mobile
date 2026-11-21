@@ -14,6 +14,11 @@ import { useWaitClock } from '@app/hooks/useLeaveWait';
 import { canHandBack } from '@app/utilities/handBackWindow';
 import { canRequestRemoval } from '@app/utilities/removalRequest';
 import {
+  canLeaveSplit,
+  canRequestSplit,
+  isSplitOpen,
+} from '@app/utilities/splitRequest';
+import {
   canLeaveWait,
   isWaitingAtPickup,
   waitClockText,
@@ -45,6 +50,12 @@ type Props = {
   onWithdrawRemoval?: (order: Order) => void;
   // A send or a withdraw of this job's request is on its way.
   removalBusy?: boolean;
+  // Spec 0047: opens the "Doesn't fit one box" screen, and leaves an order dispatch
+  // did not split in time (asks first). Left out, no action.
+  onRequestSplit?: (order: Order) => void;
+  onLeaveSplit?: (order: Order) => void;
+  // A send or a leave of this job's split request is on its way.
+  splitBusy?: boolean;
   // Spec 0034 (AC-12): opens the chat with dispatch, its messages tagged with this job. Shown whether
   // or not the co-op has a dispatch number. `chatUnseen` draws the unread dot.
   onOpenChat?: (order: Order) => void;
@@ -78,6 +89,9 @@ export const JobFooter = ({
   onRequestRemoval,
   onWithdrawRemoval,
   removalBusy,
+  onRequestSplit,
+  onLeaveSplit,
+  splitBusy,
   onOpenChat,
   chatUnseen,
 }: Props) => {
@@ -103,6 +117,19 @@ export const JobFooter = ({
   const removalOpen = removalRequest?.status === 'OPEN';
   const removalDeclined = removalRequest?.status === 'DECLINED';
   const refusalNote = removalRequest?.decisionNote?.trim();
+
+  // Spec 0047: the rider's split request. While open, the card says so with a
+  // counter, the swipe waits for the answer, and Leave appears after the limit.
+  // The answer stays on the card while the rider is still at the restaurant.
+  const splitRequest = order.splitRequest;
+  const splitOpen = isSplitOpen(order);
+  const atPickup =
+    order.status === OrderStatus.courier_arrived_at_pickup_location;
+  const splitRefused = atPickup && splitRequest?.status === 'REFUSED';
+  const splitConfirmed = atPickup && splitRequest?.status === 'CONFIRMED';
+  const splitNote = splitRequest?.adminNote?.trim();
+  const keptSize = splitRequest?.finalLegs?.[0]?.boxSize;
+  const splitSeconds = useWaitClock(order.splitCreatedAtOnPhone, splitOpen);
 
   // After a swipe's steps are queued, draw the swipe fresh (a new key): when the
   // status moved the key changes anyway; when the step was refused, this brings
@@ -182,6 +209,24 @@ export const JobFooter = ({
       });
     }
   }
+  // Spec 0047 (AC-1, AC-8): at the restaurant, "Doesn't fit one box"; once a
+  // request has waited past the co-op's limit, Leave. Neither while a send is on its way.
+  if (!jobOver && !splitBusy) {
+    if (splitOpen && onLeaveSplit && canLeaveSplit(order, Date.now())) {
+      actions.push({
+        key: 'leave-split',
+        label: t('translations:split_leave_button'),
+        onPress: () => onLeaveSplit(order),
+        tone: 'destructive',
+      });
+    } else if (!splitOpen && onRequestSplit && canRequestSplit(order)) {
+      actions.push({
+        key: 'request-split',
+        label: t('translations:split_doesnt_fit'),
+        onPress: () => onRequestSplit(order),
+      });
+    }
+  }
   // Spec 0032: at the customer's door the rider can report a wrong or missing product.
   if (
     onReportProduct &&
@@ -248,6 +293,51 @@ export const JobFooter = ({
           </Text>
         </TouchableOpacity>
       ) : null}
+      {splitOpen ? (
+        <View
+          style={styles.waiting}
+          accessibilityRole="text"
+          testID="job-split-waiting">
+          <Icon icon={ClockIcon} size={18} tone="muted-foreground" />
+          <Text style={styles.waitingText} numberOfLines={1}>
+            {splitSeconds !== null
+              ? t('translations:split_waiting_clock', {
+                  time: waitClockText(splitSeconds),
+                })
+              : t('translations:split_waiting')}
+          </Text>
+        </View>
+      ) : null}
+      {splitRefused ? (
+        // One line, as every note on the job (spec 0021); a tap reads the whole sentence.
+        <TouchableOpacity
+          style={styles.waiting}
+          disabled={!splitNote}
+          onPress={() =>
+            Alert.alert(t('translations:split_refused_title'), splitNote)
+          }
+          accessibilityRole="button"
+          testID="job-split-refused">
+          <Icon icon={WarningIcon} size={18} tone="destructive" />
+          <Text style={styles.refusedText} numberOfLines={1}>
+            {splitNote
+              ? t('translations:split_refused_with_note', { note: splitNote })
+              : t('translations:split_refused')}
+          </Text>
+        </TouchableOpacity>
+      ) : null}
+      {splitConfirmed ? (
+        <Text
+          style={styles.waitingText}
+          numberOfLines={1}
+          testID="job-split-confirmed">
+          {keptSize
+            ? t('translations:split_confirmed_size', {
+                size: t(`translations:split_size_${keptSize}`),
+              })
+            : t('translations:split_confirmed')}
+        </Text>
+      ) : null}
       {secondsWaiting !== null ? (
         <Text style={styles.waitClock} testID="job-wait-clock">
           {order.paidFromOnPhone
@@ -300,7 +390,7 @@ export const JobFooter = ({
           style={styles.swipe}
           isSwiped={false}
           onSwiped={onSwiped}
-          enabled={!leavingWait}
+          enabled={!leavingWait && !splitOpen}
           title={
             stage === 'pickup'
               ? t('translations:swipe_picked_up')

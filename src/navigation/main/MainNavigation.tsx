@@ -18,6 +18,7 @@ import { ShiftAvailabilityScreen } from '@app/screens/SettingsStack/ShiftAvailab
 import { ReportIssue } from '@app/screens/ReportIssue/ReportIssue';
 import { ReportProduct } from '@app/screens/ReportProduct/ReportProduct';
 import { RequestRemoval } from '@app/screens/RequestRemoval/RequestRemoval';
+import { RequestSplit } from '@app/screens/RequestSplit/RequestSplit';
 import { Chat } from '@app/screens/Chat/Chat';
 import { HowItWorks } from '@app/screens/HowItWorks/HowItWorks';
 import { RequestReview } from '@app/screens/RequestReview/RequestReview';
@@ -127,6 +128,11 @@ export const MainStack = () => {
       <MainStackNavigator.Screen
         name={MainScreens.RequestRemoval}
         component={RequestRemoval}
+        options={DEFAULT_OPTIONS}
+      />
+      <MainStackNavigator.Screen
+        name={MainScreens.RequestSplit}
+        component={RequestSplit}
         options={DEFAULT_OPTIONS}
       />
       <MainStackNavigator.Screen

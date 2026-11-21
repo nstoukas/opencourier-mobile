@@ -44,6 +44,7 @@ import {
   useRemovalBusy,
   useWithdrawRemoval,
 } from '@app/hooks/useRemovalRequest';
+import { useLeaveSplit, useSplitBusy } from '@app/hooks/useSplitRequest';
 import { useDeliveryRoute } from '@app/hooks/useDeliveryRoute';
 import { usePickupPoints } from '@app/hooks/usePickupPoints';
 import { useNavigateTo } from '@app/hooks/useNavigateTo';
@@ -92,6 +93,8 @@ export const HomeScreen = ({ navigation }: Props) => {
   const { leaveWait, leavingId } = useLeaveWait(user?.id);
   // Spec 0035: takes back an open removal request (asks first).
   const withdrawRemoval = useWithdrawRemoval();
+  // Spec 0047: leaving an order dispatch did not split in time.
+  const leaveSplit = useLeaveSplit();
   const connectionStatus = useConnectionStatus();
   const navigateTo = useNavigateTo();
   const { locationPermission, requestLocationPermission } =
@@ -209,6 +212,10 @@ export const HomeScreen = ({ navigation }: Props) => {
   // Spec 0035: true while a removal request for the shown job is on its way,
   // even if the rider left the Request removal screen meanwhile.
   const removalBusy = useRemovalBusy(
+    shown?.kind === 'job' ? shown.order.id : undefined,
+  );
+  // Spec 0047: the same for a split request or leaving one.
+  const splitBusy = useSplitBusy(
     shown?.kind === 'job' ? shown.order.id : undefined,
   );
 
@@ -385,6 +392,11 @@ export const HomeScreen = ({ navigation }: Props) => {
         }
         onWithdrawRemoval={withdrawRemoval}
         removalBusy={removalBusy}
+        onRequestSplit={job =>
+          navigation.navigate(MainScreens.RequestSplit, { order: job })
+        }
+        onLeaveSplit={leaveSplit}
+        splitBusy={splitBusy}
         onOpenChat={job =>
           navigation.navigate(MainScreens.Chat, {
             deliveryId: job.id,

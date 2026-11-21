@@ -27,6 +27,7 @@ export enum MainScreens {
   ReportIssue = 'ReportIssue',
   ReportProduct = 'ReportProduct',
   RequestRemoval = 'RequestRemoval',
+  RequestSplit = 'RequestSplit',
   // The rider's chat with dispatch (spec 0034).
   Chat = 'Chat',
   EarningsDelivery = 'EarningsDelivery',
@@ -58,6 +59,10 @@ export type MainStackParamList = {
     order: Order;
   };
   RequestRemoval: {
+    order: Order;
+  };
+  // Spec 0047: the order does not fit one box.
+  RequestSplit: {
     order: Order;
   };
   // Opened from a job, its messages are tagged with that delivery; from the side menu, with none.

@@ -26,6 +26,8 @@ export const OFFER_ENDED_EVENT = 'OFFER_ENDED';
 export const JOB_READY_UPDATED_EVENT = 'JOB_READY_UPDATED';
 // Dispatch answered this rider's removal request (spec 0035).
 export const REMOVAL_REQUEST_DECIDED_EVENT = 'REMOVAL_REQUEST_DECIDED';
+// Dispatch answered this rider's split request (spec 0047).
+export const SPLIT_REQUEST_DECIDED_EVENT = 'SPLIT_REQUEST_DECIDED';
 // Chat (spec 0034): a message in the rider's thread, and dispatch reading it.
 export const CHAT_MESSAGE_EVENT = 'CHAT_MESSAGE';
 export const CHAT_READ_BY_DISPATCH_EVENT = 'CHAT_READ_BY_DISPATCH';
@@ -103,6 +105,7 @@ export type LiveConnectionHandlers = {
   onJobReadyUpdated?: (message: unknown) => void;
   // Dispatch answered a removal request (spec 0035); the raw message, read by `parseRemovalDecision`.
   onRemovalRequestDecided?: (message: unknown) => void;
+  onSplitRequestDecided?: (message: unknown) => void;
   // Chat (spec 0034, AC-8): a message in the rider's thread (the raw message, read by
   // `isFromDispatch`), or dispatch reading it.
   onChatMessage?: (message: unknown) => void;
@@ -175,6 +178,9 @@ export class LiveConnection {
     );
     socket.on(REMOVAL_REQUEST_DECIDED_EVENT, (message: unknown) =>
       this.handlers.onRemovalRequestDecided?.(message),
+    );
+    socket.on(SPLIT_REQUEST_DECIDED_EVENT, (message: unknown) =>
+      this.handlers.onSplitRequestDecided?.(message),
     );
     socket.on(CHAT_MESSAGE_EVENT, (message: unknown) =>
       this.handlers.onChatMessage?.(message),

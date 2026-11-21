@@ -152,6 +152,11 @@ const SocketProvider = ({ children }: Props) => {
           console.log('Could not show the removal notice', error),
         );
       },
+      // Spec 0047: dispatch answered a split request. The job list carries the answer
+      // (and, on a confirm, the leg and its size), so it is fetched again.
+      onSplitRequestDecided: () => {
+        refetch([QueryKeys.inProgressOrders]);
+      },
       // Chat (spec 0034, AC-8): the messages live in the server's database, so
       // a message or a read mark is just a reason to fetch the thread again.
       onChatMessage: (message: unknown) => {
