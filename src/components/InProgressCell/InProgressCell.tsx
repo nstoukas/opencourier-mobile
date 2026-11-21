@@ -134,6 +134,8 @@ export const InProgressCell = ({
     order.dropoffLocation?.formattedAddress ??
     '';
   const firstName = firstNameOf(order.dropoffName);
+  // Spec 0046 (AC-7): "Leg 1 of 2" when the order goes as several deliveries.
+  const leg = legLine(order, t);
   const pickedUpAt = getPickedUpAt(order.id);
   const floorAndBell = [
     order.dropoffFloor
@@ -160,9 +162,9 @@ export const InProgressCell = ({
       ) : null}
       {/* Spec 0046 (AC-7): at every step, so the rider knows at the door too
           that a colleague brings the rest. */}
-      {legLine(order, t) !== '' ? (
+      {leg !== '' ? (
         <Text style={styles.secondary} testID="job-leg">
-          {legLine(order, t)}
+          {leg}
         </Text>
       ) : null}
 
