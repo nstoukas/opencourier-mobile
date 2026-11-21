@@ -137,4 +137,7 @@ the error count is above `typecheck-baseline.json`, and lowers the file when the
   says it cannot be shown yet, never "No reason was recorded" (that is for a null reason only). Never show a score, a rank or
   a count of riders compared.
 
+- Shift Offline records (spec 0049) come worded by the server in the schedule's optional `offlineRecords`; the Shifts screen
+  shows them as sent and words nothing itself, and shows nothing when the field is missing (an older server).
+
 _Drafted by /audit from the repo, worth a quick human pass. Edit freely: once a line stops matching this draft, later runs treat it as curated and will flag rather than overwrite it._
