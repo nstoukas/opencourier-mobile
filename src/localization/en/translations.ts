@@ -76,6 +76,8 @@ export default {
   shift_reminder_title: 'Your shift starts soon',
   shift_reminder_body: 'Your shift starts at {{time}}.',
   shift_mine: 'Your shifts',
+  // Spec 0049 (row 79): the rider's own Offline records during booked shifts.
+  shift_offline_records: 'Recorded on your shifts',
   shift_schedule: 'Next 14 days',
   shift_none_booked: 'No shifts booked.',
   shift_none_scheduled: 'No shifts on the schedule.',
@@ -489,6 +491,8 @@ export default {
   why_weight_earnings: 'earnings {{weight}}',
   why_weight_waiting: 'waiting {{weight}}',
   why_weight_shift: 'your booked shift {{weight}}',
+  // Spec 0049 (AC-3).
+  why_on_shift: 'You were on a booked shift',
   why_nearest: 'You were the nearest rider ({{km}} km)',
   why_nearest_plain: 'You were the nearest rider',
   why_nearest_road:

@@ -77,6 +77,10 @@ export const whyYouLines = (
           t('translations:why_waiting', { time: durationWords(waiting, t) }),
         );
       }
+      // Spec 0049 (AC-3): said only when the shift factor counted and the rider was on a booked shift.
+      if (counted('shift') && v.onShift === true) {
+        lines.push(t('translations:why_on_shift'));
+      }
       const weights = Object.entries(whyYou.weights)
         .filter(([key]) => WEIGHT_KEYS[key])
         .map(([key, weight]) => t(WEIGHT_KEYS[key], { weight }));

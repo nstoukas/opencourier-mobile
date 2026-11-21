@@ -84,6 +84,7 @@ export const ShiftsScreen = ({ navigation }: Props) => {
     );
 
   const myBookings = data?.myBookings ?? [];
+  const offlineRecords = data?.offlineRecords ?? [];
   const byDate = new Map<string, ShiftOccurrence[]>();
   for (const occurrence of data?.occurrences ?? []) {
     byDate.set(occurrence.date, [
@@ -169,6 +170,25 @@ export const ShiftsScreen = ({ navigation }: Props) => {
               </View>
             ))
           )}
+
+          {/* Spec 0049 (AC-5): going Offline during a booked shift, as the server recorded it. Shown
+              only when there is one; it changes nothing about offers or pay. */}
+          {offlineRecords.length > 0 ? (
+            <>
+              <Text style={styles.section}>
+                {t('translations:shift_offline_records')}
+              </Text>
+              {offlineRecords.map(record => (
+                <View
+                  key={record.id}
+                  style={styles.row}
+                  testID={`shift-offline-${record.id}`}>
+                  <Text style={styles.rowTitle}>{record.sentence}</Text>
+                  <Text style={styles.muted}>{record.noEffect}</Text>
+                </View>
+              ))}
+            </>
+          ) : null}
 
           <Text style={styles.section}>{t('translations:shift_schedule')}</Text>
           {byDate.size === 0 && !isLoading ? (

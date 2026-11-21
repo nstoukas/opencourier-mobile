@@ -31,10 +31,20 @@ export type MyShiftBooking = {
   slotRemoved: boolean;
 };
 
+// Spec 0049 (row 79): one of the rider's own Offline records, worded by the server.
+export type ShiftOfflineRecord = {
+  id: string;
+  offlineAt: string;
+  sentence: string;
+  noEffect: string;
+};
+
 export type ShiftSchedule = {
   serverNow: string;
   occurrences: ShiftOccurrence[];
   myBookings: MyShiftBooking[];
+  // Spec 0049: own records of the last 7 days, newest first. Optional: an older server sends none.
+  offlineRecords?: ShiftOfflineRecord[];
   // The server's clock minus the phone's at the moment the answer was built (the request's midpoint),
   // so the banner and the reminders use the server's time whatever the phone's clock says.
   clockOffsetMs: number;
