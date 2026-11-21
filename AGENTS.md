@@ -150,4 +150,8 @@ the error count is above `typecheck-baseline.json`, and lowers the file when the
   places above. The permissions the library declares and the app does not need are removed with `tools:node="remove"` in
   `AndroidManifest.xml` (a test reads it); keep `WAKE_LOCK`, which Firebase messaging needs. `jest.setup.js` mocks the module.
 
+- "Leg 1 of 2" (spec 0046) is worded only by `legLine` (`src/utilities/legs.ts`), on the offer card and the job card at every step;
+  nothing for a single delivery. Push data carries the labels as strings ('' for a single delivery): convert with `Number()`
+  if a card is ever built from push data.
+
 _Drafted by /audit from the repo, worth a quick human pass. Edit freely: once a line stops matching this draft, later runs treat it as curated and will flag rather than overwrite it._
