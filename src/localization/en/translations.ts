@@ -736,6 +736,7 @@ export default {
   split_send_no_connection: 'No connection. Try again when you have signal.',
   split_waiting: 'Waiting for dispatch to split this order',
   split_waiting_clock: 'Waiting for dispatch to split this order · {{time}}',
+  split_waiting_leave_at: 'Waiting for dispatch · {{time}} · Leave from {{at}}',
   split_leave_button: 'Leave',
   split_leave_title: 'Leave this order?',
   split_leave_body:
@@ -747,8 +748,10 @@ export default {
   split_refused: 'Dispatch: it fits one box',
   split_refused_with_note: 'Dispatch: {{note}}',
   split_refused_title: 'Dispatch says it fits',
-  split_confirmed: 'Split by dispatch: you take box 1',
-  split_confirmed_size: 'Split by dispatch: you take box 1, {{size}}',
+  split_confirmed: 'Split by dispatch: you take your box',
+  split_confirmed_size: 'Split by dispatch: you take the {{size}} box',
+  split_notice_title_confirmed: 'Dispatch split the order',
+  split_channel: 'Split answers',
   removal_withdraw_confirm_title: 'Withdraw your request?',
   removal_withdraw_confirm_body:
     'Dispatch stops looking at it and you stay on this order. You can ask again.',

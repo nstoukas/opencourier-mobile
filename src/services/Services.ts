@@ -15,6 +15,7 @@ import { clearChatNotice } from './chat/chatNotice';
 import { clearChatOutgoing } from './chat/chatOutgoing';
 import { setOwnPosition } from './ownPosition';
 import { clearRemovalNotices } from './removalNotice/removalNotice';
+import { clearSplitNotices } from './splitNotice/splitNotice';
 import { setLatestFix } from './latestFix';
 import { clearHeldArrivals } from './heldArrivals';
 import { clearStatementFiles } from './statements/statementsApi';
@@ -61,6 +62,7 @@ const Services = (): Services => {
     clearPickedUpTimes();
     // The next rider never sees the last one's removal answers (spec 0035).
     clearRemovalNotices();
+    clearSplitNotices();
     // Nor what the last rider had seen of their chat (spec 0034, AC-12).
     clearChatSeen().catch(error =>
       console.log('Could not clear the chat seen mark', error),

@@ -300,11 +300,18 @@ export const JobFooter = ({
           testID="job-split-waiting">
           <Icon icon={ClockIcon} size={18} tone="muted-foreground" />
           <Text style={styles.waitingText} numberOfLines={1}>
-            {splitSeconds !== null
-              ? t('translations:split_waiting_clock', {
+            {splitSeconds === null
+              ? t('translations:split_waiting')
+              : order.splitLeaveFromOnPhone &&
+                Date.now() < order.splitLeaveFromOnPhone
+              ? // Row 11 review: says when Leave will appear, from the server's time on the phone's clock.
+                t('translations:split_waiting_leave_at', {
                   time: waitClockText(splitSeconds),
+                  at: moment(order.splitLeaveFromOnPhone).format(formatShift),
                 })
-              : t('translations:split_waiting')}
+              : t('translations:split_waiting_clock', {
+                  time: waitClockText(splitSeconds),
+                })}
           </Text>
         </View>
       ) : null}
@@ -338,7 +345,9 @@ export const JobFooter = ({
             : t('translations:split_confirmed')}
         </Text>
       ) : null}
-      {secondsWaiting !== null ? (
+      {/* Row 11 review: while dispatch splits the order, its line is the only clock, as those minutes
+          are paid only as the split wait (cross check 2). */}
+      {secondsWaiting !== null && !splitOpen ? (
         <Text style={styles.waitClock} testID="job-wait-clock">
           {order.paidFromOnPhone
             ? t('translations:waiting_clock_paid', {

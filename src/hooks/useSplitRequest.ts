@@ -13,6 +13,7 @@ import { services } from '@app/services/service';
 import { Order, SplitBoxSize, SplitRequest } from '@app/types/types';
 import { QueryKeys } from '@app/utilities/queryKeys';
 import { serverMessage } from './useMoveDropoffPin';
+import { forgetSplitDecision } from '@app/services/splitNotice/splitNotice';
 
 // Spec 0047 (row 11): sending a split request and leaving an order dispatch did
 // not split in time. Online only, like the removal request (spec 0035): each is
@@ -31,13 +32,32 @@ export const useSplitBusy = (deliveryId: string | undefined): boolean =>
 const busyNow = (client: QueryClient, deliveryId: string): boolean =>
   client.isMutating(splitFilters(deliveryId)) > 0;
 
+// Row 11 review: the request was made a moment ago, so on the phone's clock it starts now, and Leave comes
+// the server's own gap later (no server clock needed for a difference). The card counts and shows Leave
+// at once, even if the refetch that follows fails.
+export const splitTimesOnPhone = (
+  splitRequest: Pick<SplitRequest, 'createdAt' | 'leaveFrom'>,
+  phoneNow: number,
+): { splitCreatedAtOnPhone: number; splitLeaveFromOnPhone: number | null } => {
+  const gap =
+    new Date(splitRequest.leaveFrom).getTime() -
+    new Date(splitRequest.createdAt).getTime();
+  return {
+    splitCreatedAtOnPhone: phoneNow,
+    splitLeaveFromOnPhone: Number.isFinite(gap) ? phoneNow + gap : null,
+  };
+};
+
 const setRequestOnJob = (
   client: QueryClient,
   deliveryId: string,
   splitRequest: SplitRequest,
 ) => {
+  const times = splitTimesOnPhone(splitRequest, Date.now());
   client.setQueryData<Order[]>([QueryKeys.inProgressOrders], jobs =>
-    jobs?.map(job => (job.id === deliveryId ? { ...job, splitRequest } : job)),
+    jobs?.map(job =>
+      job.id === deliveryId ? { ...job, splitRequest, ...times } : job,
+    ),
   );
 };
 
@@ -53,6 +73,8 @@ export const useSendSplitRequest = () => {
     mutationFn: ({ orderId, legs }: SendParams) =>
       services.orderService.sendSplitRequest({ id: orderId, legs }),
     onSuccess: (request, { orderId }) => {
+      // A new request: its answer is shown even if worded as an earlier one.
+      forgetSplitDecision(orderId);
       setRequestOnJob(queryClient, orderId, request);
     },
     onError: error => {

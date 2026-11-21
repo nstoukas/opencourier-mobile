@@ -1,6 +1,7 @@
 import { parseJobReadyUpdate } from '@app/utilities/readySignals';
 import { showReadyNotice } from '@app/services/readyNotice/readyNotice';
 import { receiveRemovalDecision } from '@app/services/removalNotice/removalNotice';
+import { receiveSplitDecision } from '@app/services/splitNotice/splitNotice';
 import useUser from '@app/hooks/useUser';
 import { services } from '@app/services/service';
 import { QueryKeys } from '@app/utilities/queryKeys';
@@ -153,9 +154,12 @@ const SocketProvider = ({ children }: Props) => {
         );
       },
       // Spec 0047: dispatch answered a split request. The job list carries the answer
-      // (and, on a confirm, the leg and its size), so it is fetched again.
-      onSplitRequestDecided: () => {
-        refetch([QueryKeys.inProgressOrders]);
+      // (and, on a confirm, the leg and its size); the rider is also told, with a sound,
+      // as a removal answer is (cross check 12, row 11 review).
+      onSplitRequestDecided: (message: unknown) => {
+        receiveSplitDecision(message, queryClient).catch(error =>
+          console.log('Could not show the split notice', error),
+        );
       },
       // Chat (spec 0034, AC-8): the messages live in the server's database, so
       // a message or a read mark is just a reason to fetch the thread again.

@@ -9,6 +9,7 @@
 import { parseJobReadyUpdate } from '@app/utilities/readySignals';
 import { showReadyNotice } from '@app/services/readyNotice/readyNotice';
 import { receiveRemovalDecision } from '@app/services/removalNotice/removalNotice';
+import { receiveSplitDecision } from '@app/services/splitNotice/splitNotice';
 import { AppState } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 // `type` brings in only the TypeScript description of these, no code.
@@ -83,6 +84,15 @@ export const onRemoteMessage = async (
     if (await AsyncStorage.getItem('token')) {
       await receiveRemovalDecision(message.data, queryClient).catch(error =>
         console.log('Could not show the removal notice', error),
+      );
+    }
+    return;
+  }
+  // Spec 0047 (cross check 12): dispatch answered a split request, shown as a removal answer is.
+  if (message.data?.type === 'SPLIT_REQUEST_DECIDED') {
+    if (await AsyncStorage.getItem('token')) {
+      await receiveSplitDecision(message.data, queryClient).catch(error =>
+        console.log('Could not show the split notice', error),
       );
     }
     return;
