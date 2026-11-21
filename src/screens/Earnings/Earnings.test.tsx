@@ -31,6 +31,17 @@ jest.mock('@app/hooks/useEarnings', () => {
 jest.mock('@app/hooks/useTimeWorked');
 jest.mock('@app/hooks/useReviewRequests');
 jest.mock('@app/services/reviewSeen');
+// Spec 0050 (AC-8): Statements reads its months with its own query and has its own test
+// (StatementsSection.test.tsx). Here a stand in takes its place, so this screen's tests need no query
+// provider; one test below checks the screen really shows it.
+jest.mock('@app/components/StatementsSection/StatementsSection', () => {
+  const ReactLocal = require('react');
+  const { View } = require('react-native');
+  return {
+    StatementsSection: () =>
+      ReactLocal.createElement(View, { testID: 'statements' }),
+  };
+});
 
 describe('Earnings screen (spec 0042 AC-1, AC-2, AC-6, AC-8, AC-9, AC-13)', () => {
   let focusCallback: (() => void) | undefined;
@@ -207,6 +218,48 @@ describe('Earnings screen (spec 0042 AC-1, AC-2, AC-6, AC-8, AC-9, AC-13)', () =
 
   afterEach(() => {
     jest.useRealTimers();
+  });
+
+  describe('Spec 0050 AC-8: Statements', () => {
+    it('the Earnings screen shows Statements, once, below the figures', () => {
+      render(<Earnings {...defaultProps} />);
+
+      expect(screen.getAllByTestId('statements')).toHaveLength(1);
+      // Every testID on the screen, in the order it is drawn.
+      const ids: string[] = [];
+      const walk = (node: any) => {
+        if (Array.isArray(node)) {
+          node.forEach(walk);
+        } else if (node && typeof node === 'object') {
+          if (typeof node.props?.testID === 'string') {
+            ids.push(node.props.testID);
+          }
+          walk(node.children);
+        }
+      };
+      walk(screen.toJSON());
+      expect(ids).toContain('earnings-figures');
+      expect(ids.indexOf('statements')).toBeGreaterThan(
+        ids.indexOf('earnings-figures'),
+      );
+    });
+
+    it('Statements is there even when the month cannot be loaded (a statement does not depend on the screen reach)', () => {
+      (useEarningsMonths as jest.Mock).mockReturnValue([
+        {
+          data: undefined,
+          isLoading: false,
+          isError: true,
+          isRefetching: false,
+          refetch: jest.fn(),
+          dataUpdatedAt: 0,
+        },
+      ]);
+
+      render(<Earnings {...defaultProps} />);
+
+      expect(screen.getAllByTestId('statements')).toHaveLength(1);
+    });
   });
 
   describe('AC-1: Figures card', () => {

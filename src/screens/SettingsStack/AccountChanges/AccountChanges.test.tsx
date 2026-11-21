@@ -138,6 +138,51 @@ describe('AccountChanges (spec 0051, AC-7)', () => {
       ).toBe('vehiclePlate changed by the co-op: A → B');
     });
 
+    // Spec 0050 (cross check 14): an admin downloaded the rider's monthly statement.
+    it('a statement download by the co-op names the month and the format', () => {
+      expect(
+        accountChangeLine(
+          change({
+            kind: 'STATEMENT_DOWNLOADED',
+            field: 'statement',
+            newValue: '2026-10 PDF',
+          }),
+          t,
+        ),
+      ).toBe('The co-op downloaded your statement for 2026-10 PDF');
+    });
+
+    it('a statement download never reads as an edited field ("statement changed by ...")', () => {
+      const line = accountChangeLine(
+        change({
+          kind: 'STATEMENT_DOWNLOADED',
+          field: 'statement',
+          newValue: '2026-09 CSV',
+        }),
+        t,
+      );
+
+      expect(line).toContain('2026-09 CSV');
+      expect(line).not.toContain('changed by');
+      expect(line).not.toContain('→');
+      expect(line).not.toContain('empty');
+    });
+
+    it('a statement download names the co-op, never the admin who did it', () => {
+      const line = accountChangeLine(
+        change({
+          kind: 'STATEMENT_DOWNLOADED',
+          field: 'statement',
+          newValue: '2026-10 PDF',
+          by: 'anna.admin@coop.gr' as AccountChange['by'],
+        }),
+        t,
+      );
+
+      expect(line).toContain('The co-op');
+      expect(line).not.toContain('anna.admin@coop.gr');
+    });
+
     it('whatever the kind, the actor is only ever "the co-op" or "you"', () => {
       for (const kind of [
         'DEACTIVATED',
@@ -235,6 +280,26 @@ describe('AccountChanges (spec 0051, AC-7)', () => {
       expect(screen.getByText('Reason: Left the co-op')).toBeTruthy();
       // The co-op's clock (Athens): 18:30 UTC on 20 November is 20:30 there.
       expect(screen.getByText(/2026-11-20\s+20:30/)).toBeTruthy();
+    });
+
+    it('spec 0050: a statement download by the co-op is listed like any other change', async () => {
+      mockFetch.mockResolvedValue([
+        change({
+          id: 's1',
+          kind: 'STATEMENT_DOWNLOADED',
+          field: 'statement',
+          newValue: '2026-10 PDF',
+        }),
+      ]);
+
+      renderScreen();
+
+      expect(
+        await screen.findByText(
+          'The co-op downloaded your statement for 2026-10 PDF',
+        ),
+      ).toBeTruthy();
+      expect(screen.queryByText(/Reason:/)).toBeNull();
     });
 
     it('a change with no reason shows no "Reason:" line', async () => {
