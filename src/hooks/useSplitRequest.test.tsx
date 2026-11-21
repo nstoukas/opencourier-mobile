@@ -9,7 +9,13 @@ import { services } from '@app/services/service';
 import { OrderStatus } from '@app/types/enums';
 import { Order, SplitRequest } from '@app/types/types';
 import { QueryKeys } from '@app/utilities/queryKeys';
+import notifee from '@notifee/react-native';
 import {
+  clearSplitNotices,
+  showSplitDecision,
+} from '@app/services/splitNotice/splitNotice';
+import {
+  splitTimesOnPhone,
   useLeaveSplit,
   useSendSplitRequest,
   useSplitBusy,
@@ -90,6 +96,69 @@ describe('useSplitRequest hooks (spec 0047, AC-1, AC-8)', () => {
     queryClient?.clear();
   });
 
+  describe('splitTimesOnPhone (row 11 review)', () => {
+    const PHONE_NOW = 1_800_000_000_000;
+
+    it("starts the request now on the phone's clock, and Leave the server's own gap later", () => {
+      expect(
+        splitTimesOnPhone(
+          {
+            createdAt: '2026-11-21T12:00:00.000Z',
+            leaveFrom: '2026-11-21T12:10:00.000Z',
+          },
+          PHONE_NOW,
+        ),
+      ).toEqual({
+        splitCreatedAtOnPhone: PHONE_NOW,
+        splitLeaveFromOnPhone: PHONE_NOW + 10 * 60_000,
+      });
+    });
+
+    it("uses the instance's own answer time, not ten minutes of the app's", () => {
+      expect(
+        splitTimesOnPhone(
+          {
+            createdAt: '2026-11-21T12:00:00.000Z',
+            leaveFrom: '2026-11-21T12:04:30.000Z',
+          },
+          PHONE_NOW,
+        ).splitLeaveFromOnPhone,
+      ).toBe(PHONE_NOW + 4.5 * 60_000);
+    });
+
+    it("a phone whose clock is hours off the server's still gets the same gap", () => {
+      const wrongClock = PHONE_NOW - 3 * 3_600_000;
+      const times = splitTimesOnPhone(
+        {
+          createdAt: '2026-11-21T12:00:00.000Z',
+          leaveFrom: '2026-11-21T12:10:00.000Z',
+        },
+        wrongClock,
+      );
+
+      expect(times.splitCreatedAtOnPhone).toBe(wrongClock);
+      expect(times.splitLeaveFromOnPhone).toBe(wrongClock + 10 * 60_000);
+    });
+
+    it('names no Leave time, never a wrong one, when a time cannot be read', () => {
+      expect(
+        splitTimesOnPhone(
+          { createdAt: '2026-11-21T12:00:00.000Z', leaveFrom: 'soon' },
+          PHONE_NOW,
+        ),
+      ).toEqual({
+        splitCreatedAtOnPhone: PHONE_NOW,
+        splitLeaveFromOnPhone: null,
+      });
+      expect(
+        splitTimesOnPhone(
+          { createdAt: undefined, leaveFrom: undefined } as any,
+          PHONE_NOW,
+        ).splitLeaveFromOnPhone,
+      ).toBeNull();
+    });
+  });
+
   describe('useSendSplitRequest (AC-1)', () => {
     it('sends the boxes for this order, puts the open request on the job at once, and tells the screen it was sent', async () => {
       const wrapper = createWrapper();
@@ -120,6 +189,103 @@ describe('useSplitRequest hooks (spec 0047, AC-1, AC-8)', () => {
       // Another job is left alone.
       expect(jobs?.find(item => item.id === 'del-B')?.splitRequest).toBeNull();
       expect(alertSpy).not.toHaveBeenCalled();
+    });
+
+    // Row 11 review: the card counts and offers Leave from what the send answered, even if the read of
+    // the job list that follows fails (the phone has no server clock for it yet, and needs none).
+    it("puts the request's times on the phone's clock at once: flagged now, Leave the server's gap later", async () => {
+      const wrapper = createWrapper();
+      queryClient.setQueryData(
+        [QueryKeys.inProgressOrders],
+        [job('del-A'), job('del-B')],
+      );
+      jest
+        .spyOn(services.orderService, 'sendSplitRequest')
+        .mockResolvedValue(created);
+      // The read of the job list that follows fails: the times must not depend on it.
+      jest
+        .spyOn(queryClient, 'invalidateQueries')
+        .mockImplementation(() => Promise.resolve());
+      const onSent = jest.fn();
+      const { result } = renderHook(() => useSendSplitRequest(), { wrapper });
+
+      const before = Date.now();
+      act(() => {
+        result.current.send({ orderId: 'del-A', legs }, onSent);
+      });
+      await waitFor(() => expect(onSent).toHaveBeenCalledTimes(1));
+      const after = Date.now();
+
+      const jobs = queryClient.getQueryData<Order[]>([
+        QueryKeys.inProgressOrders,
+      ]);
+      const sent = jobs?.find(item => item.id === 'del-A') as Order;
+      expect(sent.splitCreatedAtOnPhone).toBeGreaterThanOrEqual(before);
+      expect(sent.splitCreatedAtOnPhone).toBeLessThanOrEqual(after);
+      // 12:00 to 12:10 on the server: ten minutes after the flag on the phone.
+      expect(sent.splitLeaveFromOnPhone).toBe(
+        (sent.splitCreatedAtOnPhone as number) + 10 * 60_000,
+      );
+      // Another job gets no times.
+      const other = jobs?.find(item => item.id === 'del-B') as Order;
+      expect(other.splitCreatedAtOnPhone).toBeUndefined();
+      expect(other.splitLeaveFromOnPhone).toBeUndefined();
+    });
+
+    // Row 11 review: the answer to a new request is a new answer, even if worded like the last one.
+    it('a new request forgets the last answer shown for this order, so the same answer is told again', async () => {
+      const wrapper = createWrapper();
+      jest
+        .spyOn(services.orderService, 'sendSplitRequest')
+        .mockResolvedValue(created);
+      const refusedAnswer = {
+        deliveryId: 'del-A',
+        outcome: 'REFUSED' as const,
+        adminNote: null,
+        boxSize: null,
+      };
+      clearSplitNotices();
+      (notifee.displayNotification as jest.Mock).mockClear();
+      await showSplitDecision(refusedAnswer);
+      await showSplitDecision(refusedAnswer);
+      expect(notifee.displayNotification).toHaveBeenCalledTimes(1);
+
+      const onSent = jest.fn();
+      const { result } = renderHook(() => useSendSplitRequest(), { wrapper });
+      act(() => {
+        result.current.send({ orderId: 'del-A', legs }, onSent);
+      });
+      await waitFor(() => expect(onSent).toHaveBeenCalledTimes(1));
+
+      await showSplitDecision(refusedAnswer);
+      expect(notifee.displayNotification).toHaveBeenCalledTimes(2);
+      clearSplitNotices();
+    });
+
+    it('a send that was refused forgets nothing: the old answer is not told again', async () => {
+      const wrapper = createWrapper();
+      jest
+        .spyOn(services.orderService, 'sendSplitRequest')
+        .mockRejectedValue(refusal(409, 'This order already has a request.'));
+      const refusedAnswer = {
+        deliveryId: 'del-A',
+        outcome: 'REFUSED' as const,
+        adminNote: null,
+        boxSize: null,
+      };
+      clearSplitNotices();
+      (notifee.displayNotification as jest.Mock).mockClear();
+      await showSplitDecision(refusedAnswer);
+
+      const { result } = renderHook(() => useSendSplitRequest(), { wrapper });
+      act(() => {
+        result.current.send({ orderId: 'del-A', legs }, jest.fn());
+      });
+      await waitFor(() => expect(alertSpy).toHaveBeenCalled());
+
+      await showSplitDecision(refusedAnswer);
+      expect(notifee.displayNotification).toHaveBeenCalledTimes(1);
+      clearSplitNotices();
     });
 
     it('reads the job list again afterwards, for the times on the phone clock', async () => {

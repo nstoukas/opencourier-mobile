@@ -54,6 +54,13 @@ describe('JobFooter split at pickup (spec 0047, AC-1, AC-2, AC-7, AC-8)', () => 
       ...overrides,
     });
 
+  // "HH:mm" on the phone's own clock, worked out here without the app's date library.
+  const phoneClock = (at: number): string => {
+    const date = new Date(at);
+    const two = (value: number) => String(value).padStart(2, '0');
+    return `${two(date.getHours())}:${two(date.getMinutes())}`;
+  };
+
   const footer = (
     order: Order,
     props: Partial<React.ComponentProps<typeof JobFooter>> = {},
@@ -136,20 +143,97 @@ describe('JobFooter split at pickup (spec 0047, AC-1, AC-2, AC-7, AC-8)', () => 
   });
 
   describe('while the request is OPEN (AC-2)', () => {
-    it('says "Waiting for dispatch to split this order" with a counter that counts up', () => {
+    // Row 11 review: before the limit the line also says when Leave will appear.
+    it('says it is waiting for dispatch, with a counter that counts up and the time Leave comes', () => {
+      const leaveAt = phoneClock(LEAVE_FROM_ON_PHONE);
       const { getByTestId, getByText } = render(footer(waiting()));
 
       expect(getByTestId('job-split-waiting')).toBeTruthy();
       expect(
-        getByText('Waiting for dispatch to split this order · 3:05'),
+        getByText(`Waiting for dispatch · 3:05 · Leave from ${leaveAt}`),
       ).toBeTruthy();
 
       act(() => {
         jest.advanceTimersByTime(1000);
       });
       expect(
-        getByText('Waiting for dispatch to split this order · 3:06'),
+        getByText(`Waiting for dispatch · 3:06 · Leave from ${leaveAt}`),
       ).toBeTruthy();
+    });
+
+    it("the Leave time is the server's leave time on the phone's clock, not ten minutes of the app's own", () => {
+      // An instance whose answer time is 4 minutes: Leave comes 4 minutes after the flag.
+      const leaveFrom = FLAGGED_ON_PHONE + 4 * 60_000;
+      const { getByText } = render(
+        footer(waiting({ splitLeaveFromOnPhone: leaveFrom })),
+      );
+
+      expect(
+        getByText(
+          `Waiting for dispatch · 3:05 · Leave from ${phoneClock(leaveFrom)}`,
+        ),
+      ).toBeTruthy();
+    });
+
+    it('once the limit has passed the line no longer promises a Leave time (the button is there)', () => {
+      jest.setSystemTime(LEAVE_FROM_ON_PHONE + 1000);
+      const { getByText, queryByText, getByTestId } = render(footer(waiting()));
+
+      expect(
+        getByText('Waiting for dispatch to split this order · 10:01'),
+      ).toBeTruthy();
+      expect(queryByText(/Leave from/)).toBeNull();
+      expect(getByTestId('job-action-leave-split')).toBeTruthy();
+    });
+
+    it('with no leave time on the phone yet it keeps the counter and names no time', () => {
+      const { getByText, queryByText } = render(
+        footer(waiting({ splitLeaveFromOnPhone: null })),
+      );
+
+      expect(
+        getByText('Waiting for dispatch to split this order · 3:05'),
+      ).toBeTruthy();
+      expect(queryByText(/Leave from/)).toBeNull();
+    });
+
+    // Row 11 review (cross check 2): while dispatch splits the order those minutes are paid only as the
+    // split wait, so the ordinary wait clock is not drawn under the split line.
+    it('hides the ordinary wait clock while the request is open', () => {
+      const { queryByTestId, queryByText, getByTestId } = render(
+        footer(
+          waiting({
+            arrivedAtOnPhone: NOW - (6 * 60 + 12) * 1000,
+            paidFromOnPhone: NOW - 60_000,
+          }),
+        ),
+      );
+
+      expect(getByTestId('job-split-waiting')).toBeTruthy();
+      expect(queryByTestId('job-wait-clock')).toBeNull();
+      expect(queryByText(/^Waiting 6:12/)).toBeNull();
+    });
+
+    it('shows the ordinary wait clock with no request, and again once dispatch has answered', () => {
+      const arrivedAtOnPhone = NOW - (6 * 60 + 12) * 1000;
+
+      const plain = render(footer(atRestaurant({ arrivedAtOnPhone })));
+      expect(plain.getByTestId('job-wait-clock').props.children).toBe(
+        'Waiting 6:12',
+      );
+      plain.unmount();
+
+      for (const status of ['REFUSED', 'CONFIRMED'] as const) {
+        const view = render(
+          footer(
+            atRestaurant({ arrivedAtOnPhone, splitRequest: request(status) }),
+          ),
+        );
+        expect(view.getByTestId('job-wait-clock').props.children).toBe(
+          'Waiting 6:12',
+        );
+        view.unmount();
+      }
     });
 
     it('says the sentence without a counter when the phone does not know the flag time yet', () => {
@@ -268,7 +352,8 @@ describe('JobFooter split at pickup (spec 0047, AC-1, AC-2, AC-7, AC-8)', () => 
       expect(getByText('Dispatch: it fits one box')).toBeTruthy();
     });
 
-    it('a confirm says the rider takes box 1 and its size', () => {
+    // Row 11 review: "box 1" was wrong on a leg split again, so the line names the size the rider keeps.
+    it('a confirm says the size of the box the rider keeps, and never "box 1"', () => {
       const order = atRestaurant({
         splitRequest: request('CONFIRMED', {
           finalLegs: [{ boxSize: 'MEDIUM' }, { boxSize: 'SMALL' }],
@@ -277,7 +362,10 @@ describe('JobFooter split at pickup (spec 0047, AC-1, AC-2, AC-7, AC-8)', () => 
       const { getByTestId } = render(footer(order));
 
       expect(getByTestId('job-split-confirmed').props.children).toBe(
-        'Split by dispatch: you take box 1, Medium',
+        'Split by dispatch: you take the Medium box',
+      );
+      expect(getByTestId('job-split-confirmed').props.children).not.toMatch(
+        /box 1/,
       );
     });
 
@@ -291,7 +379,17 @@ describe('JobFooter split at pickup (spec 0047, AC-1, AC-2, AC-7, AC-8)', () => 
       const { getByTestId } = render(footer(order));
 
       expect(getByTestId('job-split-confirmed').props.children).toBe(
-        'Split by dispatch: you take box 1, Small',
+        'Split by dispatch: you take the Small box',
+      );
+    });
+
+    it('a confirm whose sizes did not arrive still says so, without a size and without "box 1"', () => {
+      const { getByTestId } = render(
+        footer(atRestaurant({ splitRequest: request('CONFIRMED') })),
+      );
+
+      expect(getByTestId('job-split-confirmed').props.children).toBe(
+        'Split by dispatch: you take your box',
       );
     });
 
