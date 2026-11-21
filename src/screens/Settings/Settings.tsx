@@ -44,6 +44,15 @@ export const SettingsScreen = ({ navigation }: Props) => {
           cellType: SettingsCellType.plain,
           cellData: SettingsOptions.emergencyContact,
         },
+        // Spec 0051 (AC-7, AC-8).
+        {
+          cellType: SettingsCellType.plain,
+          cellData: SettingsOptions.changePassword,
+        },
+        {
+          cellType: SettingsCellType.plain,
+          cellData: SettingsOptions.accountChanges,
+        },
         {
           cellType: SettingsCellType.plain,
           cellData: SettingsOptions.language,
@@ -137,6 +146,8 @@ export const SettingsScreen = ({ navigation }: Props) => {
       case SettingsOptions.cashOnDelivery:
         return 'enable_cash';
       case SettingsOptions.licenses:
+      case SettingsOptions.changePassword:
+      case SettingsOptions.accountChanges:
         return undefined;
       case SettingsOptions.vehicleType:
         return 'select_vehicle';
@@ -157,6 +168,12 @@ export const SettingsScreen = ({ navigation }: Props) => {
     }
     if (item === SettingsOptions.emergencyContact) {
       navigation.navigate(MainScreens.EmergencyContact);
+    }
+    if (item === SettingsOptions.changePassword) {
+      navigation.navigate(MainScreens.ChangePassword);
+    }
+    if (item === SettingsOptions.accountChanges) {
+      navigation.navigate(MainScreens.AccountChanges);
     }
     if (item === SettingsOptions.navigation) {
       navigation.navigate(MainScreens.NavigationScreen);

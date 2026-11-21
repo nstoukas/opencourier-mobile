@@ -395,6 +395,9 @@ export type ConfirmItemsCheck = {
 export enum SettingsOptions {
   accountInformation = 'account_information',
   emergencyContact = 'emergency_contact',
+  // Spec 0051 (row 108).
+  changePassword = 'change_password',
+  accountChanges = 'account_changes',
   language = 'language',
   navigation = 'navigation',
   operatingArea = 'specify_operating',

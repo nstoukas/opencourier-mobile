@@ -18,6 +18,11 @@ import { cancelAllOfferAlerts } from './offerPush/offerAlert';
 import { StackActions } from '@react-navigation/native';
 import { navigationRef } from '@app/navigation/navigationRef';
 import { RootScreen } from '@app/navigation/types';
+import {
+  SessionEndNotice,
+  noticeForRefusal,
+  setSessionEndNotice,
+} from './account/sessionEndNotice';
 
 // Keeps a rider's login alive (row 66). The backend answers 401 when the access
 // token has expired; the app then asks for a new one with the refresh token it
@@ -138,7 +143,12 @@ export const clearRiderDataOnPhone = async (http: UClient): Promise<void> => {
 // session, and tells them why. The server calls that logging out normally
 // makes (going Offline, removing this phone from push) cannot work without a
 // session; an offer left with this rider still ends at its deadline.
-export const endExpiredSession = (http: UClient): Promise<void> => {
+// Spec 0051 (AC-9): `notice` says why when the server named the reason (a deactivated account, or the
+// password or login email changed); then a full screen notice replaces the generic alert.
+export const endExpiredSession = (
+  http: UClient,
+  notice: SessionEndNotice | null = null,
+): Promise<void> => {
   if (!ending) {
     ending = (async () => {
       await clearRiderDataOnPhone(http);
@@ -153,10 +163,14 @@ export const endExpiredSession = (http: UClient): Promise<void> => {
         // for a ref, which has no `replace` of its own.
         navigationRef.dispatch(StackActions.replace(RootScreen.Auth));
       }
-      Alert.alert(
-        i18n.t('translations:session_ended_title'),
-        i18n.t('translations:session_ended_body'),
-      );
+      if (notice) {
+        setSessionEndNotice(notice);
+      } else {
+        Alert.alert(
+          i18n.t('translations:session_ended_title'),
+          i18n.t('translations:session_ended_body'),
+        );
+      }
     })().finally(() => {
       ending = null;
     });
@@ -187,7 +201,7 @@ export const onResponseError =
       return http(config);
     } catch (refreshError) {
       if (isRefused(refreshError)) {
-        await endExpiredSession(http);
+        await endExpiredSession(http, noticeForRefusal(refreshError));
       }
       return Promise.reject(error);
     }

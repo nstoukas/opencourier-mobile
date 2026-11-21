@@ -19,6 +19,7 @@ import { useOfflineWithoutLocation } from '@app/hooks/useOfflineWithoutLocation'
 import { useArrivalDetection } from '@app/hooks/useArrivalDetection';
 import { useSos } from '@app/hooks/useSos';
 import { SosScreen } from '@app/screens/Sos/SosScreen';
+import { SessionEndedNotice } from '@app/components/SessionEndedNotice/SessionEndedNotice';
 
 const RootStack = createNativeStackNavigator<RootStackParamList>();
 
@@ -63,6 +64,8 @@ export const Router = () => {
           location watch's fixes on the phone (spec 0021). Its own leaf, so
           each fix redraws only this, not the whole navigator (review nit). */}
       <ArrivalDetector courierId={user?.id} />
+      {/* Spec 0051 (AC-9): why the co-op ended the session, over the login screen. */}
+      <SessionEndedNotice />
       <RootStack.Navigator>
         {!user ? (
           <>

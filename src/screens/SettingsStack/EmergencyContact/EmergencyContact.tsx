@@ -1,59 +1,61 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, ScrollView } from 'react-native';
+import {
+  Alert,
+  KeyboardAvoidingView,
+  ScrollView,
+  Text,
+  View,
+} from 'react-native';
+import { useTranslation } from 'react-i18next';
 import { ScreenSafeArea } from '@app/components/ScreenSafeArea/ScreenSafeArea';
 import { styles } from './EmergencyContact.styles';
 import { MainScreenProp, MainScreens } from '@app/navigation/main/types';
 import { BackNavButton } from '@app/components/BackNavButton/BackNavButton';
-import { useTranslation } from 'react-i18next';
 import { TextField } from '@app/components/TextField/TextField';
-import { validateEmail } from '@app/utilities/text';
 import { Button, ButtonType } from '@app/components/Button/Button';
 import { Icon } from '@app/components/Icon/Icon';
 import { InfoIcon } from 'phosphor-react-native/src/icons/Info';
 import { FloppyDiskBackIcon } from 'phosphor-react-native/src/icons/FloppyDiskBack';
+import {
+  fetchEmergencyContact,
+  saveEmergencyContact,
+} from '@app/services/account/accountApi';
 
 type Props = MainScreenProp<MainScreens.EmergencyContact>;
 
-type TextFieldErrors = {
-  email: string | undefined;
-  firstname: string | undefined;
-  lastname: string | undefined;
-  phone: string | undefined;
-  address: string | undefined;
-};
-
+// Spec 0051 (cross check 12): the rider's emergency contact is kept on the server, so the co-op can see it
+// on the rider's page and when they send an SOS. The old screen saved nothing at all (its Save did
+// nothing), so there is no value on any phone to carry over. A name and a phone, both optional.
 export const EmergencyContact = ({ navigation }: Props) => {
   const { t } = useTranslation();
-  const [email, setEmail] = useState<string>('');
-  const [firstname, setFirstname] = useState<string>('');
-  const [lastname, setLastname] = useState<string>('');
-  const [phone, setPhone] = useState<string>('');
-  const [address, setAddress] = useState<string>('');
-  const [errors, setErrors] = useState<TextFieldErrors>({
-    email: undefined,
-    firstname: undefined,
-    lastname: undefined,
-    phone: undefined,
-    address: undefined,
-  });
-
-  const validateFields = () => {
-    var oldState = errors;
-
-    if (email.length > 0) {
-      if (validateEmail(email)) {
-        oldState.email = undefined;
-      } else {
-        oldState.email = 'Email invalid!';
-      }
-    }
-
-    setErrors(oldState);
-  };
+  const [name, setName] = useState('');
+  const [phone, setPhone] = useState('');
+  const [busy, setBusy] = useState(false);
 
   useEffect(() => {
-    validateFields();
-  }, [email, firstname, lastname, phone, address]);
+    fetchEmergencyContact()
+      .then(contact => {
+        setName(contact.name ?? '');
+        setPhone(contact.phone ?? '');
+      })
+      .catch(() => undefined);
+  }, []);
+
+  const save = async () => {
+    setBusy(true);
+    try {
+      await saveEmergencyContact({
+        name: name.trim() || null,
+        phone: phone.trim() || null,
+      });
+      Alert.alert(t('translations:emergency_contact_saved'));
+      navigation.goBack();
+    } catch {
+      Alert.alert(t('translations:emergency_contact_failed'));
+    } finally {
+      setBusy(false);
+    }
+  };
 
   return (
     <View style={styles.container}>
@@ -64,61 +66,40 @@ export const EmergencyContact = ({ navigation }: Props) => {
             {t('translations:emergency_contact')}
           </Text>
         </View>
-        <ScrollView contentContainerStyle={styles.scroll}>
-          <TextField
-            error={errors.firstname}
-            value={firstname}
-            placeholder={t('translations:first_name')}
-            onChangeText={setFirstname}
-            onBlur={validateFields}
-            style={styles.textField}
-          />
-          <TextField
-            error={errors.lastname}
-            value={lastname}
-            placeholder={t('translations:last_name')}
-            onChangeText={setLastname}
-            onBlur={validateFields}
-            style={styles.textField}
-          />
-          <TextField
-            error={errors.phone}
-            value={phone}
-            placeholder={t('translations:phone')}
-            onChangeText={setPhone}
-            onBlur={validateFields}
-            style={[styles.textField, { marginBottom: 2 }]}
-          />
-          <View style={styles.containerHorizontal}>
-            <Icon icon={InfoIcon} weight="fill" size={14} />
-            <Text style={styles.textInfo}>
-              {t('translations:include_code')}
-            </Text>
-          </View>
-          <TextField
-            error={errors.email}
-            value={email}
-            placeholder={t('translations:email')}
-            onChangeText={setEmail}
-            onBlur={validateFields}
-            style={styles.textField}
-          />
-          <TextField
-            error={errors.address}
-            value={address}
-            placeholder={t('translations:address')}
-            onChangeText={setAddress}
-            onBlur={validateFields}
-            style={styles.textField}
-          />
-          <Button
-            type={ButtonType.green}
-            title={t('translations:save')}
-            onPress={() => undefined}
-            icon={FloppyDiskBackIcon}
-            iconWeight="fill"
-          />
-        </ScrollView>
+        {/* Android 15 draws edge to edge, so padding is needed on Android too (row 114). */}
+        <KeyboardAvoidingView style={styles.safe} behavior="padding">
+          <ScrollView contentContainerStyle={styles.scroll}>
+            <TextField
+              value={name}
+              placeholder={t('translations:emergency_contact_name')}
+              onChangeText={setName}
+              maxLength={120}
+              style={styles.textField}
+            />
+            <TextField
+              value={phone}
+              placeholder={t('translations:emergency_contact_phone')}
+              onChangeText={setPhone}
+              keyboardType="phone-pad"
+              maxLength={32}
+              style={[styles.textField, { marginBottom: 2 }]}
+            />
+            <View style={styles.containerHorizontal}>
+              <Icon icon={InfoIcon} weight="fill" size={14} />
+              <Text style={styles.textInfo}>
+                {t('translations:include_code')}
+              </Text>
+            </View>
+            <Button
+              type={ButtonType.green}
+              title={t('translations:save')}
+              onPress={save}
+              disabled={busy}
+              icon={FloppyDiskBackIcon}
+              iconWeight="fill"
+            />
+          </ScrollView>
+        </KeyboardAvoidingView>
       </ScreenSafeArea>
     </View>
   );

@@ -18,6 +18,9 @@ export enum MainScreens {
   DefaultSound = 'DefaultSound',
   VolumeScreen = 'VolumeScreen',
   EmergencyContact = 'EmergencyContact',
+  // Spec 0051 (row 108).
+  ChangePassword = 'ChangePassword',
+  AccountChanges = 'AccountChanges',
   NavigationScreen = 'NavigationScreen',
   VehicleTypeScreen = 'VehicleTypeScreen',
   ShiftAvailabilityScreen = 'ShiftAvailabilityScreen',
@@ -43,6 +46,8 @@ export type MainStackParamList = {
   DefaultSound: undefined;
   VolumeScreen: undefined;
   EmergencyContact: undefined;
+  ChangePassword: undefined;
+  AccountChanges: undefined;
   NavigationScreen: undefined;
   VehicleTypeScreen: undefined;
   ShiftAvailabilityScreen: undefined;

@@ -6,6 +6,8 @@ import { PayoutActivity } from '@app/screens/PayoutActivity/PayoutActivity';
 import { LicencesScreen } from '@app/screens/Licences/Licences';
 import { LanguageScreen } from '@app/screens/SettingsStack/Language/Language';
 import { EmergencyContact } from '@app/screens/SettingsStack/EmergencyContact/EmergencyContact';
+import { ChangePassword } from '@app/screens/SettingsStack/ChangePassword/ChangePassword';
+import { AccountChanges } from '@app/screens/SettingsStack/AccountChanges/AccountChanges';
 import { NavigationScreen } from '@app/screens/SettingsStack/Navigation/Navigation';
 import { OperatingArea } from '@app/screens/SettingsStack/OperatingArea/OperatingArea';
 import { DefaultSound } from '@app/screens/SettingsStack/DefaultSound/DefaultSound';
@@ -65,6 +67,16 @@ export const MainStack = () => {
       <MainStackNavigator.Screen
         name={MainScreens.EmergencyContact}
         component={EmergencyContact}
+        options={DEFAULT_OPTIONS}
+      />
+      <MainStackNavigator.Screen
+        name={MainScreens.ChangePassword}
+        component={ChangePassword}
+        options={DEFAULT_OPTIONS}
+      />
+      <MainStackNavigator.Screen
+        name={MainScreens.AccountChanges}
+        component={AccountChanges}
         options={DEFAULT_OPTIONS}
       />
       <MainStackNavigator.Screen

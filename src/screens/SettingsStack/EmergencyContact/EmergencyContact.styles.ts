@@ -39,4 +39,14 @@ export const styles = StyleSheet.create({
     color: Colors.black6,
     marginLeft: 4,
   },
+  // Spec 0051: a refusal's sentence on Change password, and a line of the account history.
+  error: {
+    fontSize: typeScale.caption.fontSize,
+    color: Colors.red1,
+    marginBottom: 12,
+  },
+  line: {
+    fontSize: typeScale['body-sm'].fontSize,
+    color: Colors.black1,
+  },
 });
