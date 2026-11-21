@@ -48,6 +48,8 @@ export const openStatement = async (
   );
   const status = response.info().status;
   if (status !== 200) {
+    // Review fix: an error body saved under the statement's name is not left behind.
+    await ReactNativeBlobUtil.fs.unlink(response.path()).catch(() => undefined);
     throw new Error(`Statement download answered ${status}`);
   }
   if (Platform.OS === 'android') {
@@ -58,5 +60,25 @@ export const openStatement = async (
     );
   } else {
     await Share.share({ url: `file://${response.path()}` });
+  }
+};
+
+// Review fix (row 76): a rider's statements leave the phone at logout and at a session end, like the rest
+// of their data. Failures are ignored: the system may have cleared the cache already.
+export const clearStatementFiles = async (): Promise<void> => {
+  try {
+    const dir = ReactNativeBlobUtil.fs.dirs.CacheDir;
+    const names = await ReactNativeBlobUtil.fs.ls(dir);
+    await Promise.all(
+      names
+        .filter(name => /^statement-\d{4}-\d{2}\.(pdf|csv)$/.test(name))
+        .map(name =>
+          ReactNativeBlobUtil.fs
+            .unlink(`${dir}/${name}`)
+            .catch(() => undefined),
+        ),
+    );
+  } catch {
+    // Nothing to clear.
   }
 };

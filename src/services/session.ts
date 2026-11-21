@@ -15,6 +15,7 @@ import i18n from '@app/localization/i18n';
 import type { UClient } from './Client';
 import { queryClient } from './queryClient';
 import { cancelAllOfferAlerts } from './offerPush/offerAlert';
+import { clearStatementFiles } from './statements/statementsApi';
 import { StackActions } from '@react-navigation/native';
 import { navigationRef } from '@app/navigation/navigationRef';
 import { RootScreen } from '@app/navigation/types';
@@ -166,6 +167,8 @@ export const clearRiderDataOnPhone = async (http: UClient): Promise<void> => {
   // as logging out does.
   await clearReviewSeen().catch(() => undefined);
   clearReviewNotice();
+  // Nor the statements they downloaded (spec 0050, row 76 review).
+  await clearStatementFiles();
 };
 
 // Logs the rider out on this phone after the backend refused to renew the

@@ -151,7 +151,11 @@ jest.mock('react-native-blob-util', () => {
   return {
     __esModule: true,
     default: {
-      fs: { dirs: { CacheDir: '/cache' } },
+      fs: {
+        dirs: { CacheDir: '/cache' },
+        ls: jest.fn(() => Promise.resolve([])),
+        unlink: jest.fn(() => Promise.resolve()),
+      },
       config: jest.fn(() => ({ fetch })),
       android: { actionViewIntent: jest.fn(() => Promise.resolve()) },
     },

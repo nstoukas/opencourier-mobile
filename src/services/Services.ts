@@ -17,6 +17,7 @@ import { setOwnPosition } from './ownPosition';
 import { clearRemovalNotices } from './removalNotice/removalNotice';
 import { setLatestFix } from './latestFix';
 import { clearHeldArrivals } from './heldArrivals';
+import { clearStatementFiles } from './statements/statementsApi';
 import { clearPickedUpTimes } from './pickupTimes';
 import notificationDeviceService, {
   NotificationDeviceService,
@@ -75,6 +76,8 @@ const Services = (): Services => {
     clearHeldArrivals().catch(error =>
       console.log('Could not clear held arrivals', error),
     );
+    // The statements this rider downloaded (spec 0050, row 76 review).
+    clearStatementFiles().catch(() => undefined);
   };
 
   return {

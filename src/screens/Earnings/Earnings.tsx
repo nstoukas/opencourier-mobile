@@ -427,6 +427,8 @@ export const Earnings = ({ navigation }: Props) => {
     Promise.allSettled([
       ...queries.map(query => query.refetch()),
       coop.refetch(),
+      // Review fix: the Statements months too, so "Pull to try again" does what it says.
+      queryClient.refetchQueries({ queryKey: ['statementMonths'] }),
     ]).finally(() => setPulling(false));
   };
 
