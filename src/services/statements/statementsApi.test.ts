@@ -3,6 +3,7 @@ import ReactNativeBlobUtil from 'react-native-blob-util';
 import { Platform, Share } from 'react-native';
 import { client } from '@app/services/Client';
 import {
+  clearStatementFiles,
   fetchStatementMonths,
   openStatement,
   statementUrl,
@@ -23,6 +24,8 @@ const mockGet = client.get as jest.Mock;
 const blob = jest.mocked(ReactNativeBlobUtil);
 const mockFetch = jest.fn();
 const mockView = blob.android.actionViewIntent as jest.Mock;
+const mockLs = blob.fs.ls as jest.Mock;
+const mockUnlink = blob.fs.unlink as jest.Mock;
 
 const answer = (status: number, path = '/cache/statement-2026-10.pdf') => ({
   info: () => ({ status }),
@@ -45,6 +48,8 @@ describe('statementsApi (spec 0050)', () => {
     mockFetch.mockResolvedValue(answer(200));
     (blob.config as jest.Mock).mockReturnValue({ fetch: mockFetch });
     mockView.mockResolvedValue(undefined);
+    mockLs.mockResolvedValue([]);
+    mockUnlink.mockResolvedValue(undefined);
     share = jest
       .spyOn(Share, 'share')
       .mockResolvedValue({ action: 'sharedAction' } as any);
@@ -187,6 +192,75 @@ describe('statementsApi (spec 0050)', () => {
       expect(share).not.toHaveBeenCalled();
     });
 
+    // Review ruling (2026-11-21): a failed download deletes its file. The library saves whatever the
+    // server answers under the statement's name, an error body included.
+    describe('review fix: a download that is refused leaves no file behind', () => {
+      it.each([400, 401, 403, 404, 500, 503, 204, 302])(
+        'an answer of %s deletes the file it saved, then throws',
+        async status => {
+          mockFetch.mockResolvedValue(
+            answer(status, '/cache/statement-2026-10.pdf'),
+          );
+
+          await expect(openStatement('2026-10', 'pdf', 'el')).rejects.toThrow(
+            `Statement download answered ${status}`,
+          );
+
+          expect(mockUnlink).toHaveBeenCalledTimes(1);
+          expect(mockUnlink).toHaveBeenCalledWith(
+            '/cache/statement-2026-10.pdf',
+          );
+          expect(mockView).not.toHaveBeenCalled();
+        },
+      );
+
+      it('deletes the file where the download says it was saved, a CSV too', async () => {
+        mockFetch.mockResolvedValue(
+          answer(404, '/cache/statement-2026-09.csv'),
+        );
+
+        await expect(openStatement('2026-09', 'csv', 'en')).rejects.toThrow(
+          '404',
+        );
+
+        expect(mockUnlink).toHaveBeenCalledWith('/cache/statement-2026-09.csv');
+      });
+
+      it('if the file cannot be deleted the rider still gets the download error, not the delete error', async () => {
+        mockFetch.mockResolvedValue(answer(500));
+        mockUnlink.mockRejectedValue(new Error('no such file'));
+
+        await expect(openStatement('2026-10', 'pdf', 'el')).rejects.toThrow(
+          'Statement download answered 500',
+        );
+        expect(mockView).not.toHaveBeenCalled();
+      });
+
+      it('the file is deleted before the error is thrown, not left to finish later', async () => {
+        mockFetch.mockResolvedValue(answer(500));
+        let deleted = false;
+        mockUnlink.mockImplementation(async () => {
+          await new Promise(resolve => setTimeout(resolve, 5));
+          deleted = true;
+        });
+
+        await expect(openStatement('2026-10', 'pdf', 'el')).rejects.toThrow(
+          '500',
+        );
+
+        expect(deleted).toBe(true);
+      });
+
+      it('a good download (200) is kept: nothing is deleted before the phone opens it', async () => {
+        mockFetch.mockResolvedValue(answer(200));
+
+        await openStatement('2026-10', 'pdf', 'el');
+
+        expect(mockUnlink).not.toHaveBeenCalled();
+        expect(mockView).toHaveBeenCalledTimes(1);
+      });
+    });
+
     it("Android: opens the PDF in the phone's viewer with the PDF mime type", async () => {
       mockFetch.mockResolvedValue(answer(200, '/cache/statement-2026-10.pdf'));
 
@@ -222,6 +296,138 @@ describe('statementsApi (spec 0050)', () => {
         url: 'file:///cache/statement-2026-10.pdf',
       });
       expect(mockView).not.toHaveBeenCalled();
+    });
+  });
+
+  // Review ruling (2026-11-21): logout and a session end delete every statement file in the cache.
+  describe('clearStatementFiles (review fix)', () => {
+    it("looks in the app's cache folder", async () => {
+      await clearStatementFiles();
+
+      expect(mockLs).toHaveBeenCalledTimes(1);
+      expect(mockLs).toHaveBeenCalledWith('/cache');
+    });
+
+    it('deletes every statement file, PDF and CSV, of every month', async () => {
+      mockLs.mockResolvedValue([
+        'statement-2026-10.pdf',
+        'statement-2026-10.csv',
+        'statement-2025-01.pdf',
+      ]);
+
+      await clearStatementFiles();
+
+      expect(mockUnlink.mock.calls.map(call => call[0]).sort()).toEqual([
+        '/cache/statement-2025-01.pdf',
+        '/cache/statement-2026-10.csv',
+        '/cache/statement-2026-10.pdf',
+      ]);
+    });
+
+    it('deletes nothing else in the cache: only statement-YYYY-MM.pdf and .csv', async () => {
+      const others = [
+        // Other things the app or the system keeps in its cache.
+        'http-cache',
+        'image_manager_disk_cache',
+        'ReactNativeBlobUtilTmp_abc123',
+        'photo.pdf',
+        'notes.csv',
+        // Near misses of the statement name.
+        'statement.pdf',
+        'statement-2026-10.txt',
+        'statement-2026-10.pdf.bak',
+        'statement-2026-10.PDF',
+        'statement-2026-1.pdf',
+        'statement-26-10.pdf',
+        'statement-2026-10-01.pdf',
+        'statement-2026-10',
+        'statement-2026-10.pdfx',
+        'my-statement-2026-10.pdf',
+        'xstatement-2026-10.csv',
+        'statement-2026-10.pdf/..',
+        'Statement-2026-10.pdf',
+        'statement-abcd-ef.pdf',
+        'statement-2026-10 .pdf',
+      ];
+      mockLs.mockResolvedValue([...others, 'statement-2026-10.pdf']);
+
+      await clearStatementFiles();
+
+      expect(mockUnlink).toHaveBeenCalledTimes(1);
+      expect(mockUnlink).toHaveBeenCalledWith('/cache/statement-2026-10.pdf');
+    });
+
+    it('an empty cache is fine: nothing is deleted', async () => {
+      mockLs.mockResolvedValue([]);
+
+      await expect(clearStatementFiles()).resolves.toBeUndefined();
+      expect(mockUnlink).not.toHaveBeenCalled();
+    });
+
+    it('never throws when the cache folder cannot be read (the system may have cleared it)', async () => {
+      mockLs.mockRejectedValue(new Error('ENOENT: no such directory'));
+
+      await expect(clearStatementFiles()).resolves.toBeUndefined();
+      expect(mockUnlink).not.toHaveBeenCalled();
+    });
+
+    it('never throws when listing the folder throws outright', async () => {
+      mockLs.mockImplementation(() => {
+        throw new Error('native module missing');
+      });
+
+      await expect(clearStatementFiles()).resolves.toBeUndefined();
+    });
+
+    it('a file that cannot be deleted does not stop the others, and nothing is thrown', async () => {
+      mockLs.mockResolvedValue([
+        'statement-2026-08.pdf',
+        'statement-2026-09.pdf',
+        'statement-2026-10.csv',
+      ]);
+      mockUnlink.mockImplementation(async (path: string) => {
+        if (path.includes('2026-09')) {
+          throw new Error('busy');
+        }
+      });
+
+      await expect(clearStatementFiles()).resolves.toBeUndefined();
+
+      expect(mockUnlink).toHaveBeenCalledTimes(3);
+      expect(mockUnlink).toHaveBeenCalledWith('/cache/statement-2026-08.pdf');
+      expect(mockUnlink).toHaveBeenCalledWith('/cache/statement-2026-10.csv');
+    });
+
+    it('waits for every other file even when one cannot be deleted', async () => {
+      mockLs.mockResolvedValue([
+        'statement-2026-09.pdf',
+        'statement-2026-10.pdf',
+      ]);
+      let slowOneDeleted = false;
+      mockUnlink.mockImplementation(async (path: string) => {
+        if (path.includes('2026-09')) {
+          throw new Error('busy');
+        }
+        await new Promise(resolve => setTimeout(resolve, 5));
+        slowOneDeleted = true;
+      });
+
+      await clearStatementFiles();
+
+      expect(slowOneDeleted).toBe(true);
+    });
+
+    it('has finished deleting when it resolves', async () => {
+      mockLs.mockResolvedValue(['statement-2026-10.pdf']);
+      let deleted = false;
+      mockUnlink.mockImplementation(async () => {
+        await new Promise(resolve => setTimeout(resolve, 5));
+        deleted = true;
+      });
+
+      await clearStatementFiles();
+
+      expect(deleted).toBe(true);
     });
   });
 });
