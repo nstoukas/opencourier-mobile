@@ -491,6 +491,10 @@ export default {
   why_weight_shift: 'your booked shift {{weight}}',
   why_nearest: 'You were the nearest rider ({{km}} km)',
   why_nearest_plain: 'You were the nearest rider',
+  why_nearest_road:
+    'You had the shortest road time to the restaurant ({{time}})',
+  why_unknown:
+    'A reason was recorded that this version of the app cannot show yet.',
   why_seniority: 'The co-op offers to its longest serving members first',
   why_dispatch: 'Dispatch gave you this job',
   why_how_link: 'How offers and pay work',

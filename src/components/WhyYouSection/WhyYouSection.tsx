@@ -43,8 +43,11 @@ export const whyYouLines = (
   switch (whyYou.strategy) {
     case 'FAIRNESS': {
       const lines: string[] = [];
+      // Review fix: a factor the co-op weighed at 0 did not count, so it gets no line (the server sends
+      // only the weights above 0).
+      const counted = (key: string) => number(whyYou.weights[key]) !== null;
       const road = number(v.roadSeconds);
-      if (road !== null) {
+      if (counted('roadTime') && road !== null) {
         lines.push(
           t(
             whyYou.estimated
@@ -54,7 +57,9 @@ export const whyYouLines = (
           ),
         );
       }
-      if (v.earningsEqual === true) {
+      if (!counted('earnings')) {
+        // Earnings did not count for this offer.
+      } else if (v.earningsEqual === true) {
         lines.push(t('translations:why_earnings_equal'));
       } else if (v.earningsAssumed === true) {
         lines.push(t('translations:why_earnings_assumed'));
@@ -67,7 +72,7 @@ export const whyYouLines = (
         }
       }
       const waiting = number(v.waitingSeconds);
-      if (waiting !== null) {
+      if (counted('waiting') && waiting !== null) {
         lines.push(
           t('translations:why_waiting', { time: durationWords(waiting, t) }),
         );
@@ -80,10 +85,19 @@ export const whyYouLines = (
           t('translations:why_weights', { weights: weights.join(', ') }),
         );
       }
-      return lines;
+      return lines.length > 0 ? lines : [t('translations:why_unknown')];
     }
     case 'NEAREST_COURIER': {
       const metres = number(v.straightMetres);
+      // Review fix: Nearest by road time (spec 0031) records the road time; say so rather than "nearest".
+      const roadSeconds = number(v.roadSeconds);
+      if (roadSeconds !== null) {
+        return [
+          t('translations:why_nearest_road', {
+            time: durationWords(roadSeconds, t),
+          }),
+        ];
+      }
       return [
         metres === null
           ? t('translations:why_nearest_plain')
@@ -96,7 +110,8 @@ export const whyYouLines = (
     case 'STATIC':
       return [t('translations:why_dispatch')];
     default:
-      return [t('translations:why_none')];
+      // Review fix: a reason this app version cannot word yet is not "no reason".
+      return [t('translations:why_unknown')];
   }
 };
 
