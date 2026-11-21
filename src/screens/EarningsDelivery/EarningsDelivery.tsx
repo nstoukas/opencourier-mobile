@@ -19,6 +19,7 @@ import { detailFailureOf, useEarningsDelivery } from '@app/hooks/useEarnings';
 import { formatCurrencyFromCents } from '@app/utilities/currency';
 import { Button, ButtonType } from '@app/components/Button/Button';
 import { REASON_KEYS } from '@app/components/TimeWorkedSection/TimeWorkedSection';
+import { WhyYouSection } from '@app/components/WhyYouSection/WhyYouSection';
 import { EarningsTimelineLine } from '@app/types/earnings';
 import {
   END_LABEL_KEYS,
@@ -225,6 +226,13 @@ export const EarningsDelivery = ({ navigation, route }: Props) => {
             strong
           />
         </View>
+
+        {/* Spec 0045 (row 14): why this job came to you, under the pay breakdown. */}
+        <WhyYouSection
+          whyYou={data.whyYou ?? null}
+          money={money}
+          onHowItWorks={() => navigation.navigate(MainScreens.HowItWorks)}
+        />
 
         <View style={styles.card}>
           <DetailRow

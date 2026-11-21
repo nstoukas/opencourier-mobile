@@ -97,8 +97,21 @@ export interface EarningsCompensationLine {
   addedLater: boolean;
 }
 
+// Spec 0045: why this job came to the rider, own raw figures only.
+export interface EarningsWhyYou {
+  // FAIRNESS, NEAREST_COURIER, COURIER_SENIORITY, STATIC or ADMIN.
+  strategy: string;
+  kind: string;
+  values: Record<string, number | boolean | string | null>;
+  weights: Record<string, number>;
+  estimated: boolean;
+}
+
 // One delivery as this rider held it (AC-10, AC-11).
 export interface EarningsDeliveryDetail {
+  // Spec 0045. Optional: an answer saved on the phone before this field existed has none, and the
+  // section then reads "No reason was recorded for this job" until the next fetch.
+  whyYou?: EarningsWhyYou | null;
   deliveryId: string;
   currencyCode: string;
   pickupName: string;

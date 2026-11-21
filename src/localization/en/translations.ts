@@ -473,6 +473,30 @@ export default {
   slide_to_start: 'Slide to start accepting deliveries',
   // Offers with no deadline (spec 0002, AC-4) and offers that ended (AC-5).
   offer_waiting_minutes: 'Waiting {{minutes}} min',
+  // Spec 0045 (row 14): why a job came to you, on its page in Earnings.
+  why_title: 'Why you got this',
+  why_none: 'No reason was recorded for this job.',
+  why_road: '{{time}} to the restaurant',
+  why_road_estimated:
+    'About {{time}} to the restaurant (estimated, the route could not be worked out)',
+  why_earnings: '{{money}} an hour online today',
+  why_earnings_assumed:
+    "You had little time online today, so the co-op's average counted for you",
+  why_earnings_equal: 'Earnings counted the same for everyone this time',
+  why_waiting: 'Waited {{time}} since your last job or going Online',
+  why_weights: 'The co-op weighs {{weights}}',
+  why_weight_road_time: 'road time {{weight}}',
+  why_weight_earnings: 'earnings {{weight}}',
+  why_weight_waiting: 'waiting {{weight}}',
+  why_weight_shift: 'your booked shift {{weight}}',
+  why_nearest: 'You were the nearest rider ({{km}} km)',
+  why_nearest_plain: 'You were the nearest rider',
+  why_seniority: 'The co-op offers to its longest serving members first',
+  why_dispatch: 'Dispatch gave you this job',
+  why_how_link: 'How offers and pay work',
+  why_minutes: '{{minutes}} min',
+  why_hours: '{{hours}} h {{minutes}} min',
+  why_under_a_minute: 'under a minute',
   // Spec 0043 (AC-7): the order's box size, on the offer and the job card.
   box_size_order_SMALL: 'Small order',
   box_size_order_MEDIUM: 'Medium order',
