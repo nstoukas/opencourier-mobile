@@ -294,6 +294,10 @@ export type Order = {
   readyAtOnPhone?: number | null;
   // Spec 0043: the order's box size, worded on the offer and the job card.
   boxSize?: BoxSize | null;
+  // Spec 0046: "leg 1 of 2" of an order sent as several deliveries, worded
+  // on the offer and the job card. Both null for a single delivery.
+  legNumber?: number | null;
+  legCount?: number | null;
   // Spec 0035: this rider's newest removal request on this job, while it is open or was refused.
   // Null otherwise. Only the job list (deliveries/in-progress) sends it.
   removalRequest?: RemovalRequest | null;

@@ -16,6 +16,7 @@ import { StageStrip } from '@app/components/StageStrip/StageStrip';
 import { JobNotesLine } from '@app/components/JobNotesLine/JobNotesLine';
 import { JobItemsLine } from '@app/components/JobItemsLine/JobItemsLine';
 import { boxSizeLine } from '@app/utilities/boxSize';
+import { legLine } from '@app/utilities/legs';
 import { ReadyLine } from '@app/components/ReadyLine/ReadyLine';
 import { PhoneIcon } from 'phosphor-react-native/src/icons/Phone';
 import { ChatTextIcon } from 'phosphor-react-native/src/icons/ChatText';
@@ -155,6 +156,13 @@ export const InProgressCell = ({
       {routeUnavailable && !toRestaurant && !toCustomer ? (
         <Text style={styles.secondary} testID="route-unavailable">
           {t('translations:route_not_available')}
+        </Text>
+      ) : null}
+      {/* Spec 0046 (AC-7): at every step, so the rider knows at the door too
+          that a colleague brings the rest. */}
+      {legLine(order, t) !== '' ? (
+        <Text style={styles.secondary} testID="job-leg">
+          {legLine(order, t)}
         </Text>
       ) : null}
 

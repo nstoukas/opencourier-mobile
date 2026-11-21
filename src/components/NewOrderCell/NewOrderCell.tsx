@@ -7,6 +7,7 @@ import { useTranslation } from 'react-i18next';
 import ButtonSwipe from '../ButtonSwipe/ButtonSwipe';
 import { offerTripLines } from '@app/utilities/offerTrip';
 import { boxSizeLine } from '@app/utilities/boxSize';
+import { legLine } from '@app/utilities/legs';
 import { control } from '@app/styles/theme';
 import { formatCurrencyFromCents } from '@app/utilities/currency';
 import { SCREEN_WIDTH } from '@app/utilities/constants';
@@ -64,6 +65,8 @@ export const NewOrderCell = ({
   const trip = offerTripLines(order.offerTrip, t);
   // Spec 0043 (AC-7): "Medium order", so the rider knows what they carry before accepting.
   const boxSize = boxSizeLine(order.boxSize, t);
+  // Spec 0046 (AC-7): "Leg 1 of 2" when the order goes as several deliveries.
+  const leg = legLine(order, t);
   // A new key after each attempt draws the swipe fresh, so an accept that did
   // not go through (already answered, a refused claim) leaves no knob at the end.
   const [acceptAttempt, setAcceptAttempt] = useState(0);
@@ -108,6 +111,11 @@ export const NewOrderCell = ({
       {boxSize !== '' && (
         <Text style={styles.textTrip} testID="offer-box-size">
           {boxSize}
+        </Text>
+      )}
+      {leg !== '' && (
+        <Text style={styles.textTrip} testID="offer-leg">
+          {leg}
         </Text>
       )}
       <View style={styles.separator} />

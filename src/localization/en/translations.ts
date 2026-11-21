@@ -558,6 +558,8 @@ export default {
   box_size_order_SMALL: 'Small order',
   box_size_order_MEDIUM: 'Medium order',
   box_size_order_LARGE: 'Large order',
+  // Spec 0046 (AC-7): one leg of an order sent as several deliveries.
+  order_leg_of: 'Leg {{legNumber}} of {{legCount}}',
   offer_waiting_just_now: 'Waiting less than 1 min',
   offer_reminder_title: 'An offer is waiting for you',
   offer_has_ended: 'This offer has ended',
