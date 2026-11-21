@@ -51,6 +51,7 @@ describe('LiveConnection: a connection the server refused with a code (spec 0051
       onDeliveryStatusUpdated: jest.fn(),
       onJobReadyUpdated: jest.fn(),
       onRemovalRequestDecided: jest.fn(),
+      onSplitRequestDecided: jest.fn(),
       onChatMessage: jest.fn(),
       onChatReadByDispatch: jest.fn(),
       onRefusedWithCode: jest.fn(),
