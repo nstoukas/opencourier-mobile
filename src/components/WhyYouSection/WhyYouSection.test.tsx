@@ -13,6 +13,9 @@ const t = (key: string, options?: Record<string, unknown>): string =>
 const euros = (cents: number) => formatCurrencyFromCents(cents, 'EUR');
 
 const NONE = 'No reason was recorded for this job.';
+// Review ruling 2026-11-21 (decision 14.5): a reason this app version cannot word is not "no reason".
+const UNKNOWN =
+  'A reason was recorded that this version of the app cannot show yet.';
 
 const fairness = (over: Partial<EarningsWhyYou> = {}): EarningsWhyYou => ({
   strategy: 'FAIRNESS',
@@ -154,13 +157,98 @@ describe('whyYouLines (spec 0045, AC-2, AC-3, AC-6)', () => {
       );
     });
 
-    it('leaves the weights line out when no weight applied', () => {
+    // Review ruling 2026-11-21 (decision 14.5): a factor the co-op weighed at 0 did not count, so it gets
+    // no line. The server sends only the weights above 0, so "weighed 0" arrives as "missing from weights".
+    describe('a factor missing from the weights gets no line (decision 14.5)', () => {
+      it('road time: no road line, the others stay', () => {
+        const lines = whyYouLines(
+          fairness({ weights: { earnings: 60, waiting: 40 } }),
+          t,
+          euros,
+        );
+        expect(lines).toEqual([
+          '€9.40 an hour online today',
+          'Waited 22 min since your last job or going Online',
+          'The co-op weighs earnings 60, waiting 40',
+        ]);
+        expect(lines.join('\n')).not.toContain('to the restaurant');
+      });
+
+      it('road time: no estimated road line either', () => {
+        const lines = whyYouLines(
+          fairness({ estimated: true, weights: { earnings: 60, waiting: 40 } }),
+          t,
+          euros,
+        );
+        expect(lines.join('\n')).not.toMatch(/to the restaurant|estimated/);
+        expect(lines).toHaveLength(3);
+      });
+
+      it('earnings: no pay per hour line, the others stay', () => {
+        const lines = whyYouLines(
+          fairness({ weights: { roadTime: 70, waiting: 30 } }),
+          t,
+          euros,
+        );
+        expect(lines).toEqual([
+          '8 min to the restaurant',
+          'Waited 22 min since your last job or going Online',
+          'The co-op weighs road time 70, waiting 30',
+        ]);
+        expect(lines.join('\n')).not.toContain('an hour online today');
+      });
+
+      it.each([
+        ['earningsAssumed', "the co-op's average counted for you"],
+        ['earningsEqual', 'Earnings counted the same for everyone'],
+      ])(
+        'earnings: no line with %s true either, since earnings did not count',
+        (flag, words) => {
+          const lines = whyYouLines(
+            fairness({
+              values: { roadSeconds: 480, [flag]: true, waitingSeconds: 1320 },
+              weights: { roadTime: 70, waiting: 30 },
+            }),
+            t,
+            euros,
+          );
+          expect(lines.join('\n')).not.toContain(words);
+          expect(lines).toEqual([
+            '8 min to the restaurant',
+            'Waited 22 min since your last job or going Online',
+            'The co-op weighs road time 70, waiting 30',
+          ]);
+        },
+      );
+
+      it('waiting: no waiting line, the others stay', () => {
+        const lines = whyYouLines(
+          fairness({ weights: { roadTime: 60, earnings: 40 } }),
+          t,
+          euros,
+        );
+        expect(lines).toEqual([
+          '8 min to the restaurant',
+          '€9.40 an hour online today',
+          'The co-op weighs road time 60, earnings 40',
+        ]);
+        expect(lines.join('\n')).not.toContain('Waited');
+      });
+
+      it('only one factor weighed: only its line and the weights line', () => {
+        expect(
+          whyYouLines(fairness({ weights: { roadTime: 100 } }), t, euros),
+        ).toEqual([
+          '8 min to the restaurant',
+          'The co-op weighs road time 100',
+        ]);
+      });
+    });
+
+    it('with no weights at all says a reason was recorded that the app cannot show yet', () => {
       const lines = whyYouLines(fairness({ weights: {} }), t, euros);
-      expect(lines).toEqual([
-        '8 min to the restaurant',
-        '€9.40 an hour online today',
-        'Waited 22 min since your last job or going Online',
-      ]);
+      expect(lines).toEqual([UNKNOWN]);
+      expect(lines).not.toContain(NONE);
     });
 
     it('leaves out a line whose value is missing rather than printing a blank', () => {
@@ -180,6 +268,30 @@ describe('whyYouLines (spec 0045, AC-2, AC-3, AC-6)', () => {
     expect(
       whyYouLines(
         reason('NEAREST_COURIER', { straightMetres: 1200 }),
+        t,
+        euros,
+      ),
+    ).toEqual(['You were the nearest rider (1.2 km)']);
+  });
+
+  // Review ruling 2026-11-21 (decision 14.5): Nearest by road time (spec 0031) records the road time, so
+  // the card says that. A null roadSeconds means no route was found: the straight line sentence stays.
+  it('NEAREST_COURIER with a road time says the rider had the shortest road time', () => {
+    const lines = whyYouLines(
+      reason('NEAREST_COURIER', { straightMetres: 1200, roadSeconds: 480 }),
+      t,
+      euros,
+    );
+    expect(lines).toEqual([
+      'You had the shortest road time to the restaurant (8 min)',
+    ]);
+    expect(lines.join('\n')).not.toContain('nearest rider');
+  });
+
+  it('NEAREST_COURIER with roadSeconds null keeps the km sentence', () => {
+    expect(
+      whyYouLines(
+        reason('NEAREST_COURIER', { straightMetres: 1200, roadSeconds: null }),
         t,
         euros,
       ),
@@ -212,14 +324,14 @@ describe('whyYouLines (spec 0045, AC-2, AC-3, AC-6)', () => {
     expect(whyYouLines(null, t, euros)).toEqual([NONE]);
   });
 
-  it('an unknown strategy gives the same fallback', () => {
-    expect(
-      whyYouLines(
-        reason('SOME_FUTURE_MATCHER', { roadSeconds: 480 }),
-        t,
-        euros,
-      ),
-    ).toEqual([NONE]);
+  it('an unknown strategy says a reason was recorded that the app cannot show yet, never "No reason was recorded"', () => {
+    const lines = whyYouLines(
+      reason('SOME_FUTURE_MATCHER', { roadSeconds: 480 }),
+      t,
+      euros,
+    );
+    expect(lines).toEqual([UNKNOWN]);
+    expect(lines.join('\n')).not.toContain('No reason was recorded');
   });
 });
 
@@ -347,5 +459,17 @@ describe('WhyYouSection (spec 0045, AC-2 to AC-4)', () => {
     );
     expect(screen.getByText('Why you got this')).toBeTruthy();
     expect(screen.getByText(NONE)).toBeTruthy();
+  });
+
+  it('renders the "cannot show yet" sentence for an unknown strategy, not "No reason was recorded"', () => {
+    render(
+      <WhyYouSection
+        whyYou={reason('SOME_FUTURE_MATCHER')}
+        money={euros}
+        onHowItWorks={jest.fn()}
+      />,
+    );
+    expect(screen.getByText(UNKNOWN)).toBeTruthy();
+    expect(screen.queryByText(NONE)).toBeNull();
   });
 });
