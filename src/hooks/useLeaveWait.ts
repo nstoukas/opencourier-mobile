@@ -75,7 +75,10 @@ export const useLeaveWait = (courierId: string | undefined) => {
         const answered = axios.isAxiosError(error) && !!error.response;
         const notYours =
           axios.isAxiosError(error) && error.response?.status === 404;
+        // Row 47 live check: the sentence goes in the body, which Android shows
+        // whole; as the title it was cut after two lines ("…το κατ…").
         Alert.alert(
+          '',
           !answered
             ? t('translations:hand_back_no_connection')
             : notYours

@@ -82,7 +82,10 @@ export const useHandBack = (courierId: string | undefined) => {
         // is over, the order changed); a 404 says it is not theirs.
         const notYours =
           axios.isAxiosError(error) && error.response?.status === 404;
+        // Row 47 live check: the sentence goes in the body, which Android shows
+        // whole; as the title it was cut after two lines ("…το κατ…").
         Alert.alert(
+          '',
           !answered
             ? t('translations:hand_back_no_connection')
             : notYours
