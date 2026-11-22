@@ -16,4 +16,6 @@ const target = path.resolve(
 );
 
 fs.copyFileSync(source, target);
-console.log(`Copied ${path.basename(source)} to ${path.relative(process.cwd(), target)}`);
+console.log(
+  `Copied ${path.basename(source)} to ${path.relative(process.cwd(), target)}`,
+);

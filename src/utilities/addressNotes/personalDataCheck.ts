@@ -36,7 +36,7 @@ const GREEK_ACCENTS: Record<string, string> = {
   ς: 'σ',
 };
 
-// Lower case, accents removed, final sigma as σ: "Γιώργος" and "ΓΙΩΡΓΟΣ" both become "γι\u03c9ργοσ".
+// Lower case, accents removed, final sigma as σ: "Γιώργος" and "ΓΙΩΡΓΟΣ" both become "γιωργοσ".
 export const foldForNameCheck = (text: string): string => {
   const lower = text.toLowerCase();
   // NFD splits a Latin letter from its accent (é into e and the accent mark); the marks are dropped.

@@ -1,5 +1,11 @@
 import { OrderSetting } from '@app/types/enums';
-import { Order, Pagination, Setting, UserStatus } from '@app/types/types';
+import {
+  NoteStop,
+  Order,
+  Pagination,
+  Setting,
+  UserStatus,
+} from '@app/types/types';
 import { Point } from 'geojson';
 
 export type LoginParams = {
@@ -69,7 +75,7 @@ export type UserServiceResponse = {
 export type NewCommentParams = {
   note: string;
   deliveryId: string;
-  stop: 'PICKUP' | 'DROPOFF';
+  stop: NoteStop;
   confirmed?: boolean;
 };
 
