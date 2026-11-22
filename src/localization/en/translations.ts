@@ -120,16 +120,18 @@ export default {
   account_changes_more: 'What the co-op changed on your account, and when.',
   licenses_more: 'The open source software inside this app.',
   offer_sound: 'Offer sound and volume',
-  offer_sound_more: "The co-op's offer ring, at your phone's volume",
+  offer_sound_more: 'The sound offers ring with, and how loud',
   offer_sound_explained:
-    "Offers ring with the co-op's own sound. How loud they ring is your phone's notification volume, so you change it in the phone's sound settings.",
+    "Offers ring with the co-op's own sound unless you pick another below. How loud they ring is your phone's notification volume, so you change it in the phone's sound settings.",
   offer_sound_play: 'Play the offer ring',
   offer_sound_silenced:
     'Your phone is on silent, vibrate or Do Not Disturb, so the ring did not play. Offers will not ring either.',
   offer_sound_volume: 'Change the volume',
   offer_sound_change: 'Change the offer sound',
   offer_sound_change_explained:
-    'Your phone keeps the sound of each kind of alert. Open "{{offers}}" and "{{waiting}}" and pick a sound for each.',
+    'Your phone keeps the sound of each kind of alert. Open "{{offers}}" and pick a sound: offers ring with it whether the app is open or closed, and Play uses it. Pick the same for "{{waiting}}", the ring of an offer still waiting.',
+  offer_sound_none:
+    'The "{{offers}}" alert has no sound, so offers will not ring. Pick one with "Change the offer sound".',
   auto_accept_more:
     'Takes each offer the moment it arrives, with its own sound.',
   emergency_contact_more: 'The co-op sees it when you send an SOS.',

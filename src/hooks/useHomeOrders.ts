@@ -485,7 +485,11 @@ export const useHomeOrders = () => {
       }
     }
     if (anyNew) {
-      isHomeInFront().then(inFront => inFront && playOfferSound());
+      isHomeInFront().then(inFront => {
+        if (inFront) {
+          playOfferSound();
+        }
+      });
     }
   };
 

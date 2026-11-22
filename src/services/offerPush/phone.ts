@@ -14,13 +14,17 @@ export type RingerState = {
   doNotDisturb: boolean;
 };
 
+// What playing the ring did (row 84): it played, the ringer was not on, or the
+// rider chose None as the sound of the "New offers" alert kind.
+export type OfferSoundOutcome = 'played' | 'silenced' | 'no_sound';
+
 // The shape of what the Kotlin module offers to JavaScript.
 type OfferAlertNativeModule = {
   getRingerState: () => Promise<RingerState>;
   canUseFullScreenAlert: () => Promise<boolean>;
   openFullScreenAlertSettings: () => void;
   openSoundSettings: () => void;
-  playOfferSound: () => void;
+  playOfferSound: () => Promise<OfferSoundOutcome>;
   isAlertScreenInFront: () => Promise<boolean>;
   closeAlertScreen: () => void;
   openApp: () => void;
@@ -62,8 +66,18 @@ export const openFullScreenAlertSettings = () =>
 
 export const openSoundSettings = () => native()?.openSoundSettings();
 
-// The offer ring, once, when the offers list on screen shows a new offer.
-export const playOfferSound = () => native()?.playOfferSound();
+// The offer ring, once, when the offers list on screen shows a new offer, and
+// for the Play button. Row 84: the sound is the one the rider chose for the
+// "New offers" alert kind in Android, else the co-op's ring. With no module (or
+// an app built before row 84, whose method answers nothing) it reports
+// "played", as every function here reports "all fine".
+export const playOfferSound = async (): Promise<OfferSoundOutcome> => {
+  try {
+    return (await native()?.playOfferSound()) ?? 'played';
+  } catch {
+    return 'played';
+  }
+};
 
 // True while the offer screen (OfferAlertActivity) is in front. React Native
 // calls the app "active" whichever of its screens is in front, so "the offers

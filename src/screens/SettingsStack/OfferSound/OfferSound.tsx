@@ -25,6 +25,9 @@ type Props = MainScreenProp<MainScreens.OfferSound>;
 // with the co-op's own ring unless the rider picks another sound there, at the
 // phone's notification volume. So this screen saves nothing of its own: it
 // plays the ring, and opens the two phone settings where the rider changes it.
+// The ring the app plays itself (an offer arriving with the app open, and the
+// Play button here) reads the "New offers" sound too (OfferAlertModule.kt), so
+// a sound picked there is the sound the rider hears everywhere.
 // (The upstream Default sound and Volume screens offered choices that saved
 // nothing and rang nothing; they are gone.)
 export const OfferSound = ({ navigation }: Props) => {
@@ -33,12 +36,15 @@ export const OfferSound = ({ navigation }: Props) => {
   // Set when Play found the phone on silent, vibrate or Do Not Disturb: the
   // ring would not play, so say why instead of playing nothing.
   const [silenced, setSilenced] = useState(false);
+  // Set when Play found that the rider chose None as the offer sound.
+  const [noSound, setNoSound] = useState(false);
 
   const play = async () => {
     const isSilenced = isPhoneSilenced(await getRingerState());
     setSilenced(isSilenced);
+    setNoSound(false);
     if (!isSilenced) {
-      playOfferSound();
+      setNoSound((await playOfferSound()) === 'no_sound');
     }
   };
 
@@ -87,6 +93,13 @@ export const OfferSound = ({ navigation }: Props) => {
               {silenced ? (
                 <Text style={styles.note} accessibilityLiveRegion="polite">
                   {t('translations:offer_sound_silenced')}
+                </Text>
+              ) : null}
+              {noSound ? (
+                <Text style={styles.note} accessibilityLiveRegion="polite">
+                  {t('translations:offer_sound_none', {
+                    offers: t('translations:offer_alert_channel'),
+                  })}
                 </Text>
               ) : null}
             </>

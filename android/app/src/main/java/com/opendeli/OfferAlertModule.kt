@@ -137,13 +137,25 @@ class OfferAlertModule(private val reactContext: ReactApplicationContext) :
   /**
    * Plays the offer ring once, for an offer that arrives while the app is open on the
    * offers list (AC-12): the list shows it, so no system alert is posted. Plays only when
-   * the ringer is on, as a notification sound would.
+   * the ringer is on, as a notification sound would. The Play button on the Offer sound
+   * screen calls it too.
+   *
+   * Row 84: the sound is the one the rider chose for the "New offers" alert kind in
+   * Android's settings, so the ring with the app open, the Play button and an alert with
+   * the app closed all sound the same. Answers JavaScript with what happened:
+   * "played", "silenced" (ringer not on) or "no_sound" (the rider chose None).
    */
   @ReactMethod
   @Synchronized
-  fun playOfferSound() {
+  fun playOfferSound(promise: Promise) {
     val audio = reactContext.getSystemService(Context.AUDIO_SERVICE) as AudioManager
     if (audio.ringerMode != AudioManager.RINGER_MODE_NORMAL) {
+      promise.resolve("silenced")
+      return
+    }
+    val chosen = chosenOfferSound()
+    if (chosen === NO_SOUND_CHOSEN) {
+      promise.resolve("no_sound")
       return
     }
     val attributes =
@@ -151,9 +163,21 @@ class OfferAlertModule(private val reactContext: ReactApplicationContext) :
             .setUsage(AudioAttributes.USAGE_NOTIFICATION)
             .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
             .build()
+    val sessionId = audio.generateAudioSessionId()
+    // The rider's sound first; when it cannot be played (deleted, or a file the app may
+    // not read), the co-op's own ring, so an offer never goes unheard by mistake.
     val player =
-        MediaPlayer.create(reactContext, R.raw.offer_ring, attributes, audio.generateAudioSessionId())
-            ?: return
+        (chosen as? Uri)?.let { uri ->
+          try {
+            MediaPlayer.create(reactContext, uri, null, attributes, sessionId)
+          } catch (error: Exception) {
+            null
+          }
+        } ?: MediaPlayer.create(reactContext, R.raw.offer_ring, attributes, sessionId)
+    if (player == null) {
+      promise.resolve("silenced")
+      return
+    }
     // A new ring replaces one still playing.
     releaseRing(null)
     ringPlayer = player
@@ -164,6 +188,30 @@ class OfferAlertModule(private val reactContext: ReactApplicationContext) :
       true
     }
     player.start()
+    promise.resolve("played")
+  }
+
+  /**
+   * The sound of the "New offers" alert kind: its Uri, NO_SOUND_CHOSEN when the rider
+   * chose None there, or null when there is no such alert kind yet (before Android 8, or
+   * before the first offer made it), which means the co-op's own ring.
+   *
+   * None is honoured, not overruled: it is what the rider picked, and an offer alert with
+   * the app closed is silent too, so ringing here would make the two disagree (row 84).
+   * The Play button tells the rider, so a None picked by mistake is found.
+   */
+  private fun chosenOfferSound(): Any? {
+    if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) {
+      return null
+    }
+    return try {
+      val notifications =
+          reactContext.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+      val channel = notifications.getNotificationChannel(OFFERS_CHANNEL_ID) ?: return null
+      channel.sound ?: NO_SOUND_CHOSEN
+    } catch (error: Exception) {
+      null
+    }
   }
 
   /** Lets go of `player`, or of whichever ring is playing when it is null. */
@@ -241,5 +289,12 @@ class OfferAlertModule(private val reactContext: ReactApplicationContext) :
   companion object {
     // The event JavaScript listens for (src/services/offerPush/phone.ts).
     const val ALERT_SCREEN_REOPENED = "OfferAlertScreenReopened"
+
+    // The "New offers" alert kind's id; the same as OFFERS_CHANNEL_ID in
+    // src/services/offerPush/offerAlert.ts.
+    private const val OFFERS_CHANNEL_ID = "offers"
+
+    // Stands for "the rider chose None" in chosenOfferSound (a channel with no sound).
+    private val NO_SOUND_CHOSEN = Any()
   }
 }
