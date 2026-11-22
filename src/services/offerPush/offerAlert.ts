@@ -288,6 +288,14 @@ export const cancelOfferAlert = async (deliveryId: string): Promise<void> => {
   }
 };
 
+// Every channel an offer alert is posted on. Review fix (row 81): the calm
+// add on channel was missing here, so logout left a calm alert up.
+const OFFER_ALERT_CHANNEL_IDS = [
+  OFFERS_CHANNEL_ID,
+  OFFERS_INSISTENT_CHANNEL_ID,
+  OFFERS_CALM_CHANNEL_ID,
+];
+
 // The offer alerts on display now, read back from Android with their data.
 export const displayedOfferAlerts = async (): Promise<
   { notificationId: string; data: Notification['data'] }[]
@@ -295,10 +303,10 @@ export const displayedOfferAlerts = async (): Promise<
   try {
     const displayed = await notifee.getDisplayedNotifications();
     return displayed
-      .filter(
-        item =>
-          item.notification.android?.channelId === OFFERS_CHANNEL_ID ||
-          item.notification.android?.channelId === OFFERS_INSISTENT_CHANNEL_ID,
+      .filter(item =>
+        OFFER_ALERT_CHANNEL_IDS.includes(
+          item.notification.android?.channelId ?? '',
+        ),
       )
       .map(item => ({
         notificationId: item.id ?? item.notification.id ?? '',
