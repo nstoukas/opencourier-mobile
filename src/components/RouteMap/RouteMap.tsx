@@ -16,7 +16,7 @@ import { StackIcon } from 'phosphor-react-native/src/icons/Stack';
 import { CrosshairIcon } from 'phosphor-react-native/src/icons/Crosshair';
 import { StorefrontIcon } from 'phosphor-react-native/src/icons/Storefront';
 import { HouseLineIcon } from 'phosphor-react-native/src/icons/HouseLine';
-import { PickupPoint, RouteLeg, RoutePoint } from '@app/types/route';
+import { PickupPoint, RouteLeg, RoutePoint, RouteStop } from '@app/types/route';
 import { FALLBACK_CENTRE, isRiderLeg } from '@app/utilities/routeLegs';
 
 type Props = {
@@ -25,6 +25,9 @@ type Props = {
   // The pins of the offer or job in the card; none when the card has nothing.
   pickup?: RoutePoint;
   dropoff?: RoutePoint;
+  // Spec 0048 (AC-10): a stack's stops, pinned with their numbers 1 to 4 in
+  // place of the two pins above. Empty or left out for a single order.
+  stops?: RouteStop[];
   // The phone's own newest position (AC-5); never the server's copy.
   ownPosition: RoutePoint | null;
   // The restaurant layer (AC-11).
@@ -38,6 +41,9 @@ type Props = {
   bottomInset: number;
 };
 
+// One empty list for every single order, so the memo below keeps its value.
+const NO_STOPS: RouteStop[] = [];
+
 const ZOOMED_IN = { latitudeDelta: 0.02, longitudeDelta: 0.02 };
 const EDGE = 48;
 
@@ -48,6 +54,7 @@ export const RouteMap = ({
   legs,
   pickup,
   dropoff,
+  stops = NO_STOPS,
   ownPosition,
   restaurantLayerOn,
   pickupPoints,
@@ -71,9 +78,10 @@ export const RouteMap = ({
     if (dropoff) {
       points.push(dropoff);
     }
+    stops.forEach(stop => points.push(stop));
     // concat, not push(...): a long line would be too many arguments for one call.
     return legs.reduce((all, leg) => all.concat(leg.points), points);
-  }, [ownPosition, pickup, dropoff, legs]);
+  }, [ownPosition, pickup, dropoff, stops, legs]);
 
   const frame = () => {
     const map = mapRef.current;
@@ -82,7 +90,8 @@ export const RouteMap = ({
     }
     // With an offer or job: everything on it. With nothing: the rider, then the
     // restaurants, then Volos (AC-5).
-    const hasJob = pickup !== undefined || dropoff !== undefined;
+    const hasJob =
+      pickup !== undefined || dropoff !== undefined || stops.length > 0;
     if (hasJob && fitPoints.length > 1) {
       map.fitToCoordinates(fitPoints, {
         edgePadding: {
@@ -146,9 +155,10 @@ export const RouteMap = ({
         // location dot would start a second location reader (row 67).
         showsUserLocation={false}
         toolbarEnabled={false}>
-        {legs.map(leg => (
+        {legs.map((leg, index) => (
           <Polyline
-            key={leg.kind}
+            // A stack has several legs of one kind; the place in the list keeps keys apart.
+            key={`${leg.kind}-${leg.toStopNumber ?? index}`}
             testID={`route-leg-${leg.kind}`}
             coordinates={leg.points}
             strokeWidth={5}
@@ -174,7 +184,24 @@ export const RouteMap = ({
               </Callout>
             </Marker>
           ))}
-        {pickup && (
+        {stops.map(stop => (
+          <Marker
+            key={`${stop.number}`}
+            coordinate={stop}
+            testID={`stack-stop-pin-${stop.number}`}
+            anchor={{ x: 0.5, y: 0.5 }}>
+            <View style={[styles.stopPin, stop.done && styles.stopPinDone]}>
+              <Text
+                style={[
+                  styles.stopPinText,
+                  stop.done && styles.stopPinTextDone,
+                ]}>
+                {stop.number}
+              </Text>
+            </View>
+          </Marker>
+        ))}
+        {pickup && stops.length === 0 && (
           <Marker coordinate={pickup} testID="pickup-pin">
             <View style={styles.jobPin}>
               <Icon
@@ -186,7 +213,7 @@ export const RouteMap = ({
             </View>
           </Marker>
         )}
-        {dropoff && (
+        {dropoff && stops.length === 0 && (
           <Marker coordinate={dropoff} testID="dropoff-pin">
             <View style={styles.jobPin}>
               <Icon
@@ -273,6 +300,28 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     ...shadow.md,
+  },
+  // Spec 0048: a stack's numbered stop, the same size as a job pin.
+  stopPin: {
+    width: control.lg,
+    height: control.lg,
+    borderRadius: radius.full,
+    backgroundColor: color.primary,
+    borderWidth: 2,
+    borderColor: color.card,
+    alignItems: 'center',
+    justifyContent: 'center',
+    ...shadow.md,
+  },
+  stopPinDone: {
+    backgroundColor: color.muted,
+  },
+  stopPinText: {
+    ...typeScale.label,
+    color: color['primary-foreground'],
+  },
+  stopPinTextDone: {
+    color: color['muted-foreground'],
   },
   riderOuter: {
     width: control.xs,

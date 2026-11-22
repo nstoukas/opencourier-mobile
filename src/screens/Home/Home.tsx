@@ -12,6 +12,8 @@ import { CancelledJobCard } from '@app/components/CancelledJobCard/CancelledJobC
 import { RemovalNotices } from '@app/components/RemovalNotices/RemovalNotices';
 import { RefusedSteps } from '@app/components/RefusedSteps/RefusedSteps';
 import { NewOrderCell } from '@app/components/NewOrderCell/NewOrderCell';
+import { StackOfferCell } from '@app/components/StackOfferCell/StackOfferCell';
+import { StackStopList } from '@app/components/StackStopList/StackStopList';
 import { InProgressCell } from '@app/components/InProgressCell/InProgressCell';
 import { JobFooter } from '@app/components/JobFooter/JobFooter';
 import { RouteMap } from '@app/components/RouteMap/RouteMap';
@@ -48,6 +50,8 @@ import {
 } from '@app/hooks/useRemovalRequest';
 import { useLeaveSplit, useSplitBusy } from '@app/hooks/useSplitRequest';
 import { useDeliveryRoute } from '@app/hooks/useDeliveryRoute';
+import { useStackRoute } from '@app/hooks/useStackRoute';
+import { groupJobs, groupOffers, stackStopsOf } from '@app/utilities/stack';
 import { usePickupPoints } from '@app/hooks/usePickupPoints';
 import { useNavigateTo } from '@app/hooks/useNavigateTo';
 import { useLocationPermission } from '@app/hooks/useLocationPermission';
@@ -61,16 +65,33 @@ import {
   setRestaurantLayerChoice,
 } from '@app/services/mapPreferences';
 import {
+  LegFigures,
   isBeforePickup,
   legLines,
   restaurantLayerOn,
   visibleLegs,
 } from '@app/utilities/routeLegs';
+import { RouteLeg } from '@app/types/route';
 import { useChatUnseen } from '@app/hooks/useChat';
 
 type Props = DrawerScreenProp<DrawerScreens.Home>;
 
-type CardItem = { kind: 'offer' | 'job'; order: Order };
+// `partner` (spec 0048): the other order of a stack shown on the same card.
+// For a stacked job, `order` is the one whose stop comes next.
+type CardItem = { kind: 'offer' | 'job'; order: Order; partner?: Order };
+
+// Spec 0048: the whole ride through a stack's stops, from all its legs.
+const rideOf = (legs: RouteLeg[]): LegFigures | undefined => {
+  if (legs.length === 0) {
+    return undefined;
+  }
+  const metres = legs.reduce((sum, leg) => sum + leg.distanceMetres, 0);
+  const seconds = legs.reduce((sum, leg) => sum + leg.durationSeconds, 0);
+  return {
+    km: (metres / 1000).toFixed(1),
+    minutes: Math.max(1, Math.round(seconds / 60)),
+  };
+};
 
 // An offer's route is asked for at the server's offer status. A string, because
 // the app's OrderStatus has no member for it: offers never carry their status.
@@ -192,21 +213,32 @@ export const HomeScreen = ({ navigation }: Props) => {
   const ownPosition = locationPermission ? storedOwnPosition : null;
 
   // AC-8: offers first, then jobs. Riders on auto accept never see an offer
-  // card: their offers are claimed on arrival and come back as jobs.
+  // card: their offers are claimed on arrival and come back as jobs. A stack
+  // is the exception (spec 0048, AC-8): the phone never takes two orders by
+  // itself, so it shows to every rider. A stack's two orders share one card.
   const items = useMemo<CardItem[]>(
     () => [
-      ...(autoAcceptOrders ? [] : dataSourceNew).map(order => ({
-        kind: 'offer' as const,
-        order,
+      ...groupOffers(
+        autoAcceptOrders
+          ? dataSourceNew.filter(order => order.offerGroupId)
+          : dataSourceNew,
+      ).map(card => ({ kind: 'offer' as const, ...card })),
+      ...groupJobs(dataSourceInProgress).map(card => ({
+        kind: 'job' as const,
+        ...card,
       })),
-      ...dataSourceInProgress.map(order => ({ kind: 'job' as const, order })),
     ],
     [autoAcceptOrders, dataSourceNew, dataSourceInProgress],
   );
   // Back to the first whenever the list changes (an offer ending, a 409 on
   // accept, a job finishing), so the position never points past the end.
   const listKey = items
-    .map(item => `${item.kind}:${item.order.id}:${item.order.offeredAt ?? ''}`)
+    .map(
+      item =>
+        `${item.kind}:${item.order.id}:${item.order.offeredAt ?? ''}:${
+          item.partner?.id ?? ''
+        }`,
+    )
     .join('|');
   const [index, setIndex] = useState(0);
   useEffect(() => setIndex(0), [listKey]);
@@ -228,16 +260,43 @@ export const HomeScreen = ({ navigation }: Props) => {
       : undefined;
   const serverStatus =
     shown?.kind === 'offer' ? OFFER_STATUS : serverJob?.status;
+  // Spec 0048 (AC-10): a stack's card draws the route through all its stops,
+  // asked with either order, for both orders' server statuses.
+  const shownStack = shown?.partner !== undefined;
+  const stackStops = shown?.partner
+    ? stackStopsOf(shown.order, shown.partner)
+    : null;
+  const serverPartner =
+    shown?.kind === 'job' && shown.partner
+      ? serverInProgress.find(order => order.id === shown.partner?.id)
+      : undefined;
+  const stackServerStatuses =
+    shown?.kind === 'offer'
+      ? OFFER_STATUS
+      : serverJob && serverPartner
+      ? `${serverJob.status}+${serverPartner.status}`
+      : undefined;
   const route = useDeliveryRoute({
-    deliveryId: shown?.order.id,
+    deliveryId: shownStack ? undefined : shown?.order.id,
     serverStatus,
     isJob: shown?.kind === 'job',
     waitingToSend: !!shown?.order.waitingToSend,
     inFront: isFocused,
   });
-  const legs = visibleLegs(route.data ?? [], ownPosition);
+  const stackRoute = useStackRoute({
+    deliveryId: shownStack ? shown?.order.id : undefined,
+    serverStatuses: stackServerStatuses,
+    isJob: shown?.kind === 'job',
+    waitingToSend:
+      !!shown?.order.waitingToSend || !!shown?.partner?.waitingToSend,
+    inFront: isFocused,
+  });
+  const shownRoute = shownStack ? stackRoute : route;
+  const allLegs = (shownStack ? stackRoute.data?.legs : route.data) ?? [];
+  const legs = visibleLegs(allLegs, ownPosition);
   const lines = legLines(legs);
-  const routeUnavailable = route.isError && route.data === undefined;
+  const routeUnavailable = shownRoute.isError && shownRoute.data === undefined;
+  const mapStops = shownStack ? stackRoute.data?.stops ?? [] : [];
 
   // AC-11: the restaurant layer.
   const [layerChoice, setLayerChoice] = useState<'on' | 'off' | null>(null);
@@ -350,6 +409,23 @@ export const HomeScreen = ({ navigation }: Props) => {
       return null;
     }
     const order = shown.order;
+    // Spec 0048 (AC-10): one card for two orders offered together.
+    if (shown.kind === 'offer' && shown.partner) {
+      return (
+        <StackOfferCell
+          key={`${order.id}-${order.offeredAt ?? ''}`}
+          order={order}
+          partner={shown.partner}
+          stops={stackStops ?? []}
+          ride={rideOf(allLegs)}
+          millisRemaining={timeLeftForOffer(order.id)}
+          totalMillis={totalTimeForOffer(order.id)}
+          millisWaited={waitedTimeForOffer(order.id)}
+          onAccept={offer => acceptOrderFn(offer.id)}
+          onDecline={offer => declineOrderFn(offer.id)}
+        />
+      );
+    }
     if (shown.kind === 'offer') {
       return (
         <NewOrderCell
@@ -364,7 +440,7 @@ export const HomeScreen = ({ navigation }: Props) => {
         />
       );
     }
-    return (
+    const jobCard = (
       <InProgressCell
         key={order.id}
         order={order}
@@ -382,6 +458,21 @@ export const HomeScreen = ({ navigation }: Props) => {
         onNavigate={onNavigate}
       />
     );
+    // Spec 0048 (AC-10): a stacked job shows its stops in order above the one
+    // stop card, which is the card of the stop that comes next.
+    if (shown.partner && stackStops) {
+      return (
+        <View testID="stack-job">
+          <StackStopList
+            stops={stackStops}
+            orders={[order, shown.partner]}
+            isOffer={false}
+          />
+          {jobCard}
+        </View>
+      );
+    }
+    return jobCard;
   };
 
   // Spec 0034 (AC-12): the chat's unread dot, worked out on the phone.
@@ -465,11 +556,14 @@ export const HomeScreen = ({ navigation }: Props) => {
         legs={legs}
         pickup={shownPickup}
         dropoff={shownDropoff}
+        stops={mapStops}
         ownPosition={ownPosition}
         restaurantLayerOn={layerOn}
         pickupPoints={pickupPoints}
         onToggleRestaurantLayer={toggleLayer}
-        fitKey={`${shown?.order.id ?? 'none'}-${serverStatus ?? ''}`}
+        fitKey={`${shown?.order.id ?? 'none'}-${shown?.partner?.id ?? ''}-${
+          (shownStack ? stackServerStatuses : serverStatus) ?? ''
+        }`}
         bottomInset={cardHeight}
       />
       <HomeTopSlot

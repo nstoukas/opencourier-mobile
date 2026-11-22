@@ -167,21 +167,32 @@ export const showOfferAlert = async (
   }
 
   await ensureOfferChannels();
-  const openOffer = {
-    id: OPEN_OFFER_ACTION,
-    launchActivity: OFFER_SCREEN_ACTIVITY,
-  };
+  // Spec 0048 (cross check 11, AC-8): two orders offered together. The push
+  // carries only the first order's figures, so the alert names no pay and has
+  // no Accept or Decline: a tap opens the app, whose home card shows both
+  // orders and their stops. Taking two orders blind from a lock screen would
+  // be as unchecked as the phone taking them by itself.
+  const isStack = !!offer.partnerDeliveryId;
+  const openOffer = isStack
+    ? { id: 'default', launchActivity: 'default' }
+    : {
+        id: OPEN_OFFER_ACTION,
+        launchActivity: OFFER_SCREEN_ACTIVITY,
+      };
+  const lines = isStack
+    ? [i18next.t('translations:stack_offer_alert_body')]
+    : offerAlertLineList(offer);
+  const summary = isStack ? lines.join(' · ') : offerSummary(offer);
   const notification: Notification = {
     id: offer.deliveryId,
-    title: i18next.t('translations:offer_alert_title', {
-      pay: payText(offer),
-    }),
+    title: isStack
+      ? i18next.t('translations:stack_offer_alert_title')
+      : i18next.t('translations:offer_alert_title', {
+          pay: payText(offer),
+        }),
     // Android reads the body as HTML too, so it is escaped there; iOS shows it
     // as plain text, where an entity would show as typed.
-    body:
-      Platform.OS === 'android'
-        ? escapeHtml(offerSummary(offer))
-        : offerSummary(offer),
+    body: Platform.OS === 'android' ? escapeHtml(summary) : summary,
     data: toNotificationData(offer, deadlineAt),
     android: {
       channelId: offer.insistent
@@ -192,7 +203,7 @@ export const showOfferAlert = async (
       // the one line body after about the second km (row 100 review).
       style: {
         type: AndroidStyle.BIGTEXT,
-        text: offerAlertLineList(offer).map(escapeHtml).join('<br>'),
+        text: lines.map(escapeHtml).join('<br>'),
       },
       // PUBLIC, or the lock screen hides the text and the buttons. Only the
       // offer card's facts are in it (AC-10).
@@ -208,16 +219,18 @@ export const showOfferAlert = async (
       fullScreenAction: style === 'full-screen' ? openOffer : undefined,
       // No `launchActivity` on the buttons: they answer in the background
       // without opening the app (AC-5).
-      actions: [
-        {
-          title: i18next.t('translations:accept'),
-          pressAction: { id: ACCEPT_ACTION },
-        },
-        {
-          title: i18next.t('translations:decline'),
-          pressAction: { id: DECLINE_ACTION },
-        },
-      ],
+      actions: isStack
+        ? []
+        : [
+            {
+              title: i18next.t('translations:accept'),
+              pressAction: { id: ACCEPT_ACTION },
+            },
+            {
+              title: i18next.t('translations:decline'),
+              pressAction: { id: DECLINE_ACTION },
+            },
+          ],
       // A countdown to the deadline, drawn by Android itself, when there is one.
       // `...(test ? { fields } : {})` adds the fields only when the test holds.
       ...(deadlineAt !== null && stopAfterMs !== null

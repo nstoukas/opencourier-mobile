@@ -560,6 +560,18 @@ export default {
   offer_waiting_just_now: 'Waiting less than 1 min',
   offer_reminder_title: 'An offer is waiting for you',
   offer_has_ended: 'This offer has ended',
+  // Spec 0048 (row 80): two orders offered together, answered together.
+  stack_offer_title: 'Two orders together',
+  stack_offer_each_paid: 'Each paid in full: {{first}} and {{second}}',
+  stack_offer_ride: '{{km}} km in all · About {{minutes}} min',
+  stack_offer_accept: 'Accept both',
+  stack_offer_slide: 'Slide to take both orders',
+  stack_stop_pickup: 'Pick up · {{place}}',
+  stack_stop_dropoff: 'Drop off · {{place}}',
+  stack_stop_a11y: 'Stop {{number}}',
+  stack_stop_done_a11y: 'Stop {{number}}, done',
+  stack_offer_alert_title: 'Two orders together',
+  stack_offer_alert_body: 'Open the app to see both orders and their stops',
   // Offer alerts on the phone (row 58, spec 0003).
   offer_alert_title: 'New offer: {{pay}}',
   offer_alert_body_area: '{{restaurant}} to {{area}}',

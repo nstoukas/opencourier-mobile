@@ -32,6 +32,10 @@ export type OfferAlertData = {
   // an older caller may leave them out, which reads as a single delivery.
   legNumber?: number | null;
   legCount?: number | null;
+  // Spec 0048 (cross check 11): one push carries a stack; this is the other
+  // order's delivery id, null for a single offer. The phone then loads both
+  // orders from the server rather than answering from the alert.
+  partnerDeliveryId?: string | null;
 };
 
 export type OfferMessage =
@@ -114,6 +118,7 @@ export const parseOfferMessage = (data: RawData): OfferMessage | null => {
       insistent: text(data, 'insistent') === '1',
       legNumber: numberOf(text(data, 'legNumber')),
       legCount: numberOf(text(data, 'legCount')),
+      partnerDeliveryId: text(data, 'partnerDeliveryId') || null,
     },
   };
 };
@@ -145,6 +150,7 @@ export const toNotificationData = (
   insistent: offer.insistent ? '1' : '',
   legNumber: textOf(offer.legNumber ?? null),
   legCount: textOf(offer.legCount ?? null),
+  partnerDeliveryId: offer.partnerDeliveryId ?? '',
 });
 
 export const fromNotificationData = (
@@ -174,5 +180,6 @@ export const fromNotificationData = (
     insistent: text(data, 'insistent') === '1',
     legNumber: numberOf(text(data, 'legNumber')),
     legCount: numberOf(text(data, 'legCount')),
+    partnerDeliveryId: text(data, 'partnerDeliveryId') || null,
   };
 };
