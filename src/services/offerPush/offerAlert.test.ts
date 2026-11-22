@@ -11,6 +11,7 @@ import {
   cancelOfferAlert,
   displayedOfferAlerts,
   ensureOfferChannels,
+  isOfferAlertDisplayed,
   offerAlertLineList,
   offerAlertLines,
   offerSummary,
@@ -240,7 +241,7 @@ describe('offerAlert (spec 0003, AC-3, AC-6, AC-7, Decisions 58.13, 58.15)', () 
     expect(notifee.cancelNotification).toHaveBeenCalledWith('del-to-cancel');
   });
 
-  it('displayedOfferAlerts filters for notifications on offers channels and cancelAllOfferAlerts cancels each', async () => {
+  it('displayedOfferAlerts filters for notifications on all offer channels (including calm channel) and cancelAllOfferAlerts cancels each', async () => {
     (notifee.getDisplayedNotifications as jest.Mock).mockResolvedValue([
       {
         id: 'del-1',
@@ -259,6 +260,14 @@ describe('offerAlert (spec 0003, AC-3, AC-6, AC-7, Decisions 58.13, 58.15)', () 
         },
       },
       {
+        id: 'del-calm',
+        notification: {
+          id: 'del-calm',
+          android: { channelId: OFFERS_CALM_CHANNEL_ID },
+          data: { kind: 'offer-alert', deliveryId: 'del-calm' },
+        },
+      },
+      {
         id: 'other-notif',
         notification: {
           id: 'other-notif',
@@ -269,12 +278,23 @@ describe('offerAlert (spec 0003, AC-3, AC-6, AC-7, Decisions 58.13, 58.15)', () 
     ]);
 
     const active = await displayedOfferAlerts();
-    expect(active).toHaveLength(2);
-    expect(active.map(a => a.notificationId)).toEqual(['del-1', 'del-2']);
+    // All 3 offer channels are included; unrelated channels are filtered out
+    expect(active).toHaveLength(3);
+    expect(active.map(a => a.notificationId)).toEqual([
+      'del-1',
+      'del-2',
+      'del-calm',
+    ]);
 
+    // isOfferAlertDisplayed detects alerts on normal, insistent, and calm channels
+    expect(await isOfferAlertDisplayed('del-calm')).toBe(true);
+    expect(await isOfferAlertDisplayed('other-notif')).toBe(false);
+
+    // cancelAllOfferAlerts (runs on logout) cancels all 3, including calm add-on alert
     await cancelAllOfferAlerts();
     expect(notifee.cancelNotification).toHaveBeenCalledWith('del-1');
     expect(notifee.cancelNotification).toHaveBeenCalledWith('del-2');
+    expect(notifee.cancelNotification).toHaveBeenCalledWith('del-calm');
     expect(notifee.cancelNotification).not.toHaveBeenCalledWith('other-notif');
   });
   // Row 100 (decision 100.2, spec 0019 AC-3): the alert words the trip like

@@ -6,6 +6,7 @@ import { Order, StackStop } from '@app/types/types';
 import ButtonSwipe from '../ButtonSwipe/ButtonSwipe';
 import { ButtonOrder } from '../ButtonOrder/ButtonOrder';
 import { Paralelogram } from '../Paralelogram/Paralelogram';
+import { StackStopList } from '../StackStopList/StackStopList';
 
 describe('AddOnOfferCell (spec 0048, row 81, AC-9, AC-10, cross check 2)', () => {
   beforeEach(() => {
@@ -283,6 +284,170 @@ describe('AddOnOfferCell (spec 0048, row 81, AC-9, AC-10, cross check 2)', () =>
 
     act(() => {
       component.unmount();
+    });
+  });
+
+  describe('review fixes (row 81 rulings, decision 81.18)', () => {
+    it('when job is undefined: shows pay, what it adds, calm line, but hides total and stop list', () => {
+      const onAcceptMock = jest.fn();
+      const onDeclineMock = jest.fn();
+
+      // The job list on the phone has not caught up, so job is undefined
+      let component: renderer.ReactTestRenderer;
+      act(() => {
+        component = renderer.create(
+          <AddOnOfferCell
+            order={addOnOrder}
+            job={undefined}
+            stops={[]}
+            calm={true}
+            onAccept={onAcceptMock}
+            onDecline={onDeclineMock}
+            millisRemaining={null}
+            totalMillis={null}
+          />,
+        );
+      });
+
+      // Still displays add-on pay
+      const payNode = component!.root.findByProps({
+        testID: 'add-on-offer-pay',
+      });
+      expect(payNode.props.children).toBe('€3.25');
+
+      // Still displays what it adds
+      const addsNode = component!.root.findByProps({
+        testID: 'add-on-offer-adds',
+      });
+      expect(addsNode.props.children).toBe('+2.1 km, +7 min');
+
+      // Errs on the calm side: displays when stopped reminder
+      const stoppedNode = component!.root.findByProps({
+        testID: 'add-on-offer-stopped',
+      });
+      expect(stoppedNode.props.children).toBe(
+        'Answer only when you are stopped',
+      );
+
+      // Total line is NOT shown because job pay is not known
+      const totalNodes = component!.root.findAllByProps({
+        testID: 'add-on-offer-total',
+      });
+      expect(totalNodes).toHaveLength(0);
+
+      // StackStopList is NOT shown without job
+      const stopLists = component!.root.findAllByType(StackStopList);
+      expect(stopLists).toHaveLength(0);
+
+      // Swiping Accept still works and passes the added order
+      const swipeButton = component!.root.findByType(ButtonSwipe);
+      act(() => {
+        swipeButton.props.onSwiped(true);
+      });
+      expect(onAcceptMock).toHaveBeenCalledWith(addOnOrder);
+
+      // Tapping Decline still works and passes the added order
+      const declineButton = component!.root.findByType(ButtonOrder);
+      act(() => {
+        declineButton.props.onPress();
+      });
+      expect(onDeclineMock).toHaveBeenCalledWith(addOnOrder);
+
+      act(() => {
+        component.unmount();
+      });
+    });
+
+    it('hides total line when job totalCompensation is null or undefined (never treats missing pay as 0)', () => {
+      // Missing compensation on the job should never result in "€3.25 with your current job"
+      for (const missingPay of [null, undefined]) {
+        const jobWithoutPay = {
+          ...heldJob,
+          totalCompensation: missingPay,
+        } as unknown as Order;
+
+        let component: renderer.ReactTestRenderer;
+        act(() => {
+          component = renderer.create(
+            <AddOnOfferCell
+              order={addOnOrder}
+              job={jobWithoutPay}
+              stops={stops}
+              calm={false}
+              onAccept={jest.fn()}
+              onDecline={jest.fn()}
+              millisRemaining={null}
+              totalMillis={null}
+            />,
+          );
+        });
+
+        const totalNodes = component!.root.findAllByProps({
+          testID: 'add-on-offer-total',
+        });
+        expect(totalNodes).toHaveLength(0);
+
+        act(() => {
+          component.unmount();
+        });
+      }
+    });
+
+    it('hides total line when add-on order totalCompensation is null or undefined', () => {
+      const orderWithoutPay = {
+        ...addOnOrder,
+        totalCompensation: null,
+      } as unknown as Order;
+
+      let component: renderer.ReactTestRenderer;
+      act(() => {
+        component = renderer.create(
+          <AddOnOfferCell
+            order={orderWithoutPay}
+            job={heldJob}
+            stops={stops}
+            calm={false}
+            onAccept={jest.fn()}
+            onDecline={jest.fn()}
+            millisRemaining={null}
+            totalMillis={null}
+          />,
+        );
+      });
+
+      const totalNodes = component!.root.findAllByProps({
+        testID: 'add-on-offer-total',
+      });
+      expect(totalNodes).toHaveLength(0);
+
+      act(() => {
+        component.unmount();
+      });
+    });
+
+    it('hides StackStopList when stops is empty even if job is defined', () => {
+      let component: renderer.ReactTestRenderer;
+      act(() => {
+        component = renderer.create(
+          <AddOnOfferCell
+            order={addOnOrder}
+            job={heldJob}
+            stops={[]}
+            calm={false}
+            onAccept={jest.fn()}
+            onDecline={jest.fn()}
+            millisRemaining={null}
+            totalMillis={null}
+          />,
+        );
+      });
+
+      const stopLists = component!.root.findAllByType(StackStopList);
+      expect(stopLists).toHaveLength(0);
+
+      act(() => {
+        component.unmount();
+      });
     });
   });
 });

@@ -974,5 +974,28 @@ describe('HomeScreen (spec 0018, AC-5 to AC-15)', () => {
 
       unmount();
     });
+
+    it('review fix: renders AddOnOfferCell even before the job list has caught up (job not yet on phone)', () => {
+      // The add-on offer is present in new orders, but in-progress orders list is still empty
+      mockHomeOrders.dataSourceNew = [addOnOffer];
+      mockHomeOrders.dataSourceInProgress = [];
+      mockHomeOrders.serverInProgress = [];
+
+      const { UNSAFE_getByType, getByTestId, queryByTestId, unmount } =
+        renderHome();
+
+      // Rendered as AddOnOfferCell (not NewOrderCell) so the rider knows it is an add-on
+      expect(UNSAFE_getByType(AddOnOfferCell)).toBeTruthy();
+      expect(getByTestId('add-on-offer-card')).toBeTruthy();
+      expect(queryByTestId('new-order-cell')).toBeNull();
+
+      const cell = UNSAFE_getByType(AddOnOfferCell);
+      expect(cell.props.job).toBeUndefined();
+      expect(cell.props.stops).toEqual([]);
+      // Errs on calm side when held job is not on phone
+      expect(cell.props.calm).toBe(true);
+
+      unmount();
+    });
   });
 });

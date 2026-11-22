@@ -178,5 +178,29 @@ describe('StackStopList (spec 0048, row 80, AC-10)', () => {
       expect(queryByText('Drop off · Secret Street 42')).toBeNull();
       expect(getByText('Drop off · ')).toBeTruthy();
     });
+
+    it('shows dropoffArea for both when area is present, hiding add-on street', () => {
+      const heldWithArea: Order = {
+        ...heldJob,
+        dropoffArea: 'Port Area',
+      };
+      const addOnWithArea: Order = {
+        ...addOnOffer,
+        dropoffArea: 'Iasonos',
+      };
+
+      const { getByText, queryByText } = render(
+        <StackStopList
+          stops={stops}
+          orders={[heldWithArea, addOnWithArea]}
+          isOffer={true}
+          addOn={true}
+        />,
+      );
+
+      expect(getByText('Drop off · Port Area')).toBeTruthy();
+      expect(getByText('Drop off · Iasonos')).toBeTruthy();
+      expect(queryByText('Drop off · Secret Street 42')).toBeNull();
+    });
   });
 });

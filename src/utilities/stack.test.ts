@@ -333,6 +333,9 @@ describe('stack utilities (spec 0048, row 80, AC-2, AC-5, AC-10)', () => {
         addOnJobOf({ ...addOnOffer, stackStops: null }, [heldJob]),
       ).toBeUndefined();
       expect(
+        addOnJobOf({ ...addOnOffer, stackStops: [] }, [heldJob]),
+      ).toBeUndefined();
+      expect(
         addOnJobOf(
           {
             ...addOnOffer,
@@ -403,6 +406,11 @@ describe('stack utilities (spec 0048, row 80, AC-2, AC-5, AC-10)', () => {
       ],
     } as Order;
 
+    const heldJob: Order = {
+      id: 'deliv-held',
+      status: OrderStatus.dispatched,
+    } as Order;
+
     it('returns false when offer.addOn is not true', () => {
       expect(isCalmAddOn({ id: 'deliv-single' } as Order, [])).toBe(false);
       expect(isCalmAddOn({ ...addOnOffer, addOn: false }, [])).toBe(false);
@@ -410,6 +418,13 @@ describe('stack utilities (spec 0048, row 80, AC-2, AC-5, AC-10)', () => {
 
     it('returns true when held job is not on phone (the calm side)', () => {
       expect(isCalmAddOn(addOnOffer, [])).toBe(true);
+      // When stackStops is missing or names no other job, job lookup finds undefined and errs on calm side
+      expect(
+        isCalmAddOn({ ...addOnOffer, stackStops: undefined }, [heldJob]),
+      ).toBe(true);
+      expect(isCalmAddOn({ ...addOnOffer, stackStops: [] }, [heldJob])).toBe(
+        true,
+      );
     });
 
     it('returns true when held job status is in PAST_PICKUP (picked_up, on_the_way, arrived dropoff, dropped_off)', () => {

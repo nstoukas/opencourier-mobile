@@ -333,6 +333,76 @@ describe('whyYouLines (spec 0045, AC-2, AC-3, AC-6)', () => {
     expect(lines).toEqual([UNKNOWN]);
     expect(lines.join('\n')).not.toContain('No reason was recorded');
   });
+
+  describe('ADD_ON (spec 0048, decision 81.16, review fix)', () => {
+    it('words the add-on by extra km and minutes when both are known', () => {
+      // Backend records kind: 'ADD_ON' with extraKm and extraMinutes in values
+      const addOnReason: EarningsWhyYou = {
+        strategy: 'FAIRNESS',
+        kind: 'ADD_ON',
+        values: { extraKm: 1.8, extraMinutes: 6 },
+        weights: {},
+        estimated: false,
+      };
+      expect(whyYouLines(addOnReason, t, euros)).toEqual([
+        'Offered as one more order on the way: it added 1.8 km and 6 min to your job, less than for any other rider on a job',
+      ]);
+    });
+
+    it('words the add-on plain when extraKm or extraMinutes is missing or null', () => {
+      // Missing extraKm falls back to plain add-on sentence
+      const missingKm: EarningsWhyYou = {
+        strategy: 'FAIRNESS',
+        kind: 'ADD_ON',
+        values: { extraMinutes: 6 },
+        weights: {},
+        estimated: false,
+      };
+      expect(whyYouLines(missingKm, t, euros)).toEqual([
+        'Offered as one more order on the way, added to the job you were on',
+      ]);
+
+      // Null extraMinutes falls back to plain add-on sentence
+      const nullMinutes: EarningsWhyYou = {
+        strategy: 'NEAREST_COURIER',
+        kind: 'ADD_ON',
+        values: { extraKm: 2.1, extraMinutes: null },
+        weights: {},
+        estimated: false,
+      };
+      expect(whyYouLines(nullMinutes, t, euros)).toEqual([
+        'Offered as one more order on the way, added to the job you were on',
+      ]);
+
+      // Empty values object falls back to plain add-on sentence
+      const emptyValues: EarningsWhyYou = {
+        strategy: 'FAIRNESS',
+        kind: 'ADD_ON',
+        values: {},
+        weights: {},
+        estimated: false,
+      };
+      expect(whyYouLines(emptyValues, t, euros)).toEqual([
+        'Offered as one more order on the way, added to the job you were on',
+      ]);
+    });
+
+    it('does not mention the underlying matcher strategy or weights', () => {
+      // An add on is explained by what it added, not by the matcher's weights or strategy
+      const addOnWithWeights: EarningsWhyYou = {
+        strategy: 'FAIRNESS',
+        kind: 'ADD_ON',
+        values: { extraKm: 1.8, extraMinutes: 6 },
+        weights: { roadTime: 50, earnings: 30, waiting: 20 },
+        estimated: false,
+      };
+      const lines = whyYouLines(addOnWithWeights, t, euros);
+      expect(lines).toHaveLength(1);
+      expect(lines.join('\n')).not.toMatch(
+        /weighs|fairness|nearest|road time|restaurant/i,
+      );
+    });
+  });
 });
 
 describe('what a line never shows (spec 0045 cross check 1 and 5)', () => {
@@ -381,6 +451,16 @@ describe('what a line never shows (spec 0045 cross check 1 and 5)', () => {
     ['seniority', reason('COURIER_SENIORITY')],
     ['admin', reason('ADMIN')],
     ['static', reason('STATIC')],
+    [
+      'add-on',
+      {
+        strategy: 'FAIRNESS',
+        kind: 'ADD_ON',
+        values: { extraKm: 1.8, extraMinutes: 6 },
+        weights: {},
+        estimated: false,
+      },
+    ],
     ['unknown', reason('SOME_FUTURE_MATCHER')],
     ['none', null],
   ];
@@ -470,6 +550,30 @@ describe('WhyYouSection (spec 0045, AC-2 to AC-4)', () => {
       />,
     );
     expect(screen.getByText(UNKNOWN)).toBeTruthy();
+    expect(screen.queryByText(NONE)).toBeNull();
+  });
+
+  it('renders the add-on reason in WhyYouSection component', () => {
+    render(
+      <WhyYouSection
+        whyYou={{
+          strategy: 'FAIRNESS',
+          kind: 'ADD_ON',
+          values: { extraKm: 1.8, extraMinutes: 6 },
+          weights: {},
+          estimated: false,
+        }}
+        money={euros}
+        onHowItWorks={jest.fn()}
+      />,
+    );
+    expect(screen.getByText('Why you got this')).toBeTruthy();
+    expect(
+      screen.getByText(
+        'Offered as one more order on the way: it added 1.8 km and 6 min to your job, less than for any other rider on a job',
+      ),
+    ).toBeTruthy();
+    expect(screen.queryByText(UNKNOWN)).toBeNull();
     expect(screen.queryByText(NONE)).toBeNull();
   });
 });
