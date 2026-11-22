@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { AppState } from 'react-native';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useJobContact } from '@app/hooks/useJobContact';
-import { serverCode } from '@app/hooks/useMoveDropoffPin';
+import { serverCode, serverSentence } from '@app/hooks/useMoveDropoffPin';
 import { fetchShifts } from '@app/services/shifts/shiftsApi';
 import { syncShiftReminders } from '@app/services/shifts/shiftReminder';
 import { QueryKeys } from '@app/utilities/queryKeys';
@@ -42,8 +42,11 @@ export const useShifts = (inFront: boolean = true) => {
   // The server says shifts were switched off: read the switch again, so the menu, the banner and the
   // reminders follow it now rather than within ten minutes.
   useEffect(() => {
-    // By its code, since spec 0054 translates the sentence (backend error-sentences.ts maps it to SHIFTS_OFF).
-    if (serverCode(error) === 'SHIFTS_OFF') {
+    // By its code or the server's English sentence, never the shown words, which spec 0054 translates.
+    if (
+      serverCode(error) === 'SHIFTS_OFF' ||
+      serverSentence(error) === SHIFTS_OFF_SENTENCE
+    ) {
       void queryClient.invalidateQueries({ queryKey: [QueryKeys.jobContact] });
     }
   }, [error, queryClient]);

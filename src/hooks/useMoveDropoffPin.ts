@@ -72,11 +72,16 @@ const refusalOf = (error: unknown): ServerRefusal | undefined => {
 export const serverMessage = (error: unknown): string | undefined =>
   refusalText(refusalOf(error));
 
-// The refusal's code (such as 'SHIFTS_OFF'), for code that acts on one: never
-// compare the words, which follow the language.
+// What a refusal is, for code that acts on one: its code (such as 'SHIFTS_OFF')
+// and the server's own English sentence. Never compare the shown words, which
+// follow the language (spec 0054).
 export const serverCode = (error: unknown): string | undefined => {
   const code = refusalOf(error)?.code;
   return typeof code === 'string' ? code : undefined;
+};
+export const serverSentence = (error: unknown): string | undefined => {
+  const message = refusalOf(error)?.message;
+  return typeof message === 'string' ? message : undefined;
 };
 
 // The rider's "Pin wrong? Set it where I stand" (spec 0016, AC-8): ask, read a
