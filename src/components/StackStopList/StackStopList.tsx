@@ -49,7 +49,7 @@ export const StackStopList = ({ stops, orders, isOffer }: Props) => {
         const isNext = index === nextIndex;
         return (
           <View
-            // A stop's place in the list never changes, so its number is a stable key.
+            // A delivery has one stop of each kind, so its id and the kind make a stable key.
             key={`${stop.deliveryId}-${stop.stop}`}
             style={styles.row}
             testID={`stack-stop-${index + 1}`}
