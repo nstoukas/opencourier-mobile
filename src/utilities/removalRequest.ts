@@ -1,12 +1,22 @@
 // Spec 0035: a rider asks dispatch to take them off an order. The small rules, as plain functions so
 // each can be tested on its own; the words come from the translations.
 
-import { Order } from '@app/types/types';
+import { Order, RemovalReason } from '@app/types/types';
 import { canHandBack } from './handBackWindow';
 import { isJobOver } from './jobContact';
 import { formatCurrencyFromCents } from './currency';
 
 type Translate = (key: string, options?: Record<string, unknown>) => string;
+
+// Spec 0054 (AC-7): a reason in the language on show, else the other one, the same rule as the chat
+// presets. `Pick<RemovalReason, ...>` is the type with only those two fields.
+export const removalReasonLabel = (
+  reason: Pick<RemovalReason, 'label' | 'labelEl'>,
+  language: 'el' | 'en',
+): string =>
+  language === 'el'
+    ? reason.labelEl || reason.label
+    : reason.label || reason.labelEl || '';
 
 // What the backend sends as REMOVAL_REQUEST_DECIDED, over the live connection or by push
 // (backend `RemovalRequestDecidedMessage`).

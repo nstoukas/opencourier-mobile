@@ -27,6 +27,8 @@ import {
 } from '@app/hooks/useRemovalRequest';
 import { RemovalReason } from '@app/types/types';
 import { touchRow } from '@app/utilities/touch';
+import { removalReasonLabel } from '@app/utilities/removalRequest';
+import { currentLanguage } from '@app/localization/appLanguage';
 import { styles } from './RequestRemoval.styles';
 
 type Props = MainScreenProp<MainScreens.RequestRemoval>;
@@ -85,7 +87,9 @@ export const RequestRemoval = ({ navigation, route }: Props) => {
             size={20}
             tone={isSelected ? 'success' : 'muted-foreground'}
           />
-          <Text style={styles.rowLabel}>{item.label}</Text>
+          <Text style={styles.rowLabel}>
+            {removalReasonLabel(item, currentLanguage())}
+          </Text>
           <Text style={item.paid ? styles.rowPaid : styles.rowNotPaid}>
             {t(
               item.paid

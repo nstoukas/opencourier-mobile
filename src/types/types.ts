@@ -346,6 +346,8 @@ export type SplitRequest = {
 export type RemovalReason = {
   id: string;
   label: string;
+  // Spec 0054 (AC-7): the Greek label, or null when the co-op wrote none (an older server leaves it out).
+  labelEl?: string | null;
   // Whether this reason pays the rider. Riders never see whether it bills the restaurant.
   paid: boolean;
   needsNote: boolean;
