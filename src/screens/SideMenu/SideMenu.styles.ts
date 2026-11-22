@@ -13,7 +13,10 @@ export const styles = StyleSheet.create({
     marginBottom: 8,
     marginTop: 16,
   },
+  // Row 47 live check: the greeting wraps instead of running off the menu's edge
+  // ("Γεια σας" is longer than "Hi", and so is many a name).
   textName: {
+    flexShrink: 1,
     fontSize: typeScale.h1.fontSize,
     fontWeight: '700',
     marginLeft: 8,

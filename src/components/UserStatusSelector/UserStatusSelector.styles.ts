@@ -31,10 +31,20 @@ export const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
+  // Each of the three takes an equal share of the menu's width (row 47).
+  item: {
+    flex: 1,
+  },
+  // The bordered box fills its share, so the three are as tall as the tallest.
+  segment: {
+    flex: 1,
+  },
   text: {
-    fontSize: typeScale.body.fontSize,
+    fontSize: typeScale['body-sm'].fontSize,
     fontWeight: '500',
     color: Colors.gray3,
-    margin: 10,
+    textAlign: 'center',
+    marginHorizontal: 4,
+    marginVertical: 10,
   },
 });
