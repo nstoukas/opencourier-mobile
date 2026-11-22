@@ -42,9 +42,7 @@ const readFreshFix = (): Promise<Fix | null> =>
 // A pin move's distance for the thank you line: whole metres under 1 km ("141 m"),
 // km with one decimal above (a move of 30 m must not read "0 km").
 export const formatPinDistance = (metres: number): string =>
-  metres < 1000
-    ? `${Math.round(metres)} m`
-    : `${kmNumber(metres / 1000)} km`;
+  metres < 1000 ? `${Math.round(metres)} m` : `${kmNumber(metres / 1000)} km`;
 
 // A fix the phone says is within 50 m. Android reports 0 when it has no
 // figure, iOS a negative number for an invalid fix: neither counts as precise.
