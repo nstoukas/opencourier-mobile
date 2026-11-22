@@ -188,7 +188,11 @@ export const useHomeOrders = () => {
     releaseOffer(partnerId);
     refetchNewRef.current();
     const sentence = serverSentenceOf(error);
-    Alert.alert(sentence ?? title, sentence ? undefined : error.message);
+    // With no refusal from the server, a plain sentence, never axios's own English ("Network Error").
+    Alert.alert(
+      sentence ?? title,
+      sentence ? undefined : i18next.t('translations:auth_error_other'),
+    );
   };
 
   // Spec 0048: the other offer of the same stack in the fetched list, if any.
@@ -253,7 +257,7 @@ export const useHomeOrders = () => {
       // In the rider's language (spec 0054): the refusal's words when the server sent one.
       Alert.alert(
         i18next.t('translations:accept_failed_title'),
-        serverMessage(error) ?? error.message,
+        serverMessage(error) ?? i18next.t('translations:auth_error_other'),
       );
     },
   });
@@ -287,7 +291,7 @@ export const useHomeOrders = () => {
       releaseOffer(orderId);
       Alert.alert(
         i18next.t('translations:decline_failed_title'),
-        serverMessage(error) ?? error.message,
+        serverMessage(error) ?? i18next.t('translations:auth_error_other'),
       );
     },
   });
