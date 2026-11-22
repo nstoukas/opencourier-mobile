@@ -2,7 +2,7 @@
 // the JavaScript engine of this app on Android, does not have it, and without it i18next falls back to
 // its old v3 key style and finds none of the `_one` / `_other` keys (spec 0054, cross check 12, moved
 // the app to them). This adds a minimal Intl.PluralRules for the app's two languages only when the
-// engine lacks one (decision 47.32). Greek and English share the same rule: "one" for exactly 1,
+// engine lacks one (decision 47.33). Greek and English share the same rule: "one" for exactly 1,
 // "other" for everything else. No package: the two rules are all the app needs.
 
 type PluralCategory = 'one' | 'other';

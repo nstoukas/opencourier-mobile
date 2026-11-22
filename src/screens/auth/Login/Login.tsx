@@ -29,7 +29,7 @@ export const Login = ({ navigation }: Props) => {
     mutationFn: services.userService.login,
     onSuccess: () => {
       markJustLoggedIn();
-      // The server words this rider's emails in the phone's language (spec 0054, decision 47.33).
+      // The server words this rider's emails in the phone's language (spec 0054, decision 47.34).
       sendLanguageToServer();
     },
     onError: error => showAuthError(error, 'login'),

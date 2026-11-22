@@ -4,9 +4,9 @@
 // the refusal's `params` filled in; otherwise the server's own sentence, which is English.
 // The templates use the backend renderer's syntax: `{{name}}`, `{{name, clock}}` (an ISO time as HH:mm on
 // the co-op's clock) and `$t(server.x.{{name}})` (another key). This renders them the same way, line for
-// line, rather than through i18next's own interpolation (decision 47.30).
+// line, rather than through i18next's own interpolation (decision 47.31).
 // No courier answer carries a delivery record line (the rider's timeline words events by type, spec
-// 0042), so only refusals use this today (decision 47.34).
+// 0042), so only refusals use this today (decision 47.35).
 import i18n from 'i18next';
 import { coopClock } from '@app/utilities/timeWorked';
 import { toAppLanguage, type AppLanguage } from './appLanguage';

@@ -3,7 +3,7 @@ import { currentLanguage, type AppLanguage } from './appLanguage';
 
 // Spec 0054 (AC-1): `PUT courier/v1/courier/language` with { language }, stored as the rider's
 // `User.language`, which the server words mails in. The phone's own choice always wins: it is sent
-// when the rider picks one in Settings and again after every login (decision 47.33).
+// when the rider picks one in Settings and again after every login (decision 47.34).
 export const putCourierLanguage = async (
   language: AppLanguage,
 ): Promise<void> => {
