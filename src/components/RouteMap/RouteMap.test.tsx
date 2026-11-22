@@ -99,6 +99,50 @@ describe('RouteMap (spec 0018, AC-5, AC-6, AC-11)', () => {
     expect(getByTestId('rider-marker')).toBeTruthy();
   });
 
+  it('spec 0048 (AC-10): draws numbered stop pins and hides pickup/dropoff pins when stops are present', () => {
+    const stops = [
+      {
+        number: 1,
+        deliveryId: 'deliv-1',
+        stop: 'PICKUP' as const,
+        latitude: 39.362,
+        longitude: 22.942,
+        done: true,
+      },
+      {
+        number: 2,
+        deliveryId: 'deliv-2',
+        stop: 'PICKUP' as const,
+        latitude: 39.365,
+        longitude: 22.945,
+        done: false,
+      },
+    ];
+
+    const { getByTestId, queryByTestId } = render(
+      <RouteMap
+        legs={[]}
+        pickup={pickupPos}
+        dropoff={dropoffPos}
+        stops={stops}
+        ownPosition={ownPos}
+        restaurantLayerOn={false}
+        pickupPoints={[]}
+        onToggleRestaurantLayer={jest.fn()}
+        fitKey="order-1-ACCEPTED"
+        bottomInset={100}
+      />,
+    );
+
+    // Numbered stop pins exist
+    expect(getByTestId('stack-stop-pin-1')).toBeTruthy();
+    expect(getByTestId('stack-stop-pin-2')).toBeTruthy();
+
+    // Default single job pickup and dropoff pins are NOT rendered when stops exist
+    expect(queryByTestId('pickup-pin')).toBeNull();
+    expect(queryByTestId('dropoff-pin')).toBeNull();
+  });
+
   it('draws rider marker only when ownPosition is provided', () => {
     const { queryByTestId, rerender } = render(
       <RouteMap

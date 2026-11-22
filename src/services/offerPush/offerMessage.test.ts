@@ -51,6 +51,7 @@ describe('offerMessage (spec 0003, AC-4, AC-10)', () => {
         insistent: false,
         legNumber: null,
         legCount: null,
+        partnerDeliveryId: null,
       });
     }
   });
@@ -177,6 +178,7 @@ describe('offerMessage (spec 0003, AC-4, AC-10)', () => {
       insistent: true,
       legNumber: null,
       legCount: null,
+      partnerDeliveryId: null,
     });
   });
 
@@ -231,6 +233,53 @@ describe('offerMessage (spec 0003, AC-4, AC-10)', () => {
     const restored = fromNotificationData(notificationData);
     expect(restored?.legNumber).toBe(1);
     expect(restored?.legCount).toBe(2);
+  });
+
+  // Spec 0048 (cross check 11): stacked offers carry partnerDeliveryId
+  it('parses partnerDeliveryId when present in push message', () => {
+    const parsed = parseOfferMessage({
+      ...validData,
+      partnerDeliveryId: 'del-partner-789',
+    });
+
+    expect(parsed?.kind).toBe('offer');
+    if (parsed?.kind === 'offer') {
+      expect(parsed.offer.partnerDeliveryId).toBe('del-partner-789');
+    }
+  });
+
+  it('parses empty string partnerDeliveryId as null', () => {
+    const parsed = parseOfferMessage({
+      ...validData,
+      partnerDeliveryId: '',
+    });
+
+    expect(parsed?.kind).toBe('offer');
+    if (parsed?.kind === 'offer') {
+      expect(parsed.offer.partnerDeliveryId).toBeNull();
+    }
+  });
+
+  it('toNotificationData and fromNotificationData roundtrip preserves partnerDeliveryId', () => {
+    const offer: OfferAlertData = {
+      deliveryId: 'del-stack-roundtrip',
+      offeredAt: '2026-10-26T10:00:00.000Z',
+      msLeftAtSend: 30000,
+      payTotal: 450,
+      currencyCode: 'EUR',
+      restaurantName: 'Co-op Grill',
+      dropoffArea: 'Port Area',
+      trip: { toPickupMetres: 1800, toDropoffMetres: 950, minutes: 8 },
+      insistent: false,
+      partnerDeliveryId: 'del-partner-roundtrip',
+    };
+
+    const deadlineAt = 1700000000000;
+    const notificationData = toNotificationData(offer, deadlineAt);
+    expect(notificationData.partnerDeliveryId).toBe('del-partner-roundtrip');
+
+    const restored = fromNotificationData(notificationData);
+    expect(restored?.partnerDeliveryId).toBe('del-partner-roundtrip');
   });
 
   it('fromNotificationData rejects malformed notification data (not kind offer-alert or empty deliveryId)', () => {

@@ -633,4 +633,53 @@ describe('offerAlert (spec 0003, AC-3, AC-6, AC-7, Decisions 58.13, 58.15)', () 
       });
     });
   });
+
+  describe('stacked offer alert (spec 0048, cross check 11, AC-8)', () => {
+    const stackOffer: OfferAlertData = {
+      ...baseOffer,
+      partnerDeliveryId: 'del-partner-999',
+    };
+
+    it('names no pay, has title "Two orders together", body "Open the app...", and no actions', async () => {
+      await showOfferAlert(stackOffer, Date.now(), 'full-screen');
+
+      expect(notifee.displayNotification).toHaveBeenCalledTimes(1);
+      const call = (notifee.displayNotification as jest.Mock).mock.calls[0][0];
+
+      expect(call.title).toBe('Two orders together');
+      expect(call.title).not.toContain('€');
+      expect(call.body).toBe('Open the app to see both orders and their stops');
+      expect(call.android.actions).toEqual([]);
+      expect(call.android.fullScreenAction).toEqual({
+        id: 'default',
+        launchActivity: 'default',
+      });
+      expect(call.android.style.text).toBe(
+        'Open the app to see both orders and their stops',
+      );
+    });
+
+    it('opens default activity even when heads-up mode (pressAction has default)', async () => {
+      await showOfferAlert(stackOffer, Date.now(), 'heads-up');
+
+      const call = (notifee.displayNotification as jest.Mock).mock.calls[0][0];
+      expect(call.android.fullScreenAction).toBeUndefined();
+      expect(call.android.actions).toEqual([]);
+    });
+
+    it('retains single offer behavior when partnerDeliveryId is null or undefined', async () => {
+      await showOfferAlert(
+        { ...baseOffer, partnerDeliveryId: null },
+        Date.now(),
+        'full-screen',
+      );
+
+      const call = (notifee.displayNotification as jest.Mock).mock.calls[0][0];
+      expect(call.title).toContain('€5.50');
+      expect(call.android.actions).toHaveLength(2);
+      expect(call.android.fullScreenAction?.launchActivity).toBe(
+        'com.opendeli.OfferAlertActivity',
+      );
+    });
+  });
 });

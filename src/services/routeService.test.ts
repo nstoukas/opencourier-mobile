@@ -28,6 +28,58 @@ describe('routeService (spec 0018, AC-1, AC-4)', () => {
     });
   });
 
+  describe('getStackRoute (spec 0048, AC-10)', () => {
+    it('calls deliveries/:id/route and returns result legs and stops', async () => {
+      const mockLegs: RouteLeg[] = [
+        {
+          kind: RouteLegKind.BetweenStops,
+          distanceMetres: 800,
+          durationSeconds: 150,
+          points: [{ latitude: 39.36, longitude: 22.94 }],
+          toStopNumber: 2,
+        },
+      ];
+      const mockStops = [
+        {
+          number: 1,
+          deliveryId: 'deliv-1',
+          stop: 'PICKUP' as const,
+          latitude: 39.36,
+          longitude: 22.94,
+          done: true,
+        },
+        {
+          number: 2,
+          deliveryId: 'deliv-2',
+          stop: 'PICKUP' as const,
+          latitude: 39.37,
+          longitude: 22.95,
+          done: false,
+        },
+      ];
+      mockGet.mockResolvedValueOnce({
+        data: { result: { legs: mockLegs, stops: mockStops } },
+      });
+
+      const stackRoute = await service.getStackRoute('deliv-123');
+      expect(mockGet).toHaveBeenCalledWith('deliveries/deliv-123/route');
+      expect(stackRoute).toEqual({
+        legs: mockLegs,
+        stops: mockStops,
+      });
+    });
+
+    it('defaults stops to empty array when result.stops is missing or null', async () => {
+      const mockLegs: RouteLeg[] = [];
+      mockGet.mockResolvedValueOnce({
+        data: { result: { legs: mockLegs, stops: null } },
+      });
+
+      const stackRoute = await service.getStackRoute('deliv-456');
+      expect(stackRoute.stops).toEqual([]);
+    });
+  });
+
   describe('getPickupPoints (AC-4)', () => {
     it('calls partners/pickup-points and returns result', async () => {
       const mockPoints = [

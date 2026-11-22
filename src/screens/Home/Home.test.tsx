@@ -17,6 +17,8 @@ import { Order, User, UserStatus } from '@app/types/types';
 import { OrderSetting, OrderStatus } from '@app/types/enums';
 import { InProgressCell } from '@app/components/InProgressCell/InProgressCell';
 import { NewOrderCell } from '@app/components/NewOrderCell/NewOrderCell';
+import { StackOfferCell } from '@app/components/StackOfferCell/StackOfferCell';
+import { StackStopList } from '@app/components/StackStopList/StackStopList';
 import { RouteMap } from '@app/components/RouteMap/RouteMap';
 import { HomeTopSlot } from '@app/components/HomeTopSlot/HomeTopSlot';
 import { HomeCard } from '@app/components/HomeCard/HomeCard';
@@ -774,6 +776,96 @@ describe('HomeScreen (spec 0018, AC-5 to AC-15)', () => {
       expect(queryByTestId('box-gauge')).toBeNull();
       expect(queryByTestId('box-fill')).toBeNull();
       expect(queryAllByText(/%/)).toHaveLength(0);
+      unmount();
+    });
+  });
+
+  describe('Stacked offers and stacked jobs on Home (spec 0048, AC-8, AC-10)', () => {
+    const stackOfferA: Order = {
+      ...mockOffer,
+      id: 'offer-stack-1',
+      offerGroupId: 'grp-123',
+      totalCompensation: 500,
+    } as unknown as Order;
+
+    const stackOfferB: Order = {
+      ...mockOffer,
+      id: 'offer-stack-2',
+      offerGroupId: 'grp-123',
+      totalCompensation: 450,
+    } as unknown as Order;
+
+    const stackStops = [
+      { deliveryId: 'job-stack-1', stop: 'PICKUP' as const },
+      { deliveryId: 'job-stack-2', stop: 'PICKUP' as const },
+      { deliveryId: 'job-stack-1', stop: 'DROPOFF' as const },
+      { deliveryId: 'job-stack-2', stop: 'DROPOFF' as const },
+    ];
+
+    const stackJobA: Order = {
+      ...mockJob,
+      id: 'job-stack-1',
+      status: OrderStatus.dispatched,
+      stackStops,
+    } as unknown as Order;
+
+    const stackJobB: Order = {
+      ...mockJob,
+      id: 'job-stack-2',
+      status: OrderStatus.dispatched,
+      stackStops,
+    } as unknown as Order;
+
+    it('renders StackOfferCell when two offers share an offerGroupId', () => {
+      mockHomeOrders.dataSourceNew = [stackOfferA, stackOfferB];
+      mockHomeOrders.dataSourceInProgress = [];
+      mockHomeOrders.serverInProgress = [];
+
+      const { UNSAFE_getByType, queryByTestId, getByTestId, unmount } =
+        renderHome();
+
+      expect(UNSAFE_getByType(StackOfferCell)).toBeTruthy();
+      expect(getByTestId('stack-offer-card')).toBeTruthy();
+      expect(queryByTestId('new-order-cell')).toBeNull();
+      unmount();
+    });
+
+    it('AC-8: displays stacked offer card even when user is on auto_accept', () => {
+      mockUser!.deliverySetting = OrderSetting.auto_accept;
+      mockHomeOrders.dataSourceNew = [stackOfferA, stackOfferB];
+      mockHomeOrders.dataSourceInProgress = [];
+      mockHomeOrders.serverInProgress = [];
+
+      const { UNSAFE_getByType, unmount } = renderHome();
+
+      // On auto accept: single offers are claimed on arrival, but stacks must show to the rider
+      expect(UNSAFE_getByType(StackOfferCell)).toBeTruthy();
+      unmount();
+    });
+
+    it('renders StackStopList above the active job card when rider holds a stacked job', () => {
+      mockHomeOrders.dataSourceNew = [];
+      mockHomeOrders.dataSourceInProgress = [stackJobA, stackJobB];
+      mockHomeOrders.serverInProgress = [stackJobA, stackJobB];
+
+      const { getByTestId, UNSAFE_getByType, unmount } = renderHome();
+
+      expect(getByTestId('stack-job')).toBeTruthy();
+      expect(UNSAFE_getByType(StackStopList)).toBeTruthy();
+      expect(UNSAFE_getByType(InProgressCell)).toBeTruthy();
+      unmount();
+    });
+
+    it('falls back to single job card when only one job remains (partner ended or cancelled)', () => {
+      // Only stackJobA is present; stackJobB is no longer held
+      mockHomeOrders.dataSourceNew = [];
+      mockHomeOrders.dataSourceInProgress = [stackJobA];
+      mockHomeOrders.serverInProgress = [stackJobA];
+
+      const { queryByTestId, UNSAFE_getByType, unmount } = renderHome();
+
+      expect(queryByTestId('stack-job')).toBeNull();
+      expect(UNSAFE_getByType(InProgressCell)).toBeTruthy();
       unmount();
     });
   });
