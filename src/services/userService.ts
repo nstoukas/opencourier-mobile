@@ -23,8 +23,10 @@ export interface UserService {
   resetPassword: (params: ResetPasswordParams) => Promise<LoginResponse>;
   getUser: () => Promise<User>;
   getUserSettings: () => Promise<UserSettings>;
-  // Resolves with the raw PATCH response; the only caller (useUserSettings) ignores it
-  // and refetches the settings instead.
+  // Row 84: getUserSettings and updateUserSettings have no caller left (their one user,
+  // useUserSetttings, went with the upstream setting screens). Kept only because
+  // userService.test.ts still calls them; delete both, and the UserSettings types in
+  // ./types, when that test is updated.
   updateUserSettings: (
     params: Partial<UserSettings>,
   ) => Promise<UserServiceResponse>;

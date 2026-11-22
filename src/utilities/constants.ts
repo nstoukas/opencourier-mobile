@@ -1,7 +1,6 @@
 import {
   CuisineType,
   EarningMethod,
-  Language,
   MapLinkingOptions,
   OrderPreference,
   RestauranType,
@@ -46,34 +45,6 @@ export const MAP_ACTION_SHEET_OPTIONS_ANDROID = [
 ];
 
 export const ADD_NOTE_CELL = 'const_add_note_cell';
-
-export const SUPPORTED_LANGUAGES: Language[] = [
-  {
-    id: '1',
-    name: 'english_GB',
-    abreviation: 'en-GB',
-  },
-  {
-    id: '2',
-    name: 'english_US',
-    abreviation: 'en-US',
-  },
-  {
-    id: '3',
-    name: 'spanish_ES',
-    abreviation: 'es-ES',
-  },
-  {
-    id: '4',
-    name: 'spanish_MX',
-    abreviation: 'es-MX',
-  },
-  {
-    id: '5',
-    name: 'spanish_US',
-    abreviation: 'es-US',
-  },
-];
 
 export const SUPPORTED_THEMES: Theme[] = [
   { id: '1', name: 'dark' },

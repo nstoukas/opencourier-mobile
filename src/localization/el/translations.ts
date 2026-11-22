@@ -14,18 +14,12 @@ const translations: typeof en = {
   dispatch_stops_soon_title: 'Παύση διανομών σε λίγο',
   // Spec 0013: the co-op issues and resets every rider's login.
   forgot_password: 'Ξεχάσατε τον κωδικό πρόσβασης;',
-  // The link and the card no longer reset anything: the co-op sets a new password (spec 0013).
-  account_information: 'Στοιχεία λογαριασμού',
-  manage_your_account:
-    'Διαχειριστείτε τον λογαριασμό και τα προσωπικά σας στοιχεία',
   accessibility: 'Προσβασιμότητα',
   earning_method: 'Τρόπος αμοιβής',
   select_earning_method: 'Επιλέξτε πώς προτιμάτε να αμείβεστε',
   enable_enhcanced_accessibility:
     'Ενεργοποιήστε επιπλέον επιλογές προσβασιμότητας, προσαρμοσμένες στις ανάγκες σας, για πιο άνετη χρήση της εφαρμογής',
   emergency_contact: 'Επαφή έκτακτης ανάγκης',
-  add_trusted_contact:
-    'Προσθέστε ένα άτομο εμπιστοσύνης για επικοινωνία σε περίπτωση έκτακτης ανάγκης, για την ασφάλεια και την ησυχία σας',
   language: 'Γλώσσα',
   select_language: 'Επιλέξτε τη γλώσσα που προτιμάτε',
   // Spec 0054 (AC-1): the language setting. Each language's own name, the same in both files (never
@@ -39,20 +33,9 @@ const translations: typeof en = {
   navigation: 'Πλοήγηση',
   customize_navigation:
     'Ρυθμίστε τις προτιμήσεις πλοήγησης για πιο εύκολες διαδρομές',
-  specify_operating: 'Ορισμός περιοχής εργασίας',
-  vehicle_type: 'Τύπος οχήματος',
-  select_vehicle: 'Επιλέξτε το όχημα που προτιμάτε',
-  operating_area: 'Περιοχή εργασίας',
-  manage_you_areas: 'Διαχειριστείτε τις περιοχές όπου είστε διαθέσιμοι',
   theme: 'Θέμα',
   select_theme: 'Επιλέξτε το θέμα που προτιμάτε',
-  verification: 'Επαλήθευση',
-  manage_verification: 'Διαχειριστείτε την επαλήθευση του λογαριασμού σας',
   notifications: 'Ειδοποιήσεις',
-  push_notifications: 'Ειδοποιήσεις από την εφαρμογή Open Deli',
-  cash_on_delivery: 'Αντικαταβολή',
-  enable_cash:
-    'Ενεργοποιήστε την επιλογή για να πληρώνεστε με μετρητά κατά την παράδοση',
   delivery_bag: 'Τσάντα διανομής',
   having_delivery_bag:
     'Με τσάντα διανομής είναι πιο πιθανό να σας ανατίθενται ζεστές παραγγελίες',
@@ -464,46 +447,11 @@ const translations: typeof en = {
   restaurant_notes: 'Σημειώσεις καταστήματος',
   location_courier_notes: 'Σημειώσεις διανομέων για την τοποθεσία',
   customer_notes: 'Σημειώσεις πελάτη',
-  english_US: 'Αγγλικά',
-  english_GB: 'Αγγλικά',
-  spanish_ES: 'Ισπανικά',
-  spanish_MX: 'Ισπανικά',
-  spanish_US: 'Ισπανικά',
   dark: 'Σκούρο',
   light: 'Φωτεινό',
-  default_volume: 'Προεπιλεγμένη ένταση',
-  default_volume_more: 'Επιλέξτε την ένταση που προτιμάτε ',
-  default_sound: 'Προεπιλεγμένος ήχος',
-  default_sound_more: 'Επιλέξτε τον προεπιλεγμένο ήχο για τις ειδοποιήσεις',
-  my_languages: 'Οι γλώσσες μου ',
-  my_languages_more:
-    'Επιλέξτε όλες τις γλώσσες που μιλάτε άνετα, για την επικοινωνία με πελάτες και προσωπικό καταστημάτων',
-  enable_different_sounds: 'Διαφορετικός ήχος',
-  enable_different_sounds_more:
-    'Ενεργοποιήστε για διαφορετικό ήχο στα νέα αιτήματα',
-  screen_flash: 'Αναλαμπή οθόνης',
-  screen_flash_more: 'Ενεργοποιήστε για αναλαμπή της οθόνης στα νέα αιτήματα',
-  enable_vibration: 'Δόνηση',
-  enable_vibration_more: 'Ενεργοποιήστε για δόνηση στα εισερχόμενα αιτήματα',
-  reading_notes: 'Ανάγνωση σημειώσεων',
-  reading_notes_more:
-    'Ενεργοποιήστε για να ακούτε τις οδηγίες ή τις προτιμήσεις πελατών και καταστημάτων για κάθε παραγγελία',
-  seatbelt_reminder: 'Υπενθύμιση ζώνης ασφαλείας',
-  seatbelt_reminder_more:
-    'Ενεργοποιήστε για να λαμβάνετε μια φιλική υπενθύμιση να φοράτε ζώνη σε κάθε διαδρομή',
-  im_deaf: 'Έχω κώφωση ή πρόβλημα ακοής',
-  im_deaf_more: 'Να γνωρίζουν οι διανομείς ότι έχω κώφωση ή πρόβλημα ακοής',
   other: 'Άλλο',
   requests: 'Αιτήματα',
-  bells: 'Καμπανάκια',
-  chime: 'Κουδούνισμα',
-  dell: 'Ντελ',
-  ping: 'Πινγκ',
-  open: 'Άνοιγμα',
-  softer: 'Πιο σιγά',
   normal: 'Κανονική',
-  louder: 'Πιο δυνατά',
-  volume: 'Ένταση',
   first_name: 'Όνομα',
   last_name: 'Επώνυμο',
   phone: 'Τηλέφωνο',
@@ -576,8 +524,6 @@ const translations: typeof en = {
   weight_info_large:
     '• Βάρος: 15 έως 30 lbs (περίπου 6,8 έως 13,6 kg)\n• Διαστάσεις: χρειάζεται μεγάλη σακούλα ή κουτί (πάνω από 18"x18"x18")\n• Συνήθες περιεχόμενο: μεγάλες παραγγελίες φαγητού, παραγγελίες catering, μεγάλα δέματα',
   include_code: 'Συμπεριλάβετε τον κωδικό χώρας',
-  shift_availability: 'Διαθεσιμότητα για βάρδιες',
-  shift_availability_more: 'Πληροφορίες για τη διαθεσιμότητα βαρδιών',
   enable_camera: 'Ενεργοποίηση κάμερας',
   enable_camera_text:
     'Δώστε μας πρόσβαση στην κάμερά σας. Τη χρειάζεστε για να ολοκληρώνετε παραγγελίες.',

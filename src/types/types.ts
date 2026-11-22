@@ -446,28 +446,10 @@ export enum SettingsOptions {
   ringCheck = 'ring_check',
 }
 
-export type Language = {
-  id: string;
-  name: string;
-  abreviation: string;
-};
-
 export type Theme = {
   id: string;
   name: string;
 };
-
-export enum AccessibilitySettingsOptions {
-  volume = 'default_volume',
-  sound = 'default_sound',
-  myLanguages = 'my_languages',
-  differentSounds = 'enable_different_sounds',
-  screenFlash = 'screen_flash',
-  vibration = 'enable_vibration',
-  readingNotes = 'reading_notes',
-  seatbeltReminder = 'seatbelt_reminder',
-  deaf = 'im_deaf',
-}
 
 export enum ToastMessage {
   enableNotifications = 'enable_notifications',
