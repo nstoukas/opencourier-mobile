@@ -9,8 +9,9 @@ import givenNamesFile from './given-names.json';
 
 export type PersonalDataKind = 'phone' | 'email' | 'name';
 
-// 8 or more digits, with spaces (or a dash or a dot) between them and an optional leading +.
-const PHONE_PATTERN = /\+?\d(?:[\s.-]?\d){7,}/;
+// 8 or more digits, with up to 3 spaces, dashes or dots between any two and an optional leading +
+// (row 82 review: "694 - 123 - 4567" and double spaces are how people type numbers too).
+const PHONE_PATTERN = /\+?\d(?:[\s.-]{0,3}\d){7,}/;
 
 // Something@something.something, the shape of any email address.
 const EMAIL_PATTERN = /[^\s@]+@[^\s@]+\.[^\s@]+/;
