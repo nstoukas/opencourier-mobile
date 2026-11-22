@@ -57,16 +57,20 @@ export const ProfileBadge = ({
         />
       )}
       {!discreteStatusIndicator && (
-        <View
-          style={[
-            styles.containerStatus,
-            { backgroundColor: backgroundColor },
-          ]}>
-          <Text style={styles.textStatus} numberOfLines={1}>
-            {/* 'online', 'offline' and 'last_call' are translation keys: the
-                rider reads Online, Offline or Last Call, never the raw value. */}
-            {t(`translations:${userStatus.toLowerCase()}`)}
-          </Text>
+        // pointerEvents "none": the row is wider than the avatar and only shows
+        // the word; a tap goes to whatever is under it, as before.
+        <View style={styles.statusRow} pointerEvents="none">
+          <View
+            style={[
+              styles.containerStatus,
+              { backgroundColor: backgroundColor },
+            ]}>
+            <Text style={styles.textStatus} numberOfLines={1}>
+              {/* 'online', 'offline' and 'last_call' are translation keys: the
+                  rider reads Online, Offline or Last Call, never the raw value. */}
+              {t(`translations:${userStatus.toLowerCase()}`)}
+            </Text>
+          </View>
         </View>
       )}
     </TouchableOpacity>
