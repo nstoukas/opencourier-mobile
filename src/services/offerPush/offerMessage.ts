@@ -36,6 +36,11 @@ export type OfferAlertData = {
   // order's delivery id, null for a single offer. The phone then loads both
   // orders from the server rather than answering from the alert.
   partnerDeliveryId?: string | null;
+  // Spec 0048 (row 81): an add on, one more order offered while on a job, and
+  // whether the rider carries food already (cross check 2: then it is calm,
+  // never insistent). `?` for older callers and tests: missing reads as false.
+  addOn?: boolean;
+  calm?: boolean;
 };
 
 export type OfferMessage =
@@ -119,6 +124,8 @@ export const parseOfferMessage = (data: RawData): OfferMessage | null => {
       legNumber: numberOf(text(data, 'legNumber')),
       legCount: numberOf(text(data, 'legCount')),
       partnerDeliveryId: text(data, 'partnerDeliveryId') || null,
+      addOn: text(data, 'addOn') === '1',
+      calm: text(data, 'calm') === '1',
     },
   };
 };
@@ -151,6 +158,8 @@ export const toNotificationData = (
   legNumber: textOf(offer.legNumber ?? null),
   legCount: textOf(offer.legCount ?? null),
   partnerDeliveryId: offer.partnerDeliveryId ?? '',
+  addOn: offer.addOn ? '1' : '',
+  calm: offer.calm ? '1' : '',
 });
 
 export const fromNotificationData = (
@@ -181,5 +190,7 @@ export const fromNotificationData = (
     legNumber: numberOf(text(data, 'legNumber')),
     legCount: numberOf(text(data, 'legCount')),
     partnerDeliveryId: text(data, 'partnerDeliveryId') || null,
+    addOn: text(data, 'addOn') === '1',
+    calm: text(data, 'calm') === '1',
   };
 };

@@ -122,3 +122,48 @@ export const groupJobs = (jobs: Order[]): CardOrders[] => {
 // TypeScript that, when this returns true, `card.partner` is set.
 export const isStack = (card: CardOrders): card is Required<CardOrders> =>
   card.partner !== undefined;
+
+// Spec 0048 (row 81): an add on offer, one more order offered while the rider
+// is on a job. It is a single offer; its stop list names that job. The job it
+// would ride with, from the rider's jobs, or undefined when the job is not on
+// the phone (yet) or the stop list does not name both.
+export const addOnJobOf = (offer: Order, jobs: Order[]): Order | undefined => {
+  if (!offer.addOn) {
+    return undefined;
+  }
+  const jobId = offer.stackStops?.find(
+    stop => stop.deliveryId !== offer.id,
+  )?.deliveryId;
+  const job = jobs.find(candidate => candidate.id === jobId);
+  return job && stackStopsOf(offer, job) ? job : undefined;
+};
+
+// Offer cards with each add on joined to the job it would ride with, so home
+// shows them on one card (the stops, both orders' pay) and asks the route
+// through all four stops. An add on whose job is not on the phone shows as a
+// plain offer until the job list catches up.
+export const attachAddOnJobs = (
+  cards: CardOrders[],
+  jobs: Order[],
+): CardOrders[] =>
+  cards.map(card => {
+    if (card.partner) {
+      return card;
+    }
+    const job = addOnJobOf(card.order, jobs);
+    return job ? { order: card.order, partner: job } : card;
+  });
+
+// Cross check 2: an add on offered while the rider carries food (the job it
+// names is picked up) is calm: it never rings insistently. A job not on the
+// phone counts as carrying, the calm side.
+export const isCalmAddOn = (offer: Order, jobs: Order[]): boolean => {
+  if (!offer.addOn) {
+    return false;
+  }
+  const jobId = offer.stackStops?.find(
+    stop => stop.deliveryId !== offer.id,
+  )?.deliveryId;
+  const job = jobs.find(candidate => candidate.id === jobId);
+  return !job || PAST_PICKUP.includes(job.status);
+};

@@ -31,6 +31,10 @@ import {
 // sound for phones that already made these channels needs new ids here.
 export const OFFERS_CHANNEL_ID = 'offers';
 export const OFFERS_INSISTENT_CHANNEL_ID = 'offers-insistent';
+// Row 81 (cross check 2): an add on offered while the rider carries food. Its
+// own channel because Android fixes a channel's sound and vibration when it is
+// first made: the default sound once, one short buzz, never the offer ring.
+export const OFFERS_CALM_CHANNEL_ID = 'offers-calm';
 // Short, silent notices ("This offer has ended") after a lock screen answer.
 const NOTICES_CHANNEL_ID = 'offer-notices';
 
@@ -38,6 +42,8 @@ const OFFER_SOUND = 'offer_ring';
 // The insistent ring vibrates longer (AC-7): buzz 800 ms, pause 300 ms, three
 // times, then a pause. notifee wants an even count of numbers, none zero.
 const INSISTENT_VIBRATION = [300, 800, 300, 800, 300, 800, 300, 1500];
+// Row 81: one short buzz for a calm add on (an even number of values, none 0).
+const CALM_VIBRATION = [200, 300];
 
 // The alert stops by itself this long after the deadline, in case the
 // `OFFER_ENDED` push is lost (the server ends the offer 3 s after it).
@@ -73,6 +79,14 @@ export const ensureOfferChannels = async () => {
     sound: OFFER_SOUND,
     vibration: true,
     vibrationPattern: INSISTENT_VIBRATION,
+  });
+  await notifee.createChannel({
+    id: OFFERS_CALM_CHANNEL_ID,
+    name: i18next.t('translations:offer_alert_channel_calm'),
+    importance: AndroidImportance.HIGH,
+    visibility: AndroidVisibility.PUBLIC,
+    vibration: true,
+    vibrationPattern: CALM_VIBRATION,
   });
   await notifee.createChannel({
     id: NOTICES_CHANNEL_ID,
@@ -173,7 +187,14 @@ export const showOfferAlert = async (
   // orders and their stops. Taking two orders blind from a lock screen would
   // be as unchecked as the phone taking them by itself.
   const isStack = !!offer.partnerDeliveryId;
-  const openOffer = isStack
+  // Row 81: an add on is answered in the app too, where its card shows what it
+  // adds to the job and the stops (the push carries neither); the alert says
+  // to open it once stopped. While the rider carries food it is calm: its own
+  // quiet channel, no looping ring, never full screen (cross check 2).
+  const isAddOn = !!offer.addOn;
+  const calm = isAddOn && !!offer.calm;
+  const opensApp = isStack || isAddOn;
+  const openOffer = opensApp
     ? { id: 'default', launchActivity: 'default' }
     : {
         id: OPEN_OFFER_ACTION,
@@ -181,12 +202,18 @@ export const showOfferAlert = async (
       };
   const lines = isStack
     ? [i18next.t('translations:stack_offer_alert_body')]
+    : isAddOn
+    ? [i18next.t('translations:add_on_offer_alert_body')]
     : offerAlertLineList(offer);
-  const summary = isStack ? lines.join(' · ') : offerSummary(offer);
+  const summary = opensApp ? lines.join(' · ') : offerSummary(offer);
   const notification: Notification = {
     id: offer.deliveryId,
     title: isStack
       ? i18next.t('translations:stack_offer_alert_title')
+      : isAddOn
+      ? i18next.t('translations:add_on_offer_alert_title', {
+          pay: payText(offer),
+        })
       : i18next.t('translations:offer_alert_title', {
           pay: payText(offer),
         }),
@@ -195,7 +222,9 @@ export const showOfferAlert = async (
     body: Platform.OS === 'android' ? escapeHtml(summary) : summary,
     data: toNotificationData(offer, deadlineAt),
     android: {
-      channelId: offer.insistent
+      channelId: calm
+        ? OFFERS_CALM_CHANNEL_ID
+        : offer.insistent
         ? OFFERS_INSISTENT_CHANNEL_ID
         : OFFERS_CHANNEL_ID,
       importance: AndroidImportance.HIGH,
@@ -209,17 +238,18 @@ export const showOfferAlert = async (
       // offer card's facts are in it (AC-10).
       visibility: AndroidVisibility.PUBLIC,
       // Rings again and again until it is cancelled (AC-3) ...
-      loopSound: true,
+      loopSound: !calm,
       // ... and cannot be swiped away: it ends by an answer or by the offer
       // ending.
       ongoing: true,
       autoCancel: false,
-      lightUpScreen: true,
+      lightUpScreen: !calm,
       pressAction: openOffer,
-      fullScreenAction: style === 'full-screen' ? openOffer : undefined,
+      fullScreenAction:
+        style === 'full-screen' && !calm ? openOffer : undefined,
       // No `launchActivity` on the buttons: they answer in the background
       // without opening the app (AC-5).
-      actions: isStack
+      actions: opensApp
         ? []
         : [
             {

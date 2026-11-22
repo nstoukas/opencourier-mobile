@@ -13,6 +13,7 @@ import { RemovalNotices } from '@app/components/RemovalNotices/RemovalNotices';
 import { RefusedSteps } from '@app/components/RefusedSteps/RefusedSteps';
 import { NewOrderCell } from '@app/components/NewOrderCell/NewOrderCell';
 import { StackOfferCell } from '@app/components/StackOfferCell/StackOfferCell';
+import { AddOnOfferCell } from '@app/components/AddOnOfferCell/AddOnOfferCell';
 import { StackStopList } from '@app/components/StackStopList/StackStopList';
 import { InProgressCell } from '@app/components/InProgressCell/InProgressCell';
 import { JobFooter } from '@app/components/JobFooter/JobFooter';
@@ -51,7 +52,13 @@ import {
 import { useLeaveSplit, useSplitBusy } from '@app/hooks/useSplitRequest';
 import { useDeliveryRoute } from '@app/hooks/useDeliveryRoute';
 import { useStackRoute } from '@app/hooks/useStackRoute';
-import { groupJobs, groupOffers, stackStopsOf } from '@app/utilities/stack';
+import {
+  attachAddOnJobs,
+  groupJobs,
+  groupOffers,
+  isCalmAddOn,
+  stackStopsOf,
+} from '@app/utilities/stack';
 import { usePickupPoints } from '@app/hooks/usePickupPoints';
 import { useNavigateTo } from '@app/hooks/useNavigateTo';
 import { useLocationPermission } from '@app/hooks/useLocationPermission';
@@ -216,12 +223,17 @@ export const HomeScreen = ({ navigation }: Props) => {
   // card: their offers are claimed on arrival and come back as jobs. A stack
   // is the exception (spec 0048, AC-8): the phone never takes two orders by
   // itself, so it shows to every rider. A stack's two orders share one card.
+  // Row 81: so does an add on, one more order offered while on a job; its card
+  // holds the job too (attachAddOnJobs), for the stops and both orders' pay.
   const items = useMemo<CardItem[]>(
     () => [
-      ...groupOffers(
-        autoAcceptOrders
-          ? dataSourceNew.filter(order => order.offerGroupId)
-          : dataSourceNew,
+      ...attachAddOnJobs(
+        groupOffers(
+          autoAcceptOrders
+            ? dataSourceNew.filter(order => order.offerGroupId || order.addOn)
+            : dataSourceNew,
+        ),
+        dataSourceInProgress,
       ).map(card => ({ kind: 'offer' as const, ...card })),
       ...groupJobs(dataSourceInProgress).map(card => ({
         kind: 'job' as const,
@@ -409,6 +421,24 @@ export const HomeScreen = ({ navigation }: Props) => {
       return null;
     }
     const order = shown.order;
+    // Spec 0048 (row 81, AC-10): one more order on the way, with the job it
+    // would ride with. Accept and Decline answer the added order only.
+    if (shown.kind === 'offer' && shown.partner && order.addOn) {
+      return (
+        <AddOnOfferCell
+          key={`${order.id}-${order.offeredAt ?? ''}`}
+          order={order}
+          job={shown.partner}
+          stops={stackStops ?? []}
+          calm={isCalmAddOn(order, dataSourceInProgress)}
+          millisRemaining={timeLeftForOffer(order.id)}
+          totalMillis={totalTimeForOffer(order.id)}
+          millisWaited={waitedTimeForOffer(order.id)}
+          onAccept={offer => acceptOrderFn(offer.id)}
+          onDecline={offer => declineOrderFn(offer.id)}
+        />
+      );
+    }
     // Spec 0048 (AC-10): one card for two orders offered together.
     if (shown.kind === 'offer' && shown.partner) {
       return (

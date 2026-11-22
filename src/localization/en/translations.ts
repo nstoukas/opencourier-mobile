@@ -574,6 +574,17 @@ export default {
   stack_stop_done_a11y: 'Stop {{number}}, done',
   stack_offer_alert_title: 'Two orders together',
   stack_offer_alert_body: 'Open the app to see both orders and their stops',
+  // Spec 0048 (row 81): one more order offered while on a job (an add on).
+  add_on_offer_title: 'One more order on the way',
+  add_on_offer_adds: '+{{km}} km, +{{minutes}} min',
+  add_on_offer_with_job: '{{total}} with your current job · each paid in full',
+  add_on_offer_when_stopped: 'Answer only when you are stopped',
+  add_on_offer_accept: 'Accept',
+  add_on_offer_slide: 'Slide to add this order',
+  add_on_offer_alert_title: 'One more order on the way: {{pay}}',
+  add_on_offer_alert_body:
+    'Open the app when you are stopped to see what it adds',
+  offer_alert_channel_calm: 'Offers while you carry food',
   // Offer alerts on the phone (row 58, spec 0003).
   offer_alert_title: 'New offer: {{pay}}',
   offer_alert_body_area: '{{restaurant}} to {{area}}',

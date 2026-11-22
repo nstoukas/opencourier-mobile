@@ -14,6 +14,10 @@ type Props = {
   orders: Order[];
   // An offer: no stop is done yet and none is "next".
   isOffer: boolean;
+  // Row 81: an add on offer. Still an offer (no stop is "next", drop offs by
+  // area only), but the rider's current job may be picked up already, so its
+  // stops are ticked from its status.
+  addOn?: boolean;
 };
 
 // Where a stop is, in words a rider can read at a glance: the restaurant for
@@ -44,11 +48,17 @@ const placeOf = (
 // Spec 0048 (AC-10): a stack's stops in order, numbered 1 to 4 as on the map.
 // On a job, the stops behind the rider are ticked and the next one is marked,
 // so the rider always knows which order the card below is about.
-export const StackStopList = ({ stops, orders, isOffer }: Props) => {
+export const StackStopList = ({
+  stops,
+  orders,
+  isOffer,
+  addOn = false,
+}: Props) => {
   const { t } = useTranslation();
   const orderOf = (id: string) => orders.find(order => order.id === id);
   const done = (stop: StackStop) =>
-    !isOffer && isStopDone(stop, orderOf(stop.deliveryId)?.status ?? '');
+    (!isOffer || addOn) &&
+    isStopDone(stop, orderOf(stop.deliveryId)?.status ?? '');
   const nextIndex = isOffer ? -1 : stops.findIndex(stop => !done(stop));
 
   return (

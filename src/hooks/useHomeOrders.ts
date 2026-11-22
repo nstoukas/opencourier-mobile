@@ -18,7 +18,7 @@ import {
   remindRiderOfOffer,
 } from '@app/services/offerReminder';
 import i18next from 'i18next';
-import { stackStopsOf } from '@app/utilities/stack';
+import { isCalmAddOn, stackStopsOf } from '@app/utilities/stack';
 import {
   isOfferAnswered,
   loadAnsweredOffers,
@@ -108,6 +108,12 @@ export const useHomeOrders = () => {
       // Not while the offer's push alert is up: it is ringing already, and a
       // second notification for one offer only adds noise (row 58, 58.26).
       onReminder: (orderId, waitedMs) => {
+        // Row 81 (cross check 2): an add on offered while the rider carries
+        // food never rings again; it waits quietly on its card.
+        const offer = newOrdersRef.current?.find(o => o.id === orderId);
+        if (offer && isCalmAddOn(offer, inProgressRef.current)) {
+          return;
+        }
         isOfferAlertDisplayed(orderId).then(alertIsUp => {
           if (!alertIsUp) {
             remindRiderOfOffer(orderId, waitedMs);
@@ -124,6 +130,10 @@ export const useHomeOrders = () => {
   // Latest fetched offers, read when a failed send puts an offer back. Set
   // on every render, below, once the rider's status is known.
   const newOrdersRef = useRef<Order[] | undefined>(newOrders);
+  // Row 81: the rider's jobs as the server last sent them, read by the
+  // reminder timer (set long ago) to tell a calm add on.
+  const inProgressRef = useRef<Order[]>([]);
+  inProgressRef.current = inProgressOrders ?? [];
 
   // Show the fetched offers the rider can still answer. This skips offers
   // being accepted or declined, and offers already answered whose refetch has
@@ -404,13 +414,14 @@ export const useHomeOrders = () => {
       // Auto accept riders: the phone accepts each offer as soon as it
       // arrives (AC-8), at most once per offer, and tells the server it did
       // so by itself (spec 0020, AC-11). The server never accepts on the
-      // rider's behalf. Add ons (row 81) must be skipped here once they exist.
+      // rider's behalf.
       if (autoAccept && !sosSharingRef.current) {
         for (const order of offers) {
           // Spec 0048 (AC-8): a stack is never accepted by the phone: the
-          // rider must see both orders and check both bags fit. It stays an
-          // offer on home, even for a rider on auto accept.
-          if (order.offerGroupId) {
+          // rider must see both orders and check both bags fit. Nor is an add
+          // on (row 81): the rider must see what it adds to the job they are
+          // on. Both stay offers on home, even for a rider on auto accept.
+          if (order.offerGroupId || order.addOn) {
             continue;
           }
           if (
@@ -448,8 +459,9 @@ export const useHomeOrders = () => {
       if (!rungForRef.current.has(key)) {
         rungForRef.current.add(key);
         // Spec 0048: a stack rings even for a rider on auto accept, who must
-        // answer it by hand.
-        if (!autoAccept || order.offerGroupId) {
+        // answer it by hand; so does an add on (row 81). One sound, never
+        // repeated: that is also all a calm add on gets (cross check 2).
+        if (!autoAccept || order.offerGroupId || order.addOn) {
           anyNew = true;
         }
       }

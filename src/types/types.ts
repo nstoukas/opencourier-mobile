@@ -308,6 +308,13 @@ export type Order = {
   // same list on both orders; null for a single order, and once the other
   // order of the pair is no longer this rider's.
   stackStops?: StackStop[] | null;
+  // Spec 0048 (row 81, AC-6): true while this offer is an add on, one more
+  // order on the way while the rider is on a job; its stackStops then name that
+  // job. extraKm and extraMinutes are what it adds ("+2.1 km, +7 min"); null
+  // for any other offer. Once accepted, the two are a pair like a stack.
+  addOn?: boolean;
+  extraKm?: number | null;
+  extraMinutes?: number | null;
   // Spec 0035: this rider's newest removal request on this job, while it is open or was refused.
   // Null otherwise. Only the job list (deliveries/in-progress) sends it.
   removalRequest?: RemovalRequest | null;
