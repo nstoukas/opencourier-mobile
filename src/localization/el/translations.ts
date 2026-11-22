@@ -314,6 +314,8 @@ const translations: typeof en = {
   // Spec 0054 (AC-8): four screen texts that were written straight into JSX.
   payout_activity: 'Πληρωμές',
   no_payout_activity: 'Καμία πληρωμή',
+  no_payout_activity_more:
+    'Δεν έχετε πρόσφατες πληρωμές.\nΚάντε μια διανομή για να αρχίσετε να πληρώνεστε.',
   order_delivered_thanks: 'Η παραγγελία παραδόθηκε. Ευχαριστούμε!',
   waiting_for_new_orders: 'Αναμονή για νέες παραγγελίες',
   licenses: 'Άδειες χρήσης',
@@ -648,6 +650,8 @@ const translations: typeof en = {
   offer_alert_channel: 'Νέες προτάσεις',
   offer_alert_channel_insistent: 'Προτάσεις που ακόμη περιμένουν',
   offer_alert_channel_notices: 'Ειδοποιήσεις για προτάσεις',
+  offer_reminder_channel: 'Υπενθυμίσεις προτάσεων',
+  shift_reminder_channel: 'Υπενθυμίσεις βαρδιών',
   offer_alert_open_app: 'Άνοιγμα εφαρμογής',
   offer_alert_close: 'Κλείσιμο',
   offer_alert_time_left: 'Απομένουν {{seconds}} δευτ.',
