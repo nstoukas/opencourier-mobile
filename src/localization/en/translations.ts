@@ -360,10 +360,7 @@ export default {
   ensure_all_collected: 'Ensure all items are collected.',
   pickup_address: 'Pickup address',
   dropoff_address: 'Dropoff address',
-  add_note_here: 'Add a note here...',
   note: 'Note',
-  avoid_mentioning: 'Avoid mentioning different topics in one note.',
-  avoid_mentioning_consumer: 'Avoid mentioning notes about the consumer.',
   delete: 'Delete',
   delete_prompt: 'Are you sure you want to delete this note?',
   action_undone:
@@ -713,6 +710,11 @@ export default {
   address_note_flagged: 'Thank you. An admin will look at it.',
   address_note_failed_title: 'That did not work',
   address_note_failed: 'Check your connection and try again.',
+  address_note_failed_server:
+    'The server could not do that. Try again in a moment.',
+  address_note_gone: 'This note is no longer there.',
+  address_note_job_gone:
+    'This job is no longer yours, so the note was not saved.',
   address_note_title: 'Note about this place',
   address_note_title_edit: 'Edit your note',
   address_note_placeholder:

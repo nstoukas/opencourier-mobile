@@ -22,7 +22,10 @@ import { CheckCircleIcon } from 'phosphor-react-native/src/icons/CheckCircle';
 import { services } from '@app/services/service';
 import { QueryKeys } from '@app/utilities/queryKeys';
 import { looksLikePersonalData } from '@app/utilities/addressNotes/personalDataCheck';
-import { isPersonalDataWarning } from '@app/hooks/useAddressNotes';
+import {
+  isPersonalDataWarning,
+  noteFailureKey,
+} from '@app/hooks/useAddressNotes';
 import {
   hasSeenAddressNotesRules,
   markAddressNotesRulesSeen,
@@ -98,9 +101,20 @@ export const AddNote = ({ navigation, route }: Props) => {
         // The server's copy of the check found something this phone's did not (an older app).
         warn();
       } else {
+        // Row 82 review: a 404 is a job handed back or a note deleted meanwhile, not a connection problem.
+        const key = noteFailureKey(
+          error,
+          noteToEdit
+            ? 'translations:address_note_gone'
+            : 'translations:address_note_job_gone',
+        );
         Alert.alert(
           t('translations:address_note_failed_title'),
-          t('translations:address_note_save_failed'),
+          t(
+            key === 'translations:address_note_failed'
+              ? 'translations:address_note_save_failed'
+              : key,
+          ),
         );
       }
     } finally {

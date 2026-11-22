@@ -256,7 +256,7 @@ export const HomeScreen = ({ navigation }: Props) => {
 
   // Spec 0053: the riders' notes on a held job's stop. Adding and editing open the note screen,
   // deleting asks first; upvote and flag go straight to the server.
-  const { toggleUpvote, flagNote, deleteNote } = useAddressNotes();
+  const { toggleUpvote, flagNote, deleteNote, isBusy } = useAddressNotes();
   const addressNotesFor = (job: Order, stop: NoteStop): AddressNoteActions => ({
     onAdd: () =>
       navigation.navigate(RootScreen.AddNoteModal, {
@@ -272,6 +272,7 @@ export const HomeScreen = ({ navigation }: Props) => {
       }),
     onUpvote: note => toggleUpvote(note.id),
     onFlag: note => flagNote({ id: note.id }),
+    isBusy: note => isBusy(note.id),
     retentionDays: jobContact?.addressNoteRetentionDays,
   });
 

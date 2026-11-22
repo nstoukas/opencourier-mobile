@@ -29,6 +29,8 @@ export type AddressNoteActions = {
   onFlag: (note: Note) => void;
   // The co-op's addressNoteRetentionDays, for the rules notice.
   retentionDays?: number;
+  // Row 82 review: true while this note's upvote or flag is on its way; its buttons wait meanwhile.
+  isBusy?: (note: Note) => boolean;
 };
 
 type Props = { notes: JobNote[]; addressNotes?: AddressNoteActions };
@@ -54,6 +56,7 @@ type RowProps = {
 // its count of upvotes) and flagged; the rider's own note can be edited or deleted. No author.
 const AddressNoteRow = ({ note, actions, closeThen }: RowProps) => {
   const { t } = useTranslation();
+  const busy = actions.isBusy?.(note) ?? false;
   const flag = () =>
     Alert.alert(
       t('translations:address_note_flag_title'),
@@ -96,8 +99,12 @@ const AddressNoteRow = ({ note, actions, closeThen }: RowProps) => {
               hitSlop={hitSlopFor(28, 28, 4)}
               style={styles.noteAction}
               onPress={() => actions.onUpvote(note)}
+              disabled={busy}
               accessibilityRole="button"
-              accessibilityState={{ selected: note.upvotedByMe }}
+              accessibilityState={{
+                selected: note.upvotedByMe,
+                disabled: busy,
+              }}
               accessibilityLabel={t(
                 note.upvotedByMe
                   ? 'translations:address_note_upvoted'
@@ -122,7 +129,9 @@ const AddressNoteRow = ({ note, actions, closeThen }: RowProps) => {
                 hitSlop={hitSlopFor(28, 28, 4)}
                 style={styles.noteAction}
                 onPress={flag}
+                disabled={busy}
                 accessibilityRole="button"
+                accessibilityState={{ disabled: busy }}
                 accessibilityLabel={t('translations:address_note_flag')}
                 testID={`address-note-flag-${note.id}`}>
                 <Icon icon={FlagIcon} size={18} tone="muted-foreground" />
