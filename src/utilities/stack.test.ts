@@ -1,6 +1,9 @@
 import {
+  addOnJobOf,
+  attachAddOnJobs,
   groupJobs,
   groupOffers,
+  isCalmAddOn,
   isStack,
   isStopDone,
   nextStopIndex,
@@ -282,6 +285,154 @@ describe('stack utilities (spec 0048, row 80, AC-2, AC-5, AC-10)', () => {
       expect(isStack({ order: order1, partner: order2 })).toBe(true);
       expect(isStack({ order: order1 })).toBe(false);
       expect(isStack({ order: order1, partner: undefined })).toBe(false);
+    });
+  });
+
+  describe('addOnJobOf (spec 0048, row 81, AC-6)', () => {
+    const addOnOffer: Order = {
+      id: 'deliv-addon',
+      addOn: true,
+      stackStops: [
+        { deliveryId: 'deliv-held', stop: 'PICKUP' },
+        { deliveryId: 'deliv-addon', stop: 'PICKUP' },
+        { deliveryId: 'deliv-held', stop: 'DROPOFF' },
+        { deliveryId: 'deliv-addon', stop: 'DROPOFF' },
+      ],
+      totalCompensation: 350,
+    } as Order;
+
+    const heldJob: Order = {
+      id: 'deliv-held',
+      status: OrderStatus.dispatched,
+      totalCompensation: 450,
+    } as Order;
+
+    it('returns matching job when offer has addOn: true and valid stackStops referencing held job', () => {
+      const job = addOnJobOf(addOnOffer, [heldJob]);
+      expect(job).toEqual(heldJob);
+    });
+
+    it('returns undefined if offer.addOn is false or undefined', () => {
+      expect(
+        addOnJobOf({ ...addOnOffer, addOn: false }, [heldJob]),
+      ).toBeUndefined();
+      expect(
+        addOnJobOf({ ...addOnOffer, addOn: undefined }, [heldJob]),
+      ).toBeUndefined();
+    });
+
+    it('returns undefined if held job is not in jobs array', () => {
+      expect(addOnJobOf(addOnOffer, [])).toBeUndefined();
+      expect(
+        addOnJobOf(addOnOffer, [{ id: 'other-job' } as Order]),
+      ).toBeUndefined();
+    });
+
+    it('returns undefined if stackStops is null, malformed, or does not reference both deliveries', () => {
+      expect(
+        addOnJobOf({ ...addOnOffer, stackStops: null }, [heldJob]),
+      ).toBeUndefined();
+      expect(
+        addOnJobOf(
+          {
+            ...addOnOffer,
+            stackStops: [
+              { deliveryId: 'deliv-addon', stop: 'PICKUP' },
+              { deliveryId: 'deliv-addon', stop: 'DROPOFF' },
+            ],
+          },
+          [heldJob],
+        ),
+      ).toBeUndefined();
+    });
+  });
+
+  describe('attachAddOnJobs (spec 0048, row 81, AC-10)', () => {
+    const addOnOffer: Order = {
+      id: 'deliv-addon',
+      addOn: true,
+      stackStops: [
+        { deliveryId: 'deliv-held', stop: 'PICKUP' },
+        { deliveryId: 'deliv-addon', stop: 'PICKUP' },
+        { deliveryId: 'deliv-held', stop: 'DROPOFF' },
+        { deliveryId: 'deliv-addon', stop: 'DROPOFF' },
+      ],
+    } as Order;
+
+    const heldJob: Order = {
+      id: 'deliv-held',
+      status: OrderStatus.dispatched,
+    } as Order;
+
+    it('joins add on offer to the held job it rides with', () => {
+      const cards = [{ order: addOnOffer }];
+      const result = attachAddOnJobs(cards, [heldJob]);
+
+      expect(result).toHaveLength(1);
+      expect(result[0].order).toEqual(addOnOffer);
+      expect(result[0].partner).toEqual(heldJob);
+    });
+
+    it('leaves card unchanged when partner is already set (e.g. stack)', () => {
+      const stackCard = { order: order1, partner: order2 };
+      const result = attachAddOnJobs([stackCard], [heldJob]);
+
+      expect(result).toHaveLength(1);
+      expect(result[0]).toEqual(stackCard);
+    });
+
+    it('leaves add on card without partner when held job is not in jobs array (until job list catches up)', () => {
+      const cards = [{ order: addOnOffer }];
+      const result = attachAddOnJobs(cards, []);
+
+      expect(result).toHaveLength(1);
+      expect(result[0].order).toEqual(addOnOffer);
+      expect(result[0].partner).toBeUndefined();
+    });
+  });
+
+  describe('isCalmAddOn (spec 0048, row 81, cross check 2)', () => {
+    const addOnOffer: Order = {
+      id: 'deliv-addon',
+      addOn: true,
+      stackStops: [
+        { deliveryId: 'deliv-held', stop: 'PICKUP' },
+        { deliveryId: 'deliv-addon', stop: 'PICKUP' },
+        { deliveryId: 'deliv-held', stop: 'DROPOFF' },
+        { deliveryId: 'deliv-addon', stop: 'DROPOFF' },
+      ],
+    } as Order;
+
+    it('returns false when offer.addOn is not true', () => {
+      expect(isCalmAddOn({ id: 'deliv-single' } as Order, [])).toBe(false);
+      expect(isCalmAddOn({ ...addOnOffer, addOn: false }, [])).toBe(false);
+    });
+
+    it('returns true when held job is not on phone (the calm side)', () => {
+      expect(isCalmAddOn(addOnOffer, [])).toBe(true);
+    });
+
+    it('returns true when held job status is in PAST_PICKUP (picked_up, on_the_way, arrived dropoff, dropped_off)', () => {
+      for (const status of [
+        OrderStatus.picked_up,
+        OrderStatus.on_the_way,
+        OrderStatus.courier_arrived_at_dropoff_location,
+        OrderStatus.dropped_off,
+      ]) {
+        const job = { id: 'deliv-held', status } as Order;
+        expect(isCalmAddOn(addOnOffer, [job])).toBe(true);
+      }
+    });
+
+    it('returns false when held job is before pickup (dispatched, accepted, arrived pickup)', () => {
+      for (const status of [
+        OrderStatus.dispatched,
+        OrderStatus.accepted,
+        OrderStatus.courier_arrived_at_pickup_location,
+      ]) {
+        const job = { id: 'deliv-held', status } as Order;
+        expect(isCalmAddOn(addOnOffer, [job])).toBe(false);
+      }
     });
   });
 });

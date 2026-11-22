@@ -118,4 +118,65 @@ describe('StackStopList (spec 0048, row 80, AC-10)', () => {
     expect(getByText('Pick up · Fallback Pickup')).toBeTruthy();
     expect(getByText('Drop off · Main St 123')).toBeTruthy();
   });
+
+  describe('on an add-on offer (spec 0048, row 81, decision 81.12)', () => {
+    // order1 is the rider's held job, order2 is the new offered add-on
+    const heldJob: Order = {
+      id: 'order-1',
+      status: OrderStatus.picked_up,
+      pickupBusinessName: 'Pizza Roma',
+      dropoffArea: '',
+      dropoffLocation: { street: 'Iolkou 5' } as any,
+    } as Order;
+
+    const addOnOffer: Order = {
+      id: 'order-2',
+      status: OrderStatus.dispatched,
+      addOn: true,
+      pickupBusinessName: 'Souvlaki Bar',
+      dropoffArea: '',
+      dropoffLocation: { street: 'Secret Street 42' } as any,
+    } as Order;
+
+    it('ticks stops that are finished on the held job, but leaves offered order stops unticked', () => {
+      const { getByLabelText, queryByLabelText } = render(
+        <StackStopList
+          stops={stops}
+          orders={[heldJob, addOnOffer]}
+          isOffer={true}
+          addOn={true}
+        />,
+      );
+
+      // Stop 1 (heldJob PICKUP) is done because heldJob is picked_up
+      expect(getByLabelText('Stop 1, done')).toBeTruthy();
+
+      // Stop 2 (addOnOffer PICKUP) is NOT done because addOnOffer is an offer
+      expect(queryByLabelText('Stop 2, done')).toBeNull();
+
+      // Stop 3 (heldJob DROPOFF) is NOT done
+      expect(queryByLabelText('Stop 3, done')).toBeNull();
+
+      // Stop 4 (addOnOffer DROPOFF) is NOT done
+      expect(queryByLabelText('Stop 4, done')).toBeNull();
+    });
+
+    it('held job uses street fallback when dropoffArea is missing, but add-on offer hides street (area rule)', () => {
+      const { getByText, queryByText } = render(
+        <StackStopList
+          stops={stops}
+          orders={[heldJob, addOnOffer]}
+          isOffer={true}
+          addOn={true}
+        />,
+      );
+
+      // Held job dropoff shows street because rider already holds it
+      expect(getByText('Drop off · Iolkou 5')).toBeTruthy();
+
+      // Offered add-on dropoff hides street (never leaks customer address on an offer)
+      expect(queryByText('Drop off · Secret Street 42')).toBeNull();
+      expect(getByText('Drop off · ')).toBeTruthy();
+    });
+  });
 });

@@ -18,6 +18,7 @@ import { OrderSetting, OrderStatus } from '@app/types/enums';
 import { InProgressCell } from '@app/components/InProgressCell/InProgressCell';
 import { NewOrderCell } from '@app/components/NewOrderCell/NewOrderCell';
 import { StackOfferCell } from '@app/components/StackOfferCell/StackOfferCell';
+import { AddOnOfferCell } from '@app/components/AddOnOfferCell/AddOnOfferCell';
 import { StackStopList } from '@app/components/StackStopList/StackStopList';
 import { RouteMap } from '@app/components/RouteMap/RouteMap';
 import { HomeTopSlot } from '@app/components/HomeTopSlot/HomeTopSlot';
@@ -866,6 +867,111 @@ describe('HomeScreen (spec 0018, AC-5 to AC-15)', () => {
 
       expect(queryByTestId('stack-job')).toBeNull();
       expect(UNSAFE_getByType(InProgressCell)).toBeTruthy();
+      unmount();
+    });
+  });
+
+  describe('Add-on offers on Home (spec 0048, row 81, AC-8, AC-10, cross check 2)', () => {
+    const addOnStops = [
+      { deliveryId: 'job-123', stop: 'PICKUP' as const },
+      { deliveryId: 'offer-addon-1', stop: 'PICKUP' as const },
+      { deliveryId: 'job-123', stop: 'DROPOFF' as const },
+      { deliveryId: 'offer-addon-1', stop: 'DROPOFF' as const },
+    ];
+
+    const addOnOffer: Order = {
+      ...mockOffer,
+      id: 'offer-addon-1',
+      addOn: true,
+      totalCompensation: 325,
+      extraKm: 1.8,
+      extraMinutes: 6,
+      stackStops: addOnStops,
+    } as unknown as Order;
+
+    it('renders AddOnOfferCell with partner job when an add on offer is present', () => {
+      mockHomeOrders.dataSourceNew = [addOnOffer];
+      mockHomeOrders.dataSourceInProgress = [mockJob];
+      mockHomeOrders.serverInProgress = [mockJob];
+
+      const { UNSAFE_getByType, getByTestId, queryByTestId, unmount } =
+        renderHome();
+
+      expect(UNSAFE_getByType(AddOnOfferCell)).toBeTruthy();
+      expect(getByTestId('add-on-offer-card')).toBeTruthy();
+      expect(queryByTestId('new-order-cell')).toBeNull();
+      expect(queryByTestId('stack-offer-card')).toBeNull();
+      unmount();
+    });
+
+    it('AC-8: displays AddOnOfferCell even when user is on auto_accept', () => {
+      mockUser!.deliverySetting = OrderSetting.auto_accept;
+      mockHomeOrders.dataSourceNew = [addOnOffer];
+      mockHomeOrders.dataSourceInProgress = [mockJob];
+      mockHomeOrders.serverInProgress = [mockJob];
+
+      const { UNSAFE_getByType, getByTestId, unmount } = renderHome();
+
+      expect(UNSAFE_getByType(AddOnOfferCell)).toBeTruthy();
+      expect(getByTestId('add-on-offer-card')).toBeTruthy();
+      unmount();
+    });
+
+    it('cross check 2: passes calm=true when the held job is in picked up status', () => {
+      const pickedUpJob: Order = {
+        ...mockJob,
+        status: OrderStatus.picked_up,
+      };
+      mockHomeOrders.dataSourceNew = [addOnOffer];
+      mockHomeOrders.dataSourceInProgress = [pickedUpJob];
+      mockHomeOrders.serverInProgress = [pickedUpJob];
+
+      const { UNSAFE_getByType, unmount } = renderHome();
+
+      const cell = UNSAFE_getByType(AddOnOfferCell);
+      expect(cell.props.calm).toBe(true);
+      unmount();
+    });
+
+    it('cross check 2: passes calm=false when the held job is before pickup', () => {
+      const dispatchedJob: Order = {
+        ...mockJob,
+        status: OrderStatus.dispatched,
+      };
+      mockHomeOrders.dataSourceNew = [addOnOffer];
+      mockHomeOrders.dataSourceInProgress = [dispatchedJob];
+      mockHomeOrders.serverInProgress = [dispatchedJob];
+
+      const { UNSAFE_getByType, unmount } = renderHome();
+
+      const cell = UNSAFE_getByType(AddOnOfferCell);
+      expect(cell.props.calm).toBe(false);
+      unmount();
+    });
+
+    it('wires onAccept and onDecline to acceptOrderFn and declineOrderFn', () => {
+      mockHomeOrders.dataSourceNew = [addOnOffer];
+      mockHomeOrders.dataSourceInProgress = [mockJob];
+      mockHomeOrders.serverInProgress = [mockJob];
+
+      const { UNSAFE_getByType, unmount } = renderHome();
+
+      const cell = UNSAFE_getByType(AddOnOfferCell);
+
+      act(() => {
+        cell.props.onAccept(addOnOffer);
+      });
+      expect(mockHomeOrders.acceptOrderFn).toHaveBeenCalledWith(
+        'offer-addon-1',
+      );
+
+      act(() => {
+        cell.props.onDecline(addOnOffer);
+      });
+      expect(mockHomeOrders.declineOrderFn).toHaveBeenCalledWith(
+        'offer-addon-1',
+      );
+
       unmount();
     });
   });

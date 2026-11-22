@@ -52,6 +52,8 @@ describe('offerMessage (spec 0003, AC-4, AC-10)', () => {
         legNumber: null,
         legCount: null,
         partnerDeliveryId: null,
+        addOn: false,
+        calm: false,
       });
     }
   });
@@ -179,6 +181,8 @@ describe('offerMessage (spec 0003, AC-4, AC-10)', () => {
       legNumber: null,
       legCount: null,
       partnerDeliveryId: null,
+      addOn: false,
+      calm: false,
     });
   });
 
@@ -280,6 +284,60 @@ describe('offerMessage (spec 0003, AC-4, AC-10)', () => {
 
     const restored = fromNotificationData(notificationData);
     expect(restored?.partnerDeliveryId).toBe('del-partner-roundtrip');
+  });
+
+  // Spec 0048 (row 81, cross check 2): add-on offers carry addOn and calm flags
+  it('parses addOn and calm flags as booleans from string flags', () => {
+    const parsed = parseOfferMessage({
+      ...validData,
+      addOn: '1',
+      calm: '1',
+    });
+
+    expect(parsed?.kind).toBe('offer');
+    if (parsed?.kind === 'offer') {
+      expect(parsed.offer.addOn).toBe(true);
+      expect(parsed.offer.calm).toBe(true);
+    }
+  });
+
+  it('parses missing or non-1 addOn and calm as false', () => {
+    const parsed = parseOfferMessage({
+      ...validData,
+      addOn: '0',
+      calm: '',
+    });
+
+    expect(parsed?.kind).toBe('offer');
+    if (parsed?.kind === 'offer') {
+      expect(parsed.offer.addOn).toBe(false);
+      expect(parsed.offer.calm).toBe(false);
+    }
+  });
+
+  it('toNotificationData and fromNotificationData roundtrip preserves addOn and calm', () => {
+    const offer: OfferAlertData = {
+      deliveryId: 'del-addon-roundtrip',
+      offeredAt: '2026-10-26T10:00:00.000Z',
+      msLeftAtSend: 30000,
+      payTotal: 450,
+      currencyCode: 'EUR',
+      restaurantName: 'Co-op Grill',
+      dropoffArea: 'Port Area',
+      trip: { toPickupMetres: 1800, toDropoffMetres: 950, minutes: 8 },
+      insistent: false,
+      addOn: true,
+      calm: true,
+    };
+
+    const deadlineAt = 1700000000000;
+    const notificationData = toNotificationData(offer, deadlineAt);
+    expect(notificationData.addOn).toBe('1');
+    expect(notificationData.calm).toBe('1');
+
+    const restored = fromNotificationData(notificationData);
+    expect(restored?.addOn).toBe(true);
+    expect(restored?.calm).toBe(true);
   });
 
   it('fromNotificationData rejects malformed notification data (not kind offer-alert or empty deliveryId)', () => {

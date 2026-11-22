@@ -16,6 +16,7 @@ import {
   offerSummary,
   OFFERS_CHANNEL_ID,
   OFFERS_INSISTENT_CHANNEL_ID,
+  OFFERS_CALM_CHANNEL_ID,
   showOfferAlert,
 } from './offerAlert';
 import { OfferAlertData, parseOfferMessage } from './offerMessage';
@@ -44,7 +45,7 @@ describe('offerAlert (spec 0003, AC-3, AC-6, AC-7, Decisions 58.13, 58.15)', () 
     insistent: false,
   };
 
-  it('creates channels for offers (normal), offers-insistent (longer vibration), and notices (silent)', async () => {
+  it('creates channels for offers (normal), offers-insistent (longer vibration), offers-calm (short buzz), and notices (silent)', async () => {
     await ensureOfferChannels();
 
     expect(notifee.createChannel).toHaveBeenCalledWith(
@@ -65,6 +66,16 @@ describe('offerAlert (spec 0003, AC-3, AC-6, AC-7, Decisions 58.13, 58.15)', () 
         sound: 'offer_ring',
         vibration: true,
         vibrationPattern: [300, 800, 300, 800, 300, 800, 300, 1500],
+      }),
+    );
+
+    expect(notifee.createChannel).toHaveBeenCalledWith(
+      expect.objectContaining({
+        id: OFFERS_CALM_CHANNEL_ID,
+        importance: AndroidImportance.HIGH,
+        visibility: AndroidVisibility.PUBLIC,
+        vibration: true,
+        vibrationPattern: [200, 300],
       }),
     );
 
@@ -676,6 +687,96 @@ describe('offerAlert (spec 0003, AC-3, AC-6, AC-7, Decisions 58.13, 58.15)', () 
 
       const call = (notifee.displayNotification as jest.Mock).mock.calls[0][0];
       expect(call.title).toContain('€5.50');
+      expect(call.android.actions).toHaveLength(2);
+      expect(call.android.fullScreenAction?.launchActivity).toBe(
+        'com.opendeli.OfferAlertActivity',
+      );
+    });
+  });
+
+  describe('add-on offer alert (spec 0048, row 81, cross check 2)', () => {
+    const calmAddOnOffer: OfferAlertData = {
+      ...baseOffer,
+      addOn: true,
+      calm: true,
+    };
+
+    const regularAddOnOffer: OfferAlertData = {
+      ...baseOffer,
+      addOn: true,
+      calm: false,
+    };
+
+    it('calm add-on (while carrying food): quiet channel, no loopSound, no lightUpScreen, never full screen, opens app', async () => {
+      await showOfferAlert(calmAddOnOffer, Date.now(), 'full-screen');
+
+      expect(notifee.displayNotification).toHaveBeenCalledTimes(1);
+      const call = (notifee.displayNotification as jest.Mock).mock.calls[0][0];
+
+      expect(call.title).toBe('One more order on the way: €5.50');
+      expect(call.body).toBe(
+        'Open the app when you are stopped to see what it adds',
+      );
+      expect(call.android.channelId).toBe(OFFERS_CALM_CHANNEL_ID);
+      expect(call.android.loopSound).toBe(false);
+      expect(call.android.lightUpScreen).toBe(false);
+      expect(call.android.fullScreenAction).toBeUndefined();
+      expect(call.android.actions).toEqual([]);
+      expect(call.android.pressAction).toEqual({
+        id: 'default',
+        launchActivity: 'default',
+      });
+      expect(call.android.style.text).toBe(
+        'Open the app when you are stopped to see what it adds',
+      );
+    });
+
+    it('regular add-on (before pickup): standard channel, loops sound, lights screen, opens app on full-screen and tap', async () => {
+      await showOfferAlert(regularAddOnOffer, Date.now(), 'full-screen');
+
+      expect(notifee.displayNotification).toHaveBeenCalledTimes(1);
+      const call = (notifee.displayNotification as jest.Mock).mock.calls[0][0];
+
+      expect(call.title).toBe('One more order on the way: €5.50');
+      expect(call.body).toBe(
+        'Open the app when you are stopped to see what it adds',
+      );
+      expect(call.android.channelId).toBe(OFFERS_CHANNEL_ID);
+      expect(call.android.loopSound).toBe(true);
+      expect(call.android.lightUpScreen).toBe(true);
+      expect(call.android.fullScreenAction).toEqual({
+        id: 'default',
+        launchActivity: 'default',
+      });
+      expect(call.android.actions).toEqual([]);
+      expect(call.android.pressAction).toEqual({
+        id: 'default',
+        launchActivity: 'default',
+      });
+    });
+
+    it('regular add-on with insistent true uses OFFERS_INSISTENT_CHANNEL_ID', async () => {
+      await showOfferAlert(
+        { ...regularAddOnOffer, insistent: true },
+        Date.now(),
+        'heads-up',
+      );
+
+      const call = (notifee.displayNotification as jest.Mock).mock.calls[0][0];
+      expect(call.android.channelId).toBe(OFFERS_INSISTENT_CHANNEL_ID);
+      expect(call.android.loopSound).toBe(true);
+      expect(call.android.actions).toEqual([]);
+    });
+
+    it('retains single offer behavior when addOn is false or missing', async () => {
+      await showOfferAlert(
+        { ...baseOffer, addOn: false },
+        Date.now(),
+        'full-screen',
+      );
+
+      const call = (notifee.displayNotification as jest.Mock).mock.calls[0][0];
+      expect(call.title).toBe('New offer: €5.50');
       expect(call.android.actions).toHaveLength(2);
       expect(call.android.fullScreenAction?.launchActivity).toBe(
         'com.opendeli.OfferAlertActivity',
