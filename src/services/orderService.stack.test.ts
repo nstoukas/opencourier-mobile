@@ -21,7 +21,17 @@ describe('orderService.stack & serverSentenceOf (spec 0048, AC-5)', () => {
         'One order of this pair changed before your answer arrived, so nothing was accepted. Check your offers again.';
       const error = makeAxiosError(409, {
         error: true,
-        result: [{ code: 'ORDER_CHANGED', message }],
+        result: [{ code: 'STACK_CHANGED', message }],
+      });
+
+      expect(serverSentenceOf(error)).toBe(message);
+    });
+
+    it('falls back to the server message when the code is unknown', () => {
+      const message = 'Some custom refusal from newer backend';
+      const error = makeAxiosError(409, {
+        error: true,
+        result: [{ code: 'UNKNOWN_NEW_CODE', message }],
       });
 
       expect(serverSentenceOf(error)).toBe(message);

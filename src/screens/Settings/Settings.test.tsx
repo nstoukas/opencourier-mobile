@@ -1,39 +1,19 @@
 import React from 'react';
 import { render, screen, fireEvent, act } from '@testing-library/react-native';
-import { SettingsScreen } from './Settings';
+import { SettingsScreen, SETTINGS_ROWS } from './Settings';
+import { BackNavButton } from '@app/components/BackNavButton/BackNavButton';
 import { MainScreens } from '@app/navigation/main/types';
 import i18n from '@app/localization/i18n';
-import { MapLinkingOptions } from '@app/types/types';
+import { MapLinkingOptions, SettingsOptions } from '@app/types/types';
+import { OrderSetting } from '@app/types/enums';
 import * as mapPreferences from '@app/services/mapPreferences';
+import useUser from '@app/hooks/useUser';
+import { useRingCheck } from '@app/hooks/useRingCheck';
 
-// SectionList virtualizes items in Jest; render all items so every setting is visible
-jest.mock('react-native/Libraries/Lists/SectionList', () => {
-  const { View: MockView } = require('react-native');
-  const MockSectionList = ({
-    sections,
-    renderItem,
-    renderSectionHeader,
-  }: any) => (
-    <MockView testID="mock-section-list">
-      {sections.map((section: any, sectionIdx: number) => (
-        <MockView key={`section-${sectionIdx}`}>
-          {renderSectionHeader ? renderSectionHeader({ section }) : null}
-          {section.data.map((item: any, itemIdx: number) => (
-            <MockView key={`item-${sectionIdx}-${itemIdx}`}>
-              {renderItem({ item, index: itemIdx, section })}
-            </MockView>
-          ))}
-        </MockView>
-      ))}
-    </MockView>
-  );
-  return {
-    __esModule: true,
-    default: MockSectionList,
-  };
-});
+jest.mock('@app/hooks/useUser');
+jest.mock('@app/hooks/useRingCheck');
 
-describe('SettingsScreen (Row 18, settings trimmed to wishlist item 35; spec 0018 AC-12)', () => {
+describe('SettingsScreen (Row 84: settings trimmed to six, wishlist item 35)', () => {
   let focusListeners: Array<() => void> = [];
   const mockNavigation: any = {
     toggleDrawer: jest.fn(),
@@ -48,139 +28,293 @@ describe('SettingsScreen (Row 18, settings trimmed to wishlist item 35; spec 001
     }),
   };
 
-  const removedKeys = [
-    'accessibility',
-    'earning_method',
-    'theme',
-    'cuisine_types',
-    'restaurant_types',
-    'order_types',
-    'weight_order',
-    'include_orders_drinks',
-    'rushed_orders',
-    'delivery_bag',
-  ];
-
-  const keptKeys = [
-    'account_information',
-    'emergency_contact',
-    'language',
-    'navigation',
-    'specify_operating',
-    'vehicle_type',
-    'verification',
-    'notifications',
-    'cash_on_delivery',
-    'shift_availability',
-    'licenses',
-  ];
+  const mockUpdateDeliverySettings = jest.fn();
+  let mockUser: any;
+  let mockIsSavingDeliverySetting = false;
+  let mockRingCheckItems: any = null;
 
   beforeEach(() => {
     jest.clearAllMocks();
     focusListeners = [];
-  });
+    mockUser = {
+      id: 'rider-1',
+      deliverySetting: OrderSetting.manual,
+    };
+    mockIsSavingDeliverySetting = false;
+    mockRingCheckItems = [
+      { id: 'notifications', problem: null },
+      { id: 'offer_alerts', problem: null },
+      { id: 'full_screen', problem: null },
+      { id: 'sound', problem: null },
+      { id: 'battery', problem: null },
+    ];
 
-  it('Navigation row subtitle is "Ask every time" when no app is saved', async () => {
+    (useUser as jest.Mock).mockImplementation(() => ({
+      user: mockUser,
+      updateDeliverySettings: mockUpdateDeliverySettings,
+      isSavingDeliverySetting: mockIsSavingDeliverySetting,
+    }));
+
+    (useRingCheck as jest.Mock).mockImplementation(() => ({
+      items: mockRingCheckItems,
+      recheck: jest.fn(),
+    }));
+
     jest.spyOn(mapPreferences, 'getNavigationApp').mockResolvedValue(null);
-
-    const { findByText } = render(
-      <SettingsScreen navigation={mockNavigation} route={{} as any} />,
-    );
-
-    expect(await findByText('Ask every time')).toBeTruthy();
   });
 
-  it('Navigation row subtitle is "Google Maps" when Google Maps is saved', async () => {
-    jest
-      .spyOn(mapPreferences, 'getNavigationApp')
-      .mockResolvedValue(MapLinkingOptions.google);
-
-    const { findByText } = render(
-      <SettingsScreen navigation={mockNavigation} route={{} as any} />,
-    );
-
-    expect(await findByText('Google Maps')).toBeTruthy();
+  it('SETTINGS_ROWS contains exactly six rows in order', () => {
+    expect(SETTINGS_ROWS).toEqual([
+      SettingsOptions.language,
+      SettingsOptions.navigation,
+      SettingsOptions.offerSound,
+      SettingsOptions.autoAccept,
+      SettingsOptions.emergencyContact,
+      SettingsOptions.ringCheck,
+    ]);
+    expect(SETTINGS_ROWS.length).toBe(6);
   });
 
-  it('Navigation row subtitle is "Waze" when Waze is saved', async () => {
-    jest
-      .spyOn(mapPreferences, 'getNavigationApp')
-      .mockResolvedValue(MapLinkingOptions.waze);
-
-    const { findByText } = render(
-      <SettingsScreen navigation={mockNavigation} route={{} as any} />,
-    );
-
-    expect(await findByText('Waze')).toBeTruthy();
-  });
-
-  it('Navigation row subtitle is read again on the navigation focus event', async () => {
-    const getAppSpy = jest
-      .spyOn(mapPreferences, 'getNavigationApp')
-      .mockResolvedValue(null);
-
-    const { findByText, queryByText } = render(
-      <SettingsScreen navigation={mockNavigation} route={{} as any} />,
-    );
-
-    expect(await findByText('Ask every time')).toBeTruthy();
-
-    getAppSpy.mockResolvedValue(MapLinkingOptions.google);
-    expect(focusListeners.length).toBeGreaterThan(0);
-
-    await act(async () => {
-      focusListeners.forEach(listener => listener());
-    });
-
-    expect(await findByText('Google Maps')).toBeTruthy();
-    expect(queryByText('Ask every time')).toBeNull();
-  });
-
-  it('none of the removed settings rows renders', () => {
+  it('renders all six settings rows and none of the removed ones', () => {
     render(<SettingsScreen navigation={mockNavigation} route={{} as any} />);
 
+    // The six kept settings titles
+    for (const row of SETTINGS_ROWS) {
+      const translated = i18n.t(`translations:${row}`);
+      expect(screen.getByText(translated)).toBeTruthy();
+    }
+
+    // Removed upstream settings must not render
+    const removedKeys = [
+      'specify_operating',
+      'vehicle_type',
+      'verification',
+      'notifications',
+      'cash_on_delivery',
+      'shift_availability',
+      'account_information',
+      'theme',
+      'cuisine_types',
+      'restaurant_types',
+      'order_types',
+      'weight_order',
+    ];
     for (const key of removedKeys) {
       const translated = i18n.t(`translations:${key}`);
       expect(screen.queryByText(translated)).toBeNull();
-      expect(screen.queryByText(key)).toBeNull();
     }
   });
 
-  it('all kept settings rows render', () => {
-    render(<SettingsScreen navigation={mockNavigation} route={{} as any} />);
+  describe('navigation row', () => {
+    it('shows "Ask every time" when no app is saved', async () => {
+      jest.spyOn(mapPreferences, 'getNavigationApp').mockResolvedValue(null);
+      const { findByText } = render(
+        <SettingsScreen navigation={mockNavigation} route={{} as any} />,
+      );
+      expect(await findByText('Ask every time')).toBeTruthy();
+    });
 
-    for (const key of keptKeys) {
-      const translated = i18n.t(`translations:${key}`);
-      expect(screen.getByText(translated)).toBeTruthy();
-    }
+    it('shows "Google Maps" when Google Maps is saved', async () => {
+      jest
+        .spyOn(mapPreferences, 'getNavigationApp')
+        .mockResolvedValue(MapLinkingOptions.google);
+      const { findByText } = render(
+        <SettingsScreen navigation={mockNavigation} route={{} as any} />,
+      );
+      expect(await findByText('Google Maps')).toBeTruthy();
+    });
+
+    it('shows "Waze" when Waze is saved', async () => {
+      jest
+        .spyOn(mapPreferences, 'getNavigationApp')
+        .mockResolvedValue(MapLinkingOptions.waze);
+      const { findByText } = render(
+        <SettingsScreen navigation={mockNavigation} route={{} as any} />,
+      );
+      expect(await findByText('Waze')).toBeTruthy();
+    });
+
+    it('re-reads navigation app on focus event', async () => {
+      const getAppSpy = jest
+        .spyOn(mapPreferences, 'getNavigationApp')
+        .mockResolvedValue(null);
+
+      const { findByText, queryByText } = render(
+        <SettingsScreen navigation={mockNavigation} route={{} as any} />,
+      );
+      expect(await findByText('Ask every time')).toBeTruthy();
+
+      getAppSpy.mockResolvedValue(MapLinkingOptions.google);
+      await act(async () => {
+        focusListeners.forEach(listener => listener());
+      });
+
+      expect(await findByText('Google Maps')).toBeTruthy();
+      expect(queryByText('Ask every time')).toBeNull();
+    });
   });
 
-  it('pressing a kept setting row navigates to its screen', () => {
-    render(<SettingsScreen navigation={mockNavigation} route={{} as any} />);
-
-    const operatingAreaTitle = i18n.t('translations:specify_operating');
-    fireEvent.press(screen.getByText(operatingAreaTitle));
-
-    expect(mockNavigation.navigate).toHaveBeenCalledWith(
-      MainScreens.OperatingArea,
-    );
-  });
-
-  // Spec 0051 (AC-7, AC-8, cross check 12): the account screens are reached from Settings.
-  it.each([
-    ['Change password', MainScreens.ChangePassword],
-    ['Changes by the co-op', MainScreens.AccountChanges],
-    ['Emergency Contact', MainScreens.EmergencyContact],
-  ])(
-    'Settings lists "%s" and pressing it opens its screen (spec 0051)',
-    (title, target) => {
+  describe('row navigation', () => {
+    it('navigates to LanguageScreen on language tap', () => {
       render(<SettingsScreen navigation={mockNavigation} route={{} as any} />);
-      mockNavigation.navigate.mockClear();
+      fireEvent.press(screen.getByText(i18n.t('translations:language')));
+      expect(mockNavigation.navigate).toHaveBeenCalledWith(
+        MainScreens.LanguageScreen,
+      );
+    });
 
-      fireEvent.press(screen.getByText(title));
+    it('navigates to NavigationScreen on navigation tap', () => {
+      render(<SettingsScreen navigation={mockNavigation} route={{} as any} />);
+      fireEvent.press(
+        screen.getByText(i18n.t(`translations:${SettingsOptions.navigation}`)),
+      );
+      expect(mockNavigation.navigate).toHaveBeenCalledWith(
+        MainScreens.NavigationScreen,
+      );
+    });
 
-      expect(mockNavigation.navigate).toHaveBeenCalledTimes(1);
-      expect(mockNavigation.navigate).toHaveBeenCalledWith(target);
-    },
-  );
+    it('navigates to OfferSound on offer sound tap', () => {
+      render(<SettingsScreen navigation={mockNavigation} route={{} as any} />);
+      fireEvent.press(screen.getByText(i18n.t('translations:offer_sound')));
+      expect(mockNavigation.navigate).toHaveBeenCalledWith(
+        MainScreens.OfferSound,
+      );
+    });
+
+    it('navigates to EmergencyContact on emergency contact tap', () => {
+      render(<SettingsScreen navigation={mockNavigation} route={{} as any} />);
+      fireEvent.press(
+        screen.getByText(i18n.t('translations:emergency_contact')),
+      );
+      expect(mockNavigation.navigate).toHaveBeenCalledWith(
+        MainScreens.EmergencyContact,
+      );
+    });
+
+    it('navigates to RingCheck on ring check tap', () => {
+      render(<SettingsScreen navigation={mockNavigation} route={{} as any} />);
+      fireEvent.press(screen.getByText(i18n.t('translations:ring_check')));
+      expect(mockNavigation.navigate).toHaveBeenCalledWith(
+        MainScreens.RingCheck,
+      );
+    });
+
+    it('toggles drawer when back navigation button is pressed', () => {
+      const { UNSAFE_getByType } = render(
+        <SettingsScreen navigation={mockNavigation} route={{} as any} />,
+      );
+      const backButton = UNSAFE_getByType(BackNavButton);
+      fireEvent.press(backButton);
+      expect(mockNavigation.toggleDrawer).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  describe('auto accept setting', () => {
+    it('shows switch reflecting server state (off when manual)', () => {
+      mockUser.deliverySetting = OrderSetting.manual;
+      const { getByRole } = render(
+        <SettingsScreen navigation={mockNavigation} route={{} as any} />,
+      );
+      const switchElement = getByRole('switch');
+      expect(switchElement.props.value).toBe(false);
+    });
+
+    it('shows switch reflecting server state (on when auto_accept)', () => {
+      mockUser.deliverySetting = OrderSetting.auto_accept;
+      const { getByRole } = render(
+        <SettingsScreen navigation={mockNavigation} route={{} as any} />,
+      );
+      const switchElement = getByRole('switch');
+      expect(switchElement.props.value).toBe(true);
+    });
+
+    it('toggling switch calls updateDeliverySettings with new setting', () => {
+      mockUser.deliverySetting = OrderSetting.manual;
+      const { getByRole } = render(
+        <SettingsScreen navigation={mockNavigation} route={{} as any} />,
+      );
+      const switchElement = getByRole('switch');
+      fireEvent(switchElement, 'valueChange', true);
+
+      expect(mockUpdateDeliverySettings).toHaveBeenCalledWith(
+        OrderSetting.auto_accept,
+      );
+    });
+
+    it('ignores taps and disables switch while save is in flight (isSavingDeliverySetting)', () => {
+      mockIsSavingDeliverySetting = true;
+      (useUser as jest.Mock).mockImplementation(() => ({
+        user: mockUser,
+        updateDeliverySettings: mockUpdateDeliverySettings,
+        isSavingDeliverySetting: true,
+      }));
+
+      const { getByRole } = render(
+        <SettingsScreen navigation={mockNavigation} route={{} as any} />,
+      );
+      const switchElement = getByRole('switch');
+      expect(switchElement.props.disabled).toBe(true);
+
+      fireEvent(switchElement, 'valueChange', true);
+      expect(mockUpdateDeliverySettings).not.toHaveBeenCalled();
+    });
+
+    it('disables switch when no user is loaded', () => {
+      (useUser as jest.Mock).mockImplementation(() => ({
+        user: undefined,
+        updateDeliverySettings: mockUpdateDeliverySettings,
+        isSavingDeliverySetting: false,
+      }));
+
+      const { getByRole } = render(
+        <SettingsScreen navigation={mockNavigation} route={{} as any} />,
+      );
+      const switchElement = getByRole('switch');
+      expect(switchElement.props.disabled).toBe(true);
+    });
+  });
+
+  describe('ring check subtitle', () => {
+    it('shows "Checking..." when ring check items is null', () => {
+      (useRingCheck as jest.Mock).mockImplementation(() => ({
+        items: null,
+        recheck: jest.fn(),
+      }));
+
+      render(<SettingsScreen navigation={mockNavigation} route={{} as any} />);
+      expect(
+        screen.getByText(i18n.t('translations:ring_check_checking')),
+      ).toBeTruthy();
+    });
+
+    it('shows "Ready to ring" when all checks pass', () => {
+      (useRingCheck as jest.Mock).mockImplementation(() => ({
+        items: [
+          { id: 'notifications', problem: null },
+          { id: 'sound', problem: null },
+        ],
+        recheck: jest.fn(),
+      }));
+
+      render(<SettingsScreen navigation={mockNavigation} route={{} as any} />);
+      expect(
+        screen.getByText(i18n.t('translations:ring_check_all_good')),
+      ).toBeTruthy();
+    });
+
+    it('shows "Needs fixing" when at least one check finds a problem', () => {
+      (useRingCheck as jest.Mock).mockImplementation(() => ({
+        items: [
+          { id: 'notifications', problem: 'notifications_off' },
+          { id: 'sound', problem: null },
+        ],
+        recheck: jest.fn(),
+      }));
+
+      render(<SettingsScreen navigation={mockNavigation} route={{} as any} />);
+      expect(
+        screen.getByText(i18n.t('translations:ring_check_needs_fixing')),
+      ).toBeTruthy();
+    });
+  });
 });

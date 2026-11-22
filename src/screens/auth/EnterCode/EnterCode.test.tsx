@@ -15,6 +15,7 @@ import {
 } from './EnterCode';
 import { services } from '@app/services/service';
 import * as afterLogin from '@app/services/afterLogin';
+import * as languageApi from '@app/localization/languageApi';
 import { Button } from '@app/components/Button/Button';
 import i18n from '@app/localization/i18n';
 
@@ -22,6 +23,7 @@ describe('EnterCode screen (spec 0039, AC-6, AC-10, AC-11)', () => {
   let queryClient: QueryClient;
   let alertSpy: jest.SpyInstance;
   let markJustLoggedInSpy: jest.SpyInstance;
+  let sendLanguageSpy: jest.SpyInstance;
 
   const mockNavigation: any = {
     navigate: jest.fn(),
@@ -41,11 +43,15 @@ describe('EnterCode screen (spec 0039, AC-6, AC-10, AC-11)', () => {
     });
     alertSpy = jest.spyOn(Alert, 'alert');
     markJustLoggedInSpy = jest.spyOn(afterLogin, 'markJustLoggedIn');
+    sendLanguageSpy = jest
+      .spyOn(languageApi, 'sendLanguageToServer')
+      .mockImplementation();
   });
 
   afterEach(async () => {
     alertSpy.mockRestore();
     markJustLoggedInSpy.mockRestore();
+    sendLanguageSpy.mockRestore();
     queryClient.clear();
     await act(async () => {
       jest.runOnlyPendingTimers();
@@ -184,6 +190,7 @@ describe('EnterCode screen (spec 0039, AC-6, AC-10, AC-11)', () => {
           expect.anything(),
         );
         expect(markJustLoggedInSpy).toHaveBeenCalledTimes(1);
+        expect(sendLanguageSpy).toHaveBeenCalledTimes(1);
       });
       expect(alertSpy).not.toHaveBeenCalled();
     });

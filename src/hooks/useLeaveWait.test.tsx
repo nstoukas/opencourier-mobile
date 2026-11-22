@@ -394,6 +394,7 @@ describe('useLeaveWait & useWaitClock (spec 0033, AC-5, AC-6)', () => {
 
       // Shows translated not-yours message
       expect(alertSpy).toHaveBeenCalledWith(
+        '',
         i18n.t('translations:hand_back_not_yours'),
       );
 
@@ -445,7 +446,7 @@ describe('useLeaveWait & useWaitClock (spec 0033, AC-5, AC-6)', () => {
       });
 
       // Shows the server's sentence
-      expect(alertSpy).toHaveBeenCalledWith(serverErrorMessage);
+      expect(alertSpy).toHaveBeenCalledWith('', serverErrorMessage);
 
       // Keeps the job in cache
       const cachedJobs = queryClient.getQueryData<Order[]>([
@@ -483,6 +484,7 @@ describe('useLeaveWait & useWaitClock (spec 0033, AC-5, AC-6)', () => {
 
       // Shows no connection message
       expect(alertSpy).toHaveBeenCalledWith(
+        '',
         i18n.t('translations:hand_back_no_connection'),
       );
 
@@ -522,6 +524,7 @@ describe('useLeaveWait & useWaitClock (spec 0033, AC-5, AC-6)', () => {
       });
 
       expect(alertSpy).toHaveBeenCalledWith(
+        '',
         i18n.t('translations:leave_wait_failed'),
       );
     });

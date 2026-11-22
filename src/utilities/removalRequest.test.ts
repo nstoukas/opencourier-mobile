@@ -7,6 +7,7 @@ import {
   removalNoticeTitle,
   removalNoticeText,
   RemovalDecision,
+  removalReasonLabel,
 } from './removalRequest';
 import i18n from '@app/localization/i18n';
 
@@ -326,6 +327,46 @@ describe('removalRequest utilities (spec 0035, AC-3, AC-11)', () => {
       expect(text).toBe(t('translations:removal_notice_approved'));
       expect(text).not.toContain('€');
       expect(text).not.toMatch(/\d/);
+    });
+  });
+
+  describe('removalReasonLabel (spec 0054, AC-7)', () => {
+    it('shows labelEl in Greek when present', () => {
+      const reason = {
+        label: 'Moped broke down',
+        labelEl: 'Βλάβη στο μηχανάκι',
+      };
+      expect(removalReasonLabel(reason, 'el')).toBe('Βλάβη στο μηχανάκι');
+    });
+
+    it('falls back to English label in Greek when labelEl is null or empty', () => {
+      const nullGreek = {
+        label: 'Moped broke down',
+        labelEl: null,
+      };
+      expect(removalReasonLabel(nullGreek, 'el')).toBe('Moped broke down');
+
+      const emptyGreek = {
+        label: 'Moped broke down',
+        labelEl: '',
+      };
+      expect(removalReasonLabel(emptyGreek, 'el')).toBe('Moped broke down');
+    });
+
+    it('shows English label in English when present', () => {
+      const reason = {
+        label: 'Moped broke down',
+        labelEl: 'Βλάβη στο μηχανάκι',
+      };
+      expect(removalReasonLabel(reason, 'en')).toBe('Moped broke down');
+    });
+
+    it('falls back to labelEl in English when English label is empty or null', () => {
+      const nullEnglish = {
+        label: '',
+        labelEl: 'Βλάβη στο μηχανάκι',
+      };
+      expect(removalReasonLabel(nullEnglish, 'en')).toBe('Βλάβη στο μηχανάκι');
     });
   });
 });

@@ -411,7 +411,7 @@ describe('useMoveDropoffPin (spec 0016, AC-8)', () => {
 
       expect(alertSpy).toHaveBeenLastCalledWith(
         'Move the pin',
-        'The pin is already where you stand',
+        'The pin was already moved for this delivery',
       );
       expect(invalidateSpy).toHaveBeenCalledWith({
         queryKey: [QueryKeys.inProgressOrders],

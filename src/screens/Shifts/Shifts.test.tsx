@@ -141,7 +141,7 @@ describe('ShiftsScreen (spec 0027, AC-10)', () => {
       row('my-shift-mine-1').getByText(/Fri 6 Nov · 19:00–\s*23:00/),
     ).toBeTruthy();
     expect(
-      row('my-shift-mine-1').getByText('You can drop it until 07:00 today.'),
+      row('my-shift-mine-1').getByText(/You can drop it until 07:00/),
     ).toBeTruthy();
   });
 

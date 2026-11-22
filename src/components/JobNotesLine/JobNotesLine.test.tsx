@@ -6,6 +6,7 @@ import i18n from '@app/localization/i18n';
 import { JobNote, LEAVE_AT_DOOR } from '@app/utilities/jobCard';
 import { Note } from '@app/types/types';
 import { AddressNoteActions, JobNotesLine } from './JobNotesLine';
+import { capitals } from '@app/utilities/capitals';
 
 // Spec 0021 (AC-14), Spec 0053 (AC-2, AC-5, AC-7, AC-8):
 // JobNotesLine displays notes on one line and opens a sheet grouping by author.
@@ -125,12 +126,14 @@ describe('JobNotesLine (spec 0021, spec 0053)', () => {
 
       expect(getByTestId('job-notes-sheet')).toBeTruthy();
       expect(
-        getByText(i18n.t('translations:notes_from_customer')),
+        getByText(capitals(i18n.t('translations:notes_from_customer'))),
       ).toBeTruthy();
       expect(
-        getByText(i18n.t('translations:notes_from_restaurant')),
+        getByText(capitals(i18n.t('translations:notes_from_restaurant'))),
       ).toBeTruthy();
-      expect(getByText(i18n.t('translations:notes_from_riders'))).toBeTruthy();
+      expect(
+        getByText(capitals(i18n.t('translations:notes_from_riders'))),
+      ).toBeTruthy();
 
       // Note contents are shown
       expect(getByText(otherRiderNote.note)).toBeTruthy();

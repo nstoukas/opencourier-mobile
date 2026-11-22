@@ -11,6 +11,7 @@ import { Login } from './Login';
 import { Button } from '@app/components/Button/Button';
 import { services } from '@app/services/service';
 import * as afterLogin from '@app/services/afterLogin';
+import * as languageApi from '@app/localization/languageApi';
 import * as config from '@app/utilities/config';
 import { AuthScreen } from '@app/navigation/auth/types';
 import i18n from '@app/localization/i18n';
@@ -19,6 +20,7 @@ describe('Login screen (spec 0039, AC-4, AC-5)', () => {
   let queryClient: QueryClient;
   let alertSpy: jest.SpyInstance;
   let markJustLoggedInSpy: jest.SpyInstance;
+  let sendLanguageSpy: jest.SpyInstance;
 
   const mockNavigation: any = {
     navigate: jest.fn(),
@@ -35,11 +37,15 @@ describe('Login screen (spec 0039, AC-4, AC-5)', () => {
     });
     alertSpy = jest.spyOn(Alert, 'alert');
     markJustLoggedInSpy = jest.spyOn(afterLogin, 'markJustLoggedIn');
+    sendLanguageSpy = jest
+      .spyOn(languageApi, 'sendLanguageToServer')
+      .mockImplementation();
   });
 
   afterEach(() => {
     alertSpy.mockRestore();
     markJustLoggedInSpy.mockRestore();
+    sendLanguageSpy.mockRestore();
     queryClient.clear();
   });
 
@@ -118,6 +124,7 @@ describe('Login screen (spec 0039, AC-4, AC-5)', () => {
       });
       await waitFor(() => {
         expect(markJustLoggedInSpy).toHaveBeenCalled();
+        expect(sendLanguageSpy).toHaveBeenCalled();
       });
     });
   });

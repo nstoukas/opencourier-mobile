@@ -242,6 +242,7 @@ describe('useHandBack & useHandBackCountdown (spec 0020, AC-9)', () => {
 
       // Shows server's sentence
       expect(alertSpy).toHaveBeenCalledWith(
+        '',
         'You are at the restaurant. Report an issue or call dispatch to give this order back.',
       );
 
@@ -282,6 +283,7 @@ describe('useHandBack & useHandBackCountdown (spec 0020, AC-9)', () => {
       });
 
       expect(alertSpy).toHaveBeenCalledWith(
+        '',
         'This order is no longer yours. Check your jobs.',
       );
     });
@@ -310,6 +312,7 @@ describe('useHandBack & useHandBackCountdown (spec 0020, AC-9)', () => {
       });
 
       expect(alertSpy).toHaveBeenCalledWith(
+        '',
         'No connection. Try again when you have signal.',
       );
     });

@@ -42,7 +42,7 @@ describe('SideMenuItemSwitch (spec 0007, AC-5)', () => {
       <SideMenuItemSwitch
         isOn={true}
         onValueChange={onValueChange}
-        item={SideMenuItem.AutoOrders}
+        item={SideMenuItem.Location}
       />,
     );
     const row = UNSAFE_getByType(TouchableOpacity);

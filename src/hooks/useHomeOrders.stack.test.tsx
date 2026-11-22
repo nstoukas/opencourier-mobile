@@ -427,7 +427,7 @@ describe('useHomeOrders.stack (spec 0048, row 80, AC-5, AC-8)', () => {
         config: {} as any,
         data: {
           error: true,
-          result: [{ code: 'ORDER_CHANGED', message: serverSentence }],
+          result: [{ code: 'STACK_CHANGED', message: serverSentence }],
         },
       };
 
@@ -474,7 +474,7 @@ describe('useHomeOrders.stack (spec 0048, row 80, AC-5, AC-8)', () => {
         config: {} as any,
         data: {
           error: true,
-          result: [{ code: 'ORDER_CHANGED', message: serverSentence }],
+          result: [{ message: serverSentence }],
         },
       };
 
@@ -539,7 +539,7 @@ describe('useHomeOrders.stack (spec 0048, row 80, AC-5, AC-8)', () => {
 
       expect(alertSpy).toHaveBeenCalledWith(
         'Error declining order',
-        'Network timeout during decline',
+        'Something went wrong. Try again in a minute.',
       );
 
       act(() => {

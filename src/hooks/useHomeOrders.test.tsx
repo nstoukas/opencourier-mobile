@@ -808,7 +808,7 @@ describe('useHomeOrders', () => {
       expect(hookResult?.dataSourceNew.map(o => o.id)).toEqual(['order-fail']);
       expect(alertSpy).toHaveBeenCalledWith(
         'Error accepting order',
-        'Internal Server Error',
+        'Something went wrong. Try again in a minute.',
       );
 
       act(() => {
@@ -1532,7 +1532,9 @@ describe('useHomeOrders', () => {
       });
 
       // Assert that inProgressOrders was invalidated before user
-      const inProgressIndex = invalidateCalls.indexOf(QueryKeys.inProgressOrders);
+      const inProgressIndex = invalidateCalls.indexOf(
+        QueryKeys.inProgressOrders,
+      );
       const userIndex = invalidateCalls.indexOf(QueryKeys.user);
 
       expect(inProgressIndex).toBeGreaterThanOrEqual(0);

@@ -6,6 +6,7 @@ import { OrderStatus } from '@app/types/enums';
 import { Order } from '@app/types/types';
 import { clearPickedUpTimes, setPickedUpAt } from '@app/services/pickupTimes';
 import { InProgressCell, canMoveDropoffPin } from './InProgressCell';
+import { coopClock } from '@app/utilities/timeWorked';
 
 describe('InProgressCell (spec 0021, AC-6 to AC-8, AC-14, spec 0016)', () => {
   const baseOrder: Order = {
@@ -209,11 +210,8 @@ describe('InProgressCell (spec 0021, AC-6 to AC-8, AC-14, spec 0016)', () => {
       fireEvent.press(navButton);
       expect(onNavigate).toHaveBeenCalledWith(dropoffOrder);
 
-      // Restaurant line with picked up swipe time
-      const formattedSwipeTime = new Date(swipeTime).toLocaleTimeString([], {
-        hour: '2-digit',
-        minute: '2-digit',
-      });
+      // Restaurant line with picked up swipe time (24-hour clock on Athens time, spec 0054 AC-3)
+      const formattedSwipeTime = coopClock(swipeTime);
       const expectedText = i18n.t('translations:picked_up_at', {
         restaurant: 'Souvlaki Bar',
         time: formattedSwipeTime,
@@ -234,14 +232,8 @@ describe('InProgressCell (spec 0021, AC-6 to AC-8, AC-14, spec 0016)', () => {
 
       setPickedUpAt(orderWithStaleReadyAt.id, swipeTime);
 
-      const formattedSwipeTime = new Date(swipeTime).toLocaleTimeString([], {
-        hour: '2-digit',
-        minute: '2-digit',
-      });
-      const formattedReadyAt = new Date(threeHoursAgo).toLocaleTimeString([], {
-        hour: '2-digit',
-        minute: '2-digit',
-      });
+      const formattedSwipeTime = coopClock(swipeTime);
+      const formattedReadyAt = coopClock(Date.parse(threeHoursAgo));
 
       const { getByTestId, getByText, queryByText } = render(
         <InProgressCell order={orderWithStaleReadyAt} {...noopProps} />,

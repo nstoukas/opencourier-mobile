@@ -92,8 +92,9 @@ describe('Screen safe area guard (row 104)', () => {
     );
   });
 
-  // The screens moved off React Native's SafeAreaView (row 104, updated row 17).
+  // The screens moved off React Native's SafeAreaView (row 104, updated row 17, row 84).
   const screens = [
+    'screens/Account/Account.tsx',
     'screens/Earnings/Earnings.tsx',
     'screens/EarningsDelivery/EarningsDelivery.tsx',
     'screens/Licences/Licences.tsx',
@@ -102,20 +103,17 @@ describe('Screen safe area guard (row 104)', () => {
     'screens/PayoutActivity/PayoutActivity.tsx',
     'screens/ReportIssue/ReportIssue.tsx',
     'screens/Settings/Settings.tsx',
-    'screens/SettingsStack/DefaultSound/DefaultSound.tsx',
     'screens/SettingsStack/EmergencyContact/EmergencyContact.tsx',
     'screens/SettingsStack/Language/Language.tsx',
     'screens/SettingsStack/Navigation/Navigation.tsx',
-    'screens/SettingsStack/OperatingArea/OperatingArea.tsx',
-    'screens/SettingsStack/ShiftAvailability/ShiftAvailabilityScreen.tsx',
-    'screens/SettingsStack/VehicleType/VehicleType.tsx',
-    'screens/SettingsStack/Volume/Volume.tsx',
+    'screens/SettingsStack/OfferSound/OfferSound.tsx',
+    'screens/SettingsStack/RingCheck/RingCheck.tsx',
     'screens/auth/AuthFrame.tsx',
     'screens/Permissions/Permissions.tsx',
   ];
 
-  it('lists 18 screens', () => {
-    expect(new Set(screens).size).toBe(18);
+  it('lists 16 screens', () => {
+    expect(new Set(screens).size).toBe(16);
   });
 
   it.each(screens)('src/%s imports and renders ScreenSafeArea', screen => {
