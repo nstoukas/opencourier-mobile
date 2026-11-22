@@ -37,6 +37,7 @@ import {
   orderCodeOf,
 } from '@app/utilities/jobCard';
 import { color, control, radius, space, typeScale } from '@app/styles/theme';
+import { coopClock } from '@app/utilities/timeWorked';
 
 type Props = {
   style?: StyleProp<ViewStyle>;
@@ -68,13 +69,10 @@ export const canMoveDropoffPin = (order: Order): boolean =>
   order.status === OrderStatus.courier_arrived_at_dropoff_location &&
   !order.dropoffPointCorrectedAt;
 
-// The time of day a step happened, as the rider's phone shows times.
-const timeOf = (at: number): string => {
-  const date = new Date(at);
-  return Number.isNaN(date.getTime())
-    ? ''
-    : date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-};
+// The time of day a step happened, on the co-op's 24 hour clock (spec 0054, AC-3: it used the
+// phone's own locale, which could show "1:05 PM").
+const timeOf = (at: number): string =>
+  Number.isNaN(new Date(at).getTime()) ? '' : coopClock(at);
 
 type IconActionProps = {
   icon: React.ComponentProps<typeof Icon>['icon'];

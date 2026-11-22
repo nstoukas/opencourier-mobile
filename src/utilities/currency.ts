@@ -1,4 +1,4 @@
-import { APP_LOCALE, FALLBACK_CURRENCY } from './locale';
+import { appLocale, FALLBACK_CURRENCY } from './locale';
 
 /**
  * Formats a whole-number amount in **minor units** (e.g. cents) for display.
@@ -13,12 +13,12 @@ export function formatCurrencyFromCents(
   const major = cents / 100;
   const code = normalizeCurrencyCode(currency);
   try {
-    return new Intl.NumberFormat(APP_LOCALE, {
+    return new Intl.NumberFormat(appLocale(), {
       style: 'currency',
       currency: code,
     }).format(major);
   } catch {
-    return new Intl.NumberFormat(APP_LOCALE, {
+    return new Intl.NumberFormat(appLocale(), {
       style: 'currency',
       currency: FALLBACK_CURRENCY,
     }).format(major);
@@ -40,7 +40,9 @@ function normalizeCurrencyCode(currency?: string | null): string {
  * Formats an amount already in **major units** (e.g. euros), not cents.
  * Use {@link formatCurrencyFromCents} for API integer minor-unit amounts.
  */
-export const currencyFormatter = new Intl.NumberFormat(APP_LOCALE, {
-  style: 'currency',
-  currency: FALLBACK_CURRENCY,
-}).format;
+// A function, not a formatter built once at start, so it follows a language switch (spec 0054, AC-3).
+export const currencyFormatter = (amount: number): string =>
+  new Intl.NumberFormat(appLocale(), {
+    style: 'currency',
+    currency: FALLBACK_CURRENCY,
+  }).format(amount);

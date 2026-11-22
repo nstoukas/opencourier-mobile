@@ -1,4 +1,4 @@
-import { APP_LOCALE } from './locale';
+import { appLocale } from './locale';
 import { Point } from 'geojson';
 import Geolocation from 'react-native-geolocation-service';
 import { WatchOptions } from './locationTracking';
@@ -49,7 +49,7 @@ export function track(
 }
 
 export function formatDistance(meters: number): string {
-  const km = new Intl.NumberFormat(APP_LOCALE, {
+  const km = new Intl.NumberFormat(appLocale(), {
     maximumFractionDigits: 1,
   }).format(meters / 1000);
   return `${km} km`;
