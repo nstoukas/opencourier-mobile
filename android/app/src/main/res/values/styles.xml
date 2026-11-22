@@ -4,6 +4,21 @@
     <style name="AppTheme" parent="Theme.AppCompat.DayNight.NoActionBar">
         <!-- Customize your theme here. -->
         <item name="android:editTextBackground">@drawable/rn_edit_text_material</item>
+        <!-- Row 124: the buttons of Android's own dialogs (React Native's Alert.alert). Material writes them
+             in capitals, and Android's capitals keep Greek accents ("ΑΠΟΧΏΡΗΣΗ", wrong in Greek), so they
+             show as the app's own words instead, in sentence case ("Αποχώρηση", "Leave"). Framework
+             dialogs read this attribute from the activity's theme. -->
+        <item name="android:buttonBarButtonStyle">@style/DialogButton</item>
+    </style>
+
+    <!-- A dialog button as Material draws it (borderless, in the accent colour, 64 by 48 dp at least),
+         with the all caps turned off. Both spellings of textAllCaps: the framework reads android:, and
+         AppCompat's button reads its own. -->
+    <style name="DialogButton" parent="@android:style/Widget.Material.Button.Borderless.Colored">
+        <item name="android:minWidth">64dp</item>
+        <item name="android:minHeight">48dp</item>
+        <item name="android:textAllCaps">false</item>
+        <item name="textAllCaps">false</item>
     </style>
 
 </resources>
