@@ -28,10 +28,13 @@ type Props = {
 // the server leaves it empty exactly when the street would give the house
 // away (spec 0019), so falling back to the street there would show what the
 // offer card must not.
+// Row 81: on an add on, the rider's own job is no offer (it is theirs, as on
+// its job card), so only the offered order is held to the area rule.
 const placeOf = (
   stop: StackStop,
   order: Order | undefined,
   isOffer: boolean,
+  addOn: boolean,
 ): string => {
   if (!order) {
     return '';
@@ -39,7 +42,7 @@ const placeOf = (
   if (stop.stop === 'PICKUP') {
     return order.pickupBusinessName || order.pickupName || '';
   }
-  if (isOffer) {
+  if (isOffer && (!addOn || order.addOn)) {
     return order.dropoffArea || '';
   }
   return order.dropoffArea || order.dropoffLocation?.street || '';
@@ -102,7 +105,14 @@ export const StackStopList = ({
                 stop.stop === 'PICKUP'
                   ? 'translations:stack_stop_pickup'
                   : 'translations:stack_stop_dropoff',
-                { place: placeOf(stop, orderOf(stop.deliveryId), isOffer) },
+                {
+                  place: placeOf(
+                    stop,
+                    orderOf(stop.deliveryId),
+                    isOffer,
+                    addOn,
+                  ),
+                },
               )}
             </Text>
           </View>
