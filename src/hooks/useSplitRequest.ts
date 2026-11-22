@@ -122,6 +122,20 @@ export const useLeaveSplit = () => {
     networkMode: 'always',
     mutationFn: ({ orderId }: { orderId: string }) =>
       services.orderService.leaveSplit(orderId),
+    // As the ordinary Leave (useLeaveWait): the order is no longer this rider's,
+    // so it leaves home now, not when the refetch lands; the rider is free for
+    // offers, and the trip and the split wait may have just been paid
+    // (agy's review of row 11).
+    onSuccess: (_answer, { orderId }) => {
+      queryClient.setQueryData<Order[]>([QueryKeys.inProgressOrders], jobs =>
+        jobs?.filter(job => job.id !== orderId),
+      );
+      [
+        QueryKeys.newOrders,
+        QueryKeys.earningsMonth,
+        QueryKeys.earningsDelivery,
+      ].forEach(key => queryClient.invalidateQueries({ queryKey: [key] }));
+    },
     onError: error => {
       console.log('Could not leave the order', (error as Error)?.message);
       Alert.alert(
