@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
   Alert,
   Image,
@@ -24,6 +24,7 @@ import { ImageIcon } from 'phosphor-react-native/src/icons/Image';
 import { MainScreenProp, MainScreens } from '@app/navigation/main/types';
 import { Colors } from '@app/styles/colors';
 import { useFileComplaint } from '@app/hooks/useComplaints';
+import { forgetPickedPhoto } from '@app/services/complaintPhotoFiles';
 import {
   COMPLAINT_PHOTO_MAX_BYTES,
   ComplaintPhoto,
@@ -116,17 +117,43 @@ export const FileComplaint = ({ navigation, route }: Props) => {
     setAbout(next);
   };
 
+  // Row 83 review: the picker's copy of a photo leaves the phone once it is not needed. On leaving the
+  // form without sending it goes here; after a filing the hook removes it. A ref (a value React keeps
+  // between draws without drawing again) lets the cleanup read the latest photo and sending state.
+  const latest = useRef({ photo, sending: send.isPending });
+  latest.current = { photo, sending: send.isPending };
+  useEffect(
+    () => () => {
+      if (!latest.current.sending) {
+        forgetPickedPhoto(latest.current.photo?.uri);
+      }
+    },
+    [],
+  );
+
+  const removePhoto = () => {
+    forgetPickedPhoto(photo?.uri);
+    setPhoto(null);
+  };
+
   // Opens the gallery for one photo. Cancelling keeps what was there before.
   const pickPhoto = async () => {
-    const result = await launchImageLibrary({
-      mediaType: 'photo',
-      selectionLimit: 1,
-      maxWidth: 1600,
-      maxHeight: 1600,
-      quality: 0.8,
-      includeBase64: false,
-      includeExtra: false,
-    });
+    let result;
+    try {
+      result = await launchImageLibrary({
+        mediaType: 'photo',
+        selectionLimit: 1,
+        maxWidth: 1600,
+        maxHeight: 1600,
+        quality: 0.8,
+        includeBase64: false,
+        includeExtra: false,
+      });
+    } catch {
+      // The library answers with an errorCode today; this only keeps a rejection off the button press.
+      Alert.alert(t('translations:complaint_photo_failed'));
+      return;
+    }
     if (result.didCancel) {
       return;
     }
@@ -138,10 +165,13 @@ export const FileComplaint = ({ navigation, route }: Props) => {
       return;
     }
     if (asset.fileSize && asset.fileSize > COMPLAINT_PHOTO_MAX_BYTES) {
+      forgetPickedPhoto(asset.uri);
       Alert.alert(t('translations:complaint_photo_too_big'));
       return;
     }
     const isPng = asset.type === 'image/png';
+    // The photo it replaces is not needed any more.
+    forgetPickedPhoto(photo?.uri);
     setPhoto({
       uri: asset.uri,
       type: isPng ? 'image/png' : 'image/jpeg',
@@ -156,12 +186,8 @@ export const FileComplaint = ({ navigation, route }: Props) => {
     send.mutate(
       { deliveryId, about, category, text: trimmed, photo },
       {
-        // Say it went and where the outcome shows, so the rider does not send it again.
+        // The hook says it went ("Sent"), even if the rider already left; this only closes the form.
         onSuccess: () => {
-          Alert.alert(
-            t('translations:complaint_sent_title'),
-            t('translations:complaint_sent_body'),
-          );
           navigation.goBack();
         },
       },
@@ -251,7 +277,7 @@ export const FileComplaint = ({ navigation, route }: Props) => {
                       <TouchableOpacity
                         style={photoStyles.photoAction}
                         disabled={send.isPending}
-                        onPress={() => setPhoto(null)}
+                        onPress={removePhoto}
                         accessibilityRole="button"
                         testID="complaint-photo-remove">
                         <Text style={photoStyles.photoActionText}>

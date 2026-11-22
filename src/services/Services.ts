@@ -21,6 +21,7 @@ import { clearSplitNotices } from './splitNotice/splitNotice';
 import { setLatestFix } from './latestFix';
 import { clearHeldArrivals } from './heldArrivals';
 import { clearStatementFiles } from './statements/statementsApi';
+import { clearPickedPhotoFiles } from './complaintPhotoFiles';
 import { clearPickedUpTimes } from './pickupTimes';
 import notificationDeviceService, {
   NotificationDeviceService,
@@ -87,6 +88,8 @@ const Services = (): Services => {
     );
     // The statements this rider downloaded (spec 0050, row 76 review).
     clearStatementFiles().catch(() => undefined);
+    // The picker's copies of complaint photos (row 83 review).
+    clearPickedPhotoFiles().catch(() => undefined);
   };
 
   return {

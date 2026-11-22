@@ -10,6 +10,7 @@ import {
 } from '@tanstack/react-query';
 import { services } from '@app/services/service';
 import { FileComplaintInput } from '@app/services/complaintService';
+import { forgetPickedPhoto } from '@app/services/complaintPhotoFiles';
 import { Complaint, ComplaintPage } from '@app/types/types';
 import { QueryKeys } from '@app/utilities/queryKeys';
 import { serverMessage } from './useMoveDropoffPin';
@@ -43,6 +44,10 @@ const failureText = (
   if (error.response.status === 404) {
     return t('translations:complaint_not_found');
   }
+  // A photo whose size the picker could not tell, refused by the server's 5 MB limit (row 83 review).
+  if (error.response.status === 413) {
+    return t('translations:complaint_photo_too_big');
+  }
   return serverMessage(error) ?? t('translations:complaint_send_failed');
 };
 
@@ -55,6 +60,16 @@ export const useFileComplaint = () => {
     networkMode: 'always',
     mutationFn: (input: FileComplaintInput) =>
       services.complaintService.fileComplaint(input),
+    // Here rather than in the screen's own mutate() call: TanStack Query skips a mutate() callback once
+    // the screen has closed, and a rider who left during a slow photo upload must still hear it went
+    // (row 83 review). The picker's copy of the photo is no longer needed either.
+    onSuccess: (_complaint, input) => {
+      forgetPickedPhoto(input.photo?.uri);
+      Alert.alert(
+        t('translations:complaint_sent_title'),
+        t('translations:complaint_sent_body'),
+      );
+    },
     onError: error => {
       // The message only: the whole error would print the rider's token, and the words.
       console.log('Could not file the complaint', (error as Error)?.message);
