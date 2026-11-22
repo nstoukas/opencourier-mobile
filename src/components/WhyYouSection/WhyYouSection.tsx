@@ -40,6 +40,20 @@ export const whyYouLines = (
 ): string[] => {
   if (!whyYou) return [t('translations:why_none')];
   const v = whyYou.values;
+  // Review fix (row 81): an add on went to the rider on a job it added the
+  // fewest minutes to, not by the matcher's figures, so it is worded by its own
+  // (the server sends only what it added to this rider's job). Read by its
+  // strategy, it said "You were the nearest rider" or "a reason this version
+  // cannot show".
+  if (whyYou.kind === 'ADD_ON') {
+    const km = number(v.extraKm);
+    const minutes = number(v.extraMinutes);
+    return [
+      km !== null && minutes !== null
+        ? t('translations:why_add_on', { km, minutes })
+        : t('translations:why_add_on_plain'),
+    ];
+  }
   switch (whyYou.strategy) {
     case 'FAIRNESS': {
       const lines: string[] = [];
