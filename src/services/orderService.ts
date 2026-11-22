@@ -265,7 +265,17 @@ const orderService = (client: UClient): OrderService => {
         );
       }
     }
-    return dispatchAfterAccept(id);
+    // The tapped order's own dispatch gets the same treatment (agy review of
+    // row 80): the accept is already done on the server, so a failure here is
+    // logged and the accept still reads as a success. The job then shows at
+    // its accepted step, and the rider's first swipe sends the dispatch
+    // before the arrival (useOrder's queue), so nothing is lost.
+    try {
+      return await dispatchAfterAccept(id);
+    } catch (error) {
+      console.warn(`Could not mark order ${id} as dispatched`, error);
+      return { data: null, error: null };
+    }
   };
 
   const dispatchAfterAccept = async (
