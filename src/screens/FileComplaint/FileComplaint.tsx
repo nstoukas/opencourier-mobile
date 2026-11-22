@@ -24,7 +24,7 @@ import { ImageIcon } from 'phosphor-react-native/src/icons/Image';
 import { MainScreenProp, MainScreens } from '@app/navigation/main/types';
 import { Colors } from '@app/styles/colors';
 import { useFileComplaint } from '@app/hooks/useComplaints';
-import { forgetPickedPhoto } from '@app/services/complaintPhotoFiles';
+import { tidyPickedPhotos } from '@app/services/complaintPhotoFiles';
 import {
   COMPLAINT_PHOTO_MAX_BYTES,
   ComplaintPhoto,
@@ -125,14 +125,14 @@ export const FileComplaint = ({ navigation, route }: Props) => {
   useEffect(
     () => () => {
       if (!latest.current.sending) {
-        forgetPickedPhoto(latest.current.photo?.uri);
+        tidyPickedPhotos(latest.current.photo?.uri);
       }
     },
     [],
   );
 
   const removePhoto = () => {
-    forgetPickedPhoto(photo?.uri);
+    tidyPickedPhotos(photo?.uri);
     setPhoto(null);
   };
 
@@ -165,13 +165,13 @@ export const FileComplaint = ({ navigation, route }: Props) => {
       return;
     }
     if (asset.fileSize && asset.fileSize > COMPLAINT_PHOTO_MAX_BYTES) {
-      forgetPickedPhoto(asset.uri);
+      tidyPickedPhotos(asset.uri, photo?.uri);
       Alert.alert(t('translations:complaint_photo_too_big'));
       return;
     }
     const isPng = asset.type === 'image/png';
     // The photo it replaces is not needed any more.
-    forgetPickedPhoto(photo?.uri);
+    tidyPickedPhotos(photo?.uri, asset.uri);
     setPhoto({
       uri: asset.uri,
       type: isPng ? 'image/png' : 'image/jpeg',

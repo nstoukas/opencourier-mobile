@@ -27,14 +27,19 @@ export const forgetPickedPhoto = async (uri: string | undefined | null) => {
     .catch(() => undefined);
 };
 
-// Every copy the picker left in the cache folder (Android), for the two clear places.
-export const clearPickedPhotoFiles = async (): Promise<void> => {
+// Every copy the picker left in the cache folder (Android), except the photo still attached (`keepUri`).
+// On Android the picker writes two files per pick (its copy of the gallery photo, then the resized one it
+// returns), so deleting the returned file alone leaves the first. Also used by the two clear places.
+export const clearPickedPhotoFiles = async (
+  keepUri?: string | null,
+): Promise<void> => {
+  const keep = keepUri?.split('/').pop();
   try {
     const dir = ReactNativeBlobUtil.fs.dirs.CacheDir;
     const names = await ReactNativeBlobUtil.fs.ls(dir);
     await Promise.all(
       names
-        .filter(name => name.startsWith(PICKER_PREFIX))
+        .filter(name => name.startsWith(PICKER_PREFIX) && name !== keep)
         .map(name =>
           ReactNativeBlobUtil.fs
             .unlink(`${dir}/${name}`)
@@ -44,4 +49,14 @@ export const clearPickedPhotoFiles = async (): Promise<void> => {
   } catch {
     // Nothing to clear.
   }
+};
+
+// The photo `dropUri` is no longer needed: it goes (iOS keeps it in the temp folder), and so does every
+// other copy in the cache folder but `keepUri`, the photo still attached if there is one.
+export const tidyPickedPhotos = async (
+  dropUri: string | undefined | null,
+  keepUri?: string | null,
+): Promise<void> => {
+  await forgetPickedPhoto(dropUri);
+  await clearPickedPhotoFiles(keepUri);
 };
