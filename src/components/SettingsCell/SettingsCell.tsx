@@ -34,6 +34,8 @@ type Props = {
   title: string;
   subtitle?: string;
   switchValue?: boolean;
+  // A switch that cannot be changed right now: shown, but taps do nothing.
+  disabled?: boolean;
   isSelected?: boolean;
   radioButtonType?: RadioButtonType;
   onSwitchValueChange?: (isOn: boolean) => void;
@@ -48,6 +50,7 @@ export const SettingsCell = ({
   title,
   subtitle = '',
   switchValue = false,
+  disabled = false,
   isSelected = false,
   radioButtonType = RadioButtonType.checkmark,
   onSwitchValueChange,
@@ -79,6 +82,7 @@ export const SettingsCell = ({
         <TouchableOpacity
           activeOpacity={0.7}
           style={styles.content}
+          disabled={disabled}
           onPress={() =>
             onSwitchValueChange && onSwitchValueChange(!switchValue)
           }>
@@ -88,7 +92,11 @@ export const SettingsCell = ({
               {t(`translations:${subtitle}`)}
             </Text>
           </View>
-          <Switch value={switchValue} onValueChange={onSwitchValueChange} />
+          <Switch
+            value={switchValue}
+            disabled={disabled}
+            onValueChange={onSwitchValueChange}
+          />
         </TouchableOpacity>
       )}
       {cellType === SettingsCellType.radioButton && (

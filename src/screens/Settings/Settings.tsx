@@ -40,29 +40,26 @@ export const SETTINGS_ROWS = [
 
 export const SettingsScreen = ({ navigation }: Props) => {
   const { t, i18n } = useTranslation();
-  const { user, updateDeliverySettings } = useUser();
+  const { user, updateDeliverySettings, isSavingDeliverySetting } = useUser();
   const { items: ringCheck } = useRingCheck();
 
   // Auto accept shows the server's value. While a change is on its way, the
-  // switch shows the rider's choice; it goes back to the server's value once
-  // that matches, or at once if the change fails (useUser says why).
+  // switch shows the rider's choice and takes no other tap, so two quick taps
+  // can never race each other; once the save ends it shows the server's value
+  // again, which is the old one if the save failed (useUser says why).
   const savedAutoAccept = user?.deliverySetting === OrderSetting.auto_accept;
-  const [pendingAutoAccept, setPendingAutoAccept] = useState<boolean | null>(
-    null,
-  );
-  useEffect(() => {
-    if (pendingAutoAccept !== null && pendingAutoAccept === savedAutoAccept) {
-      setPendingAutoAccept(null);
-    }
-  }, [pendingAutoAccept, savedAutoAccept]);
-  const autoAcceptShown = pendingAutoAccept ?? savedAutoAccept;
+  const [chosenAutoAccept, setChosenAutoAccept] = useState(false);
+  const autoAcceptShown = isSavingDeliverySetting
+    ? chosenAutoAccept
+    : savedAutoAccept;
 
   const changeAutoAccept = (isOn: boolean) => {
-    setPendingAutoAccept(isOn);
+    if (isSavingDeliverySetting) {
+      return;
+    }
+    setChosenAutoAccept(isOn);
     updateDeliverySettings(
       isOn ? OrderSetting.auto_accept : OrderSetting.manual,
-      // `mutate` takes callbacks for this one call, after the hook's own.
-      { onError: () => setPendingAutoAccept(null) },
     );
   };
 
@@ -143,8 +140,10 @@ export const SettingsScreen = ({ navigation }: Props) => {
                 subtitle={subtitleFor(setting)}
                 cellType={SettingsCellType.switch}
                 switchValue={autoAcceptShown}
+                onSwitchValueChange={changeAutoAccept}
                 // No user loaded yet (no signal at start): nothing to change.
-                onSwitchValueChange={user ? changeAutoAccept : undefined}
+                // A save on its way: wait for it.
+                disabled={!user || isSavingDeliverySetting}
               />
             ) : (
               <SettingsCell

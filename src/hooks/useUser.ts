@@ -38,14 +38,19 @@ const useUser = (enabled: boolean = true) => {
     },
   });
 
-  const { mutate: updateDeliverySettings } = useMutation({
-    mutationFn: services.userService.setDeliverySettings,
-    onError: alertFailure,
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: [QueryKeys.user] });
-      refetch();
-    },
-  });
+  const { mutate: updateDeliverySettings, isPending: isSavingDeliverySetting } =
+    useMutation({
+      mutationFn: services.userService.setDeliverySettings,
+      onError: alertFailure,
+      // Returning the reload's promise keeps the save pending until the rider is
+      // read again (react-query waits for it), so `isSavingDeliverySetting` turns
+      // false only once `user` already shows the saved value (row 84).
+      onSuccess: () =>
+        Promise.all([
+          queryClient.invalidateQueries({ queryKey: [QueryKeys.user] }),
+          refetch(),
+        ]),
+    });
 
   return {
     user,
@@ -55,6 +60,8 @@ const useUser = (enabled: boolean = true) => {
     refetchUser: refetch,
     updateStatus,
     updateDeliverySettings,
+    // True while an auto accept change is on its way (row 84).
+    isSavingDeliverySetting,
   };
 };
 

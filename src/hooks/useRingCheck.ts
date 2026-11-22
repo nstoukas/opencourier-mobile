@@ -32,7 +32,9 @@ export const useRingCheck = () => {
 
   useEffect(() => {
     recheck();
-    // `addListener` returns the function that removes the listener again.
+    // `addListener` returns the function that removes the listener again. The
+    // `?.` calls here are for tests, whose stand in navigation may lack these
+    // methods; the real navigation always has them.
     const offFocus = navigation.addListener?.('focus', recheck);
     const subscription = AppState.addEventListener('change', state => {
       // Only while this screen is the one in view: Settings is a drawer
