@@ -5,7 +5,6 @@ import {
   MapLinkingOptions,
   OrderPreference,
   RestauranType,
-  Ringtone,
   Theme,
   Vehicle,
   WeightOrder,
@@ -79,44 +78,6 @@ export const SUPPORTED_LANGUAGES: Language[] = [
 export const SUPPORTED_THEMES: Theme[] = [
   { id: '1', name: 'dark' },
   { id: '2', name: 'light' },
-];
-
-export const SUPPORTED_RINGTONES: Ringtone[] = [
-  {
-    id: '1',
-    name: 'bells',
-  },
-  {
-    id: '2',
-    name: 'chime',
-  },
-  {
-    id: '3',
-    name: 'dell',
-  },
-  {
-    id: '4',
-    name: 'ping',
-  },
-  {
-    id: '5',
-    name: 'open',
-  },
-];
-
-export const SUPPORTED_VOLUMES: Ringtone[] = [
-  {
-    id: '1',
-    name: 'softer',
-  },
-  {
-    id: '2',
-    name: 'normal',
-  },
-  {
-    id: '3',
-    name: 'louder',
-  },
 ];
 
 export const SUPPORTED_VEHICLES: Vehicle[] = [

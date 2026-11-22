@@ -14,16 +14,16 @@ export enum MainScreens {
   PayoutActivity = 'PayoutActivity',
   Licences = 'Licences',
   LanguageScreen = 'LanguageScreen',
-  OperatingArea = 'operatingArea',
-  DefaultSound = 'DefaultSound',
-  VolumeScreen = 'VolumeScreen',
+  // Row 84: offer sound and volume, and "Is my phone set up to ring?".
+  OfferSound = 'OfferSound',
+  RingCheck = 'RingCheck',
   EmergencyContact = 'EmergencyContact',
   // Spec 0051 (row 108).
   ChangePassword = 'ChangePassword',
   AccountChanges = 'AccountChanges',
+  // Row 84: Change password, Changes by the co-op and the licences, from the side menu.
+  Account = 'Account',
   NavigationScreen = 'NavigationScreen',
-  VehicleTypeScreen = 'VehicleTypeScreen',
-  ShiftAvailabilityScreen = 'ShiftAvailabilityScreen',
   ReportIssue = 'ReportIssue',
   ReportProduct = 'ReportProduct',
   RequestRemoval = 'RequestRemoval',
@@ -44,16 +44,13 @@ export type MainStackParamList = {
   PayoutActivity: undefined;
   Licences: undefined;
   LanguageScreen: undefined;
-  // The key must equal the route name, which is the enum's value 'operatingArea' (lower case o).
-  operatingArea: undefined;
-  DefaultSound: undefined;
-  VolumeScreen: undefined;
+  OfferSound: undefined;
+  RingCheck: undefined;
   EmergencyContact: undefined;
   ChangePassword: undefined;
   AccountChanges: undefined;
+  Account: undefined;
   NavigationScreen: undefined;
-  VehicleTypeScreen: undefined;
-  ShiftAvailabilityScreen: undefined;
   ReportIssue: {
     order: Order;
   };

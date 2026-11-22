@@ -24,20 +24,7 @@ export const styles = StyleSheet.create({
   list: {
     paddingHorizontal: 16,
   },
-  headerText: {
-    fontSize: typeScale.h2.fontSize,
-    lineHeight: typeScale.h2.lineHeight,
-    color: Colors.gray21,
-  },
-  containerHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: Colors.white,
-    paddingBottom: 8,
-  },
-  headerLine: {
-    height: 1,
-    backgroundColor: Colors.gray1,
-    flex: 1,
+  cell: {
+    marginBottom: 16,
   },
 });

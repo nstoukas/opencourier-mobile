@@ -9,12 +9,10 @@ import { EmergencyContact } from '@app/screens/SettingsStack/EmergencyContact/Em
 import { ChangePassword } from '@app/screens/SettingsStack/ChangePassword/ChangePassword';
 import { AccountChanges } from '@app/screens/SettingsStack/AccountChanges/AccountChanges';
 import { NavigationScreen } from '@app/screens/SettingsStack/Navigation/Navigation';
-import { OperatingArea } from '@app/screens/SettingsStack/OperatingArea/OperatingArea';
-import { DefaultSound } from '@app/screens/SettingsStack/DefaultSound/DefaultSound';
-import { VolumeScreen } from '@app/screens/SettingsStack/Volume/Volume';
-import { VehicleTypeScreen } from '@app/screens/SettingsStack/VehicleType/VehicleType';
+import { OfferSound } from '@app/screens/SettingsStack/OfferSound/OfferSound';
+import { RingCheck } from '@app/screens/SettingsStack/RingCheck/RingCheck';
+import { Account } from '@app/screens/Account/Account';
 import { EarningsDelivery } from '@app/screens/EarningsDelivery/EarningsDelivery';
-import { ShiftAvailabilityScreen } from '@app/screens/SettingsStack/ShiftAvailability/ShiftAvailabilityScreen';
 import { ReportIssue } from '@app/screens/ReportIssue/ReportIssue';
 import { ReportProduct } from '@app/screens/ReportProduct/ReportProduct';
 import { RequestRemoval } from '@app/screens/RequestRemoval/RequestRemoval';
@@ -87,33 +85,23 @@ export const MainStack = () => {
         options={DEFAULT_OPTIONS}
       />
       <MainStackNavigator.Screen
-        name={MainScreens.OperatingArea}
-        component={OperatingArea}
+        name={MainScreens.OfferSound}
+        component={OfferSound}
         options={DEFAULT_OPTIONS}
       />
       <MainStackNavigator.Screen
-        name={MainScreens.DefaultSound}
-        component={DefaultSound}
+        name={MainScreens.RingCheck}
+        component={RingCheck}
         options={DEFAULT_OPTIONS}
       />
       <MainStackNavigator.Screen
-        name={MainScreens.VolumeScreen}
-        component={VolumeScreen}
-        options={DEFAULT_OPTIONS}
-      />
-      <MainStackNavigator.Screen
-        name={MainScreens.VehicleTypeScreen}
-        component={VehicleTypeScreen}
+        name={MainScreens.Account}
+        component={Account}
         options={DEFAULT_OPTIONS}
       />
       <MainStackNavigator.Screen
         name={MainScreens.EarningsDelivery}
         component={EarningsDelivery}
-        options={DEFAULT_OPTIONS}
-      />
-      <MainStackNavigator.Screen
-        name={MainScreens.ShiftAvailabilityScreen}
-        component={ShiftAvailabilityScreen}
         options={DEFAULT_OPTIONS}
       />
       <MainStackNavigator.Screen

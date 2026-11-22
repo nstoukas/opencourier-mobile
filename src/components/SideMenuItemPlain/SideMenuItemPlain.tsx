@@ -20,6 +20,7 @@ import { NoteIcon } from 'phosphor-react-native/src/icons/Note';
 import { PiggyBankIcon } from 'phosphor-react-native/src/icons/PiggyBank';
 import { QuestionIcon } from 'phosphor-react-native/src/icons/Question';
 import { SignOutIcon } from 'phosphor-react-native/src/icons/SignOut';
+import { UserCircleIcon } from 'phosphor-react-native/src/icons/UserCircle';
 
 type Props = {
   style?: StyleProp<ViewStyle>;
@@ -54,6 +55,8 @@ export const SideMenuItemPlain = ({
         return { glyph: CardholderIcon, weight: 'fill' as const };
       case SideMenuItem.Support:
         return { glyph: QuestionIcon, weight: 'fill' as const };
+      case SideMenuItem.Account:
+        return { glyph: UserCircleIcon, weight: 'fill' as const };
       case SideMenuItem.Settings:
         return { glyph: GearSixIcon, weight: 'fill' as const };
       case SideMenuItem.Logout:

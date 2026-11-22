@@ -10,7 +10,6 @@ import { styles } from './SideMenuItemSwitch.styles';
 import { SideMenuItem } from '@app/types/types';
 import { useTranslation } from 'react-i18next';
 import { Icon } from '@app/components/Icon/Icon';
-import { ArrowsClockwiseIcon } from 'phosphor-react-native/src/icons/ArrowsClockwise';
 import { MapPinIcon } from 'phosphor-react-native/src/icons/MapPin';
 import { touchRow } from '@app/utilities/touch';
 
@@ -32,8 +31,6 @@ export const SideMenuItemSwitch = ({
     switch (item) {
       case SideMenuItem.Location:
         return { glyph: MapPinIcon, weight: 'fill' as const };
-      case SideMenuItem.AutoOrders:
-        return { glyph: ArrowsClockwiseIcon, weight: 'regular' as const };
     }
   }, [item]);
 

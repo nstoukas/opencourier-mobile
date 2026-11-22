@@ -114,6 +114,50 @@ export default {
   payout_method: 'Payout method',
   support: 'Support',
   settings: 'Settings',
+  // Row 84 (wishlist item 35): Settings holds six things; the account moved to the side menu.
+  account: 'Account',
+  change_password_more: 'You need your current password.',
+  account_changes_more: 'What the co-op changed on your account, and when.',
+  licenses_more: 'The open source software inside this app.',
+  offer_sound: 'Offer sound and volume',
+  offer_sound_more: "The co-op's offer ring, at your phone's volume",
+  offer_sound_explained:
+    "Offers ring with the co-op's own sound. How loud they ring is your phone's notification volume, so you change it in the phone's sound settings.",
+  offer_sound_play: 'Play the offer ring',
+  offer_sound_silenced:
+    'Your phone is on silent, vibrate or Do Not Disturb, so the ring did not play. Offers will not ring either.',
+  offer_sound_volume: 'Change the volume',
+  offer_sound_change: 'Change the offer sound',
+  offer_sound_change_explained:
+    'Your phone keeps the sound of each kind of alert. Open "{{offers}}" and "{{waiting}}" and pick a sound for each.',
+  auto_accept_more:
+    'Takes each offer the moment it arrives, with its own sound.',
+  emergency_contact_more: 'The co-op sees it when you send an SOS.',
+  ring_check: 'Is my phone set up to ring?',
+  ring_check_checking: 'Checking…',
+  ring_check_all_good: 'Yes. Offers will ring.',
+  ring_check_needs_fixing: 'Not yet. Something needs fixing.',
+  ring_check_intro:
+    'The app reads these settings on this phone when you look. Nothing is saved or sent to the co-op.',
+  ring_check_again: 'Check again',
+  ring_check_ok: 'OK',
+  ring_check_label_notifications: 'Notifications',
+  ring_check_label_offer_alerts: 'Offer alerts',
+  ring_check_label_full_screen: 'Offers on a locked phone',
+  ring_check_label_sound: 'Sound',
+  ring_check_label_battery: 'Battery saving',
+  ring_problem_notifications_off:
+    'Notifications are off for this app, so offers cannot ring or show.',
+  ring_problem_offer_alerts_off:
+    "Offer alerts are switched off in the phone's settings for this app.",
+  ring_problem_full_screen_off:
+    'Offers cannot fill the screen of a locked phone. They come as a small alert you may miss.',
+  ring_problem_phone_silent: 'Your phone is on silent. Offers will not ring.',
+  ring_problem_phone_vibrate:
+    'Your phone is on vibrate only. Offers will not ring.',
+  ring_problem_do_not_disturb: 'Do Not Disturb is on. Offers may not ring.',
+  ring_problem_battery_optimised:
+    'Battery saving can hold back offers while the screen is off. Set this app to "Not optimised" or "Unrestricted".',
   log_out: 'Log-out',
   delivered: 'Delivered',
   canceled: 'Canceled',

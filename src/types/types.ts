@@ -22,7 +22,6 @@ export enum UserStatus {
 
 export enum SideMenuItem {
   Location = 'real_time_location',
-  AutoOrders = 'auto_accept_orders',
   Orders = 'orders',
   // Spec 0034: the chat with dispatch, with no delivery tag.
   Chat = 'chat',
@@ -33,6 +32,8 @@ export enum SideMenuItem {
   Complaints = 'complaints',
   Payout = 'payout_method',
   Support = 'support',
+  // Row 84: the rider's account, out of Settings.
+  Account = 'account',
   Settings = 'settings',
   Logout = 'log_out',
 }
@@ -435,21 +436,14 @@ export type ConfirmItemsCheck = {
   confirmedItems: boolean;
 };
 
+// Row 84 (wishlist item 35): the six settings, each value its title's translation key.
 export enum SettingsOptions {
-  accountInformation = 'account_information',
-  emergencyContact = 'emergency_contact',
-  // Spec 0051 (row 108).
-  changePassword = 'change_password',
-  accountChanges = 'account_changes',
   language = 'language',
-  navigation = 'navigation',
-  operatingArea = 'specify_operating',
-  verification = 'verification',
-  notifications = 'notifications',
-  cashOnDelivery = 'cash_on_delivery',
-  licenses = 'licenses',
-  vehicleType = 'vehicle_type',
-  shiftAvailability = 'shift_availability',
+  navigation = 'navigation_app_title',
+  offerSound = 'offer_sound',
+  autoAccept = 'auto_accept_orders',
+  emergencyContact = 'emergency_contact',
+  ringCheck = 'ring_check',
 }
 
 export type Language = {
@@ -474,16 +468,6 @@ export enum AccessibilitySettingsOptions {
   seatbeltReminder = 'seatbelt_reminder',
   deaf = 'im_deaf',
 }
-
-export type Ringtone = {
-  id: string;
-  name: string;
-};
-
-export type Volume = {
-  id: string;
-  name: string;
-};
 
 export enum ToastMessage {
   enableNotifications = 'enable_notifications',

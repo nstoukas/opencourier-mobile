@@ -13,7 +13,6 @@ import { SideMenuItemSwitch } from '@app/components/SideMenuItemSwitch/SideMenuI
 import { SideMenuItemPlain } from '@app/components/SideMenuItemPlain/SideMenuItemPlain';
 import { DrawerScreens } from '@app/navigation/drawer/types';
 import { useTranslation } from 'react-i18next';
-import { OrderSetting } from '@app/types/enums';
 import { useLocationPermission } from '@app/hooks/useLocationPermission';
 import { waitingCount } from '@app/services/jobStepOutbox';
 import {
@@ -40,7 +39,9 @@ import { MainScreens } from '@app/navigation/main/types';
 // content props (no route), which is the type the drawer library exports for it.
 type Props = DrawerContentComponentProps;
 
-const section1 = [SideMenuItem.Location, SideMenuItem.AutoOrders];
+// Row 84: auto accept moved to Settings, one of its six; Location stays here.
+const section1 = [SideMenuItem.Location];
+// Row 84: Account (Change password, Changes by the co-op, licences) sits before Settings.
 const section2 = [
   SideMenuItem.Orders,
   SideMenuItem.Chat,
@@ -48,6 +49,7 @@ const section2 = [
   SideMenuItem.Complaints,
   SideMenuItem.Payout,
   SideMenuItem.Support,
+  SideMenuItem.Account,
   SideMenuItem.Settings,
   SideMenuItem.Logout,
 ];
@@ -62,6 +64,7 @@ const section2WithShifts = [
   SideMenuItem.Complaints,
   SideMenuItem.Payout,
   SideMenuItem.Support,
+  SideMenuItem.Account,
   SideMenuItem.Settings,
   SideMenuItem.Logout,
 ];
@@ -80,17 +83,12 @@ export const SideMenu = ({ navigation }: Props) => {
 
   const queryClient = useQueryClient();
 
-  const [autoAcceptOrders, setAutoAcceptOrders] = useState<boolean>(
-    user?.deliverySetting === OrderSetting.auto_accept,
-  );
   const [status, setStatus] = useState<string | undefined>(user?.status);
 
-  const { updateStatus, updateDeliverySettings } = useUser();
+  const { updateStatus } = useUser();
 
   const isSwitchOn = (item: SideMenuItem) => {
     switch (item) {
-      case SideMenuItem.AutoOrders:
-        return autoAcceptOrders;
       case SideMenuItem.Location:
         // On when the app may use location. It never starts a watch itself:
         // the app tracks only while Online or on a job (row 67).
@@ -101,12 +99,6 @@ export const SideMenu = ({ navigation }: Props) => {
 
   const handleSwitchValueChange = (item: SideMenuItem, value: boolean) => {
     switch (item) {
-      case SideMenuItem.AutoOrders:
-        //setAutoAcceptOrdersStorage(value);
-
-        updateDeliverySettings(value ? 'AUTO_ACCEPT' : 'MANUAL');
-        setAutoAcceptOrders(value);
-        break;
       case SideMenuItem.Location:
         if (value) {
           requestLocationPermission();
@@ -240,6 +232,10 @@ export const SideMenu = ({ navigation }: Props) => {
         navigation.navigate(DrawerScreens.PaymentMethods);
         break;
       case SideMenuItem.Support:
+        break;
+      case SideMenuItem.Account:
+        // A screen of the main stack, which holds the drawer (row 84).
+        navigation.navigate(MainScreens.Account);
         break;
       case SideMenuItem.Settings:
         navigation.navigate(DrawerScreens.Settings);
