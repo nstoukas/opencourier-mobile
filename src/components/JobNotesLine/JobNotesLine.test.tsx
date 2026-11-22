@@ -1,73 +1,322 @@
 import React from 'react';
-import { render, fireEvent } from '@testing-library/react-native';
+import { Alert } from 'react-native';
+import { render, fireEvent, act } from '@testing-library/react-native';
 import '@app/localization/i18n';
 import i18n from '@app/localization/i18n';
 import { JobNote, LEAVE_AT_DOOR } from '@app/utilities/jobCard';
-import { JobNotesLine } from './JobNotesLine';
+import { Note } from '@app/types/types';
+import { AddressNoteActions, JobNotesLine } from './JobNotesLine';
 
-describe('JobNotesLine (spec 0021, AC-14)', () => {
-  it('renders null when notes is empty (no notes, no line)', () => {
-    const { toJSON } = render(<JobNotesLine notes={[]} />);
-    expect(toJSON()).toBeNull();
+// Spec 0021 (AC-14), Spec 0053 (AC-2, AC-5, AC-7, AC-8):
+// JobNotesLine displays notes on one line and opens a sheet grouping by author.
+// With addressNotes (spec 0053), riders can add notes, upvote colleague notes,
+// flag notes for admin review, edit/delete their own notes, and learn how notes work.
+describe('JobNotesLine (spec 0021, spec 0053)', () => {
+  let alertSpy: jest.SpyInstance;
+
+  const mockActions: AddressNoteActions = {
+    onAdd: jest.fn(),
+    onEdit: jest.fn(),
+    onDelete: jest.fn(),
+    onUpvote: jest.fn(),
+    onFlag: jest.fn(),
+    retentionDays: 182,
+  };
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+    alertSpy = jest.spyOn(Alert, 'alert').mockImplementation(() => {});
   });
 
-  it('renders a single note without +N counter', () => {
-    const notes: JobNote[] = [
-      { author: 'customer', text: 'Please ring the doorbell twice' },
-    ];
-
-    const { getByTestId, getByText, queryByText } = render(
-      <JobNotesLine notes={notes} />,
-    );
-
-    expect(getByTestId('job-notes-line')).toBeTruthy();
-    expect(getByText('Please ring the doorbell twice')).toBeTruthy();
-    expect(queryByText(/\+/)).toBeNull();
+  afterEach(() => {
+    alertSpy.mockRestore();
   });
 
-  it('renders translated "Leave at door" and +N for multiple notes', () => {
-    const notes: JobNote[] = [
+  describe('no notes state (spec 0021 vs spec 0053)', () => {
+    it('renders null when notes is empty and addressNotes is omitted (no notes, no line)', () => {
+      const { toJSON } = render(<JobNotesLine notes={[]} />);
+      expect(toJSON()).toBeNull();
+    });
+
+    it('renders "Add a note about this place" line when notes is empty but addressNotes is provided (spec 0053)', () => {
+      const { getByTestId, getByText } = render(
+        <JobNotesLine notes={[]} addressNotes={mockActions} />,
+      );
+
+      expect(getByTestId('job-notes-line')).toBeTruthy();
+      expect(
+        getByText(i18n.t('translations:address_note_add')),
+      ).toBeTruthy();
+    });
+  });
+
+  describe('single and multiple notes display (spec 0021)', () => {
+    it('renders a single note without +N counter', () => {
+      const notes: JobNote[] = [
+        { author: 'customer', text: 'Please ring the doorbell twice' },
+      ];
+
+      const { getByTestId, getByText, queryByText } = render(
+        <JobNotesLine notes={notes} />,
+      );
+
+      expect(getByTestId('job-notes-line')).toBeTruthy();
+      expect(getByText('Please ring the doorbell twice')).toBeTruthy();
+      expect(queryByText(/\+/)).toBeNull();
+    });
+
+    it('renders translated "Leave at door" and +N for multiple notes', () => {
+      const notes: JobNote[] = [
+        { author: 'door', text: LEAVE_AT_DOOR },
+        { author: 'customer', text: 'Knock gently' },
+        { author: 'restaurant', text: 'Pizza box is hot' },
+      ];
+
+      const { getByTestId, getByText } = render(<JobNotesLine notes={notes} />);
+
+      expect(getByTestId('job-notes-line')).toBeTruthy();
+      expect(getByText(i18n.t('translations:leave_at_door'))).toBeTruthy();
+      expect(getByText('+2')).toBeTruthy();
+    });
+  });
+
+  describe('sheet grouping and address note actions (spec 0053)', () => {
+    const otherRiderNote: Note = {
+      id: 'note-colleague-1',
+      note: 'Gate code 1234, watch out for dog',
+      upvotes: 4,
+      upvotedByMe: false,
+      flaggedByMe: false,
+      mine: false,
+    };
+
+    const myNote: Note = {
+      id: 'note-mine-2',
+      note: 'Lift is broken, walk up stairs',
+      upvotes: 1,
+      upvotedByMe: false,
+      flaggedByMe: false,
+      mine: true,
+    };
+
+    const notesWithAddressNotes: JobNote[] = [
       { author: 'door', text: LEAVE_AT_DOOR },
-      { author: 'customer', text: 'Knock gently' },
-      { author: 'restaurant', text: 'Pizza box is hot' },
+      { author: 'customer', text: 'Ring twice' },
+      { author: 'restaurant', text: 'Handle with care' },
+      {
+        author: 'riders',
+        text: otherRiderNote.note,
+        addressNote: otherRiderNote,
+      },
+      {
+        author: 'riders',
+        text: myNote.note,
+        addressNote: myNote,
+      },
     ];
 
-    const { getByTestId, getByText } = render(<JobNotesLine notes={notes} />);
+    it('opens sheet grouping notes by Customer, Restaurant, and Co-op riders without showing author names', () => {
+      const { getByTestId, getByText, queryByText } = render(
+        <JobNotesLine
+          notes={notesWithAddressNotes}
+          addressNotes={mockActions}
+        />,
+      );
 
-    expect(getByTestId('job-notes-line')).toBeTruthy();
-    expect(getByText(i18n.t('translations:leave_at_door'))).toBeTruthy();
-    expect(getByText('+2')).toBeTruthy();
-  });
+      fireEvent.press(getByTestId('job-notes-line'));
 
-  it('opens sheet grouping notes by Customer, Restaurant, and Co-op riders', () => {
-    const notes: JobNote[] = [
-      { author: 'door', text: LEAVE_AT_DOOR },
-      { author: 'customer', text: 'Gate code 4321' },
-      { author: 'restaurant', text: 'Careful with drinks' },
-      { author: 'riders', text: 'Beware of dog in yard' },
-    ];
+      expect(getByTestId('job-notes-sheet')).toBeTruthy();
+      expect(getByText(i18n.t('translations:notes_from_customer'))).toBeTruthy();
+      expect(
+        getByText(i18n.t('translations:notes_from_restaurant')),
+      ).toBeTruthy();
+      expect(getByText(i18n.t('translations:notes_from_riders'))).toBeTruthy();
 
-    const { getByTestId, getByText, getAllByText } = render(
-      <JobNotesLine notes={notes} />,
-    );
+      // Note contents are shown
+      expect(getByText(otherRiderNote.note)).toBeTruthy();
+      expect(getByText(myNote.note)).toBeTruthy();
 
-    fireEvent.press(getByTestId('job-notes-line'));
+      // Author names/IDs are NEVER shown (AC-3)
+      expect(queryByText(/courier/i)).toBeNull();
+      expect(queryByText(/author/i)).toBeNull();
+    });
 
-    expect(getByTestId('job-notes-sheet')).toBeTruthy();
+    it('displays upvote count and allows upvoting colleague notes (AC-5)', () => {
+      const { getByTestId, getByText } = render(
+        <JobNotesLine
+          notes={notesWithAddressNotes}
+          addressNotes={mockActions}
+        />,
+      );
 
-    // Section headers
-    expect(getByText(i18n.t('translations:notes_from_customer'))).toBeTruthy();
-    expect(
-      getByText(i18n.t('translations:notes_from_restaurant')),
-    ).toBeTruthy();
-    expect(getByText(i18n.t('translations:notes_from_riders'))).toBeTruthy();
+      fireEvent.press(getByTestId('job-notes-line'));
 
-    // Notes content
-    expect(
-      getAllByText(i18n.t('translations:leave_at_door')).length,
-    ).toBeGreaterThanOrEqual(2);
-    expect(getByText('Gate code 4321')).toBeTruthy();
-    expect(getByText('Careful with drinks')).toBeTruthy();
-    expect(getByText('Beware of dog in yard')).toBeTruthy();
+      const upvoteButton = getByTestId(
+        `address-note-upvote-${otherRiderNote.id}`,
+      );
+      expect(upvoteButton).toBeTruthy();
+      expect(getByText('4')).toBeTruthy();
+
+      fireEvent.press(upvoteButton);
+      expect(mockActions.onUpvote).toHaveBeenCalledWith(otherRiderNote);
+    });
+
+    it('allows flagging a colleague note with confirmation alert (AC-7)', () => {
+      const { getByTestId } = render(
+        <JobNotesLine
+          notes={notesWithAddressNotes}
+          addressNotes={mockActions}
+        />,
+      );
+
+      fireEvent.press(getByTestId('job-notes-line'));
+
+      const flagButton = getByTestId(`address-note-flag-${otherRiderNote.id}`);
+      expect(flagButton).toBeTruthy();
+
+      fireEvent.press(flagButton);
+
+      expect(alertSpy).toHaveBeenCalledWith(
+        i18n.t('translations:address_note_flag_title'),
+        i18n.t('translations:address_note_flag_body'),
+        expect.any(Array),
+      );
+
+      // Confirm flag in alert
+      const buttons = alertSpy.mock.calls[0][2];
+      const confirmButton = buttons.find(
+        (b: any) => b.text === i18n.t('translations:address_note_flag_confirm'),
+      );
+      expect(confirmButton).toBeTruthy();
+
+      act(() => {
+        confirmButton.onPress();
+      });
+
+      expect(mockActions.onFlag).toHaveBeenCalledWith(otherRiderNote);
+    });
+
+    it('displays "Flagged" mark and hides flag button when already flagged by me (AC-7)', () => {
+      const flaggedNote: Note = {
+        ...otherRiderNote,
+        flaggedByMe: true,
+      };
+      const notes: JobNote[] = [
+        {
+          author: 'riders',
+          text: flaggedNote.note,
+          addressNote: flaggedNote,
+        },
+      ];
+
+      const { getByTestId, getByText, queryByTestId } = render(
+        <JobNotesLine notes={notes} addressNotes={mockActions} />,
+      );
+
+      fireEvent.press(getByTestId('job-notes-line'));
+
+      expect(
+        getByText(i18n.t('translations:address_note_flagged_mark')),
+      ).toBeTruthy();
+      expect(queryByTestId(`address-note-flag-${flaggedNote.id}`)).toBeNull();
+    });
+
+    it('shows edit and delete buttons for the rider’s own note, and no upvote or flag (AC-5, AC-7)', () => {
+      const { getByTestId, queryByTestId, getByLabelText } = render(
+        <JobNotesLine
+          notes={notesWithAddressNotes}
+          addressNotes={mockActions}
+        />,
+      );
+
+      fireEvent.press(getByTestId('job-notes-line'));
+
+      // Upvote and flag must NOT be rendered for own note
+      expect(queryByTestId(`address-note-upvote-${myNote.id}`)).toBeNull();
+      expect(queryByTestId(`address-note-flag-${myNote.id}`)).toBeNull();
+
+      // Edit and delete buttons are present
+      expect(
+        getByLabelText(i18n.t('translations:address_note_edit')),
+      ).toBeTruthy();
+      expect(
+        getByLabelText(i18n.t('translations:address_note_delete')),
+      ).toBeTruthy();
+    });
+
+    it('allows editing rider’s own note (AC-4)', () => {
+      const { getByTestId, getByLabelText } = render(
+        <JobNotesLine
+          notes={notesWithAddressNotes}
+          addressNotes={mockActions}
+        />,
+      );
+
+      fireEvent.press(getByTestId('job-notes-line'));
+
+      const editButton = getByLabelText(
+        i18n.t('translations:address_note_edit'),
+      );
+      fireEvent.press(editButton);
+
+      expect(mockActions.onEdit).toHaveBeenCalledWith(myNote);
+    });
+
+    it('allows deleting rider’s own note (AC-2)', () => {
+      const { getByTestId, getByLabelText } = render(
+        <JobNotesLine
+          notes={notesWithAddressNotes}
+          addressNotes={mockActions}
+        />,
+      );
+
+      fireEvent.press(getByTestId('job-notes-line'));
+
+      const deleteButton = getByLabelText(
+        i18n.t('translations:address_note_delete'),
+      );
+      fireEvent.press(deleteButton);
+
+      expect(mockActions.onDelete).toHaveBeenCalledWith(myNote);
+    });
+
+    it('provides "Add a note about this place" link in riders section (AC-2)', () => {
+      const { getByTestId } = render(
+        <JobNotesLine
+          notes={notesWithAddressNotes}
+          addressNotes={mockActions}
+        />,
+      );
+
+      fireEvent.press(getByTestId('job-notes-line'));
+
+      const addLink = getByTestId('address-note-add');
+      expect(addLink).toBeTruthy();
+
+      fireEvent.press(addLink);
+      expect(mockActions.onAdd).toHaveBeenCalledTimes(1);
+    });
+
+    it('provides "How notes work" link opening the rules inside the sheet (AC-8)', () => {
+      const { getByTestId, getByText } = render(
+        <JobNotesLine
+          notes={notesWithAddressNotes}
+          addressNotes={mockActions}
+        />,
+      );
+
+      fireEvent.press(getByTestId('job-notes-line'));
+
+      const howLink = getByTestId('address-note-how');
+      expect(howLink).toBeTruthy();
+
+      fireEvent.press(howLink);
+
+      // Sheet title changes to "How notes work" and rules component is rendered
+      expect(
+        getByText(i18n.t('translations:address_note_rules_title')),
+      ).toBeTruthy();
+      expect(getByTestId('address-notes-rules')).toBeTruthy();
+    });
   });
 });

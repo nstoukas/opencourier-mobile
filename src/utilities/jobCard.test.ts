@@ -75,8 +75,16 @@ describe('jobCard utilities (spec 0021, AC-6 to AC-10, AC-14)', () => {
         const notes = notesFor(order, 'pickup');
         expect(notes).toEqual([
           { author: 'restaurant', text: 'Use side entrance near kitchen' },
-          { author: 'riders', text: 'Ring bell on left' },
-          { author: 'riders', text: 'Watch out for dog' },
+          {
+            author: 'riders',
+            text: 'Ring bell on left',
+            addressNote: { note: 'Ring bell on left' },
+          },
+          {
+            author: 'riders',
+            text: 'Watch out for dog',
+            addressNote: { note: 'Watch out for dog' },
+          },
         ]);
       });
 
@@ -89,7 +97,37 @@ describe('jobCard utilities (spec 0021, AC-6 to AC-10, AC-14)', () => {
         } as unknown as Order;
 
         const notes = notesFor(order, 'pickup');
-        expect(notes).toEqual([{ author: 'riders', text: 'Rider tip' }]);
+        expect(notes).toEqual([
+          {
+            author: 'riders',
+            text: 'Rider tip',
+            addressNote: { note: 'Rider tip' },
+          },
+        ]);
+      });
+
+      it('attaches the full address note object on pickupLocationNotes', () => {
+        const fullNote = {
+          id: 'note-pickup-1',
+          note: 'Key under mat',
+          upvotes: 3,
+          upvotedByMe: true,
+          flaggedByMe: false,
+          mine: false,
+        };
+        const order = {
+          ...baseOrder,
+          pickupLocationNotes: [fullNote],
+        } as unknown as Order;
+
+        const notes = notesFor(order, 'pickup');
+        expect(notes).toEqual([
+          {
+            author: 'riders',
+            text: 'Key under mat',
+            addressNote: fullNote,
+          },
+        ]);
       });
     });
 
@@ -110,7 +148,35 @@ describe('jobCard utilities (spec 0021, AC-6 to AC-10, AC-14)', () => {
           { author: 'customer', text: 'Door code 1234' },
           { author: 'customer', text: 'Extra napkins requested' },
           { author: 'restaurant', text: 'Handle soup container with care' },
-          { author: 'riders', text: 'Elevator is broken' },
+          {
+            author: 'riders',
+            text: 'Elevator is broken',
+            addressNote: { note: 'Elevator is broken' },
+          },
+        ]);
+      });
+
+      it('attaches the full address note object on dropOffLocationNotes', () => {
+        const fullNote = {
+          id: 'note-dropoff-1',
+          note: 'Intercom 42 is broken',
+          upvotes: 7,
+          upvotedByMe: false,
+          flaggedByMe: false,
+          mine: true,
+        };
+        const order = {
+          ...baseOrder,
+          dropOffLocationNotes: [fullNote],
+        } as unknown as Order;
+
+        const notes = notesFor(order, 'dropoff');
+        expect(notes).toEqual([
+          {
+            author: 'riders',
+            text: 'Intercom 42 is broken',
+            addressNote: fullNote,
+          },
         ]);
       });
 
