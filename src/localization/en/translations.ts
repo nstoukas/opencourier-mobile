@@ -562,6 +562,8 @@ export default {
   offer_has_ended: 'This offer has ended',
   // Spec 0048 (row 80): two orders offered together, answered together.
   stack_offer_title: 'Two orders together',
+  stack_still_loading:
+    'The other order of this pair is still on its way to your phone. Check your offers again in a moment.',
   stack_offer_each_paid: 'Each paid in full: {{first}} and {{second}}',
   stack_offer_ride: '{{km}} km in all · About {{minutes}} min',
   stack_offer_accept: 'Accept both',

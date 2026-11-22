@@ -18,6 +18,7 @@ import {
   remindRiderOfOffer,
 } from '@app/services/offerReminder';
 import i18next from 'i18next';
+import { stackStopsOf } from '@app/utilities/stack';
 import {
   isOfferAnswered,
   loadAnsweredOffers,
@@ -347,6 +348,21 @@ export const useHomeOrders = () => {
     }
     // A stack is accepted as a pair, by one call (spec 0048, AC-5).
     const partnerId = stackPartnerIdOf(orderId);
+    // Review of row 80: one order of a pair is answered only once the phone
+    // has both orders and their stops, since the server takes both on this
+    // one tap and the rider must see both first (AC-8). Half a pair, or a
+    // pair without a usable stop list, waits for a fetch, which also catches
+    // a pair the server has since split into a single offer.
+    const offers = newOrdersRef.current ?? [];
+    const offer = offers.find(candidate => candidate.id === orderId);
+    if (offer?.offerGroupId) {
+      const partner = offers.find(candidate => candidate.id === partnerId);
+      if (!partner || !stackStopsOf(offer, partner)) {
+        refetchNewRef.current();
+        Alert.alert(i18next.t('translations:stack_still_loading'));
+        return;
+      }
+    }
     // Only the first accept or decline for an offer is sent.
     if (!claimOffer(orderId, partnerId)) {
       return;
