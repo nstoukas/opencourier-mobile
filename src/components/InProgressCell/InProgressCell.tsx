@@ -8,12 +8,15 @@ import {
   ViewStyle,
 } from 'react-native';
 import { useTranslation } from 'react-i18next';
-import { Order } from '@app/types/types';
+import { NoteStop, Order } from '@app/types/types';
 import { OrderStatus } from '@app/types/enums';
 import { Icon } from '@app/components/Icon/Icon';
 import { Button, ButtonType } from '@app/components/Button/Button';
 import { StageStrip } from '@app/components/StageStrip/StageStrip';
-import { JobNotesLine } from '@app/components/JobNotesLine/JobNotesLine';
+import {
+  AddressNoteActions,
+  JobNotesLine,
+} from '@app/components/JobNotesLine/JobNotesLine';
 import { JobItemsLine } from '@app/components/JobItemsLine/JobItemsLine';
 import { boxSizeLine } from '@app/utilities/boxSize';
 import { legLine } from '@app/utilities/legs';
@@ -48,6 +51,9 @@ type Props = {
   onMovePin?: (order: Order) => void;
   // True while this delivery's pin move runs: the button spins and ignores taps.
   movingPin?: boolean;
+  // Spec 0053: upvote, flag, add, edit and delete for the riders' notes on a stop. Left out, the
+  // notes are plain text.
+  addressNotesFor?: (order: Order, stop: NoteStop) => AddressNoteActions;
   // Spec 0018 (AC-7): each leg's km, from the co-op's route.
   toRestaurant?: LegFigures;
   toCustomer?: LegFigures;
@@ -105,6 +111,7 @@ export const InProgressCell = ({
   onNavigate,
   onMovePin,
   movingPin,
+  addressNotesFor,
   toRestaurant,
   toCustomer,
   routeUnavailable = false,
@@ -118,6 +125,9 @@ export const InProgressCell = ({
   const jobOver = isJobOver(order.status);
   const canReachCustomer = !!order.dropoffPhoneNumber && !jobOver;
   const canReachRestaurant = !!order.pickupPhoneNumber && !jobOver;
+  // Spec 0053 (AC-2): notes can be added and voted on only while the rider holds the job.
+  const addressNotesOf = (stop: NoteStop) =>
+    addressNotesFor && !jobOver ? addressNotesFor(order, stop) : undefined;
 
   // Drawn again each second while the free hand back window is open, so the
   // customer's first name appears the moment it ends (decision 71.10).
@@ -220,7 +230,10 @@ export const InProgressCell = ({
             ) : null}
           </View>
           <JobItemsLine deliveryId={order.id} items={order.orderItems} />
-          <JobNotesLine notes={notesFor(order, 'pickup')} />
+          <JobNotesLine
+            notes={notesFor(order, 'pickup')}
+            addressNotes={addressNotesOf('PICKUP')}
+          />
         </View>
       ) : (
         <View style={styles.hero}>
@@ -261,7 +274,10 @@ export const InProgressCell = ({
               />
             ) : null}
           </View>
-          <JobNotesLine notes={notesFor(order, 'dropoff')} />
+          <JobNotesLine
+            notes={notesFor(order, 'dropoff')}
+            addressNotes={addressNotesOf('DROPOFF')}
+          />
           {onMovePin && canMoveDropoffPin(order) ? (
             <Button
               style={styles.movePin}

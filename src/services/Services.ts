@@ -22,6 +22,7 @@ import { setLatestFix } from './latestFix';
 import { clearHeldArrivals } from './heldArrivals';
 import { clearStatementFiles } from './statements/statementsApi';
 import { clearPickedPhotoFiles } from './complaintPhotoFiles';
+import { clearAddressNotesRulesSeen } from './addressNotesRules';
 import { clearPickedUpTimes } from './pickupTimes';
 import notificationDeviceService, {
   NotificationDeviceService,
@@ -90,6 +91,8 @@ const Services = (): Services => {
     clearStatementFiles().catch(() => undefined);
     // The picker's copies of complaint photos (row 83 review).
     clearPickedPhotoFiles().catch(() => undefined);
+    // Spec 0053: the next rider on this phone sees the address notes rules again.
+    clearAddressNotesRulesSeen().catch(() => undefined);
   };
 
   return {

@@ -159,18 +159,19 @@ export type Verification = {
   picture: boolean;
 };
 
+// Spec 0053 (AC-3): a note about a place, as the job card gets it: never its author. `mine`
+// only says the rider may edit or delete it; `upvotes` counts other riders' upvotes.
 export type Note = {
   id: string;
   note: string;
-  courierId: string;
-  actor: string;
-  locationId: string;
-  deliveryId: string;
-  createdAt: string;
   upvotes: number;
-  downvotes: number;
-  currentCourierReaction: string;
+  upvotedByMe: boolean;
+  flaggedByMe: boolean;
+  mine: boolean;
 };
+
+// Which stop of the job a note is about (spec 0053, cross check 3).
+export type NoteStop = 'PICKUP' | 'DROPOFF';
 
 export type OrderItem = {
   name: string;

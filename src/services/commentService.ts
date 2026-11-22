@@ -1,16 +1,19 @@
 import { UClient } from './Client';
 import { NewCommentParams, OrderServiceReponse } from './types';
+
+// Spec 0053: the rider's notes about places (the backend's location-notes routes). Upvote is the
+// only reaction (downvotes left the app), and a rider can flag a note for an admin.
 export interface CommentService {
   createComment: (params: NewCommentParams) => Promise<OrderServiceReponse>;
   updateComment: (params: {
     id: string;
     note: string;
+    confirmed?: boolean;
   }) => Promise<OrderServiceReponse>;
   deleteComment: (id: string) => Promise<OrderServiceReponse>;
-  addReaction: (params: {
-    locationNoteId: string;
-    reaction: string;
-  }) => Promise<any>;
+  // A second upvote by the same rider takes it back.
+  toggleUpvote: (locationNoteId: string) => Promise<unknown>;
+  flagComment: (params: { id: string; reason?: string }) => Promise<unknown>;
 }
 
 const commentService = (client: UClient): CommentService => {
@@ -23,27 +26,37 @@ const commentService = (client: UClient): CommentService => {
   const updateComment = async (params: {
     id: string;
     note: string;
+    confirmed?: boolean;
   }): Promise<OrderServiceReponse> => {
-    const { id, note } = params;
-    return client.patch(`location-notes/${id}`, { note });
+    const { id, note, confirmed } = params;
+    return client.patch(
+      `location-notes/${id}`,
+      confirmed ? { note, confirmed } : { note },
+    );
   };
   const deleteComment = async (id: string): Promise<OrderServiceReponse> => {
     return client.delete(`location-notes/${id}`);
   };
 
-  const addReaction = async (params: {
-    locationNoteId: string;
-    reaction: string;
-  }) => {
-    const { locationNoteId, reaction } = params;
-    return client.post(`location-notes/${locationNoteId}/react`, { reaction });
+  const toggleUpvote = async (locationNoteId: string) => {
+    return client.post(`location-notes/${locationNoteId}/react`, {
+      reaction: 'UPVOTE',
+    });
+  };
+
+  const flagComment = async (params: { id: string; reason?: string }) => {
+    return client.post(
+      `location-notes/${params.id}/flag`,
+      params.reason ? { reason: params.reason } : {},
+    );
   };
 
   return {
     createComment,
     updateComment,
     deleteComment,
-    addReaction,
+    toggleUpvote,
+    flagComment,
   };
 };
 

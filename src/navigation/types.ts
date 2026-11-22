@@ -1,6 +1,6 @@
 import { NavigationProp, RouteProp } from '@react-navigation/native';
 import { MainStackParamList } from './main/types';
-import { Note, CourierTip, Order, UserStatus } from '@app/types/types';
+import { Note, NoteStop, UserStatus } from '@app/types/types';
 
 export enum RootScreen {
   Loading = 'Loading',
@@ -25,16 +25,12 @@ export type RootStackParamList = {
     onAccept: (status: UserStatus) => void;
     onCancel: () => void;
   };
+  // Spec 0053: a new note on one stop of a job the rider holds, or an edit of the rider's own note.
+  // The screen sends it itself (with the personal data warning) and goes back once it is saved.
   AddNoteModal: {
-    type?: 'merchant' | 'location';
-    order?: Order;
+    deliveryId?: string;
+    stop?: NoteStop;
     noteToEdit?: Note;
-    onNoteAdded?: (
-      text: string,
-      type: 'merchant' | 'location',
-      order: Order,
-    ) => void;
-    onNoteEdited?: (editedText: string, note: Note) => void;
   };
   DeleteNoteModal: {
     note: Note;

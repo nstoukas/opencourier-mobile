@@ -19,6 +19,7 @@ import { queryClient } from './queryClient';
 import { cancelAllOfferAlerts } from './offerPush/offerAlert';
 import { clearStatementFiles } from './statements/statementsApi';
 import { clearPickedPhotoFiles } from './complaintPhotoFiles';
+import { clearAddressNotesRulesSeen } from './addressNotesRules';
 import { StackActions } from '@react-navigation/native';
 import { navigationRef } from '@app/navigation/navigationRef';
 import { RootScreen } from '@app/navigation/types';
@@ -177,6 +178,8 @@ export const clearRiderDataOnPhone = async (http: UClient): Promise<void> => {
   await clearStatementFiles();
   // Nor the picker's copies of complaint photos (row 83 review), as logging out does.
   await clearPickedPhotoFiles();
+  // Nor whether they had seen the address notes rules (spec 0053), as logging out does.
+  await clearAddressNotesRulesSeen().catch(() => undefined);
 };
 
 // Logs the rider out on this phone after the backend refused to renew the

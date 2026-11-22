@@ -16,6 +16,9 @@ export type JobContact = {
   // dropped. Missing from an answer saved by an older app version: shifts then stay hidden.
   shiftsEnabled?: boolean;
   shiftDropNoticeHours?: number;
+  // Spec 0053 (AC-8): days an address note lives when no rider upvotes it, for the rules notice.
+  // Missing from an answer saved by an older app version: the notice then leaves the number out.
+  addressNoteRetentionDays?: number;
 };
 
 // The one request for it, shared by every reader of the same query.

@@ -1,4 +1,4 @@
-import { Order } from '@app/types/types';
+import { Note, Order } from '@app/types/types';
 import { OrderStatus } from '@app/types/enums';
 import { ArrivalStage } from './arrival';
 
@@ -19,7 +19,8 @@ export const firstNameOf = (name: string | null | undefined): string =>
 // Who wrote a note, as the notes sheet groups them (AC-14).
 export type NoteAuthor = 'door' | 'customer' | 'restaurant' | 'riders';
 
-export type JobNote = { author: NoteAuthor; text: string };
+// A riders' note also carries the note itself (spec 0053), for its upvote, flag, edit and delete.
+export type JobNote = { author: NoteAuthor; text: string; addressNote?: Note };
 
 // The value of `deliverableAction` that asks the rider to leave the order.
 // Meeting at the door is the normal case and is never shown.
@@ -32,15 +33,25 @@ const clean = (text: string | null | undefined): string => text?.trim() ?? '';
 // other riders' notes on that place (AC-14). Empty texts are left out.
 export const notesFor = (order: Order, stage: ArrivalStage): JobNote[] => {
   const notes: JobNote[] = [];
-  const add = (author: NoteAuthor, text: string | null | undefined) => {
+  const add = (
+    author: NoteAuthor,
+    text: string | null | undefined,
+    addressNote?: Note,
+  ) => {
     const value = clean(text);
     if (value) {
-      notes.push({ author, text: value });
+      notes.push(
+        addressNote
+          ? { author, text: value, addressNote }
+          : { author, text: value },
+      );
     }
   };
   if (stage === 'pickup') {
     add('restaurant', order.pickupNotes);
-    (order.pickupLocationNotes ?? []).forEach(note => add('riders', note.note));
+    (order.pickupLocationNotes ?? []).forEach(note =>
+      add('riders', note.note, note),
+    );
     return notes;
   }
   if (order.deliverableAction === LEAVE_AT_DOOR) {
@@ -51,7 +62,9 @@ export const notesFor = (order: Order, stage: ArrivalStage): JobNote[] => {
   add('customer', order.dropoffNotes);
   (order.customerNotes ?? []).forEach(text => add('customer', text));
   add('restaurant', order.dropoffSellerNotes);
-  (order.dropOffLocationNotes ?? []).forEach(note => add('riders', note.note));
+  (order.dropOffLocationNotes ?? []).forEach(note =>
+    add('riders', note.note, note),
+  );
   return notes;
 };
 

@@ -696,6 +696,52 @@ export default {
   notes_from_customer: 'Customer',
   notes_from_restaurant: 'Restaurant',
   notes_from_riders: 'Co-op riders',
+  // Spec 0053: courier notes about a place (AC-2, AC-4, AC-5, AC-7, AC-8).
+  address_note_add: 'Add a note about this place',
+  address_note_how: 'How notes work',
+  address_note_upvote: 'Upvote this note ({{count}})',
+  address_note_upvoted: 'Upvoted ({{count}}). Tap to take it back',
+  address_note_flag: 'Flag this note',
+  address_note_flagged_mark: 'Flagged',
+  address_note_edit: 'Edit your note',
+  address_note_delete: 'Delete your note',
+  address_note_flag_title: 'Flag this note?',
+  address_note_flag_body:
+    'An admin will look at it and can delete it. Flag a note that describes a person, or is wrong or rude.',
+  address_note_flag_confirm: 'Flag',
+  address_note_flagged_title: 'Note flagged',
+  address_note_flagged: 'Thank you. An admin will look at it.',
+  address_note_failed_title: 'That did not work',
+  address_note_failed: 'Check your connection and try again.',
+  address_note_title: 'Note about this place',
+  address_note_title_edit: 'Edit your note',
+  address_note_placeholder:
+    'The entrance is round the back, the bell is broken...',
+  address_note_hint:
+    'About the place, never the person. Every rider delivering here sees it, without your name.',
+  address_note_warning_title: 'About the place, not the person',
+  address_note_warning:
+    'Notes describe the place, never the person. This looks like it holds a name, phone or email.',
+  address_note_warning_edit: 'Edit',
+  address_note_warning_save: 'Save anyway',
+  address_note_save_failed:
+    'The note was not saved. Check your connection and try again.',
+  address_note_rules_title: 'How notes work',
+  address_note_rules_for:
+    'Notes are about a place: where the entrance is, a broken bell, a dog in the yard. Every rider delivering within about 30 metres sees them on the job card, never as a list or a map, and never with the name of who wrote them.',
+  address_note_rules_person:
+    'Never write about the person: no names, phone numbers or emails. The app warns you when a note looks like one.',
+  address_note_rules_retention:
+    'A note no rider upvotes for {{days}} days ({{months}}) is deleted on its own. Each upvote from another rider keeps it for another {{days}} days.',
+  address_note_rules_retention_unknown:
+    'A note no rider upvotes for the period the co-op sets is deleted on its own. Each upvote from another rider keeps it longer.',
+  address_note_rules_flag:
+    'Any rider can flag a note. An admin looks at flagged notes and can delete any note that breaks these rules.',
+  address_note_rules_votes:
+    'An upvote counts for the note, never for its author: nobody gets a score from notes.',
+  address_note_rules_ok: 'Got it',
+  address_note_about_months: 'about {{count}} month',
+  address_note_about_months_plural: 'about {{count}} months',
   im_here: "I'm here",
   swipe_picked_up: 'Picked up',
   swipe_delivered: 'Delivered',

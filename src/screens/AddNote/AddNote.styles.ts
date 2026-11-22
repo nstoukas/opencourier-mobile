@@ -59,6 +59,15 @@ export const styles = StyleSheet.create({
   iconinfo: {
     marginRight: 2,
   },
+  // Spec 0053: the hint wraps over two lines beside its icon.
+  hint: {
+    flexShrink: 1,
+  },
+  rules: {
+    paddingHorizontal: 8,
+    paddingBottom: 8,
+    gap: 8,
+  },
   backButton: {
     width: 40,
     height: 40,

@@ -64,10 +64,13 @@ export type UserServiceResponse = {
   error: boolean;
 };
 
+// Spec 0053 (AC-2): a note on one stop of a held job; the server works out the point. `confirmed`
+// means the rider saw the personal data warning and chose Save anyway (AC-4).
 export type NewCommentParams = {
   note: string;
   deliveryId: string;
-  locationId: string;
+  stop: 'PICKUP' | 'DROPOFF';
+  confirmed?: boolean;
 };
 
 export type OrderServiceReponse = {

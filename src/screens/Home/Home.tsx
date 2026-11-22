@@ -17,7 +17,7 @@ import { JobFooter } from '@app/components/JobFooter/JobFooter';
 import { RouteMap } from '@app/components/RouteMap/RouteMap';
 import { HomeTopSlot } from '@app/components/HomeTopSlot/HomeTopSlot';
 import { HomeCard, HomeCardMode } from '@app/components/HomeCard/HomeCard';
-import { Order, UserStatus } from '@app/types/types';
+import { NoteStop, Order, UserStatus } from '@app/types/types';
 import { OrderSetting, OrderStatus } from '@app/types/enums';
 import { RoutePoint } from '@app/types/route';
 import { DrawerScreenProp, DrawerScreens } from '@app/navigation/drawer/types';
@@ -37,6 +37,8 @@ import {
   telUrl,
 } from '@app/utilities/jobContact';
 import { useJobContact } from '@app/hooks/useJobContact';
+import useAddressNotes from '@app/hooks/useAddressNotes';
+import { AddressNoteActions } from '@app/components/JobNotesLine/JobNotesLine';
 import { useMoveDropoffPin } from '@app/hooks/useMoveDropoffPin';
 import { useHandBack } from '@app/hooks/useHandBack';
 import { useLeaveWait } from '@app/hooks/useLeaveWait';
@@ -252,6 +254,27 @@ export const HomeScreen = ({ navigation }: Props) => {
 
   const [cardHeight, setCardHeight] = useState(0);
 
+  // Spec 0053: the riders' notes on a held job's stop. Adding and editing open the note screen,
+  // deleting asks first; upvote and flag go straight to the server.
+  const { toggleUpvote, flagNote, deleteNote } = useAddressNotes();
+  const addressNotesFor = (job: Order, stop: NoteStop): AddressNoteActions => ({
+    onAdd: () =>
+      navigation.navigate(RootScreen.AddNoteModal, {
+        deliveryId: job.id,
+        stop,
+      }),
+    onEdit: note =>
+      navigation.navigate(RootScreen.AddNoteModal, { noteToEdit: note }),
+    onDelete: note =>
+      navigation.navigate(RootScreen.DeleteNoteModal, {
+        note,
+        onNoteDeleted: deleted => deleteNote(deleted.id),
+      }),
+    onUpvote: note => toggleUpvote(note.id),
+    onFlag: note => flagNote({ id: note.id }),
+    retentionDays: jobContact?.addressNoteRetentionDays,
+  });
+
   const confirmStatus = (newStatus: UserStatus) =>
     navigation.navigate(RootScreen.UserStatusModal, {
       status: newStatus,
@@ -351,6 +374,7 @@ export const HomeScreen = ({ navigation }: Props) => {
         onTextCustomer={showCustomerMessages}
         onMovePin={movePin}
         movingPin={movingId === order.id}
+        addressNotesFor={addressNotesFor}
         toRestaurant={lines.toRestaurant}
         toCustomer={lines.toCustomer}
         routeUnavailable={routeUnavailable}
