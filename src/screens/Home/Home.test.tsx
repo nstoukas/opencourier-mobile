@@ -33,7 +33,8 @@ import { useJobContact } from '@app/hooks/useJobContact';
 import { CUSTOMER_SMS_PRESETS, smsUrl } from '@app/utilities/jobContact';
 import { DrawerScreens } from '@app/navigation/drawer/types';
 import { MainScreens } from '@app/navigation/main/types';
-import { RouteLeg, RouteLegKind } from '@app/types/route';
+import { RouteLeg, RouteLegKind, StackRoute } from '@app/types/route';
+import { QueryKeys } from '@app/utilities/queryKeys';
 import { services } from '@app/services/service';
 import * as mapPreferences from '@app/services/mapPreferences';
 import * as ownPositionModule from '@app/services/ownPosition';
@@ -165,6 +166,41 @@ const mockRouteLegs: RouteLeg[] = [
   },
 ];
 
+const OFFER_STATUS = 'ASSIGNING_COURIER';
+
+const mockStackRoute: StackRoute = {
+  legs: [
+    {
+      kind: RouteLegKind.BetweenStops,
+      distanceMetres: 1200,
+      durationSeconds: 240,
+      points: [
+        { latitude: 39.3622, longitude: 22.9425 },
+        { latitude: 39.365, longitude: 22.945 },
+      ],
+      toStopNumber: 1,
+    },
+  ],
+  stops: [
+    {
+      number: 1,
+      deliveryId: 'job-123',
+      stop: 'PICKUP',
+      latitude: 39.36,
+      longitude: 22.94,
+      done: false,
+    },
+    {
+      number: 2,
+      deliveryId: 'offer-addon-1',
+      stop: 'PICKUP',
+      latitude: 39.37,
+      longitude: 22.95,
+      done: false,
+    },
+  ],
+};
+
 describe('HomeScreen (spec 0018, AC-5 to AC-15)', () => {
   const mockNav = {
     navigate: jest.fn(),
@@ -181,6 +217,7 @@ describe('HomeScreen (spec 0018, AC-5 to AC-15)', () => {
   let testQueryClient: QueryClient;
   let getDeliveryRouteSpy: jest.SpyInstance;
   let getPickupPointsSpy: jest.SpyInstance;
+  let getStackRouteSpy: jest.SpyInstance;
 
   beforeEach(() => {
     resetSosStoreForTests();
@@ -220,6 +257,9 @@ describe('HomeScreen (spec 0018, AC-5 to AC-15)', () => {
     getPickupPointsSpy = jest
       .spyOn(services.routeService, 'getPickupPoints')
       .mockResolvedValue([]);
+    getStackRouteSpy = jest
+      .spyOn(services.routeService, 'getStackRoute')
+      .mockResolvedValue(mockStackRoute);
     jest
       .spyOn(mapPreferences, 'getRestaurantLayerChoice')
       .mockResolvedValue(null);
@@ -232,6 +272,7 @@ describe('HomeScreen (spec 0018, AC-5 to AC-15)', () => {
     canOpenURLSpy.mockRestore();
     getDeliveryRouteSpy.mockRestore();
     getPickupPointsSpy.mockRestore();
+    getStackRouteSpy.mockRestore();
     testQueryClient.clear();
     ownPositionModule.setOwnPosition(null);
     jest.useRealTimers();
@@ -994,6 +1035,160 @@ describe('HomeScreen (spec 0018, AC-5 to AC-15)', () => {
       expect(cell.props.stops).toEqual([]);
       // Errs on calm side when held job is not on phone
       expect(cell.props.calm).toBe(true);
+
+      unmount();
+    });
+
+    it('review fix (8a8d7b0): add-on offer route query includes held job server status in serverStatuses', async () => {
+      mockHomeOrders.dataSourceNew = [addOnOffer];
+      mockHomeOrders.dataSourceInProgress = [mockJob];
+      mockHomeOrders.serverInProgress = [
+        { ...mockJob, status: OrderStatus.dispatched },
+      ];
+
+      const { unmount } = renderHome();
+
+      // Stack route is requested with the add-on delivery ID
+      expect(getStackRouteSpy).toHaveBeenCalledWith('offer-addon-1');
+
+      // The query cache key carries both OFFER_STATUS and the held job's server status
+      const expectedKey = `${OFFER_STATUS}+${OrderStatus.dispatched}`;
+      const queryState = testQueryClient.getQueryState([
+        QueryKeys.stackRoute,
+        'offer-addon-1',
+        expectedKey,
+      ]);
+      expect(queryState).toBeDefined();
+
+      await waitFor(() => {
+        expect(
+          testQueryClient.getQueryState([
+            QueryKeys.stackRoute,
+            'offer-addon-1',
+            expectedKey,
+          ])?.status,
+        ).toBe('success');
+      });
+
+      unmount();
+    });
+
+    it('review fix (8a8d7b0): held job pickup during add-on offer updates serverStatuses and requests updated route', async () => {
+      mockHomeOrders.dataSourceNew = [addOnOffer];
+      mockHomeOrders.dataSourceInProgress = [mockJob];
+      mockHomeOrders.serverInProgress = [
+        { ...mockJob, status: OrderStatus.dispatched },
+      ];
+
+      const component = renderHome();
+
+      // Initial route request for dispatched status
+      expect(getStackRouteSpy).toHaveBeenCalledTimes(1);
+      const dispatchedKey = `${OFFER_STATUS}+${OrderStatus.dispatched}`;
+      expect(
+        testQueryClient.getQueryState([
+          QueryKeys.stackRoute,
+          'offer-addon-1',
+          dispatchedKey,
+        ]),
+      ).toBeDefined();
+
+      // Held job is picked up while the add-on offer is still displayed
+      mockHomeOrders.serverInProgress = [
+        { ...mockJob, status: OrderStatus.picked_up },
+      ];
+
+      component.rerender(
+        <QueryClientProvider client={testQueryClient}>
+          <NavigationContainer>
+            <HomeScreen navigation={mockNav} route={mockRoute} />
+          </NavigationContainer>
+        </QueryClientProvider>,
+      );
+
+      // Status change in serverHeldJob causes stackServerStatuses to change, triggering a route refetch
+      await waitFor(() => {
+        expect(getStackRouteSpy).toHaveBeenCalledTimes(2);
+      });
+
+      const pickedUpKey = `${OFFER_STATUS}+${OrderStatus.picked_up}`;
+      const pickedUpQueryState = testQueryClient.getQueryState([
+        QueryKeys.stackRoute,
+        'offer-addon-1',
+        pickedUpKey,
+      ]);
+      expect(pickedUpQueryState).toBeDefined();
+
+      await waitFor(() => {
+        expect(
+          testQueryClient.getQueryState([
+            QueryKeys.stackRoute,
+            'offer-addon-1',
+            pickedUpKey,
+          ])?.status,
+        ).toBe('success');
+      });
+
+      component.unmount();
+    });
+
+    it('stack offer (not add-on) uses OFFER_STATUS alone, without held job status', () => {
+      const stackOffer1: Order = {
+        ...mockOffer,
+        id: 'offer-stack-1',
+        offerGroupId: 'grp-123',
+        totalCompensation: 500,
+      } as unknown as Order;
+      const stackOffer2: Order = {
+        ...mockOffer,
+        id: 'offer-stack-2',
+        offerGroupId: 'grp-123',
+        totalCompensation: 450,
+      } as unknown as Order;
+
+      mockHomeOrders.dataSourceNew = [stackOffer1, stackOffer2];
+      mockHomeOrders.dataSourceInProgress = [mockJob];
+      mockHomeOrders.serverInProgress = [
+        { ...mockJob, status: OrderStatus.dispatched },
+      ];
+
+      const { unmount } = renderHome();
+
+      // For a stacked offer (both wait), stackServerStatuses stays OFFER_STATUS alone
+      const stackQueryState = testQueryClient.getQueryState([
+        QueryKeys.stackRoute,
+        stackOffer1.id,
+        OFFER_STATUS,
+      ]);
+      expect(stackQueryState).toBeDefined();
+
+      // Held job status is NOT joined into the query key for normal stack offers
+      const notExpectedKey = `${OFFER_STATUS}+${OrderStatus.dispatched}`;
+      expect(
+        testQueryClient.getQueryState([
+          QueryKeys.stackRoute,
+          stackOffer1.id,
+          notExpectedKey,
+        ]),
+      ).toBeUndefined();
+
+      unmount();
+    });
+
+    it('falls back to OFFER_STATUS when add-on partner job is not yet in serverInProgress', () => {
+      mockHomeOrders.dataSourceNew = [addOnOffer];
+      mockHomeOrders.dataSourceInProgress = [mockJob];
+      mockHomeOrders.serverInProgress = [];
+
+      const { unmount } = renderHome();
+
+      // Partner job is in shown card but not yet in serverInProgress: falls back to OFFER_STATUS
+      const fallbackQuery = testQueryClient.getQueryState([
+        QueryKeys.stackRoute,
+        addOnOffer.id,
+        OFFER_STATUS,
+      ]);
+      expect(fallbackQuery).toBeDefined();
 
       unmount();
     });
