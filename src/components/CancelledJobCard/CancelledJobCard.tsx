@@ -24,6 +24,7 @@ import { telUrl } from '@app/utilities/jobContact';
 import { QueryKeys } from '@app/utilities/queryKeys';
 import { PhoneOutgoingIcon } from 'phosphor-react-native/src/icons/PhoneOutgoing';
 import { styles } from './CancelledJobCard.styles';
+import { capitals } from '@app/utilities/capitals';
 
 // The longest note the server takes (spec 0015, AC-8).
 const NOTE_MAX = 500;
@@ -156,7 +157,7 @@ export const CancelledJobCard = ({ inFront = true }: Props) => {
         <Text style={styles.pay}>{cancelledPayText(job)}</Text>
 
         <Text style={styles.instructionTitle}>
-          {t('translations:cancelled_food_title')}
+          {capitals(t('translations:cancelled_food_title'))}
         </Text>
         {job.pickedUp ? (
           <>

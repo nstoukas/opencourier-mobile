@@ -16,6 +16,7 @@ import { JobNote, LEAVE_AT_DOOR, NoteAuthor } from '@app/utilities/jobCard';
 import { Note } from '@app/types/types';
 import { hitSlopFor } from '@app/utilities/touch';
 import { color, control, space, typeScale } from '@app/styles/theme';
+import { capitals } from '@app/utilities/capitals';
 
 // Spec 0053: what a rider can do with notes about the place of this stop. Left out (as in older
 // callers and tests), the riders' notes are plain text and nothing can be added.
@@ -222,7 +223,9 @@ export const JobNotesLine = ({ notes, addressNotes }: Props) => {
               }
               return (
                 <View key={section} style={styles.section}>
-                  <Text style={styles.author}>{t(AUTHOR_KEY[section])}</Text>
+                  <Text style={styles.author}>
+                    {capitals(t(AUTHOR_KEY[section]))}
+                  </Text>
                   {inSection.map((note, index) =>
                     note.addressNote && addressNotes ? (
                       <AddressNoteRow
@@ -302,6 +305,8 @@ const styles = StyleSheet.create({
   },
   author: {
     ...typeScale.overline,
+    // In capitals by `capitals()`, which drops Greek accents (row 47).
+    textTransform: 'none',
     color: color['muted-foreground'],
   },
   note: {

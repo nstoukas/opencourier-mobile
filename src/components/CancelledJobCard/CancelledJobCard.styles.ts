@@ -30,6 +30,8 @@ export const styles = StyleSheet.create({
   },
   instructionTitle: {
     ...typeScale.overline,
+    // In capitals by `capitals()` in the component, which drops Greek accents (row 47).
+    textTransform: 'none',
     color: color['muted-foreground'],
     marginBottom: 4,
   },
