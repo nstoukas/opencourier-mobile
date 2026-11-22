@@ -8552,6 +8552,7 @@ __metadata:
     react-native-dotenv: "npm:^3.4.9"
     react-native-geolocation-service: "npm:^5.3.1"
     react-native-gesture-handler: "npm:^1.8.0"
+    react-native-image-picker: "npm:7.2.3"
     react-native-linear-gradient: "npm:^2.8.3"
     react-native-maps: "npm:1.8.0"
     react-native-markdown-display: "npm:^7.0.2"
@@ -9182,6 +9183,16 @@ __metadata:
     invariant: "npm:^2.2.4"
     prop-types: "npm:^15.7.2"
   checksum: 10/b7004d3fc40e53ee83f6d08049d5d8ea45441abe17d13eb608e0372a3f38109e063e6ebe78cbc83aed8ab15e436b67925d0ecb26bc331c97c816a44a6aed7df1
+  languageName: node
+  linkType: hard
+
+"react-native-image-picker@npm:7.2.3":
+  version: 7.2.3
+  resolution: "react-native-image-picker@npm:7.2.3"
+  peerDependencies:
+    react: "*"
+    react-native: "*"
+  checksum: 10/62c6cc3c88edb29f2b17b4cdaa098b32efd23a5faf4380171c2ccfb1706c732a50553f2ce447e1df1ea48197dde3af42dd67584c60e2c4577ee1b7769152475d
   languageName: node
   linkType: hard
 

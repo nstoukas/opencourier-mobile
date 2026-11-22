@@ -185,6 +185,12 @@
         "licenseUrl": "https://github.com/software-mansion/react-native-gesture-handler/raw/master/LICENSE",
         "parents": "opencourier"
     },
+    "react-native-image-picker@7.2.3": {
+        "licenses": "MIT",
+        "repository": "https://github.com/react-native-image-picker/react-native-image-picker",
+        "licenseUrl": "https://github.com/react-native-image-picker/react-native-image-picker/raw/master/LICENSE.md",
+        "parents": "opencourier"
+    },
     "react-native-linear-gradient@2.8.3": {
         "licenses": "MIT",
         "repository": "https://github.com/react-native-linear-gradient/react-native-linear-gradient",
