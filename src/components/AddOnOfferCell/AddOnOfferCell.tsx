@@ -12,6 +12,7 @@ import { Colors } from '@app/styles/colors';
 import { formatCurrencyFromCents } from '@app/utilities/currency';
 import { SCREEN_WIDTH } from '@app/utilities/constants';
 import { useCountdownBar } from '@app/hooks/useCountdownBar';
+import { kmNumber } from '@app/utilities/locale';
 
 const PARALELOGRAM_WIDTH = 16;
 const PARALELOGRAM_HEIGHT = 8;
@@ -87,7 +88,7 @@ export const AddOnOfferCell = ({
       {order.extraKm != null && order.extraMinutes != null && (
         <Text style={styles.adds} testID="add-on-offer-adds">
           {t('translations:add_on_offer_adds', {
-            km: order.extraKm,
+            km: kmNumber(order.extraKm),
             minutes: order.extraMinutes,
           })}
         </Text>

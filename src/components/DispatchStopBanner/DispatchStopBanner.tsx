@@ -1,14 +1,24 @@
 import React from 'react';
 import { Text, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
-import { useDispatchState } from '@app/hooks/useDispatchState';
+import {
+  useDispatchState,
+  type DispatchStopView,
+} from '@app/hooks/useDispatchState';
+import { hasServerText, renderServerText } from '@app/localization/serverText';
 import { Icon } from '@app/components/Icon/Icon';
 import { WarningIcon } from 'phosphor-react-native/src/icons/Warning';
 import { ClockIcon } from 'phosphor-react-native/src/icons/Clock';
 import { styles } from './DispatchStopBanner.styles';
 
 // Spec 0014, AC-7: tells the rider that dispatch is stopped (heat, a storm) and until when, or that a
-// stop starts soon, so a quiet Home has a reason. The sentence is the backend's.
+// stop starts soon, so a quiet Home has a reason. The sentence is the backend's, said in the rider's
+// language from its code when the app has a text for it (spec 0054, AC-6), else the server's English.
+const stopSentence = (stop: DispatchStopView): string =>
+  stop.messageCode && hasServerText(`server.notice.${stop.messageCode}`)
+    ? renderServerText(`server.notice.${stop.messageCode}`, stop.messageParams)
+    : stop.message;
+
 type Props = {
   // Whether Home is the screen in front (its useIsFocused): the banner polls only then.
   inFront?: boolean;
@@ -41,7 +51,7 @@ export const DispatchStopBanner = ({ inFront = true }: Props) => {
                 : 'translations:dispatch_stops_soon_title',
             )}
           </Text>
-          <Text style={styles.text}>{stop.message}</Text>
+          <Text style={styles.text}>{stopSentence(stop)}</Text>
         </View>
       </View>
     </View>

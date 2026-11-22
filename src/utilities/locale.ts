@@ -27,6 +27,17 @@ export const setAppLocale = (language: LocaleLanguage): void => {
 };
 setAppLocale('el');
 
+/**
+ * Kilometres as the rider reads them, always with one decimal and the language's decimal mark:
+ * 1.234 is "1,2" in Greek and "1.2" in English (spec 0054, AC-3). The one place a distance becomes text;
+ * the caller adds "km" (or its sentence does).
+ */
+export const kmNumber = (km: number): string =>
+  new Intl.NumberFormat(appLocale(), {
+    minimumFractionDigits: 1,
+    maximumFractionDigits: 1,
+  }).format(km);
+
 // Used only when an amount arrives without its currency. The instance's own
 // currency, set in its Config, always wins.
 export const FALLBACK_CURRENCY = 'EUR';

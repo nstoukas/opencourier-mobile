@@ -19,7 +19,7 @@ export default {
   language_explained:
     "The app's words, dates and amounts. The co-op's server is told too, so its emails to you come in this language.",
   language_not_sent:
-    "No connection, so the co-op's server was not told. The app shows your choice, and sends it again at your next login.",
+    "No connection, so the co-op's server was not told. The app shows your choice, and sends it again at your next login. Tap it to try now.",
   navigation: 'Navigation',
   customize_navigation:
     'Customize your navigation preferences to enhance your travel experience',
@@ -318,6 +318,8 @@ export default {
   // Spec 0054 (AC-8): four screen texts that were written straight into JSX.
   payout_activity: 'Payout Activity',
   no_payout_activity: 'No Payout Activity',
+  no_payout_activity_more:
+    'You don’t have any recent payouts.\nMake a delivery to start getting paid.',
   order_delivered_thanks: 'Order delivered. Thanks!',
   waiting_for_new_orders: 'Waiting for new orders',
   licenses: 'Licenses',
@@ -610,6 +612,9 @@ export default {
   offer_alert_channel: 'New offers',
   offer_alert_channel_insistent: 'Offers still waiting',
   offer_alert_channel_notices: 'Offer notices',
+  // Review fix (row 47): the names of two more Android alert kinds, shown in the phone's settings.
+  offer_reminder_channel: 'Offer reminders',
+  shift_reminder_channel: 'Shift reminders',
   offer_alert_open_app: 'Open the app',
   offer_alert_close: 'Close',
   offer_alert_time_left: '{{seconds}} s left',

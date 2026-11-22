@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { EarningsWhyYou } from '@app/types/earnings';
 import { Colors } from '@app/styles/colors';
 import { color, radius, typeScale } from '@app/styles/theme';
+import { kmNumber } from '@app/utilities/locale';
 
 // Spec 0045 (row 14): why this job came to the rider, in plain words, from the reason the server recorded
 // at the offer. Only the rider's own figures arrive here (the server's allow list); no place in line, no
@@ -50,7 +51,7 @@ export const whyYouLines = (
     const minutes = number(v.extraMinutes);
     return [
       km !== null && minutes !== null
-        ? t('translations:why_add_on', { km, minutes })
+        ? t('translations:why_add_on', { km: kmNumber(km), minutes })
         : t('translations:why_add_on_plain'),
     ];
   }
@@ -119,7 +120,7 @@ export const whyYouLines = (
       return [
         metres === null
           ? t('translations:why_nearest_plain')
-          : t('translations:why_nearest', { km: (metres / 1000).toFixed(1) }),
+          : t('translations:why_nearest', { km: kmNumber(metres / 1000) }),
       ];
     }
     case 'COURIER_SENIORITY':

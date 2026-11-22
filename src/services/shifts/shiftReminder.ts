@@ -21,7 +21,7 @@ const ensureChannel = async () => {
     // first made, so a new sound would need a new channel id.
     await notifee.createChannel({
       id: SHIFT_REMINDER_CHANNEL_ID,
-      name: 'Shift reminders',
+      name: i18next.t('translations:shift_reminder_channel'),
       importance: AndroidImportance.DEFAULT,
       sound: 'default',
     });

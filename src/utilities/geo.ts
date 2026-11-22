@@ -1,4 +1,4 @@
-import { appLocale } from './locale';
+import { kmNumber } from './locale';
 import { Point } from 'geojson';
 import Geolocation from 'react-native-geolocation-service';
 import { WatchOptions } from './locationTracking';
@@ -48,9 +48,7 @@ export function track(
   );
 }
 
+// Metres as "1,2 km" in Greek, "1.2 km" in English (one decimal, through kmNumber).
 export function formatDistance(meters: number): string {
-  const km = new Intl.NumberFormat(appLocale(), {
-    maximumFractionDigits: 1,
-  }).format(meters / 1000);
-  return `${km} km`;
+  return `${kmNumber(meters / 1000)} km`;
 }

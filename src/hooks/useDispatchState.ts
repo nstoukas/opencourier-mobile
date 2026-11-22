@@ -11,6 +11,10 @@ export type DispatchStopView = {
   startsAt: string;
   endsAt: string | null;
   message: string;
+  // Spec 0054 (AC-6): the sentence by code (a key of `server.notice`) with its values, so the banner says it
+  // in the rider's language; `message` is the English, shown when the app has no text for the code.
+  messageCode?: string;
+  messageParams?: Record<string, unknown>;
 };
 export type DispatchState = {
   current: DispatchStopView | null;
@@ -24,7 +28,9 @@ const EVERY_MINUTE = 60_000;
 // is no push for it yet. `inFront` is Home's own useIsFocused, passed in so the hook needs no
 // navigator (row 29 review: it polled behind other screens and in the background).
 export const useDispatchState = (inFront: boolean = true) => {
-  const [appActive, setAppActive] = useState(AppState.currentState === 'active');
+  const [appActive, setAppActive] = useState(
+    AppState.currentState === 'active',
+  );
   const query = useQuery({
     queryKey: [QueryKeys.dispatchState],
     queryFn: async (): Promise<DispatchState> => {

@@ -15,7 +15,7 @@ export const NoPayoutActivity = ({ style }: Props) => {
       <Image source={Images.Car} style={styles.imageSmall} />
       <Text style={styles.title}>{t('translations:no_payout_activity')}</Text>
       <Text style={styles.subtitle}>
-        {'You don’t have any recent payouts.\nMake a  to start getting paid.'}
+        {t('translations:no_payout_activity_more')}
       </Text>
     </View>
   );

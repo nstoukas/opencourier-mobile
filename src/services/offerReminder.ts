@@ -33,7 +33,7 @@ const ensureChannel = async () => {
     // to call before every reminder.
     await notifee.createChannel({
       id: REMINDER_CHANNEL_ID,
-      name: 'Offer reminders',
+      name: i18next.t('translations:offer_reminder_channel'),
       importance: AndroidImportance.HIGH,
       sound: 'default',
       vibration: false,

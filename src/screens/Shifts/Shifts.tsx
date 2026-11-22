@@ -25,6 +25,8 @@ import {
 } from '@app/services/shifts/shiftsApi';
 import { QueryKeys } from '@app/utilities/queryKeys';
 import { dayLabel } from '@app/utilities/shiftDays';
+import { whenText } from '@app/localization/serverText';
+import { toAppLanguage } from '@app/localization/appLanguage';
 import { color, space, typeScale } from '@app/styles/theme';
 
 type Props = DrawerScreenProp<DrawerScreens.Shifts>;
@@ -37,8 +39,18 @@ type ShiftRequest =
 // Spec 0027 (AC-10): the rider's shifts and the next 14 days. Every time on it is the server's Athens
 // text. It shows places per shift ("2 places left"), never who booked or how many shifts anyone has
 // (value 5). Every refusal shows the server's own sentence.
+// When a booking can last be dropped, as the rider reads it: from its ISO time, else the server's text.
+const dropUntilWords = (
+  dropUntil: string,
+  fallback: string,
+  language: string,
+): string => {
+  const ms = Date.parse(dropUntil);
+  return Number.isNaN(ms) ? fallback : whenText(ms, toAppLanguage(language));
+};
+
 export const ShiftsScreen = ({ navigation }: Props) => {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const queryClient = useQueryClient();
   // The drawer keeps this screen mounted: it polls only while in front (row 78 review).
   const isFocused = useIsFocused();
@@ -134,7 +146,13 @@ export const ShiftsScreen = ({ navigation }: Props) => {
                   {booking.swapOfferedAt
                     ? t('translations:shift_swap_offered')
                     : t('translations:shift_drop_until', {
-                        until: booking.dropUntilText,
+                        // The deadline in the rider's language from its time, not the server's English
+                        // "18:00 today" (spec 0054, AC-3; review of 2026-11-22).
+                        until: dropUntilWords(
+                          booking.dropUntil,
+                          booking.dropUntilText,
+                          i18n.language,
+                        ),
                       })}
                 </Text>
                 <View style={styles.actions}>

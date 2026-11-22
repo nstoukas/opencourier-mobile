@@ -29,7 +29,7 @@ const translations: typeof en = {
   language_explained:
     'Οι λέξεις, οι ημερομηνίες και τα ποσά της εφαρμογής. Ενημερώνεται και ο διακομιστής του συνεταιρισμού, ώστε τα email που σας στέλνει να έρχονται σε αυτή τη γλώσσα.',
   language_not_sent:
-    'Δεν υπάρχει σύνδεση, οπότε ο διακομιστής του συνεταιρισμού δεν ενημερώθηκε. Η εφαρμογή δείχνει την επιλογή σας και θα τη στείλει ξανά στην επόμενη σύνδεσή σας.',
+    'Δεν υπάρχει σύνδεση, οπότε ο διακομιστής του συνεταιρισμού δεν ενημερώθηκε. Η εφαρμογή δείχνει την επιλογή σας και θα τη στείλει ξανά στην επόμενη σύνδεσή σας. Πατήστε την για να δοκιμάσετε τώρα.',
   navigation: 'Πλοήγηση',
   customize_navigation:
     'Ρυθμίστε τις προτιμήσεις πλοήγησης για πιο εύκολες διαδρομές',
@@ -92,7 +92,7 @@ const translations: typeof en = {
   shift_places_left_one: 'Απομένει {{count}} θέση',
   shift_places_left_other: 'Απομένουν {{count}} θέσεις',
   shift_drop: 'Αποδέσμευση',
-  shift_drop_until: 'Μπορείτε να αποδεσμευτείτε από αυτήν έως {{until}}.',
+  shift_drop_until: 'Μπορείτε να αποδεσμευτείτε από αυτήν έως τις {{until}}.',
   shift_drop_confirm_title: 'Αποδέσμευση από αυτή τη βάρδια;',
   shift_drop_confirm_body:
     '{{day}}, {{start}}–{{end}}. Η θέση της επιστρέφει στο πρόγραμμα.',
@@ -345,6 +345,8 @@ const translations: typeof en = {
   // Spec 0054 (AC-8): four screen texts that were written straight into JSX.
   payout_activity: 'Πληρωμές',
   no_payout_activity: 'Καμία πληρωμή',
+  no_payout_activity_more:
+    'Δεν έχετε πρόσφατες πληρωμές.\nΚάντε μια διανομή για να αρχίσετε να πληρώνεστε.',
   order_delivered_thanks: 'Η παραγγελία παραδόθηκε. Ευχαριστούμε!',
   waiting_for_new_orders: 'Αναμονή για νέες παραγγελίες',
   licenses: 'Άδειες χρήσης',
@@ -642,6 +644,8 @@ const translations: typeof en = {
   offer_alert_channel: 'Νέες προτάσεις',
   offer_alert_channel_insistent: 'Προτάσεις που ακόμη περιμένουν',
   offer_alert_channel_notices: 'Ειδοποιήσεις για προτάσεις',
+  offer_reminder_channel: 'Υπενθυμίσεις προτάσεων',
+  shift_reminder_channel: 'Υπενθυμίσεις βαρδιών',
   offer_alert_open_app: 'Άνοιγμα εφαρμογής',
   offer_alert_close: 'Κλείσιμο',
   offer_alert_time_left: 'Απομένουν {{seconds}} δευτ.',
