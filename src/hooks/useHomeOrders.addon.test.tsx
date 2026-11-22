@@ -5,7 +5,10 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { OrderSetting, OrderStatus } from '@app/types/enums';
 import { Order, StackStop, UserStatus } from '@app/types/types';
 import { QueryKeys } from '@app/utilities/queryKeys';
-import { OFFER_REMINDER_EVERY_MS } from '@app/utilities/constants';
+import {
+  OFFER_END_CHECK_DELAY_MS,
+  OFFER_REMINDER_EVERY_MS,
+} from '@app/utilities/constants';
 import '@app/localization/i18n';
 
 jest.mock('@app/services/offerPush/offerAlert', () => ({
@@ -319,6 +322,262 @@ describe('useHomeOrders.addon (spec 0048, row 81, AC-7, AC-8, cross check 2)', (
         'addon-offer-1',
         OFFER_REMINDER_EVERY_MS,
       );
+
+      act(() => {
+        tree.unmount();
+      });
+    });
+  });
+
+  describe('Review finding §4.1 / decision 81.22: Add-on offer with a deadline is a countdown (onDeadline, never onReminder)', () => {
+    it('tracks an add-on offer with a deadline as a countdown, triggering onDeadline once and suppressing reminders', async () => {
+      const now = Date.now();
+      const addOnWithDeadline: Order = {
+        ...addOnOffer,
+        offeredAt: new Date(now).toISOString(),
+        phoneClock: { offeredAt: now, expiresAt: now + 60000 },
+      };
+
+      const dispatchedJob: Order = {
+        ...heldJob,
+        status: OrderStatus.dispatched,
+      };
+
+      queryClient.setQueryData([QueryKeys.inProgressOrders], [dispatchedJob]);
+      queryClient.setQueryData([QueryKeys.newOrders], [addOnWithDeadline]);
+
+      let hookResult: ReturnType<typeof useHomeOrders> | undefined;
+      let tree: renderer.ReactTestRenderer;
+      await act(async () => {
+        tree = renderer.create(
+          <QueryClientProvider client={queryClient}>
+            <HookHost
+              onRender={h => {
+                hookResult = h;
+              }}
+            />
+          </QueryClientProvider>,
+        );
+      });
+
+      // Countdown getters return remaining and total time
+      expect(hookResult?.timeLeftForOffer('addon-offer-1')).toBe(60000);
+      expect(hookResult?.totalTimeForOffer('addon-offer-1')).toBe(60000);
+
+      mockGetNewOrders.mockClear();
+
+      // Advance by reminder interval (30s)
+      await act(async () => {
+        jest.advanceTimersByTime(OFFER_REMINDER_EVERY_MS);
+        await Promise.resolve();
+      });
+
+      // Offers with a deadline are tracked as countdowns; no reminders are sent
+      expect(mockRemindRiderOfOffer).not.toHaveBeenCalled();
+      expect(mockGetNewOrders).not.toHaveBeenCalled();
+
+      // Advance to the 60s deadline at zero
+      await act(async () => {
+        jest.advanceTimersByTime(30000);
+        await Promise.resolve();
+      });
+
+      // At zero, phone sends no decline and no accept
+      expect(mockDeclineOrder).not.toHaveBeenCalled();
+      expect(mockAcceptOrder).not.toHaveBeenCalled();
+      expect(mockGetNewOrders).not.toHaveBeenCalled();
+
+      // Advance past the 4s check delay (OFFER_END_CHECK_DELAY_MS)
+      await act(async () => {
+        jest.advanceTimersByTime(OFFER_END_CHECK_DELAY_MS);
+        await Promise.resolve();
+      });
+
+      // onDeadline fired once to refetch new orders
+      expect(mockGetNewOrders).toHaveBeenCalledTimes(1);
+      expect(mockRemindRiderOfOffer).not.toHaveBeenCalled();
+      expect(mockDeclineOrder).not.toHaveBeenCalled();
+      expect(mockAcceptOrder).not.toHaveBeenCalled();
+
+      // Advance further by 60s: onDeadline does not loop repeatedly
+      await act(async () => {
+        jest.advanceTimersByTime(60000);
+        await Promise.resolve();
+      });
+      expect(mockGetNewOrders).toHaveBeenCalledTimes(1);
+      expect(mockRemindRiderOfOffer).not.toHaveBeenCalled();
+
+      act(() => {
+        tree.unmount();
+      });
+    });
+
+    it('tracks a calm add-on offer (carrying food) with doubled deadline as a countdown and suppresses reminders throughout', async () => {
+      const now = Date.now();
+      // Decision 81.14 / cross check 2: deadline is doubled to 120s when calm
+      const calmAddOnWithDeadline: Order = {
+        ...addOnOffer,
+        offeredAt: new Date(now).toISOString(),
+        phoneClock: { offeredAt: now, expiresAt: now + 120000 },
+      };
+
+      const pickedUpJob: Order = {
+        ...heldJob,
+        status: OrderStatus.picked_up,
+      };
+
+      queryClient.setQueryData([QueryKeys.inProgressOrders], [pickedUpJob]);
+      queryClient.setQueryData([QueryKeys.newOrders], [calmAddOnWithDeadline]);
+
+      let hookResult: ReturnType<typeof useHomeOrders> | undefined;
+      let tree: renderer.ReactTestRenderer;
+      await act(async () => {
+        tree = renderer.create(
+          <QueryClientProvider client={queryClient}>
+            <HookHost
+              onRender={h => {
+                hookResult = h;
+              }}
+            />
+          </QueryClientProvider>,
+        );
+      });
+
+      expect(hookResult?.timeLeftForOffer('addon-offer-1')).toBe(120000);
+      expect(hookResult?.totalTimeForOffer('addon-offer-1')).toBe(120000);
+
+      mockGetNewOrders.mockClear();
+
+      // Advance through reminder steps: 30s, 60s, 90s
+      await act(async () => {
+        jest.advanceTimersByTime(90000);
+        await Promise.resolve();
+      });
+      expect(mockRemindRiderOfOffer).not.toHaveBeenCalled();
+      expect(mockGetNewOrders).not.toHaveBeenCalled();
+
+      // Advance to 120s deadline
+      await act(async () => {
+        jest.advanceTimersByTime(30000);
+        await Promise.resolve();
+      });
+      expect(mockRemindRiderOfOffer).not.toHaveBeenCalled();
+      expect(mockGetNewOrders).not.toHaveBeenCalled();
+
+      // Advance past the 4s check delay
+      await act(async () => {
+        jest.advanceTimersByTime(OFFER_END_CHECK_DELAY_MS);
+        await Promise.resolve();
+      });
+
+      // onDeadline fired once
+      expect(mockGetNewOrders).toHaveBeenCalledTimes(1);
+      expect(mockRemindRiderOfOffer).not.toHaveBeenCalled();
+
+      act(() => {
+        tree.unmount();
+      });
+    });
+
+    it('cancels countdown when rider accepts add-on offer before deadline so onDeadline never fires', async () => {
+      const now = Date.now();
+      const addOnWithDeadline: Order = {
+        ...addOnOffer,
+        offeredAt: new Date(now).toISOString(),
+        phoneClock: { offeredAt: now, expiresAt: now + 60000 },
+      };
+
+      queryClient.setQueryData([QueryKeys.inProgressOrders], [heldJob]);
+      queryClient.setQueryData([QueryKeys.newOrders], [addOnWithDeadline]);
+
+      let hookResult: ReturnType<typeof useHomeOrders> | undefined;
+      let tree: renderer.ReactTestRenderer;
+      await act(async () => {
+        tree = renderer.create(
+          <QueryClientProvider client={queryClient}>
+            <HookHost
+              onRender={h => {
+                hookResult = h;
+              }}
+            />
+          </QueryClientProvider>,
+        );
+      });
+
+      // Advance 15s, then rider accepts
+      await act(async () => {
+        jest.advanceTimersByTime(15000);
+        await Promise.resolve();
+      });
+
+      await act(async () => {
+        hookResult?.acceptOrderFn('addon-offer-1');
+      });
+
+      expect(mockAcceptOrder).toHaveBeenCalledTimes(1);
+      mockGetNewOrders.mockClear();
+
+      // Advance past the original deadline (60s + 4s)
+      await act(async () => {
+        jest.advanceTimersByTime(60000);
+        await Promise.resolve();
+      });
+
+      // onDeadline must NOT have fired because claim cancelled the timer
+      expect(mockGetNewOrders).not.toHaveBeenCalled();
+      expect(mockRemindRiderOfOffer).not.toHaveBeenCalled();
+
+      act(() => {
+        tree.unmount();
+      });
+    });
+
+    it('cancels countdown when rider declines add-on offer before deadline so onDeadline never fires', async () => {
+      const now = Date.now();
+      const addOnWithDeadline: Order = {
+        ...addOnOffer,
+        offeredAt: new Date(now).toISOString(),
+        phoneClock: { offeredAt: now, expiresAt: now + 60000 },
+      };
+
+      queryClient.setQueryData([QueryKeys.inProgressOrders], [heldJob]);
+      queryClient.setQueryData([QueryKeys.newOrders], [addOnWithDeadline]);
+
+      let hookResult: ReturnType<typeof useHomeOrders> | undefined;
+      let tree: renderer.ReactTestRenderer;
+      await act(async () => {
+        tree = renderer.create(
+          <QueryClientProvider client={queryClient}>
+            <HookHost
+              onRender={h => {
+                hookResult = h;
+              }}
+            />
+          </QueryClientProvider>,
+        );
+      });
+
+      // Advance 15s, then rider declines
+      await act(async () => {
+        jest.advanceTimersByTime(15000);
+        await Promise.resolve();
+      });
+
+      await act(async () => {
+        hookResult?.declineOrderFn('addon-offer-1');
+      });
+
+      expect(mockDeclineOrder).toHaveBeenCalledTimes(1);
+      mockGetNewOrders.mockClear();
+
+      // Advance past the original deadline
+      await act(async () => {
+        jest.advanceTimersByTime(60000);
+        await Promise.resolve();
+      });
+
+      expect(mockGetNewOrders).not.toHaveBeenCalled();
+      expect(mockRemindRiderOfOffer).not.toHaveBeenCalled();
 
       act(() => {
         tree.unmount();

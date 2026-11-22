@@ -283,9 +283,20 @@ export const HomeScreen = ({ navigation }: Props) => {
     shown?.kind === 'job' && shown.partner
       ? serverInProgress.find(order => order.id === shown.partner?.id)
       : undefined;
+  // Row 81 (agy review): an add on offer's route runs through the rider's own
+  // job, which can move on while the offer is open (the rider picks it up).
+  // Its server status joins the key, so the route is asked again and the
+  // restaurant behind the rider drops off the map. A stack offer's two orders
+  // both wait, so their key stays OFFER_STATUS.
+  const serverHeldJob =
+    shown?.kind === 'offer' && shown.order.addOn && shown.partner
+      ? serverInProgress.find(order => order.id === shown.partner?.id)
+      : undefined;
   const stackServerStatuses =
     shown?.kind === 'offer'
-      ? OFFER_STATUS
+      ? serverHeldJob
+        ? `${OFFER_STATUS}+${serverHeldJob.status}`
+        : OFFER_STATUS
       : serverJob && serverPartner
       ? `${serverJob.status}+${serverPartner.status}`
       : undefined;
