@@ -2,7 +2,7 @@ import {
   Complaint,
   ComplaintAbout,
   ComplaintCategory,
-  PagedList,
+  ComplaintPage,
 } from '@app/types/types';
 import { UClient } from './Client';
 
@@ -18,6 +18,7 @@ export type ComplaintPhoto = {
 export type FileComplaintInput = {
   deliveryId: string;
   // A rider can complain only about the restaurant or the customer, never another rider.
+  // `Exclude<A, 'RIDER'>` = every value of A except 'RIDER'.
   about: Exclude<ComplaintAbout, 'RIDER'>;
   category: ComplaintCategory;
   text: string;
@@ -31,7 +32,7 @@ const PHOTO_UPLOAD_TIMEOUT_MS = 60000;
 
 export interface ComplaintService {
   fileComplaint: (input: FileComplaintInput) => Promise<Complaint>;
-  getComplaints: (page: number) => Promise<PagedList<Complaint>>;
+  getComplaints: (page: number) => Promise<ComplaintPage>;
   replyToComplaint: (id: string, text: string) => Promise<Complaint>;
 }
 
@@ -64,7 +65,7 @@ const complaintService = (client: UClient): ComplaintService => {
     return data.result;
   };
 
-  const getComplaints = async (page: number): Promise<PagedList<Complaint>> => {
+  const getComplaints = async (page: number): Promise<ComplaintPage> => {
     const { data } = await client.get('complaints', {
       params: { page, perPage: COMPLAINT_PAGE_SIZE },
     });

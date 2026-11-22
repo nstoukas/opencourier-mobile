@@ -659,6 +659,16 @@ export type PagedList<T> = {
   };
 };
 
+/** Spec 0052: one page of the rider's complaints. No total: the rider's answer never counts their
+ * complaints (AC-8, row 83 review), so the app only knows whether an older page exists. */
+export type ComplaintPage = {
+  data: Complaint[];
+  pagination: {
+    currentPage: number;
+    nextPage: number | null;
+  };
+};
+
 /** Spec 0038: the "How offers and pay work" page, as sentences built from the settings in effect. */
 export type HowItWorks = {
   offers: string[];
