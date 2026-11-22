@@ -19,9 +19,11 @@ const PROGRESS_BAR_WIDTH = SCREEN_WIDTH - 54;
 
 type Props = {
   // The add on offer (spec 0048, row 81), the job the rider is on, and the
-  // stops of both in riding order.
+  // stops of both in riding order. Review fix: `job` is undefined while the
+  // phone's job list has not caught up; the card then still says it is an add
+  // on, what it adds and when to answer, without the stops or the total.
   order: Order;
-  job: Order;
+  job?: Order;
   stops: StackStop[];
   // Cross check 2: the rider carries food already, so the card asks them to
   // answer only once they are stopped.
@@ -60,7 +62,13 @@ export const AddOnOfferCell = ({
   const [acceptAttempt, setAcceptAttempt] = useState(0);
   const money = (cents: number | null | undefined) =>
     formatCurrencyFromCents(cents, order.currencyCode);
-  const total = (order.totalCompensation ?? 0) + (job.totalCompensation ?? 0);
+  // Review fix: the total only when both pays are known. A missing pay counted
+  // as 0 showed the add on alone as "with your current job", and a wrong pay
+  // figure is worse than none.
+  const total =
+    order.totalCompensation != null && job?.totalCompensation != null
+      ? order.totalCompensation + job.totalCompensation
+      : null;
 
   const hasDeadline = millisRemaining !== null;
   const widthAnimation = useCountdownBar(
@@ -84,9 +92,11 @@ export const AddOnOfferCell = ({
           })}
         </Text>
       )}
-      <Text style={offerStyles.textTrip} testID="add-on-offer-total">
-        {t('translations:add_on_offer_with_job', { total: money(total) })}
-      </Text>
+      {total !== null && (
+        <Text style={offerStyles.textTrip} testID="add-on-offer-total">
+          {t('translations:add_on_offer_with_job', { total: money(total) })}
+        </Text>
+      )}
       {calm && (
         <Text style={offerStyles.textTrip} testID="add-on-offer-stopped">
           {t('translations:add_on_offer_when_stopped')}
@@ -102,12 +112,14 @@ export const AddOnOfferCell = ({
         </Text>
       )}
       <View style={offerStyles.separator} />
-      <StackStopList
-        stops={stops}
-        orders={[order, job]}
-        isOffer={true}
-        addOn={true}
-      />
+      {job && stops.length > 0 && (
+        <StackStopList
+          stops={stops}
+          orders={[order, job]}
+          isOffer={true}
+          addOn={true}
+        />
+      )}
       <ButtonSwipe
         key={acceptAttempt}
         style={offerStyles.buttonTop}

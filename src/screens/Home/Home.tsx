@@ -422,8 +422,10 @@ export const HomeScreen = ({ navigation }: Props) => {
     }
     const order = shown.order;
     // Spec 0048 (row 81, AC-10): one more order on the way, with the job it
-    // would ride with. Accept and Decline answer the added order only.
-    if (shown.kind === 'offer' && shown.partner && order.addOn) {
+    // would ride with. Accept and Decline answer the added order only. Review
+    // fix: drawn as an add on even before the job list has the job (then
+    // without the stops), so the rider never accepts it as a plain offer.
+    if (shown.kind === 'offer' && order.addOn) {
       return (
         <AddOnOfferCell
           key={`${order.id}-${order.offeredAt ?? ''}`}

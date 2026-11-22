@@ -42,7 +42,10 @@ const placeOf = (
   if (stop.stop === 'PICKUP') {
     return order.pickupBusinessName || order.pickupName || '';
   }
-  if (isOffer && (!addOn || order.addOn)) {
+  // The order on offer: every order of a stack offer, and only the added order
+  // of an add on (the rider's own job is theirs).
+  const heldToAreaRule = isOffer && (!addOn || order.addOn);
+  if (heldToAreaRule) {
     return order.dropoffArea || '';
   }
   return order.dropoffArea || order.dropoffLocation?.street || '';
