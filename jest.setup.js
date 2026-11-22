@@ -192,3 +192,10 @@ jest.mock('react-native-date-picker', () => {
 // App.tsx loads Reactotron under __DEV__, which is true in Jest; it would try to connect
 // to a desktop debugger.
 jest.mock('./ReactotronConfig', () => ({}));
+
+// The Greek interface (row 47, spec 0054): the app starts in Greek, but the existing tests assert the
+// English words, so every test runs in English (spec 0054, cross check 12: tests that assert English
+// text pin the language to `en`). Nothing is saved in the mocked storage, so the app's start up read
+// of the saved language keeps this. A test about Greek calls i18n.changeLanguage('el') itself.
+require('./src/localization/i18n').default.changeLanguage('en');
+require('./src/utilities/locale').setAppLocale('en');

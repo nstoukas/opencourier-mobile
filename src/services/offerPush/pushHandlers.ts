@@ -11,6 +11,7 @@ import { showReadyNotice } from '@app/services/readyNotice/readyNotice';
 import { receiveRemovalDecision } from '@app/services/removalNotice/removalNotice';
 import { receiveSplitDecision } from '@app/services/splitNotice/splitNotice';
 import { AppState } from 'react-native';
+import { languageReady } from '@app/localization/i18n';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 // `type` brings in only the TypeScript description of these, no code.
 import type { FirebaseMessagingTypes } from '@react-native-firebase/messaging';
@@ -58,6 +59,9 @@ export const onRemoteMessage = async (
   where: ReceivedWhere,
 ): Promise<void> => {
   const receivedAt = Date.now();
+  // Started by Android only to handle this push, the app may not have read the saved language yet:
+  // wait for it, so the notice is worded in the rider's language (spec 0054, AC-5).
+  await languageReady.catch(() => undefined);
   // Spec 0015: a job this rider held was cancelled. Only its id travels; the alert says to open
   // the app, which reads the rest from its own route. Once per job, shared with the open app.
   if (message.data?.type === 'JOB_CANCELLED') {
@@ -185,6 +189,8 @@ export const onNotificationEvent = async ({
   type,
   detail,
 }: Event): Promise<void> => {
+  // As above: a button pressed on a notice can start the app with nothing read yet.
+  await languageReady.catch(() => undefined);
   if (type === EventType.DISMISSED) {
     // The "online" sign is never left swiped away while tracking (row 68).
     await onOnlineSignDismissed(detail.notification?.id);

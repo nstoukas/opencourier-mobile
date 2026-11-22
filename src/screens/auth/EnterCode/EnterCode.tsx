@@ -11,6 +11,7 @@ import useUser from '@app/hooks/useUser';
 import { AuthFrame } from '../AuthFrame';
 import { authStyles } from '../auth.styles';
 import { showAuthError } from '../showAuthError';
+import { sendLanguageToServer } from '@app/localization/languageApi';
 
 type Props = AuthScreenProp<AuthScreen.EnterCode>;
 
@@ -48,7 +49,11 @@ export const EnterCode = ({ navigation, route }: Props) => {
 
   const reset = useMutation({
     mutationFn: services.userService.resetPassword,
-    onSuccess: () => markJustLoggedIn(),
+    onSuccess: () => {
+      markJustLoggedIn();
+      // The server words this rider's emails in the phone's language (spec 0054, decision 47.33).
+      sendLanguageToServer();
+    },
     onError: error => showAuthError(error, 'reset'),
   });
   // Once the new session is saved, loading the user opens the main app. From then on the code is spent,

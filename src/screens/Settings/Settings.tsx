@@ -10,6 +10,7 @@ import messaging from '@react-native-firebase/messaging';
 import Clipboard from '@react-native-clipboard/clipboard';
 import { MapLinkingOptions, SettingsOptions } from '@app/types/types';
 import { getNavigationApp } from '@app/services/mapPreferences';
+import { toAppLanguage } from '@app/localization/appLanguage';
 import {
   SettingsCell,
   SettingsCellType,
@@ -23,7 +24,7 @@ type SectionListItem = {
 type Props = DrawerScreenProp<DrawerScreens.Settings>;
 
 export const SettingsScreen = ({ navigation }: Props) => {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const [token, setToken] = useState<string>('');
 
   // Typed as a partial map from every option to a switch value, because the list
@@ -133,7 +134,8 @@ export const SettingsScreen = ({ navigation }: Props) => {
       case SettingsOptions.emergencyContact:
         return 'add_trusted_contact';
       case SettingsOptions.language:
-        return 'select_language';
+        // The language on show, in its own name (spec 0054, AC-1).
+        return `language_name_${toAppLanguage(i18n.language)}`;
       case SettingsOptions.navigation:
         // The app's name is its own translation key ('google_maps', 'waze'...).
         return navigationApp ?? 'navigation_app_ask';

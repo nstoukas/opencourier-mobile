@@ -13,6 +13,7 @@ import { hasUsableAddress } from '@app/utilities/config';
 import { AuthFrame } from '../AuthFrame';
 import { authStyles } from '../auth.styles';
 import { showAuthError } from '../showAuthError';
+import { sendLanguageToServer } from '@app/localization/languageApi';
 
 type Props = AuthScreenProp<AuthScreen.Login>;
 
@@ -26,7 +27,11 @@ export const Login = ({ navigation }: Props) => {
 
   const { data, mutate, isPending } = useMutation({
     mutationFn: services.userService.login,
-    onSuccess: () => markJustLoggedIn(),
+    onSuccess: () => {
+      markJustLoggedIn();
+      // The server words this rider's emails in the phone's language (spec 0054, decision 47.33).
+      sendLanguageToServer();
+    },
     onError: error => showAuthError(error, 'login'),
   });
 

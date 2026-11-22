@@ -10,7 +10,9 @@ import { navigationRef } from '@app/navigation/navigationRef';
 import { installSessionRefresh } from '@app/services/session';
 import { client } from '@app/services/Client';
 import { runUpgradeGate } from '@app/services/upgradeGate';
-// Sets the one locale every date, time and amount uses (row 66).
+// The saved language, read once at start (spec 0054, AC-1).
+import { languageReady } from '@app/localization/i18n';
+// Sets the locale every date, time and amount uses (row 66), switched with the language (spec 0054).
 import '@app/utilities/locale';
 
 // Renew an expired login, or log the rider out with a message (row 66).
@@ -25,11 +27,16 @@ const App = () => {
   const [userLatitude, setUserLatitude] = useState<number | null>(null);
   const [userLongitude, setUserLongitude] = useState<number | null>(null);
   // Row 17 (spec 0039, AC-3): nothing is restored or drawn until the check for
-  // a login saved against another server has finished.
+  // a login saved against another server has finished. Spec 0054 (AC-1): nor
+  // until the saved language is read, so the first screen is already in it.
   const [upgradeChecked, setUpgradeChecked] = useState(false);
 
   useEffect(() => {
-    runUpgradeGate().finally(() => setUpgradeChecked(true));
+    // `Promise.all` waits for both; `allSettled` would too, but neither ever rejects here.
+    Promise.all([
+      runUpgradeGate(),
+      languageReady.catch(() => undefined),
+    ]).finally(() => setUpgradeChecked(true));
   }, []);
 
   if (!upgradeChecked) {

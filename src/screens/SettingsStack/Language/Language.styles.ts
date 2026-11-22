@@ -24,4 +24,12 @@ export const styles = StyleSheet.create({
   list: {
     paddingHorizontal: 16,
   },
+  explained: {
+    fontSize: typeScale.body.fontSize,
+    color: Colors.black1,
+    marginBottom: 16,
+  },
+  cell: {
+    marginBottom: 16,
+  },
 });
