@@ -889,6 +889,9 @@ export default {
     'This complaint or job is no longer there. Pull down to refresh.',
   complaint_already_open:
     'You already have an open complaint about them on this job. The co-op is looking at it.',
+  complaint_reply_sent_title: 'Reply sent',
+  complaint_reply_sent_body:
+    'The co-op has your reply. A person reads it before deciding.',
   complaint_reply_conflict:
     'This complaint already has a reply, or the co-op has closed it. Pull down to see it.',
   complaint_category_LONG_WAIT: 'Long wait',

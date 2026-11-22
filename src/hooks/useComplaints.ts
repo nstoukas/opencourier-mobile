@@ -2,12 +2,15 @@ import { Alert } from 'react-native';
 import axios from 'axios';
 import { useTranslation } from 'react-i18next';
 import {
+  InfiniteData,
+  QueryClient,
   useInfiniteQuery,
   useMutation,
   useQueryClient,
 } from '@tanstack/react-query';
 import { services } from '@app/services/service';
 import { FileComplaintInput } from '@app/services/complaintService';
+import { Complaint, ComplaintPage } from '@app/types/types';
 import { QueryKeys } from '@app/utilities/queryKeys';
 import { serverMessage } from './useMoveDropoffPin';
 
@@ -66,8 +69,38 @@ export const useFileComplaint = () => {
   });
 };
 
+// The saved list holds this complaint with a reply already (the rider's own send, just stored).
+const hasReplyInList = (queryClient: QueryClient, id: string): boolean => {
+  const list = queryClient.getQueryData<InfiniteData<ComplaintPage>>([
+    QueryKeys.complaints,
+  ]);
+  return !!list?.pages.some(page =>
+    page.data.some(item => item.id === id && item.riderReply !== null),
+  );
+};
+
+// Puts the server's answer in place of the complaint in the saved list, so the card shows the reply at
+// once and the reply box goes, before the list is read again.
+const putInList = (queryClient: QueryClient, updated: Complaint) => {
+  queryClient.setQueryData<InfiniteData<ComplaintPage>>(
+    [QueryKeys.complaints],
+    list =>
+      list && {
+        ...list,
+        pages: list.pages.map(page => ({
+          ...page,
+          data: page.data.map(item =>
+            item.id === updated.id ? updated : item,
+          ),
+        })),
+      },
+  );
+};
+
 // AC-5: the rider replies once to a complaint about them. A 409 means it already has a reply or was
 // closed meanwhile; the list is read again either way, so the card shows what the server holds.
+// Review fix (row 83): a stored reply is shown at once and said ("Reply sent"), and a 409 that only
+// follows the rider's own stored reply (a second tap) is not reported as "Not sent".
 export const useReplyToComplaint = () => {
   const { t } = useTranslation();
   const queryClient = useQueryClient();
@@ -75,15 +108,29 @@ export const useReplyToComplaint = () => {
     networkMode: 'always',
     mutationFn: ({ id, text }: { id: string; text: string }) =>
       services.complaintService.replyToComplaint(id, text),
-    onError: error => {
+    onSuccess: updated => {
+      putInList(queryClient, updated);
+      Alert.alert(
+        t('translations:complaint_reply_sent_title'),
+        t('translations:complaint_reply_sent_body'),
+      );
+    },
+    onError: (error, { id }) => {
       console.log('Could not send the reply', (error as Error)?.message);
+      if (
+        axios.isAxiosError(error) &&
+        error.response?.status === 409 &&
+        hasReplyInList(queryClient, id)
+      ) {
+        return;
+      }
       Alert.alert(
         t('translations:complaint_send_failed_title'),
         failureText(error, t, 'translations:complaint_reply_conflict'),
       );
     },
-    onSettled: () => {
-      queryClient.invalidateQueries({ queryKey: [QueryKeys.complaints] });
-    },
+    // Returned, so the mutation stays pending (and the Send button disabled) until the list is fresh.
+    onSettled: () =>
+      queryClient.invalidateQueries({ queryKey: [QueryKeys.complaints] }),
   });
 };
