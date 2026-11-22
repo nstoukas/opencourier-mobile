@@ -123,6 +123,12 @@ const ComplaintCard = ({ complaint }: { complaint: Complaint }) => {
         })}
       </Text>
       <Text style={styles.line}>{complaint.text}</Text>
+      {/* Slice 2: the photo stays with the co-op; the card only says it went with the complaint. */}
+      {complaint.hasPhoto ? (
+        <Text style={styles.muted}>
+          {t('translations:complaint_photo_attached')}
+        </Text>
+      ) : null}
 
       {complaint.riderReply !== null ? (
         <View style={styles.block}>

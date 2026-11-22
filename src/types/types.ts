@@ -635,6 +635,8 @@ export type Complaint = {
   about: ComplaintAbout;
   category: ComplaintCategory;
   text: string;
+  // Slice 2: the rider attached a photo to their own complaint (never true on one about them).
+  hasPhoto: boolean;
   status: ComplaintStatus;
   createdAt: string;
   riderReply: string | null;

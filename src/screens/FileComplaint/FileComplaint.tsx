@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import {
   Alert,
+  Image,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
@@ -10,6 +11,7 @@ import {
   View,
 } from 'react-native';
 import LinearGradient from 'react-native-linear-gradient';
+import { launchImageLibrary } from 'react-native-image-picker';
 import { useTranslation } from 'react-i18next';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ScreenSafeArea } from '@app/components/ScreenSafeArea/ScreenSafeArea';
@@ -18,10 +20,15 @@ import { Button, ButtonType } from '@app/components/Button/Button';
 import { Icon } from '@app/components/Icon/Icon';
 import { CheckCircleIcon } from 'phosphor-react-native/src/icons/CheckCircle';
 import { CircleIcon } from 'phosphor-react-native/src/icons/Circle';
+import { ImageIcon } from 'phosphor-react-native/src/icons/Image';
 import { MainScreenProp, MainScreens } from '@app/navigation/main/types';
 import { Colors } from '@app/styles/colors';
 import { useFileComplaint } from '@app/hooks/useComplaints';
-import { FileComplaintInput } from '@app/services/complaintService';
+import {
+  COMPLAINT_PHOTO_MAX_BYTES,
+  ComplaintPhoto,
+  FileComplaintInput,
+} from '@app/services/complaintService';
 import { ComplaintCategory } from '@app/types/types';
 import { touchRow } from '@app/utilities/touch';
 import {
@@ -30,6 +37,7 @@ import {
   complaintCategoryKey,
 } from '@app/utilities/complaints';
 import { styles } from '../RequestRemoval/RequestRemoval.styles';
+import { photoStyles } from './FileComplaint.styles';
 
 type Props = MainScreenProp<MainScreens.FileComplaint>;
 
@@ -76,8 +84,11 @@ const ChoiceRow = ({
 
 // Spec 0052 (AC-2): the rider complains about the restaurant or the customer of one of their jobs,
 // opened from the job in Earnings (its two month reach is the filing window, cross check 11). Only the
-// co-op reads it: the restaurant is not told (cross check 5) and the customer is never contacted. Slice 1
-// is text only; the gallery photo comes with slice 2.
+// co-op reads it: the restaurant is not told (cross check 5) and the customer is never contacted.
+// Slice 2: one optional photo from the gallery. On Android the picker is the system Photo Picker, so the
+// app needs no storage permission and sees only the photo the rider picks; there is no camera here
+// (row 18 removed it). The picker hands back a JPEG at most 1600 px on a side at quality 0.8 (a PNG
+// stays a PNG); the server checks it again and removes all metadata before keeping it.
 export const FileComplaint = ({ navigation, route }: Props) => {
   const { t } = useTranslation();
   const { top, bottom } = useSafeAreaInsets();
@@ -86,6 +97,7 @@ export const FileComplaint = ({ navigation, route }: Props) => {
   const [about, setAbout] = useState<RiderAbout | null>(null);
   const [category, setCategory] = useState<ComplaintCategory | null>(null);
   const [text, setText] = useState('');
+  const [photo, setPhoto] = useState<ComplaintPhoto | null>(null);
 
   const trimmed = text.trim();
   const canSend =
@@ -104,12 +116,45 @@ export const FileComplaint = ({ navigation, route }: Props) => {
     setAbout(next);
   };
 
+  // Opens the gallery for one photo. Cancelling keeps what was there before.
+  const pickPhoto = async () => {
+    const result = await launchImageLibrary({
+      mediaType: 'photo',
+      selectionLimit: 1,
+      maxWidth: 1600,
+      maxHeight: 1600,
+      quality: 0.8,
+      includeBase64: false,
+      includeExtra: false,
+    });
+    if (result.didCancel) {
+      return;
+    }
+    const asset = result.assets?.[0];
+    if (result.errorCode || !asset?.uri) {
+      // The code only: an error message can carry a file path.
+      console.log('Could not pick a complaint photo', result.errorCode);
+      Alert.alert(t('translations:complaint_photo_failed'));
+      return;
+    }
+    if (asset.fileSize && asset.fileSize > COMPLAINT_PHOTO_MAX_BYTES) {
+      Alert.alert(t('translations:complaint_photo_too_big'));
+      return;
+    }
+    const isPng = asset.type === 'image/png';
+    setPhoto({
+      uri: asset.uri,
+      type: isPng ? 'image/png' : 'image/jpeg',
+      name: isPng ? 'photo.png' : 'photo.jpg',
+    });
+  };
+
   const onSend = () => {
     if (!about || !category) {
       return;
     }
     send.mutate(
-      { deliveryId, about, category, text: trimmed },
+      { deliveryId, about, category, text: trimmed, photo },
       {
         // Say it went and where the outcome shows, so the rider does not send it again.
         onSuccess: () => {
@@ -180,6 +225,55 @@ export const FileComplaint = ({ navigation, route }: Props) => {
               <Text style={styles.noteCount}>
                 {`${text.length}/${COMPLAINT_TEXT_MAX_LENGTH}`}
               </Text>
+              <View style={photoStyles.photoArea}>
+                {photo ? (
+                  <View style={photoStyles.photoRow}>
+                    <Image
+                      source={{ uri: photo.uri }}
+                      style={photoStyles.thumb}
+                      accessibilityIgnoresInvertColors
+                      accessibilityLabel={t(
+                        'translations:complaint_photo_attached',
+                      )}
+                      testID="complaint-photo-thumb"
+                    />
+                    <View style={photoStyles.photoActions}>
+                      <TouchableOpacity
+                        style={photoStyles.photoAction}
+                        disabled={send.isPending}
+                        onPress={pickPhoto}
+                        accessibilityRole="button"
+                        testID="complaint-photo-change">
+                        <Text style={photoStyles.photoActionText}>
+                          {t('translations:complaint_change_photo')}
+                        </Text>
+                      </TouchableOpacity>
+                      <TouchableOpacity
+                        style={photoStyles.photoAction}
+                        disabled={send.isPending}
+                        onPress={() => setPhoto(null)}
+                        accessibilityRole="button"
+                        testID="complaint-photo-remove">
+                        <Text style={photoStyles.photoActionText}>
+                          {t('translations:complaint_remove_photo')}
+                        </Text>
+                      </TouchableOpacity>
+                    </View>
+                  </View>
+                ) : (
+                  <Button
+                    type={ButtonType.grayBGBlackText}
+                    title={t('translations:complaint_add_photo')}
+                    icon={ImageIcon}
+                    iconPosition="left"
+                    disabled={send.isPending}
+                    onPress={pickPhoto}
+                  />
+                )}
+                <Text style={photoStyles.hint}>
+                  {t('translations:complaint_photo_hint')}
+                </Text>
+              </View>
               {about ? (
                 <Text style={styles.intro}>
                   {t(

@@ -866,6 +866,14 @@ export default {
   complaint_about_customer: 'The customer',
   complaint_what_happened: 'What happened?',
   complaint_text_placeholder: 'What happened, in your words',
+  complaint_add_photo: 'Add a photo (optional)',
+  complaint_change_photo: 'Choose another photo',
+  complaint_remove_photo: 'Remove photo',
+  complaint_photo_hint:
+    'From your gallery. Only the co-op sees it, and where it was taken is removed.',
+  complaint_photo_failed: 'The photo could not be opened. Try another one.',
+  complaint_photo_too_big: 'That photo is too big. Choose a smaller one.',
+  complaint_photo_attached: 'Photo attached',
   complaint_only_coop_restaurant:
     'Only the co-op reads this. The restaurant is not told.',
   complaint_only_coop_customer:
