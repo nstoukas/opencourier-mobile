@@ -251,9 +251,19 @@ const orderService = (client: UClient): OrderService => {
       automatic ? { automatic: true } : {},
     );
     // Spec 0048: a stack's other order was accepted by the same call; it is
-    // marked as dispatched too, so both jobs start from the same step.
+    // marked as dispatched too, so both jobs start from the same step. Its
+    // own try (review of row 80): the accept already went through, so a
+    // failure here must not read as "Error accepting order" and bring both
+    // offers back; the job screen can still be moved on by hand.
     if (partnerId) {
-      await dispatchAfterAccept(partnerId);
+      try {
+        await dispatchAfterAccept(partnerId);
+      } catch (error) {
+        console.warn(
+          `Could not mark the other order ${partnerId} as dispatched`,
+          error,
+        );
+      }
     }
     return dispatchAfterAccept(id);
   };
