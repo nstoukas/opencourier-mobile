@@ -38,14 +38,16 @@ const useAddressNotes = () => {
       t('translations:address_note_failed'),
     );
 
+  // Each service is read when the mutation runs, not when Home first draws.
   const { mutate: toggleUpvote } = useMutation({
-    mutationFn: services.commentService.toggleUpvote,
+    mutationFn: (id: string) => services.commentService.toggleUpvote(id),
     onSuccess: refresh,
     onError: failed,
   });
 
   const { mutate: flagNote } = useMutation({
-    mutationFn: services.commentService.flagComment,
+    mutationFn: (params: { id: string; reason?: string }) =>
+      services.commentService.flagComment(params),
     onSuccess: () => {
       refresh();
       Alert.alert(
@@ -57,7 +59,7 @@ const useAddressNotes = () => {
   });
 
   const { mutate: deleteNote } = useMutation({
-    mutationFn: services.commentService.deleteComment,
+    mutationFn: (id: string) => services.commentService.deleteComment(id),
     onSuccess: refresh,
     onError: failed,
   });
