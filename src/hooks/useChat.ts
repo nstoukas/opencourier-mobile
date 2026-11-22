@@ -16,6 +16,7 @@ import {
   updateOutgoing,
   useChatOutgoing,
 } from '@app/services/chat/chatOutgoing';
+import { currentLanguage } from '@app/localization/appLanguage';
 import { serverMessage } from '@app/hooks/useMoveDropoffPin';
 import { QueryKeys } from '@app/utilities/queryKeys';
 
@@ -40,9 +41,10 @@ export const useChatMessages = (
   });
 
 // The co-op's one tap presets for riders (AC-13).
+// The language is part of the key, so a switch in Settings shows the presets in the new language.
 export const useChatQuickReplies = () =>
   useQuery({
-    queryKey: [QueryKeys.chatQuickReplies],
+    queryKey: [QueryKeys.chatQuickReplies, currentLanguage()],
     queryFn: () => services.chatService.getQuickReplies(),
     staleTime: 5 * 60_000,
   });

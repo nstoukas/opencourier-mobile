@@ -1,4 +1,5 @@
 import { UClient } from '../Client';
+import { currentLanguage } from '@app/localization/appLanguage';
 
 // Spec 0034 (chat). The rider's one conversation with the co-op's dispatch, on the backend's
 // `courier/v1/chat` routes. The server finds the thread from the login: there is no thread id here.
@@ -55,6 +56,19 @@ const chatService = (client: UClient): ChatService => ({
   },
   getQuickReplies: async () => {
     const { data } = await client.get('chat/quick-replies');
+    // Spec 0054 (AC-7): each preset in both languages; the one on show now, else the other. An older
+    // server sends only `replies` (texts in one language).
+    const presets: unknown = data.result.presets;
+    if (Array.isArray(presets)) {
+      const language = currentLanguage();
+      return presets
+        .map((preset: { el?: string; en?: string }) =>
+          language === 'el'
+            ? preset.el || preset.en || ''
+            : preset.en || preset.el || '',
+        )
+        .filter(text => text !== '');
+    }
     return data.result.replies;
   },
 });
