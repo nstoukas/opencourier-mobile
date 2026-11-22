@@ -4,6 +4,25 @@
     <style name="AppTheme" parent="Theme.AppCompat.DayNight.NoActionBar">
         <!-- Customize your theme here. -->
         <item name="android:editTextBackground">@drawable/rn_edit_text_material</item>
+        <!-- Row 124: the buttons of Android's own dialogs (React Native's Alert.alert). Material writes them
+             in capitals, and Android's capitals keep Greek accents ("ΑΠΟΧΏΡΗΣΗ", wrong in Greek), so they
+             show as the app's own words instead, in sentence case ("Αποχώρηση", "Leave").
+             Both attributes, because two kinds of dialog read different ones: React Native 0.74 builds a
+             framework dialog, which reads android:buttonBarButtonStyle; newer React Native builds AppCompat's
+             dialog under an AppCompat theme like this one, which reads buttonBarButtonStyle (no prefix).
+             Neither dialog overlay sets a button style of its own, so the activity theme's value is the one
+             read, and no alertDialogTheme is needed. Drop either line and an upgrade brings the capitals back
+             with no build error. -->
+        <item name="android:buttonBarButtonStyle">@style/DialogButton</item>
+        <item name="buttonBarButtonStyle">@style/DialogButton</item>
+    </style>
+
+    <!-- AppCompat's own dialog button (borderless, in the accent colour, its sizes), which is what these
+         dialogs drew before under this theme, with the all caps turned off. Both spellings of textAllCaps:
+         the framework reads android:, and AppCompat's button reads its own. -->
+    <style name="DialogButton" parent="Widget.AppCompat.Button.ButtonBar.AlertDialog">
+        <item name="android:textAllCaps">false</item>
+        <item name="textAllCaps">false</item>
     </style>
 
 </resources>
