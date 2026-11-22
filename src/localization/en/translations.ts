@@ -547,6 +547,10 @@ export default {
     'A reason was recorded that this version of the app cannot show yet.',
   why_seniority: 'The co-op offers to its longest serving members first',
   why_dispatch: 'Dispatch gave you this job',
+  why_add_on:
+    'Offered as one more order on the way: it added {{km}} km and {{minutes}} min to your job, less than for any other rider on a job',
+  why_add_on_plain:
+    'Offered as one more order on the way, added to the job you were on',
   why_how_link: 'How offers and pay work',
   why_minutes: '{{minutes}} min',
   why_hours: '{{hours}} h {{minutes}} min',
