@@ -109,7 +109,7 @@ const translations: typeof en = {
   shift_places_left_one: 'Απομένει {{count}} θέση',
   shift_places_left_other: 'Απομένουν {{count}} θέσεις',
   shift_drop: 'Αποδέσμευση',
-  shift_drop_until: 'Μπορείτε να αποδεσμευτείτε από αυτήν έως {{until}}.',
+  shift_drop_until: 'Μπορείτε να αποδεσμευτείτε από αυτήν έως τις {{until}}.',
   shift_drop_confirm_title: 'Αποδέσμευση από αυτή τη βάρδια;',
   shift_drop_confirm_body:
     '{{day}}, {{start}}–{{end}}. Η θέση της επιστρέφει στο πρόγραμμα.',
