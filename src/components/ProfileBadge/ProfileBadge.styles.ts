@@ -17,12 +17,21 @@ export const styles = StyleSheet.create({
     justifyContent: 'center',
     backgroundColor: Colors.white,
   },
-  // Wider and taller than the avatar so its caption size word fits on one line (spec 0007).
-  containerStatus: {
+  // Row 47 live check: a wide, empty row under the avatar that holds the word, so the
+  // word is measured against this row and not against the 40 wide avatar. Without it the
+  // Greek "Σε σύνδεση" or "Τελευταία παραγγελία" was cut to "Σ…".
+  statusRow: {
     position: 'absolute',
     bottom: -4,
     left: -12,
-    right: -12,
+    width: 240,
+    alignItems: 'flex-start',
+  },
+  // Wider and taller than the avatar so its caption size word fits on one line (spec 0007);
+  // never narrower than before, and as wide as a longer word needs (it grows to the right).
+  containerStatus: {
+    minWidth: 64,
+    paddingHorizontal: 4,
     borderRadius: radius.sm,
     borderWidth: 1.5,
     borderColor: Colors.white,
