@@ -1,5 +1,11 @@
 import React, { useState } from 'react';
-import { ScrollView, Text, TouchableOpacity, View } from 'react-native';
+import {
+  Platform,
+  ScrollView,
+  Text,
+  TouchableOpacity,
+  View,
+} from 'react-native';
 import LinearGradient from 'react-native-linear-gradient';
 import { useTranslation } from 'react-i18next';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -31,11 +37,17 @@ const COUNTS = Array.from(
 // one the rider keeps; the rest go to other riders, each paid in full.
 export const RequestSplit = ({ navigation, route }: Props) => {
   const { t } = useTranslation();
-  const { top } = useSafeAreaInsets();
+  const { top, bottom } = useSafeAreaInsets();
   const { order } = route.params;
   const { send } = useSendSplitRequest();
   const sending = useSplitBusy(order.id);
   const [sizes, setSizes] = useState<(SplitBoxSize | null)[]>([null, null]);
+
+  // ScreenSafeArea pads the bottom only on iOS, so Android adds the inset itself,
+  // or "Send to dispatch" sits under the navigation bar (as in RequestRemoval).
+  const bottomInset = {
+    paddingBottom: Platform.OS === 'android' ? bottom : 0,
+  };
 
   const onSend = () => {
     if (!allBoxesSized(sizes)) {
@@ -72,7 +84,7 @@ export const RequestSplit = ({ navigation, route }: Props) => {
         style={[styles.gradient, { height: top + 100 }]}
         colors={Colors.onlineGradientArray}
       />
-      <ScreenSafeArea style={styles.safe}>
+      <ScreenSafeArea style={[styles.safe, bottomInset]}>
         <View style={styles.navHeader}>
           <Text style={styles.title}>{t('translations:split_title')}</Text>
           <BackNavButton onPress={() => navigation.goBack()} />
