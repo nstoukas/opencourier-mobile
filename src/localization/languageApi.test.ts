@@ -33,7 +33,7 @@ describe('languageApi (spec 0054 AC-1, decision 47.34)', () => {
   });
 
   describe('sendLanguageToServer', () => {
-    it('sends currentLanguage() to server without throwing on rejection', async () => {
+    it('sends currentLanguage() to server without throwing on rejection when Greek is chosen', async () => {
       await chooseLanguage('el');
       expect(currentLanguage()).toBe('el');
 
@@ -45,12 +45,26 @@ describe('languageApi (spec 0054 AC-1, decision 47.34)', () => {
       // Must not throw
       expect(() => sendLanguageToServer()).not.toThrow();
 
-      // Verify put called with current language
+      // Verify put called with current language (el)
       expect(putSpy).toHaveBeenCalledWith('courier/language', {
         language: 'el',
       });
 
       consoleSpy.mockRestore();
+    });
+
+    it('sends English ("en") to server when English is chosen (catches hardcoded "el")', async () => {
+      await chooseLanguage('en');
+      expect(currentLanguage()).toBe('en');
+
+      const putSpy = jest.spyOn(client, 'put').mockResolvedValueOnce({} as any);
+
+      sendLanguageToServer();
+
+      // Verify put called with current language (en)
+      expect(putSpy).toHaveBeenCalledWith('courier/language', {
+        language: 'en',
+      });
     });
   });
 });

@@ -1,7 +1,11 @@
 import React from 'react';
+import fs from 'fs';
+import path from 'path';
+import { AppState, AppStateStatus } from 'react-native';
 import { render, fireEvent, act } from '@testing-library/react-native';
 import MapView from 'react-native-maps';
 import '@app/localization/i18n';
+import { TRACK_FOR_MS } from '@app/hooks/useTrackOnce';
 import { RouteMap } from './RouteMap';
 import {
   PickupPoint,
@@ -512,5 +516,334 @@ describe('RouteMap (spec 0018, AC-5, AC-6, AC-11)', () => {
 
     fireEvent.press(getByTestId('map-layers-button'));
     expect(onToggleMock).toHaveBeenCalledTimes(1);
+  });
+
+  describe('marker tracking and memory leak prevention (row 125, decisions 125.1-125.5, OR.12)', () => {
+    let appStateListeners: Array<(state: AppStateStatus) => void> = [];
+
+    beforeEach(() => {
+      jest.useFakeTimers();
+      appStateListeners = [];
+      AppState.currentState = 'active';
+
+      jest
+        .spyOn(AppState, 'addEventListener')
+        .mockImplementation((event: string, listener: any) => {
+          if (event === 'change') {
+            appStateListeners.push(listener);
+          }
+          return {
+            remove: () => {
+              appStateListeners = appStateListeners.filter(l => l !== listener);
+            },
+          } as any;
+        });
+    });
+
+    afterEach(() => {
+      jest.useRealTimers();
+    });
+
+    it('single job: every pin (pickup, dropoff, rider) has tracksViewChanges true when first drawn and false after TRACK_FOR_MS', () => {
+      const { getByTestId } = render(
+        <RouteMap
+          legs={sampleLegs}
+          pickup={pickupPos}
+          dropoff={dropoffPos}
+          ownPosition={ownPos}
+          restaurantLayerOn={false}
+          pickupPoints={[]}
+          onToggleRestaurantLayer={jest.fn()}
+          fitKey="order-1-ACCEPTED"
+          bottomInset={100}
+        />,
+      );
+
+      // 1. When first drawn, all pins have tracksViewChanges true
+      expect(getByTestId('pickup-pin').props.tracksViewChanges).toBe(true);
+      expect(getByTestId('dropoff-pin').props.tracksViewChanges).toBe(true);
+      expect(getByTestId('rider-marker').props.tracksViewChanges).toBe(true);
+
+      // 2. Advance time by TRACK_FOR_MS
+      act(() => {
+        jest.advanceTimersByTime(TRACK_FOR_MS);
+      });
+
+      // 3. After TRACK_FOR_MS, all pins have tracksViewChanges false
+      expect(getByTestId('pickup-pin').props.tracksViewChanges).toBe(false);
+      expect(getByTestId('dropoff-pin').props.tracksViewChanges).toBe(false);
+      expect(getByTestId('rider-marker').props.tracksViewChanges).toBe(false);
+    });
+
+    it('two order stack: every stop pin and rider marker has tracksViewChanges true when first drawn and false after TRACK_FOR_MS', () => {
+      const stops = [
+        {
+          number: 1,
+          deliveryId: 'deliv-1',
+          stop: 'PICKUP' as const,
+          latitude: 39.362,
+          longitude: 22.942,
+          done: false,
+        },
+        {
+          number: 2,
+          deliveryId: 'deliv-2',
+          stop: 'PICKUP' as const,
+          latitude: 39.365,
+          longitude: 22.945,
+          done: false,
+        },
+      ];
+
+      const { getByTestId } = render(
+        <RouteMap
+          legs={[]}
+          stops={stops}
+          ownPosition={ownPos}
+          restaurantLayerOn={false}
+          pickupPoints={[]}
+          onToggleRestaurantLayer={jest.fn()}
+          fitKey="stack-1-ACCEPTED"
+          bottomInset={100}
+        />,
+      );
+
+      // First drawn: true
+      expect(getByTestId('stack-stop-pin-1').props.tracksViewChanges).toBe(
+        true,
+      );
+      expect(getByTestId('stack-stop-pin-2').props.tracksViewChanges).toBe(
+        true,
+      );
+      expect(getByTestId('rider-marker').props.tracksViewChanges).toBe(true);
+
+      act(() => {
+        jest.advanceTimersByTime(TRACK_FOR_MS);
+      });
+
+      // After TRACK_FOR_MS: false
+      expect(getByTestId('stack-stop-pin-1').props.tracksViewChanges).toBe(
+        false,
+      );
+      expect(getByTestId('stack-stop-pin-2').props.tracksViewChanges).toBe(
+        false,
+      );
+      expect(getByTestId('rider-marker').props.tracksViewChanges).toBe(false);
+    });
+
+    it('restaurant layer: every restaurant pin has tracksViewChanges true when first drawn and false after TRACK_FOR_MS', () => {
+      const { getByTestId } = render(
+        <RouteMap
+          legs={[]}
+          ownPosition={ownPos}
+          restaurantLayerOn={true}
+          pickupPoints={pickupPoints}
+          onToggleRestaurantLayer={jest.fn()}
+          fitKey="none-"
+          bottomInset={0}
+        />,
+      );
+
+      // First drawn: true
+      expect(getByTestId('restaurant-pin-rest-1').props.tracksViewChanges).toBe(
+        true,
+      );
+      expect(getByTestId('restaurant-pin-rest-2').props.tracksViewChanges).toBe(
+        true,
+      );
+
+      act(() => {
+        jest.advanceTimersByTime(TRACK_FOR_MS);
+      });
+
+      // After TRACK_FOR_MS: false
+      expect(getByTestId('restaurant-pin-rest-1').props.tracksViewChanges).toBe(
+        false,
+      );
+      expect(getByTestId('restaurant-pin-rest-2').props.tracksViewChanges).toBe(
+        false,
+      );
+    });
+
+    it('a stack stop that turns done tracks again briefly then stops', () => {
+      const stopsTodo = [
+        {
+          number: 1,
+          deliveryId: 'deliv-1',
+          stop: 'PICKUP' as const,
+          latitude: 39.362,
+          longitude: 22.942,
+          done: false,
+        },
+        {
+          number: 2,
+          deliveryId: 'deliv-2',
+          stop: 'PICKUP' as const,
+          latitude: 39.365,
+          longitude: 22.945,
+          done: false,
+        },
+      ];
+
+      const { getByTestId, rerender } = render(
+        <RouteMap
+          legs={[]}
+          stops={stopsTodo}
+          ownPosition={ownPos}
+          restaurantLayerOn={false}
+          pickupPoints={[]}
+          onToggleRestaurantLayer={jest.fn()}
+          fitKey="stack-1-ACCEPTED"
+          bottomInset={100}
+        />,
+      );
+
+      // Stop tracking after initial render
+      act(() => {
+        jest.advanceTimersByTime(TRACK_FOR_MS);
+      });
+      expect(getByTestId('stack-stop-pin-1').props.tracksViewChanges).toBe(
+        false,
+      );
+      expect(getByTestId('stack-stop-pin-2').props.tracksViewChanges).toBe(
+        false,
+      );
+
+      // Stop 1 turns done
+      const stopsDone = [{ ...stopsTodo[0], done: true }, stopsTodo[1]];
+
+      rerender(
+        <RouteMap
+          legs={[]}
+          stops={stopsDone}
+          ownPosition={ownPos}
+          restaurantLayerOn={false}
+          pickupPoints={[]}
+          onToggleRestaurantLayer={jest.fn()}
+          fitKey="stack-1-PICKED_UP"
+          bottomInset={100}
+        />,
+      );
+
+      // Stop 1's lookKey changed (1-done): tracks again briefly
+      expect(getByTestId('stack-stop-pin-1').props.tracksViewChanges).toBe(
+        true,
+      );
+      // Stop 2 did not change: stays non-tracking
+      expect(getByTestId('stack-stop-pin-2').props.tracksViewChanges).toBe(
+        false,
+      );
+
+      // After TRACK_FOR_MS, stop 1 stops tracking again
+      act(() => {
+        jest.advanceTimersByTime(TRACK_FOR_MS);
+      });
+      expect(getByTestId('stack-stop-pin-1').props.tracksViewChanges).toBe(
+        false,
+      );
+    });
+
+    it('the rider dot moving does not turn tracking back on', () => {
+      const { getByTestId, rerender } = render(
+        <RouteMap
+          legs={sampleLegs}
+          pickup={pickupPos}
+          dropoff={dropoffPos}
+          ownPosition={ownPos}
+          restaurantLayerOn={false}
+          pickupPoints={[]}
+          onToggleRestaurantLayer={jest.fn()}
+          fitKey="order-1-ACCEPTED"
+          bottomInset={100}
+        />,
+      );
+
+      act(() => {
+        jest.advanceTimersByTime(TRACK_FOR_MS);
+      });
+      expect(getByTestId('rider-marker').props.tracksViewChanges).toBe(false);
+
+      // Rider dot moves to new coordinates
+      rerender(
+        <RouteMap
+          legs={sampleLegs}
+          pickup={pickupPos}
+          dropoff={dropoffPos}
+          ownPosition={{ latitude: 39.364, longitude: 22.944 }}
+          restaurantLayerOn={false}
+          pickupPoints={[]}
+          onToggleRestaurantLayer={jest.fn()}
+          fitKey="order-1-ACCEPTED"
+          bottomInset={100}
+        />,
+      );
+
+      // lookKey ("rider") has not changed: tracking remains false
+      expect(getByTestId('rider-marker').props.tracksViewChanges).toBe(false);
+    });
+
+    it('the app going to the background stops tracking at once and coming back tracks briefly then stops (AppState)', () => {
+      const { getByTestId } = render(
+        <RouteMap
+          legs={sampleLegs}
+          pickup={pickupPos}
+          dropoff={dropoffPos}
+          ownPosition={ownPos}
+          restaurantLayerOn={false}
+          pickupPoints={[]}
+          onToggleRestaurantLayer={jest.fn()}
+          fitKey="order-1-ACCEPTED"
+          bottomInset={100}
+        />,
+      );
+
+      // Currently tracking right after mount
+      expect(getByTestId('pickup-pin').props.tracksViewChanges).toBe(true);
+      expect(getByTestId('rider-marker').props.tracksViewChanges).toBe(true);
+
+      // App goes to background before TRACK_FOR_MS expires
+      AppState.currentState = 'background';
+      act(() => {
+        appStateListeners.forEach(listener => listener('background'));
+      });
+
+      // Tracking stops at once on background
+      expect(getByTestId('pickup-pin').props.tracksViewChanges).toBe(false);
+      expect(getByTestId('rider-marker').props.tracksViewChanges).toBe(false);
+
+      // App returns to active (foreground)
+      AppState.currentState = 'active';
+      act(() => {
+        appStateListeners.forEach(listener => listener('active'));
+      });
+
+      // Coming back tracks briefly
+      expect(getByTestId('pickup-pin').props.tracksViewChanges).toBe(true);
+      expect(getByTestId('rider-marker').props.tracksViewChanges).toBe(true);
+
+      // After TRACK_FOR_MS, stops tracking
+      act(() => {
+        jest.advanceTimersByTime(TRACK_FOR_MS);
+      });
+      expect(getByTestId('pickup-pin').props.tracksViewChanges).toBe(false);
+      expect(getByTestId('rider-marker').props.tracksViewChanges).toBe(false);
+    });
+
+    it('fails if a bare react-native-maps Marker (always tracking) is used in RouteMap', () => {
+      const routeMapSource = fs.readFileSync(
+        path.resolve(__dirname, 'RouteMap.tsx'),
+        'utf-8',
+      );
+
+      // 1. Must not import Marker from react-native-maps
+      const markerImportMatch = routeMapSource.match(
+        /import\s+[^;]*\bMarker\b[^;]*from\s*['"]react-native-maps['"]/,
+      );
+      expect(markerImportMatch).toBeNull();
+
+      // 2. Must not use bare <Marker in JSX (all markers must use StillMarker)
+      const bareMarkerJsxMatch = routeMapSource.match(/<Marker[\s/>]/);
+      expect(bareMarkerJsxMatch).toBeNull();
+    });
   });
 });

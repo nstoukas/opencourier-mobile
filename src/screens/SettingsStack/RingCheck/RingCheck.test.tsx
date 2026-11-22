@@ -86,6 +86,40 @@ describe('RingCheck screen (row 84, decision 84.4, 84.5)', () => {
     // Pressing first button opens fix for notifications_off
     fireEvent.press(openSettingsButtons[0]);
     expect(openFixSpy).toHaveBeenCalledWith('notifications_off');
+
+    // Pressing second button opens fix for phone_silent
+    fireEvent.press(openSettingsButtons[1]);
+    expect(openFixSpy).toHaveBeenCalledWith('phone_silent');
+  });
+
+  it('presses every problem button across all check categories and asserts each opens its own setting', () => {
+    const allProblemItems: ringCheckService.RingCheckItem[] = [
+      { id: 'notifications', problem: 'notifications_off' },
+      { id: 'offer_alerts', problem: 'offer_alerts_off' },
+      { id: 'full_screen', problem: 'full_screen_off' },
+      { id: 'sound', problem: 'phone_silent' },
+      { id: 'battery', problem: 'battery_optimised' },
+    ];
+    jest.spyOn(useRingCheckModule, 'useRingCheck').mockReturnValue({
+      items: allProblemItems,
+      recheck: jest.fn(),
+    });
+    const openFixSpy = jest
+      .spyOn(ringCheckService, 'openFixFor')
+      .mockResolvedValue();
+
+    render(<RingCheck navigation={mockNavigation} route={{} as any} />);
+
+    const openSettingsButtons = screen.getAllByText(
+      i18n.t('translations:open_settings'),
+    );
+    expect(openSettingsButtons.length).toBe(5);
+
+    // Press each problem's button and assert each opens its own setting
+    allProblemItems.forEach((item, index) => {
+      fireEvent.press(openSettingsButtons[index]);
+      expect(openFixSpy).toHaveBeenNthCalledWith(index + 1, item.problem);
+    });
   });
 
   it('tapping check again calls recheck', () => {

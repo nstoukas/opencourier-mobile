@@ -46,6 +46,24 @@ describe('serverText (spec 0054, AC-4, AC-6, decisions 47.31, 47.35, 47.46)', ()
       expect(rendered).toBe('Η παραγγελία άλλαξε. Ελέγξτε τις δουλειές σας.');
     });
 
+    it('falls back to English when code is missing from Greek templates (spec 0054, AC-6)', async () => {
+      await i18n.changeLanguage('el');
+      setAppLocale('el');
+
+      // Add a server error key that exists ONLY in English, missing from Greek
+      i18n.addResource(
+        'en',
+        'server',
+        'error.CODE_MISSING_IN_GREEK',
+        'English server message for new un-translated error code',
+      );
+
+      const rendered = renderServerText('server.error.CODE_MISSING_IN_GREEK');
+      expect(rendered).toBe(
+        'English server message for new un-translated error code',
+      );
+    });
+
     it('interpolates params into templates (e.g. minutes, boxUnits)', async () => {
       await i18n.changeLanguage('en');
       setAppLocale('en');
