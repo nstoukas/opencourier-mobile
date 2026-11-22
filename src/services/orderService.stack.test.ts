@@ -42,7 +42,9 @@ describe('orderService.stack & serverSentenceOf (spec 0048, AC-5)', () => {
     it('returns null if result is missing, not an array, or empty', () => {
       expect(serverSentenceOf(makeAxiosError(409, {}))).toBeNull();
       expect(serverSentenceOf(makeAxiosError(409, { result: [] }))).toBeNull();
-      expect(serverSentenceOf(makeAxiosError(409, { result: 'invalid' }))).toBeNull();
+      expect(
+        serverSentenceOf(makeAxiosError(409, { result: 'invalid' })),
+      ).toBeNull();
       expect(
         serverSentenceOf(makeAxiosError(409, { result: [{ message: '' }] })),
       ).toBeNull();
@@ -102,11 +104,9 @@ describe('orderService.stack & serverSentenceOf (spec 0048, AC-5)', () => {
         automatic: true,
       });
 
-      expect(mockPost).toHaveBeenNthCalledWith(
-        1,
-        'deliveries/order-1/accept',
-        { automatic: true },
-      );
+      expect(mockPost).toHaveBeenNthCalledWith(1, 'deliveries/order-1/accept', {
+        automatic: true,
+      });
     });
 
     it('for single order without partnerId: only marks id as dispatched', async () => {
@@ -129,6 +129,75 @@ describe('orderService.stack & serverSentenceOf (spec 0048, AC-5)', () => {
         'deliveries/order-single/mark-as-dispatched',
         {},
       );
+    });
+
+    it('when marking partner as dispatched fails, catches the error, logs a warning, and still marks primary order as dispatched', async () => {
+      const warnSpy = jest.spyOn(console, 'warn').mockImplementation(() => {});
+      const mockPost = jest.fn().mockImplementation((url: string) => {
+        if (url === 'deliveries/order-2/mark-as-dispatched') {
+          return Promise.reject(new Error('Network error on partner dispatch'));
+        }
+        return Promise.resolve({ data: { result: 'ok' } });
+      });
+      const client = { post: mockPost } as unknown as UClient;
+      const service = orderService(client);
+
+      // acceptOrder should resolve successfully without throwing
+      await expect(
+        service.acceptOrder({
+          id: 'order-1',
+          partnerId: 'order-2',
+          automatic: false,
+        }),
+      ).resolves.toEqual({ data: { result: 'ok' } });
+
+      // 1. Accepts order-1
+      expect(mockPost).toHaveBeenNthCalledWith(
+        1,
+        'deliveries/order-1/accept',
+        {},
+      );
+
+      // 2. Attempted to mark partner order-2 as dispatched (which rejected)
+      expect(mockPost).toHaveBeenNthCalledWith(
+        2,
+        'deliveries/order-2/mark-as-dispatched',
+        {},
+      );
+
+      // 3. Warning was logged for the partner dispatch failure
+      expect(warnSpy).toHaveBeenCalledWith(
+        'Could not mark the other order order-2 as dispatched',
+        expect.any(Error),
+      );
+
+      // 4. Primary order-1 was still marked as dispatched!
+      expect(mockPost).toHaveBeenNthCalledWith(
+        3,
+        'deliveries/order-1/mark-as-dispatched',
+        {},
+      );
+
+      warnSpy.mockRestore();
+    });
+
+    it('when marking primary order as dispatched fails, the acceptOrder promise rejects', async () => {
+      const mockPost = jest.fn().mockImplementation((url: string) => {
+        if (url === 'deliveries/order-1/mark-as-dispatched') {
+          return Promise.reject(new Error('Primary dispatch failed'));
+        }
+        return Promise.resolve({ data: { result: 'ok' } });
+      });
+      const client = { post: mockPost } as unknown as UClient;
+      const service = orderService(client);
+
+      await expect(
+        service.acceptOrder({
+          id: 'order-1',
+          partnerId: 'order-2',
+          automatic: false,
+        }),
+      ).rejects.toThrow('Primary dispatch failed');
     });
   });
 });

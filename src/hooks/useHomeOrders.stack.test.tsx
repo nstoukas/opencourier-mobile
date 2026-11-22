@@ -3,7 +3,7 @@ import renderer, { act } from 'react-test-renderer';
 import { Alert } from 'react-native';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { OrderSetting } from '@app/types/enums';
-import { Order, UserStatus } from '@app/types/types';
+import { Order, StackStop, UserStatus } from '@app/types/types';
 import { QueryKeys } from '@app/utilities/queryKeys';
 import { OFFER_HAS_ENDED_CODE } from '@app/services/orderService';
 import { AxiosError } from 'axios';
@@ -91,12 +91,20 @@ describe('useHomeOrders.stack (spec 0048, row 80, AC-5, AC-8)', () => {
   let queryClient: QueryClient;
   let alertSpy: jest.SpyInstance;
 
+  const sampleStackStops: StackStop[] = [
+    { deliveryId: 'stack-1', stop: 'PICKUP' },
+    { deliveryId: 'stack-2', stop: 'PICKUP' },
+    { deliveryId: 'stack-1', stop: 'DROPOFF' },
+    { deliveryId: 'stack-2', stop: 'DROPOFF' },
+  ];
+
   const stackOffer1: Order = {
     id: 'stack-1',
     offerGroupId: 'group-abc',
     offeredAt: '2026-11-22T10:00:00.000Z',
     phoneClock: { offeredAt: 100000, expiresAt: 160000 },
     totalCompensation: 500,
+    stackStops: sampleStackStops,
   } as Order;
 
   const stackOffer2: Order = {
@@ -105,6 +113,7 @@ describe('useHomeOrders.stack (spec 0048, row 80, AC-5, AC-8)', () => {
     offeredAt: '2026-11-22T10:00:00.000Z',
     phoneClock: { offeredAt: 100000, expiresAt: 160000 },
     totalCompensation: 450,
+    stackStops: sampleStackStops,
   } as Order;
 
   beforeEach(() => {
@@ -141,7 +150,10 @@ describe('useHomeOrders.stack (spec 0048, row 80, AC-5, AC-8)', () => {
   describe('AC-8: Auto-accept skips stacked orders', () => {
     it('does NOT automatically accept offers that have an offerGroupId', async () => {
       mockDeliverySetting = OrderSetting.auto_accept;
-      queryClient.setQueryData([QueryKeys.newOrders], [stackOffer1, stackOffer2]);
+      queryClient.setQueryData(
+        [QueryKeys.newOrders],
+        [stackOffer1, stackOffer2],
+      );
 
       let hookResult: ReturnType<typeof useHomeOrders> | undefined;
       let tree: renderer.ReactTestRenderer;
@@ -161,7 +173,10 @@ describe('useHomeOrders.stack (spec 0048, row 80, AC-5, AC-8)', () => {
       expect(mockAcceptOrder).not.toHaveBeenCalled();
 
       // But both orders remain visible in dataSourceNew
-      expect(hookResult?.dataSourceNew.map(o => o.id)).toEqual(['stack-1', 'stack-2']);
+      expect(hookResult?.dataSourceNew.map(o => o.id)).toEqual([
+        'stack-1',
+        'stack-2',
+      ]);
 
       act(() => {
         tree.unmount();
@@ -170,7 +185,10 @@ describe('useHomeOrders.stack (spec 0048, row 80, AC-5, AC-8)', () => {
 
     it('plays offer sound for stacked orders even when auto_accept is enabled', async () => {
       mockDeliverySetting = OrderSetting.auto_accept;
-      queryClient.setQueryData([QueryKeys.newOrders], [stackOffer1, stackOffer2]);
+      queryClient.setQueryData(
+        [QueryKeys.newOrders],
+        [stackOffer1, stackOffer2],
+      );
 
       let tree: renderer.ReactTestRenderer;
       await act(async () => {
@@ -204,16 +222,11 @@ describe('useHomeOrders.stack (spec 0048, row 80, AC-5, AC-8)', () => {
         [singleOffer, stackOffer1, stackOffer2],
       );
 
-      let hookResult: ReturnType<typeof useHomeOrders> | undefined;
       let tree: renderer.ReactTestRenderer;
       await act(async () => {
         tree = renderer.create(
           <QueryClientProvider client={queryClient}>
-            <HookHost
-              onRender={h => {
-                hookResult = h;
-              }}
-            />
+            <HookHost onRender={() => {}} />
           </QueryClientProvider>,
         );
       });
@@ -233,7 +246,10 @@ describe('useHomeOrders.stack (spec 0048, row 80, AC-5, AC-8)', () => {
 
   describe('AC-5: Group accept and decline acting on both', () => {
     it('accepting one order of a stack accepts both together with partnerId and removes both from list', async () => {
-      queryClient.setQueryData([QueryKeys.newOrders], [stackOffer1, stackOffer2]);
+      queryClient.setQueryData(
+        [QueryKeys.newOrders],
+        [stackOffer1, stackOffer2],
+      );
 
       let hookResult: ReturnType<typeof useHomeOrders> | undefined;
       let tree: renderer.ReactTestRenderer;
@@ -271,7 +287,10 @@ describe('useHomeOrders.stack (spec 0048, row 80, AC-5, AC-8)', () => {
     });
 
     it('declining one order of a stack declines both together with partnerId and removes both from list', async () => {
-      queryClient.setQueryData([QueryKeys.newOrders], [stackOffer1, stackOffer2]);
+      queryClient.setQueryData(
+        [QueryKeys.newOrders],
+        [stackOffer1, stackOffer2],
+      );
 
       let hookResult: ReturnType<typeof useHomeOrders> | undefined;
       let tree: renderer.ReactTestRenderer;
@@ -319,7 +338,10 @@ describe('useHomeOrders.stack (spec 0048, row 80, AC-5, AC-8)', () => {
       };
 
       mockAcceptOrder.mockRejectedValueOnce(offerEndedError);
-      queryClient.setQueryData([QueryKeys.newOrders], [stackOffer1, stackOffer2]);
+      queryClient.setQueryData(
+        [QueryKeys.newOrders],
+        [stackOffer1, stackOffer2],
+      );
 
       let hookResult: ReturnType<typeof useHomeOrders> | undefined;
       let tree: renderer.ReactTestRenderer;
@@ -363,7 +385,10 @@ describe('useHomeOrders.stack (spec 0048, row 80, AC-5, AC-8)', () => {
       };
 
       mockAcceptOrder.mockRejectedValueOnce(conflictError);
-      queryClient.setQueryData([QueryKeys.newOrders], [stackOffer1, stackOffer2]);
+      queryClient.setQueryData(
+        [QueryKeys.newOrders],
+        [stackOffer1, stackOffer2],
+      );
 
       let hookResult: ReturnType<typeof useHomeOrders> | undefined;
       let tree: renderer.ReactTestRenderer;
@@ -385,6 +410,186 @@ describe('useHomeOrders.stack (spec 0048, row 80, AC-5, AC-8)', () => {
 
       // Shows the server sentence directly to the rider
       expect(alertSpy).toHaveBeenCalledWith(serverSentence, undefined);
+
+      act(() => {
+        tree.unmount();
+      });
+    });
+  });
+
+  describe('Review fixes (row 80): Guard against half a pair and missing stops before accept', () => {
+    it('half a pair: when partner order is not in offers list, refetches and alerts without sending accept', async () => {
+      // Only stack-1 is in newOrders; partner stack-2 has not arrived yet
+      queryClient.setQueryData([QueryKeys.newOrders], [stackOffer1]);
+
+      let hookResult: ReturnType<typeof useHomeOrders> | undefined;
+      let tree: renderer.ReactTestRenderer;
+      await act(async () => {
+        tree = renderer.create(
+          <QueryClientProvider client={queryClient}>
+            <HookHost
+              onRender={h => {
+                hookResult = h;
+              }}
+            />
+          </QueryClientProvider>,
+        );
+      });
+
+      // Clear initial mount fetch before tapping accept
+      mockGetNewOrders.mockClear();
+
+      // Tap accept on stack-1
+      await act(async () => {
+        hookResult?.acceptOrderFn('stack-1');
+      });
+
+      // Triggers refetch so the other order can arrive
+      expect(mockGetNewOrders).toHaveBeenCalledTimes(1);
+
+      // Alerts that the other order is still loading
+      expect(alertSpy).toHaveBeenCalledWith(
+        'The other order of this pair is still on its way to your phone. Check your offers again in a moment.',
+      );
+
+      // Does NOT call acceptOrder
+      expect(mockAcceptOrder).not.toHaveBeenCalled();
+
+      act(() => {
+        tree.unmount();
+      });
+    });
+
+    it('missing stops: when stackStops is undefined on a grouped offer, refetches and alerts without sending accept', async () => {
+      const offerNoStops1: Order = {
+        ...stackOffer1,
+        stackStops: undefined,
+      };
+      const offerNoStops2: Order = {
+        ...stackOffer2,
+        stackStops: undefined,
+      };
+      queryClient.setQueryData(
+        [QueryKeys.newOrders],
+        [offerNoStops1, offerNoStops2],
+      );
+
+      let hookResult: ReturnType<typeof useHomeOrders> | undefined;
+      let tree: renderer.ReactTestRenderer;
+      await act(async () => {
+        tree = renderer.create(
+          <QueryClientProvider client={queryClient}>
+            <HookHost
+              onRender={h => {
+                hookResult = h;
+              }}
+            />
+          </QueryClientProvider>,
+        );
+      });
+
+      mockGetNewOrders.mockClear();
+
+      await act(async () => {
+        hookResult?.acceptOrderFn('stack-1');
+      });
+
+      expect(mockGetNewOrders).toHaveBeenCalledTimes(1);
+      expect(alertSpy).toHaveBeenCalledWith(
+        'The other order of this pair is still on its way to your phone. Check your offers again in a moment.',
+      );
+      expect(mockAcceptOrder).not.toHaveBeenCalled();
+
+      act(() => {
+        tree.unmount();
+      });
+    });
+
+    it('malformed stops: when stackStops contains invalid delivery ids, refetches and alerts without sending accept', async () => {
+      const invalidStops: StackStop[] = [
+        { deliveryId: 'stack-1', stop: 'PICKUP' },
+        { deliveryId: 'wrong-id', stop: 'PICKUP' },
+        { deliveryId: 'stack-1', stop: 'DROPOFF' },
+        { deliveryId: 'wrong-id', stop: 'DROPOFF' },
+      ];
+      const offerInvalid1: Order = {
+        ...stackOffer1,
+        stackStops: invalidStops,
+      };
+      const offerInvalid2: Order = {
+        ...stackOffer2,
+        stackStops: invalidStops,
+      };
+      queryClient.setQueryData(
+        [QueryKeys.newOrders],
+        [offerInvalid1, offerInvalid2],
+      );
+
+      let hookResult: ReturnType<typeof useHomeOrders> | undefined;
+      let tree: renderer.ReactTestRenderer;
+      await act(async () => {
+        tree = renderer.create(
+          <QueryClientProvider client={queryClient}>
+            <HookHost
+              onRender={h => {
+                hookResult = h;
+              }}
+            />
+          </QueryClientProvider>,
+        );
+      });
+
+      mockGetNewOrders.mockClear();
+
+      await act(async () => {
+        hookResult?.acceptOrderFn('stack-1');
+      });
+
+      expect(mockGetNewOrders).toHaveBeenCalledTimes(1);
+      expect(alertSpy).toHaveBeenCalledWith(
+        'The other order of this pair is still on its way to your phone. Check your offers again in a moment.',
+      );
+      expect(mockAcceptOrder).not.toHaveBeenCalled();
+
+      act(() => {
+        tree.unmount();
+      });
+    });
+
+    it('single order: accept proceeds normally without requiring stackStops', async () => {
+      const singleOffer: Order = {
+        id: 'single-1',
+        offeredAt: '2026-11-22T10:00:00.000Z',
+        phoneClock: { offeredAt: 100000, expiresAt: 160000 },
+        totalCompensation: 350,
+      } as Order;
+      queryClient.setQueryData([QueryKeys.newOrders], [singleOffer]);
+
+      let hookResult: ReturnType<typeof useHomeOrders> | undefined;
+      let tree: renderer.ReactTestRenderer;
+      await act(async () => {
+        tree = renderer.create(
+          <QueryClientProvider client={queryClient}>
+            <HookHost
+              onRender={h => {
+                hookResult = h;
+              }}
+            />
+          </QueryClientProvider>,
+        );
+      });
+
+      await act(async () => {
+        hookResult?.acceptOrderFn('single-1');
+      });
+
+      expect(mockAcceptOrder).toHaveBeenCalledTimes(1);
+      expect(mockAcceptOrder).toHaveBeenCalledWith({
+        id: 'single-1',
+        partnerId: undefined,
+        automatic: false,
+      });
+      expect(alertSpy).not.toHaveBeenCalled();
 
       act(() => {
         tree.unmount();

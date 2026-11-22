@@ -3,7 +3,12 @@ import { render, fireEvent, act } from '@testing-library/react-native';
 import MapView from 'react-native-maps';
 import '@app/localization/i18n';
 import { RouteMap } from './RouteMap';
-import { PickupPoint, RouteLeg, RouteLegKind, RoutePoint } from '@app/types/route';
+import {
+  PickupPoint,
+  RouteLeg,
+  RouteLegKind,
+  RoutePoint,
+} from '@app/types/route';
 
 let mockMapReadyAutoFire = true;
 
@@ -61,7 +66,12 @@ describe('RouteMap (spec 0018, AC-5, AC-6, AC-11)', () => {
   ];
 
   const pickupPoints: PickupPoint[] = [
-    { id: 'rest-1', name: 'Souvlaki Palace', latitude: 39.363, longitude: 22.943 },
+    {
+      id: 'rest-1',
+      name: 'Souvlaki Palace',
+      latitude: 39.363,
+      longitude: 22.943,
+    },
     { id: 'rest-2', name: 'Pizza Roma', latitude: 39.367, longitude: 22.947 },
   ];
 
@@ -91,7 +101,9 @@ describe('RouteMap (spec 0018, AC-5, AC-6, AC-11)', () => {
 
     // Polylines
     expect(getByTestId(`route-leg-${RouteLegKind.RiderToPickup}`)).toBeTruthy();
-    expect(getByTestId(`route-leg-${RouteLegKind.PickupToDropoff}`)).toBeTruthy();
+    expect(
+      getByTestId(`route-leg-${RouteLegKind.PickupToDropoff}`),
+    ).toBeTruthy();
 
     // Pins
     expect(getByTestId('pickup-pin')).toBeTruthy();
@@ -430,7 +442,9 @@ describe('RouteMap (spec 0018, AC-5, AC-6, AC-11)', () => {
         node &&
         (!node.props?.style ||
           !Array.isArray(node.props.style) ||
-          !node.props.style.some((s: any) => s && typeof s === 'object' && 'bottom' in s))
+          !node.props.style.some(
+            (s: any) => s && typeof s === 'object' && 'bottom' in s,
+          ))
       ) {
         node = node.parent;
       }

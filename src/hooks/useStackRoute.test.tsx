@@ -44,14 +44,16 @@ describe('useStackRoute (spec 0048, AC-10)', () => {
 
   beforeEach(() => {
     appStateListeners = [];
-    jest.spyOn(AppState, 'addEventListener').mockImplementation((type, listener) => {
-      appStateListeners.push(listener as any);
-      return {
-        remove: () => {
-          appStateListeners = appStateListeners.filter(l => l !== listener);
-        },
-      } as any;
-    });
+    jest
+      .spyOn(AppState, 'addEventListener')
+      .mockImplementation((type, listener) => {
+        appStateListeners.push(listener as any);
+        return {
+          remove: () => {
+            appStateListeners = appStateListeners.filter(l => l !== listener);
+          },
+        } as any;
+      });
 
     queryClient = new QueryClient({
       defaultOptions: {

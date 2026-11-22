@@ -45,7 +45,9 @@ describe('stack utilities (spec 0048, row 80, AC-2, AC-5, AC-10)', () => {
 
     it('returns null if stackStops is null, undefined, or not an array', () => {
       expect(stackStopsOf({ ...order1, stackStops: null }, order2)).toBeNull();
-      expect(stackStopsOf({ ...order1, stackStops: undefined }, order2)).toBeNull();
+      expect(
+        stackStopsOf({ ...order1, stackStops: undefined }, order2),
+      ).toBeNull();
     });
 
     it('returns null if stackStops length is not exactly 4', () => {
@@ -53,7 +55,9 @@ describe('stack utilities (spec 0048, row 80, AC-2, AC-5, AC-10)', () => {
         { deliveryId: 'deliv-1', stop: 'PICKUP' },
         { deliveryId: 'deliv-2', stop: 'PICKUP' },
       ];
-      expect(stackStopsOf({ ...order1, stackStops: twoStops }, order2)).toBeNull();
+      expect(
+        stackStopsOf({ ...order1, stackStops: twoStops }, order2),
+      ).toBeNull();
     });
 
     it('returns null if stops do not reference both order IDs', () => {
@@ -64,7 +68,9 @@ describe('stack utilities (spec 0048, row 80, AC-2, AC-5, AC-10)', () => {
         { deliveryId: 'deliv-1', stop: 'PICKUP' },
         { deliveryId: 'deliv-1', stop: 'DROPOFF' },
       ];
-      expect(stackStopsOf({ ...order1, stackStops: wrongStops }, order2)).toBeNull();
+      expect(
+        stackStopsOf({ ...order1, stackStops: wrongStops }, order2),
+      ).toBeNull();
 
       // Or stops refer to an unrelated deliveryId
       const otherStops: StackStop[] = [
@@ -73,7 +79,9 @@ describe('stack utilities (spec 0048, row 80, AC-2, AC-5, AC-10)', () => {
         { deliveryId: 'deliv-1', stop: 'DROPOFF' },
         { deliveryId: 'deliv-3', stop: 'DROPOFF' },
       ];
-      expect(stackStopsOf({ ...order1, stackStops: otherStops }, order2)).toBeNull();
+      expect(
+        stackStopsOf({ ...order1, stackStops: otherStops }, order2),
+      ).toBeNull();
     });
   });
 
@@ -106,7 +114,10 @@ describe('stack utilities (spec 0048, row 80, AC-2, AC-5, AC-10)', () => {
       expect(isStopDone(dropoffStop, OrderStatus.picked_up)).toBe(false);
       expect(isStopDone(dropoffStop, OrderStatus.on_the_way)).toBe(false);
       expect(
-        isStopDone(dropoffStop, OrderStatus.courier_arrived_at_dropoff_location),
+        isStopDone(
+          dropoffStop,
+          OrderStatus.courier_arrived_at_dropoff_location,
+        ),
       ).toBe(false);
     });
   });
@@ -117,7 +128,10 @@ describe('stack utilities (spec 0048, row 80, AC-2, AC-5, AC-10)', () => {
         'deliv-1': OrderStatus.dispatched,
         'deliv-2': OrderStatus.dispatched,
       };
-      const nextIndex = nextStopIndex(sampleStops, id => statusMap[id as keyof typeof statusMap]);
+      const nextIndex = nextStopIndex(
+        sampleStops,
+        id => statusMap[id as keyof typeof statusMap],
+      );
       expect(nextIndex).toBe(0);
     });
 
@@ -126,7 +140,10 @@ describe('stack utilities (spec 0048, row 80, AC-2, AC-5, AC-10)', () => {
         'deliv-1': OrderStatus.picked_up,
         'deliv-2': OrderStatus.dispatched,
       };
-      const nextIndex = nextStopIndex(sampleStops, id => statusMap[id as keyof typeof statusMap]);
+      const nextIndex = nextStopIndex(
+        sampleStops,
+        id => statusMap[id as keyof typeof statusMap],
+      );
       expect(nextIndex).toBe(1);
     });
 
@@ -135,7 +152,10 @@ describe('stack utilities (spec 0048, row 80, AC-2, AC-5, AC-10)', () => {
         'deliv-1': OrderStatus.picked_up,
         'deliv-2': OrderStatus.picked_up,
       };
-      const nextIndex = nextStopIndex(sampleStops, id => statusMap[id as keyof typeof statusMap]);
+      const nextIndex = nextStopIndex(
+        sampleStops,
+        id => statusMap[id as keyof typeof statusMap],
+      );
       expect(nextIndex).toBe(2);
     });
 
@@ -144,7 +164,10 @@ describe('stack utilities (spec 0048, row 80, AC-2, AC-5, AC-10)', () => {
         'deliv-1': OrderStatus.dropped_off,
         'deliv-2': OrderStatus.dropped_off,
       };
-      const nextIndex = nextStopIndex(sampleStops, id => statusMap[id as keyof typeof statusMap]);
+      const nextIndex = nextStopIndex(
+        sampleStops,
+        id => statusMap[id as keyof typeof statusMap],
+      );
       expect(nextIndex).toBe(-1);
     });
   });

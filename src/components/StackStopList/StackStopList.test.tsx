@@ -29,11 +29,7 @@ describe('StackStopList (spec 0048, row 80, AC-10)', () => {
 
   it('renders all four stops in order with correct place names on an offer', () => {
     const { getByTestId, getByText, queryByLabelText } = render(
-      <StackStopList
-        stops={stops}
-        orders={[order1, order2]}
-        isOffer={true}
-      />,
+      <StackStopList stops={stops} orders={[order1, order2]} isOffer={true} />,
     );
 
     expect(getByTestId('stack-stop-1')).toBeTruthy();
