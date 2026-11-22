@@ -9,7 +9,10 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { QueryKeys } from '@app/utilities/queryKeys';
 import useUser from './useUser';
 import { OfferCountdowns, OfferTiming } from '@app/utilities/offerCountdowns';
-import { isOfferEndedError } from '@app/services/orderService';
+import {
+  isOfferEndedError,
+  serverSentenceOf,
+} from '@app/services/orderService';
 import {
   cancelOfferReminder,
   remindRiderOfOffer,
@@ -39,6 +42,8 @@ type AcceptVariables = {
   id: string;
   automatic: boolean;
   restaurantName?: string;
+  // Spec 0048: the other order of a stack, accepted by the same call.
+  partnerId?: string;
 };
 
 // The restaurant's name as the rest of the app shows it.
@@ -141,27 +146,65 @@ export const useHomeOrders = () => {
   // The server said the offer had already ended (409, AC-5): it expired, the
   // rider went Offline, or an admin moved it. Drop it, say so once, and do
   // not try again.
-  const dropEndedOffer = (orderId: string) => {
-    countdowns.forget(orderId);
+  // `partnerId`: the other order of a stack, which ended with it.
+  const dropEndedOffer = (orderId: string, partnerId?: string) => {
+    const ids = partnerId ? [orderId, partnerId] : [orderId];
+    ids.forEach(id => countdowns.forget(id));
     // Take it out of the cached list too, as the socket's OFFER_ENDED does, so
     // a redraw from the cache before the refetch lands cannot bring it back.
     queryClient.setQueryData<Order[]>([QueryKeys.newOrders], offers =>
-      offers?.filter(offer => offer.id !== orderId),
+      offers?.filter(offer => !ids.includes(offer.id)),
     );
-    setDataSourceNew(current => current.filter(order => order.id !== orderId));
+    setDataSourceNew(current =>
+      current.filter(order => !ids.includes(order.id)),
+    );
     refetchNewRef.current();
     Alert.alert(i18next.t('translations:offer_has_ended'));
+  };
+
+  // Spec 0048 (AC-5): a stack's answer was refused because one of its two
+  // orders changed first (or a pair was sent as automatic). Nothing was
+  // accepted or declined: both come back to the rider, the server's own
+  // sentence says what happened, and the list is fetched again.
+  const refusedStackAnswer = (
+    orderId: string,
+    partnerId: string,
+    error: Error,
+    title: string,
+  ) => {
+    releaseOffer(orderId);
+    releaseOffer(partnerId);
+    refetchNewRef.current();
+    const sentence = serverSentenceOf(error);
+    Alert.alert(sentence ?? title, sentence ? undefined : error.message);
+  };
+
+  // Spec 0048: the other offer of the same stack in the fetched list, if any.
+  const stackPartnerIdOf = (orderId: string): string | undefined => {
+    const offers = newOrdersRef.current ?? [];
+    const groupId = offers.find(offer => offer.id === orderId)?.offerGroupId;
+    return groupId
+      ? offers.find(
+          offer => offer.id !== orderId && offer.offerGroupId === groupId,
+        )?.id
+      : undefined;
   };
 
   // mutations
 
   const { mutate: acceptOrder } = useMutation({
-    mutationFn: ({ id, automatic }: AcceptVariables) =>
-      services.orderService.acceptOrder({ id, automatic }),
+    mutationFn: ({ id, automatic, partnerId }: AcceptVariables) =>
+      services.orderService.acceptOrder({ id, automatic, partnerId }),
     // The second argument is what we passed to `acceptOrder({ ... })`; the
     // `{ id: orderId }` pattern takes its `id` out under the name `orderId`.
-    onSuccess: async (_result, { id: orderId, automatic, restaurantName }) => {
+    onSuccess: async (
+      _result,
+      { id: orderId, automatic, restaurantName, partnerId },
+    ) => {
       countdowns.forget(orderId);
+      if (partnerId) {
+        countdowns.forget(partnerId);
+      }
       // The phone took this order by itself: say so, with its own sound, once
       // (spec 0020, AC-12). A tapped accept plays nothing new.
       if (automatic) {
@@ -180,9 +223,13 @@ export const useHomeOrders = () => {
       });
       await queryClient.invalidateQueries({ queryKey: [QueryKeys.user] });
     },
-    onError: (error, { id: orderId }) => {
+    onError: (error, { id: orderId, partnerId }) => {
       if (isOfferEndedError(error)) {
-        dropEndedOffer(orderId);
+        dropEndedOffer(orderId, partnerId);
+        return;
+      }
+      if (partnerId) {
+        refusedStackAnswer(orderId, partnerId, error, 'Error accepting order');
         return;
       }
       releaseOffer(orderId);
@@ -190,15 +237,25 @@ export const useHomeOrders = () => {
     },
   });
 
+  // `partnerId` (spec 0048): the other order of a stack; the one decline
+  // ends both on the server.
   const { mutate: declineOrder } = useMutation({
-    mutationFn: services.orderService.declineOrder,
-    onSuccess: (_result, orderId) => {
+    mutationFn: ({ id }: { id: string; partnerId?: string }) =>
+      services.orderService.declineOrder(id),
+    onSuccess: (_result, { id: orderId, partnerId }) => {
       countdowns.forget(orderId);
+      if (partnerId) {
+        countdowns.forget(partnerId);
+      }
       refetchNew();
     },
-    onError: (error, orderId) => {
+    onError: (error, { id: orderId, partnerId }) => {
       if (isOfferEndedError(error)) {
-        dropEndedOffer(orderId);
+        dropEndedOffer(orderId, partnerId);
+        return;
+      }
+      if (partnerId) {
+        refusedStackAnswer(orderId, partnerId, error, 'Error declining order');
         return;
       }
       releaseOffer(orderId);
@@ -269,28 +326,55 @@ export const useHomeOrders = () => {
     cancelOfferAlert(orderId);
   };
 
+  // Spec 0048: claims an offer, and the other offer of its stack if it has
+  // one, so a second tap on either sends nothing. If the partner cannot be
+  // claimed, the first is let go again and nothing is sent.
+  const claimOffer = (orderId: string, partnerId: string | undefined) => {
+    if (answeredFromAlert(orderId) || !countdowns.claim(orderId)) {
+      return false;
+    }
+    if (partnerId && !countdowns.claim(partnerId)) {
+      countdowns.release(orderId);
+      return false;
+    }
+    return true;
+  };
+
   const acceptOrderFn = (orderId: string) => {
     if (sosSharingRef.current) {
       Alert.alert(i18next.t('translations:sos_no_accept'));
       return;
     }
+    // A stack is accepted as a pair, by one call (spec 0048, AC-5).
+    const partnerId = stackPartnerIdOf(orderId);
     // Only the first accept or decline for an offer is sent.
-    if (answeredFromAlert(orderId) || !countdowns.claim(orderId)) {
+    if (!claimOffer(orderId, partnerId)) {
       return;
     }
     answerHere(orderId);
+    if (partnerId) {
+      answerHere(partnerId);
+    }
     // The rider's own tap: never `automatic` (spec 0020, AC-11).
-    acceptOrder({ id: orderId, automatic: false });
-    setDataSourceNew(current => current.filter(order => order.id !== orderId));
+    acceptOrder({ id: orderId, automatic: false, partnerId });
+    setDataSourceNew(current =>
+      current.filter(order => order.id !== orderId && order.id !== partnerId),
+    );
   };
 
   const declineOrderFn = (orderId: string) => {
-    if (answeredFromAlert(orderId) || !countdowns.claim(orderId)) {
+    const partnerId = stackPartnerIdOf(orderId);
+    if (!claimOffer(orderId, partnerId)) {
       return;
     }
     answerHere(orderId);
-    declineOrder(orderId);
-    setDataSourceNew(current => current.filter(order => order.id !== orderId));
+    if (partnerId) {
+      answerHere(partnerId);
+    }
+    declineOrder({ id: orderId, partnerId });
+    setDataSourceNew(current =>
+      current.filter(order => order.id !== orderId && order.id !== partnerId),
+    );
   };
 
   const autoAccept = user?.deliverySetting === OrderSetting.auto_accept;
@@ -304,10 +388,15 @@ export const useHomeOrders = () => {
       // Auto accept riders: the phone accepts each offer as soon as it
       // arrives (AC-8), at most once per offer, and tells the server it did
       // so by itself (spec 0020, AC-11). The server never accepts on the
-      // rider's behalf. Only ordinary offers exist, so every offer here is
-      // one (AC-13); add ons (row 81) must be skipped here once they exist.
+      // rider's behalf. Add ons (row 81) must be skipped here once they exist.
       if (autoAccept && !sosSharingRef.current) {
         for (const order of offers) {
+          // Spec 0048 (AC-8): a stack is never accepted by the phone: the
+          // rider must see both orders and check both bags fit. It stays an
+          // offer on home, even for a rider on auto accept.
+          if (order.offerGroupId) {
+            continue;
+          }
           if (
             !answeredFromAlert(order.id) &&
             countdowns.claimForAutoAccept(order.id)
@@ -342,10 +431,14 @@ export const useHomeOrders = () => {
       const key = offerKeyOf(order.id, order.offeredAt);
       if (!rungForRef.current.has(key)) {
         rungForRef.current.add(key);
-        anyNew = true;
+        // Spec 0048: a stack rings even for a rider on auto accept, who must
+        // answer it by hand.
+        if (!autoAccept || order.offerGroupId) {
+          anyNew = true;
+        }
       }
     }
-    if (anyNew && !autoAccept) {
+    if (anyNew) {
       isHomeInFront().then(inFront => inFront && playOfferSound());
     }
   };

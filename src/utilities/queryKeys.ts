@@ -18,6 +18,8 @@ export const QueryKeys = {
   // The road route of the offer or job on home (spec 0018). Never saved to disk:
   // it says where the rider is.
   deliveryRoute: 'deliveryRoute',
+  // A stack's route with its numbered stops (spec 0048). Never saved to disk, like the route.
+  stackRoute: 'stackRoute',
   // The restaurants' pickup points for the map's restaurant layer (spec 0018).
   pickupPoints: 'pickupPoints',
   // The shift schedule and this rider's bookings (spec 0027); saved to disk, so the banner survives a

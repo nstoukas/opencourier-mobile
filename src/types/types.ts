@@ -301,6 +301,13 @@ export type Order = {
   // on the offer and the job card. Both null for a single delivery.
   legNumber?: number | null;
   legCount?: number | null;
+  // Spec 0048 (row 80): two offers with the same id are one stack, two orders
+  // offered together and answered together. null for a single offer.
+  offerGroupId?: string | null;
+  // Spec 0048: the stack's four stops in riding order (numbered 1 to 4), the
+  // same list on both orders; null for a single order, and once the other
+  // order of the pair is no longer this rider's.
+  stackStops?: StackStop[] | null;
   // Spec 0035: this rider's newest removal request on this job, while it is open or was refused.
   // Null otherwise. Only the job list (deliveries/in-progress) sends it.
   removalRequest?: RemovalRequest | null;
@@ -689,4 +696,10 @@ export type SettingChangeLine = {
   label: string;
   oldText: string;
   newText: string;
+};
+
+// Spec 0048: one stop of a stack, picking an order up or handing it over.
+export type StackStop = {
+  deliveryId: string;
+  stop: 'PICKUP' | 'DROPOFF';
 };

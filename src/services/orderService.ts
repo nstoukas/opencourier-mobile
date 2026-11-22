@@ -69,7 +69,25 @@ export const isDispatchNoLongerNeeded = (error: unknown): boolean =>
 // What the app sends with an accept (spec 0020, AC-11). `automatic` is true
 // only when the phone accepted by itself (the rider's auto accept setting);
 // a rider's own tap leaves it out.
-export type AcceptOrderParams = { id: string; automatic?: boolean };
+// `partnerId` (spec 0048): the other order of a stack. The server accepts
+// both on the one accept; the phone then marks both as dispatched.
+export type AcceptOrderParams = {
+  id: string;
+  automatic?: boolean;
+  partnerId?: string;
+};
+
+// Spec 0048: the server's own sentence on a refused answer to a stack (a 409
+// whose message says what happened: one order of the pair changed first, or a
+// pair is never accepted automatically). null when there is none.
+export const serverSentenceOf = (error: unknown): string | null => {
+  if (!axios.isAxiosError(error) || error.response?.status !== 409) {
+    return null;
+  }
+  const result = error.response.data?.result;
+  const message = Array.isArray(result) ? result[0]?.message : undefined;
+  return typeof message === 'string' && message !== '' ? message : null;
+};
 
 export interface OrderService {
   // The list of offers (the `data` array of the paginated response), each
@@ -224,6 +242,7 @@ const orderService = (client: UClient): OrderService => {
   const acceptOrder = async ({
     id,
     automatic = false,
+    partnerId,
   }: AcceptOrderParams): Promise<OrderServiceReponse> => {
     // The server writes "accepted automatically" on the delivery's timeline
     // when told (spec 0020, AC-1); a tap sends an empty body, as before.
@@ -231,6 +250,17 @@ const orderService = (client: UClient): OrderService => {
       `deliveries/${id}/accept`,
       automatic ? { automatic: true } : {},
     );
+    // Spec 0048: a stack's other order was accepted by the same call; it is
+    // marked as dispatched too, so both jobs start from the same step.
+    if (partnerId) {
+      await dispatchAfterAccept(partnerId);
+    }
+    return dispatchAfterAccept(id);
+  };
+
+  const dispatchAfterAccept = async (
+    id: string,
+  ): Promise<OrderServiceReponse> => {
     try {
       return await client.post(`deliveries/${id}/mark-as-dispatched`, {});
     } catch (error) {
