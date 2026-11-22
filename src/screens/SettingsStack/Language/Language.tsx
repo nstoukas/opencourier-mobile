@@ -30,10 +30,14 @@ export const LanguageScreen = ({ navigation }: Props) => {
   const [notSent, setNotSent] = useState(false);
 
   const choose = async (language: AppLanguage) => {
-    if (language === current) {
+    // A tap on the language already on show does nothing, unless the last send failed: then it tries the
+    // send again (review fix, row 47), so the rider need not wait for the next login.
+    if (language === current && !notSent) {
       return;
     }
-    await chooseLanguage(language);
+    if (language !== current) {
+      await chooseLanguage(language);
+    }
     try {
       await putCourierLanguage(language);
       setNotSent(false);

@@ -24,7 +24,7 @@ export default {
   language_explained:
     "The app's words, dates and amounts. The co-op's server is told too, so its emails to you come in this language.",
   language_not_sent:
-    "No connection, so the co-op's server was not told. The app shows your choice, and sends it again at your next login.",
+    "No connection, so the co-op's server was not told. The app shows your choice, and sends it again at your next login. Tap it to try now.",
   navigation: 'Navigation',
   customize_navigation:
     'Customize your navigation preferences to enhance your travel experience',
