@@ -72,13 +72,22 @@ type StatusItemProps = {
 const StatusItem = ({ status, selected, onPress }: StatusItemProps) => {
   const { t } = useTranslation();
   return (
-    <TouchableOpacity style={touchRow} onPress={() => onPress(status)}>
+    // Row 47 live check: three equal thirds, each on up to two lines, so
+    // the Greek words ("Τελευταία παραγγελία", "Εκτός σύνδεσης") are never cut.
+    <TouchableOpacity
+      style={[touchRow, styles.item]}
+      onPress={() => onPress(status)}>
       <View
         style={[
           statusButtonStyle(status),
+          styles.segment,
           { backgroundColor: statusButtonColor(status, selected) },
         ]}>
         <Text
+          numberOfLines={2}
+          // A word still too long for its third is made a little smaller, not cut.
+          adjustsFontSizeToFit
+          minimumFontScale={0.8}
           style={[styles.text, { color: statusTextColor(status, selected) }]}>
           {t(`translations:${status.toLowerCase()}`)}
         </Text>
