@@ -44,9 +44,7 @@ describe('JobNotesLine (spec 0021, spec 0053)', () => {
       );
 
       expect(getByTestId('job-notes-line')).toBeTruthy();
-      expect(
-        getByText(i18n.t('translations:address_note_add')),
-      ).toBeTruthy();
+      expect(getByText(i18n.t('translations:address_note_add'))).toBeTruthy();
     });
   });
 
@@ -126,7 +124,9 @@ describe('JobNotesLine (spec 0021, spec 0053)', () => {
       fireEvent.press(getByTestId('job-notes-line'));
 
       expect(getByTestId('job-notes-sheet')).toBeTruthy();
-      expect(getByText(i18n.t('translations:notes_from_customer'))).toBeTruthy();
+      expect(
+        getByText(i18n.t('translations:notes_from_customer')),
+      ).toBeTruthy();
       expect(
         getByText(i18n.t('translations:notes_from_restaurant')),
       ).toBeTruthy();
@@ -317,6 +317,79 @@ describe('JobNotesLine (spec 0021, spec 0053)', () => {
         getByText(i18n.t('translations:address_note_rules_title')),
       ).toBeTruthy();
       expect(getByTestId('address-notes-rules')).toBeTruthy();
+    });
+  });
+
+  describe('in-flight busy guard on upvote and flag (Row 82 review)', () => {
+    const colleagueNote: Note = {
+      id: 'note-busy-1',
+      note: 'Gate code 5678',
+      upvotes: 2,
+      upvotedByMe: false,
+      flaggedByMe: false,
+      mine: false,
+    };
+
+    const notesWithColleague: JobNote[] = [
+      {
+        author: 'riders',
+        text: colleagueNote.note,
+        addressNote: colleagueNote,
+      },
+    ];
+
+    it('disables upvote and flag buttons when isBusy returns true for the note', () => {
+      const busyActions: AddressNoteActions = {
+        ...mockActions,
+        isBusy: note => note.id === colleagueNote.id,
+      };
+
+      const { getByTestId } = render(
+        <JobNotesLine notes={notesWithColleague} addressNotes={busyActions} />,
+      );
+
+      fireEvent.press(getByTestId('job-notes-line'));
+
+      const upvoteButton = getByTestId(
+        `address-note-upvote-${colleagueNote.id}`,
+      );
+      const flagButton = getByTestId(`address-note-flag-${colleagueNote.id}`);
+
+      expect(upvoteButton.props.accessibilityState.disabled).toBe(true);
+      expect(flagButton.props.accessibilityState.disabled).toBe(true);
+
+      // Pressing disabled upvote should not call onUpvote
+      fireEvent.press(upvoteButton);
+      expect(busyActions.onUpvote).not.toHaveBeenCalled();
+
+      // Pressing disabled flag should not open flag alert or call onFlag
+      fireEvent.press(flagButton);
+      expect(alertSpy).not.toHaveBeenCalled();
+      expect(busyActions.onFlag).not.toHaveBeenCalled();
+    });
+
+    it('enables upvote and flag buttons when isBusy returns false', () => {
+      const idleActions: AddressNoteActions = {
+        ...mockActions,
+        isBusy: () => false,
+      };
+
+      const { getByTestId } = render(
+        <JobNotesLine notes={notesWithColleague} addressNotes={idleActions} />,
+      );
+
+      fireEvent.press(getByTestId('job-notes-line'));
+
+      const upvoteButton = getByTestId(
+        `address-note-upvote-${colleagueNote.id}`,
+      );
+      const flagButton = getByTestId(`address-note-flag-${colleagueNote.id}`);
+
+      expect(upvoteButton.props.accessibilityState.disabled).toBe(false);
+      expect(flagButton.props.accessibilityState.disabled).toBe(false);
+
+      fireEvent.press(upvoteButton);
+      expect(idleActions.onUpvote).toHaveBeenCalledWith(colleagueNote);
     });
   });
 });

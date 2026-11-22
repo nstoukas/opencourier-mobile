@@ -39,13 +39,30 @@ describe('personalDataCheck (spec 0053, AC-4)', () => {
       expect(looksLikePersonalData('+306912345678')).toBe(true);
     });
 
+    it('detects phone numbers with spaced dashes or double spaces (Row 82 review)', () => {
+      expect(findPersonalData('694 - 123 - 4567')).toContain('phone');
+      expect(findPersonalData('694  123  4567')).toContain('phone');
+      expect(findPersonalData('694--123--4567')).toContain('phone');
+      expect(findPersonalData('210   123   4567')).toContain('phone');
+      expect(findPersonalData('+30 694 - 123 - 4567')).toContain('phone');
+      expect(findPersonalData('Call 694 . 123 . 4567 outside')).toContain(
+        'phone',
+      );
+      expect(looksLikePersonalData('694 - 123 - 4567')).toBe(true);
+      expect(looksLikePersonalData('694  123  4567')).toBe(true);
+    });
+
     it('does not flag short numbers like door codes, apartment numbers or floor numbers', () => {
       expect(findPersonalData('Door code 1234')).not.toContain('phone');
       expect(findPersonalData('Code #54321 on keypad')).not.toContain('phone');
-      expect(findPersonalData('Apartment 4B, 3rd floor')).not.toContain('phone');
+      expect(findPersonalData('Apartment 4B, 3rd floor')).not.toContain(
+        'phone',
+      );
       expect(findPersonalData('Ring bell 12, 7 digits: 1234567')).not.toContain(
         'phone',
       );
+      expect(findPersonalData('Code 1 - 2 - 3')).not.toContain('phone');
+      expect(findPersonalData('Apt 12 - 34')).not.toContain('phone');
     });
   });
 
@@ -81,7 +98,9 @@ describe('personalDataCheck (spec 0053, AC-4)', () => {
     });
 
     it('detects Greek names written in Latin script', () => {
-      expect(findPersonalData('Ask for Giorgos at reception')).toContain('name');
+      expect(findPersonalData('Ask for Giorgos at reception')).toContain(
+        'name',
+      );
       expect(findPersonalData('Key is with Maria')).toContain('name');
       expect(findPersonalData('Call Nikos when outside')).toContain('name');
       expect(findPersonalData('Kostas, 4th floor')).toContain('name');

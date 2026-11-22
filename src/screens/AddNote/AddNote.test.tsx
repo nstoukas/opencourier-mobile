@@ -1,6 +1,12 @@
 import React from 'react';
-import { Alert, KeyboardAvoidingView, Platform } from 'react-native';
-import { render, fireEvent, act, screen, waitFor } from '@testing-library/react-native';
+import { Alert, KeyboardAvoidingView } from 'react-native';
+import {
+  render,
+  fireEvent,
+  act,
+  screen,
+  waitFor,
+} from '@testing-library/react-native';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { AxiosError } from 'axios';
 import '@app/localization/i18n';
@@ -61,7 +67,9 @@ describe('AddNote screen (spec 0053, AC-2, AC-4, AC-8)', () => {
     );
   };
 
-  const buildProps = (params: any = { deliveryId: 'del-101', stop: 'DROPOFF' }): any => ({
+  const buildProps = (
+    params: any = { deliveryId: 'del-101', stop: 'DROPOFF' },
+  ): any => ({
     navigation: mockNavigation,
     route: {
       params,
@@ -187,7 +195,9 @@ describe('AddNote screen (spec 0053, AC-2, AC-4, AC-8)', () => {
 
   describe('Saving a safe note (Happy path, AC-2)', () => {
     it('creates note and goes back when note does not look like personal data', async () => {
-      (services.commentService.createComment as jest.Mock).mockResolvedValueOnce({
+      (
+        services.commentService.createComment as jest.Mock
+      ).mockResolvedValueOnce({
         error: false,
       });
 
@@ -226,7 +236,9 @@ describe('AddNote screen (spec 0053, AC-2, AC-4, AC-8)', () => {
     });
 
     it('creates pickup note on restaurant stop', async () => {
-      (services.commentService.createComment as jest.Mock).mockResolvedValueOnce({
+      (
+        services.commentService.createComment as jest.Mock
+      ).mockResolvedValueOnce({
         error: false,
       });
 
@@ -260,7 +272,9 @@ describe('AddNote screen (spec 0053, AC-2, AC-4, AC-8)', () => {
 
   describe('Personal data warnings (AC-4, AC-9)', () => {
     it('shows warning alert and allows editing or saving anyway when text looks like a phone number', async () => {
-      (services.commentService.createComment as jest.Mock).mockResolvedValueOnce({
+      (
+        services.commentService.createComment as jest.Mock
+      ).mockResolvedValueOnce({
         error: false,
       });
 
@@ -414,7 +428,9 @@ describe('AddNote screen (spec 0053, AC-2, AC-4, AC-8)', () => {
 
   describe('Editing existing note (AC-4, cross check 7)', () => {
     it('updates note and reruns personal data check without confirmed', async () => {
-      (services.commentService.updateComment as jest.Mock).mockResolvedValueOnce({
+      (
+        services.commentService.updateComment as jest.Mock
+      ).mockResolvedValueOnce({
         error: false,
       });
 
@@ -454,9 +470,38 @@ describe('AddNote screen (spec 0053, AC-2, AC-4, AC-8)', () => {
 
   describe('Error handling (Failure cases)', () => {
     it('shows error alert on generic server error', async () => {
-      (services.commentService.createComment as jest.Mock).mockRejectedValueOnce(
-        new Error('Server 500 error'),
+      (
+        services.commentService.createComment as jest.Mock
+      ).mockRejectedValueOnce(new Error('Server 500 error'));
+
+      render(<AddNote {...buildProps()} />, { wrapper: createWrapper() });
+
+      await waitFor(() => {
+        expect(screen.getByTestId('address-note-input')).toBeTruthy();
+      });
+
+      fireEvent.changeText(
+        screen.getByTestId('address-note-input'),
+        'Ring intercom 42',
       );
+
+      await act(async () => {
+        fireEvent.press(screen.getByText(i18n.t('translations:save')));
+      });
+
+      expect(alertSpy).toHaveBeenCalledWith(
+        i18n.t('translations:address_note_failed_title'),
+        i18n.t('translations:address_note_failed_server'),
+      );
+      // Stays on screen
+      expect(mockNavigation.goBack).not.toHaveBeenCalled();
+    });
+
+    it('shows connection error alert when request has no response (network error)', async () => {
+      const netError = new AxiosError('Network Error');
+      (
+        services.commentService.createComment as jest.Mock
+      ).mockRejectedValueOnce(netError);
 
       render(<AddNote {...buildProps()} />, { wrapper: createWrapper() });
 
@@ -477,7 +522,83 @@ describe('AddNote screen (spec 0053, AC-2, AC-4, AC-8)', () => {
         i18n.t('translations:address_note_failed_title'),
         i18n.t('translations:address_note_save_failed'),
       );
-      // Stays on screen
+      expect(mockNavigation.goBack).not.toHaveBeenCalled();
+    });
+
+    it('shows job gone alert on 404 when creating a new note (job handed back or cancelled)', async () => {
+      const error404 = new AxiosError('Not Found');
+      error404.response = {
+        status: 404,
+        statusText: 'Not Found',
+        headers: {},
+        config: {} as any,
+        data: {},
+      };
+      (
+        services.commentService.createComment as jest.Mock
+      ).mockRejectedValueOnce(error404);
+
+      render(<AddNote {...buildProps()} />, { wrapper: createWrapper() });
+
+      await waitFor(() => {
+        expect(screen.getByTestId('address-note-input')).toBeTruthy();
+      });
+
+      fireEvent.changeText(
+        screen.getByTestId('address-note-input'),
+        'Ring intercom 42',
+      );
+
+      await act(async () => {
+        fireEvent.press(screen.getByText(i18n.t('translations:save')));
+      });
+
+      expect(alertSpy).toHaveBeenCalledWith(
+        i18n.t('translations:address_note_failed_title'),
+        i18n.t('translations:address_note_job_gone'),
+      );
+      expect(mockNavigation.goBack).not.toHaveBeenCalled();
+    });
+
+    it('shows note gone alert on 404 when editing an existing note (note deleted meanwhile)', async () => {
+      const error404 = new AxiosError('Not Found');
+      error404.response = {
+        status: 404,
+        statusText: 'Not Found',
+        headers: {},
+        config: {} as any,
+        data: {},
+      };
+      (
+        services.commentService.updateComment as jest.Mock
+      ).mockRejectedValueOnce(error404);
+
+      const noteToEdit: Note = {
+        id: 'note-to-edit-88',
+        note: 'Bell broken',
+        upvotes: 0,
+        upvotedByMe: false,
+        flaggedByMe: false,
+        mine: true,
+      };
+
+      render(<AddNote {...buildProps({ noteToEdit })} />, {
+        wrapper: createWrapper(),
+      });
+
+      fireEvent.changeText(
+        screen.getByTestId('address-note-input'),
+        'Bell broken, knock twice',
+      );
+
+      await act(async () => {
+        fireEvent.press(screen.getByText(i18n.t('translations:save')));
+      });
+
+      expect(alertSpy).toHaveBeenCalledWith(
+        i18n.t('translations:address_note_failed_title'),
+        i18n.t('translations:address_note_gone'),
+      );
       expect(mockNavigation.goBack).not.toHaveBeenCalled();
     });
   });
