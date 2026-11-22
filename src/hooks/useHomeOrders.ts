@@ -5,6 +5,7 @@ import { OrderSetting } from '@app/types/enums';
 import { inProgressOrdersAsShown } from '@app/utilities/inProgressListFilter';
 import { useOutboxItems } from './useJobStepOutbox';
 import { Alert } from 'react-native';
+import { serverMessage } from './useMoveDropoffPin';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { QueryKeys } from '@app/utilities/queryKeys';
 import useUser from './useUser';
@@ -240,11 +241,20 @@ export const useHomeOrders = () => {
         return;
       }
       if (partnerId) {
-        refusedStackAnswer(orderId, partnerId, error, 'Error accepting order');
+        refusedStackAnswer(
+          orderId,
+          partnerId,
+          error,
+          i18next.t('translations:accept_failed_title'),
+        );
         return;
       }
       releaseOffer(orderId);
-      Alert.alert('Error accepting order', error.message);
+      // In the rider's language (spec 0054): the refusal's words when the server sent one.
+      Alert.alert(
+        i18next.t('translations:accept_failed_title'),
+        serverMessage(error) ?? error.message,
+      );
     },
   });
 
@@ -266,11 +276,19 @@ export const useHomeOrders = () => {
         return;
       }
       if (partnerId) {
-        refusedStackAnswer(orderId, partnerId, error, 'Error declining order');
+        refusedStackAnswer(
+          orderId,
+          partnerId,
+          error,
+          i18next.t('translations:decline_failed_title'),
+        );
         return;
       }
       releaseOffer(orderId);
-      Alert.alert('Error declining order', error.message);
+      Alert.alert(
+        i18next.t('translations:decline_failed_title'),
+        serverMessage(error) ?? error.message,
+      );
     },
   });
 

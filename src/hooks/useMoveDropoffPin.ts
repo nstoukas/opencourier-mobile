@@ -1,5 +1,6 @@
 import { useCallback, useRef, useState } from 'react';
 import { Alert } from 'react-native';
+import { refusalText, type ServerRefusal } from '@app/localization/serverText';
 import axios from 'axios';
 import Geolocation from 'react-native-geolocation-service';
 import { useQueryClient } from '@tanstack/react-query';
@@ -51,10 +52,8 @@ export const isPreciseEnough = (accuracy: number): boolean =>
   accuracy > 0 &&
   accuracy <= PIN_MAX_ACCURACY_METRES;
 
-// The server's own sentence from a refusal (a 4xx such as the 409 "The pin is
-// already where you stand"), if it sent one. A 5xx's text is not for riders.
-// Also used by the hand back (spec 0020), whose 409s carry the rider's sentence.
-export const serverMessage = (error: unknown): string | undefined => {
+// The first refusal of a 4xx answer, or undefined. A 5xx's text is not for riders.
+const refusalOf = (error: unknown): ServerRefusal | undefined => {
   if (!axios.isAxiosError(error)) {
     return undefined;
   }
@@ -63,8 +62,21 @@ export const serverMessage = (error: unknown): string | undefined => {
     return undefined;
   }
   const result = error.response?.data?.result;
-  const message = Array.isArray(result) ? result[0]?.message : undefined;
-  return typeof message === 'string' && message.trim() ? message : undefined;
+  return Array.isArray(result) ? result[0] : undefined;
+};
+
+// The words of a refusal (a 4xx such as the 409 "The pin is already where you
+// stand"), if it sent any, in the rider's language: the app's text for its code,
+// else the server's own sentence (spec 0054, AC-6). A 5xx's text is not for riders.
+// Also used by the hand back (spec 0020), whose 409s carry the rider's sentence.
+export const serverMessage = (error: unknown): string | undefined =>
+  refusalText(refusalOf(error));
+
+// The refusal's code (such as 'SHIFTS_OFF'), for code that acts on one: never
+// compare the words, which follow the language.
+export const serverCode = (error: unknown): string | undefined => {
+  const code = refusalOf(error)?.code;
+  return typeof code === 'string' ? code : undefined;
 };
 
 // The rider's "Pin wrong? Set it where I stand" (spec 0016, AC-8): ask, read a

@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import React from 'react';
 import { View, Text } from 'react-native';
 import { ScreenSafeArea } from '@app/components/ScreenSafeArea/ScreenSafeArea';
@@ -12,6 +13,7 @@ import { NoPayoutActivity } from '@app/components/NoPayoutActivity/NoPayoutActiv
 type Props = MainScreenProp<MainScreens.PayoutActivity>;
 
 export const PayoutActivity = ({ navigation }: Props) => {
+  const { t } = useTranslation();
   const { top } = useSafeAreaInsets();
 
   return (
@@ -23,7 +25,7 @@ export const PayoutActivity = ({ navigation }: Props) => {
       <ScreenSafeArea style={styles.safe}>
         <View style={styles.navHeader}>
           <BackNavButton onPress={() => navigation.goBack()} />
-          <Text style={styles.title}>Payout Activity</Text>
+          <Text style={styles.title}>{t('translations:payout_activity')}</Text>
         </View>
         <NoPayoutActivity />
       </ScreenSafeArea>

@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import React from 'react';
 import {
   StyleProp,
@@ -18,13 +19,16 @@ type Props = {
 };
 
 export const OrderDelivered = ({ style, onClose }: Props) => {
+  const { t } = useTranslation();
   return (
     <View style={[styles.container, style]}>
       <View style={styles.content}>
         <View style={styles.containerLoader}>
           <Icon icon={CheckIcon} weight="bold" size={13} tone="success" />
         </View>
-        <Text style={styles.text}>Order delivered. Thanks!</Text>
+        <Text style={styles.text}>
+          {t('translations:order_delivered_thanks')}
+        </Text>
       </View>
       <TouchableOpacity
         hitSlop={hitSlopFor(40)}

@@ -86,7 +86,7 @@ export const LicencesScreen = ({ navigation }: Props) => {
       <ScreenSafeArea style={styles.safe}>
         <View style={styles.navHeader}>
           <BackNavButton onPress={() => navigation.goBack()} />
-          <Text style={styles.title}>Licenses</Text>
+          <Text style={styles.title}>{t('translations:licenses')}</Text>
         </View>
         <FlatList
           keyboardShouldPersistTaps={'handled'}

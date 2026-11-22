@@ -9,7 +9,8 @@
     "test": "jest",
     "lint": "eslint . --ext .js,.jsx,.ts,.tsx",
     "postinstall": "patch-package && npm-license-crawler -onlyDirectDependencies -json licenses.json",
-    "typecheck:baseline": "node scripts/typecheck-baseline.js"
+    "typecheck:baseline": "node scripts/typecheck-baseline.js",
+    "lint:i18n": "node scripts/i18n-lint-ratchet.js"
   },
   "proxy": "http://10.0.0.187:3001/",
   "dependencies": {

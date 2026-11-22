@@ -206,10 +206,14 @@ export const SideMenu = ({ navigation }: Props) => {
       );
       return;
     }
-    Alert.alert('Notice', 'Are you sure you want to log out?', [
-      { text: 'Yes', onPress: onLogoutHandle },
-      { text: 'Cancel', style: 'cancel' },
-    ]);
+    Alert.alert(
+      t('translations:logout_confirm_title'),
+      t('translations:logout_confirm_body'),
+      [
+        { text: t('translations:yes'), onPress: onLogoutHandle },
+        { text: t('translations:cancel'), style: 'cancel' },
+      ],
+    );
   };
 
   const handlePress = (item: SideMenuItem) => {

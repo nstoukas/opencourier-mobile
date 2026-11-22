@@ -1,4 +1,5 @@
 import { DeliveryIssueReason } from '@app/types/enums';
+import { refusalText } from '@app/localization/serverText';
 import axios from 'axios';
 import { UClient } from './Client';
 import { OrderServiceReponse } from './types';
@@ -85,8 +86,8 @@ export const serverSentenceOf = (error: unknown): string | null => {
     return null;
   }
   const result = error.response.data?.result;
-  const message = Array.isArray(result) ? result[0]?.message : undefined;
-  return typeof message === 'string' && message !== '' ? message : null;
+  // In the rider's language when the app knows the refusal's code (spec 0054, AC-6).
+  return (Array.isArray(result) ? refusalText(result[0]) : undefined) ?? null;
 };
 
 export interface OrderService {
