@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import MapView, { Callout, Marker, Polyline } from 'react-native-maps';
+import MapView, { Callout, Polyline } from 'react-native-maps';
 import { useTranslation } from 'react-i18next';
 import {
   color,
@@ -18,6 +18,7 @@ import { StorefrontIcon } from 'phosphor-react-native/src/icons/Storefront';
 import { HouseLineIcon } from 'phosphor-react-native/src/icons/HouseLine';
 import { PickupPoint, RouteLeg, RoutePoint, RouteStop } from '@app/types/route';
 import { FALLBACK_CENTRE, isRiderLeg } from '@app/utilities/routeLegs';
+import { StillMarker } from '@app/components/RouteMap/StillMarker';
 
 type Props = {
   // The legs to draw, already filtered by `visibleLegs` (spec 0018, AC-6).
@@ -144,8 +145,11 @@ export const RouteMap = ({
 
   return (
     <View style={StyleSheet.absoluteFill} testID="route-map">
-      {/* Markers keep tracking their views (the default): with tracking off,
-          Android can snapshot a custom pin before it is drawn and show nothing. */}
+      {/* Row 125: every pin is a StillMarker, which redraws its picture only for
+          a moment after it appears or its `lookKey` changes. A pin left redrawing
+          all the time ran the app out of memory on Android in about 25 minutes.
+          The short redraw at the start still covers what the old comment here
+          warned about: a picture taken before the pin was drawn shows nothing. */}
       <MapView
         ref={mapRef}
         onMapReady={() => setMapReady(true)}
@@ -172,8 +176,10 @@ export const RouteMap = ({
         ))}
         {restaurantLayerOn &&
           pickupPoints.map(point => (
-            <Marker
+            <StillMarker
               key={point.id}
+              // Every restaurant pin looks the same and never changes; the name is in the callout.
+              lookKey="restaurant"
               testID={`restaurant-pin-${point.id}`}
               coordinate={point}>
               <View style={styles.restaurantPin}>
@@ -182,11 +188,13 @@ export const RouteMap = ({
               <Callout>
                 <Text style={styles.callout}>{point.name}</Text>
               </Callout>
-            </Marker>
+            </StillMarker>
           ))}
         {stops.map(stop => (
-          <Marker
+          <StillMarker
             key={`${stop.number}`}
+            // The pin shows its number and turns grey once done: either change redraws it.
+            lookKey={`${stop.number}-${stop.done ? 'done' : 'todo'}`}
             coordinate={stop}
             testID={`stack-stop-pin-${stop.number}`}
             anchor={{ x: 0.5, y: 0.5 }}>
@@ -199,10 +207,10 @@ export const RouteMap = ({
                 {stop.number}
               </Text>
             </View>
-          </Marker>
+          </StillMarker>
         ))}
         {pickup && stops.length === 0 && (
-          <Marker coordinate={pickup} testID="pickup-pin">
+          <StillMarker lookKey="pickup" coordinate={pickup} testID="pickup-pin">
             <View style={styles.jobPin}>
               <Icon
                 icon={StorefrontIcon}
@@ -211,10 +219,13 @@ export const RouteMap = ({
                 tone="primary-foreground"
               />
             </View>
-          </Marker>
+          </StillMarker>
         )}
         {dropoff && stops.length === 0 && (
-          <Marker coordinate={dropoff} testID="dropoff-pin">
+          <StillMarker
+            lookKey="dropoff"
+            coordinate={dropoff}
+            testID="dropoff-pin">
             <View style={styles.jobPin}>
               <Icon
                 icon={HouseLineIcon}
@@ -223,17 +234,19 @@ export const RouteMap = ({
                 tone="primary-foreground"
               />
             </View>
-          </Marker>
+          </StillMarker>
         )}
         {ownPosition && (
-          <Marker
+          <StillMarker
+            // The dot moves with each fix but never changes its look: no redraw needed.
+            lookKey="rider"
             coordinate={ownPosition}
             testID="rider-marker"
             anchor={{ x: 0.5, y: 0.5 }}>
             <View style={styles.riderOuter}>
               <View style={styles.riderInner} />
             </View>
-          </Marker>
+          </StillMarker>
         )}
       </MapView>
       {/* Just above the card, clear of the banners at the top of home. */}
