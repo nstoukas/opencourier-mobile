@@ -8,6 +8,7 @@ import { clearChatNotice } from './chat/chatNotice';
 import { clearChatOutgoing } from './chat/chatOutgoing';
 import { clearReviewSeen } from './reviewSeen';
 import { clearReviewNotice } from './reviewNotice';
+import { clearComplaintNotice } from './complaintNotice';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import i18n from '@app/localization/i18n';
 // `import type` brings in only the type, never the module itself, so this file
@@ -169,6 +170,8 @@ export const clearRiderDataOnPhone = async (http: UClient): Promise<void> => {
   // as logging out does.
   await clearReviewSeen().catch(() => undefined);
   clearReviewNotice();
+  // Nor the notice of a complaint waiting for their reply (spec 0052), as logging out does.
+  clearComplaintNotice();
   // Nor the statements they downloaded (spec 0050, row 76 review).
   await clearStatementFiles();
 };

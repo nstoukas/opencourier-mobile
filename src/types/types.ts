@@ -29,6 +29,8 @@ export enum SideMenuItem {
   Earnings = 'earnings',
   // Spec 0027: booking shifts, only while the co-op runs them.
   Shifts = 'shifts',
+  // Spec 0052: complaints both ways.
+  Complaints = 'complaints',
   Payout = 'payout_method',
   Support = 'support',
   Settings = 'settings',
@@ -598,6 +600,51 @@ export type ReviewRequest = {
   correctionCurrency: string | null;
   // The delivery it is about; null for a general request.
   delivery: { id: string; pickupName: string; createdAt: string } | null;
+};
+
+// Spec 0052 (row 83): complaints both ways. A rider files about a restaurant or a customer; a restaurant
+// or the co-op files about a rider, who replies before anyone decides. Never a count or score (value 5).
+export type ComplaintAbout = 'RESTAURANT' | 'CUSTOMER' | 'RIDER';
+export type ComplaintFiledBy = 'RIDER' | 'RESTAURANT' | 'ADMIN';
+export type ComplaintStatus =
+  | 'OPEN'
+  | 'AWAITING_REPLY'
+  | 'DECIDED'
+  | 'WITHDRAWN';
+export type ComplaintCategory =
+  | 'LONG_WAIT'
+  | 'FOOD_NOT_READY'
+  | 'UNSAFE_PACKAGING'
+  | 'RUDE_STAFF'
+  | 'ABUSE_OR_THREAT'
+  | 'UNSAFE_ADDRESS'
+  | 'NOT_ANSWERING'
+  | 'LATE'
+  | 'RUDE'
+  | 'FOOD_DAMAGED'
+  | 'OTHER';
+
+// One complaint as the backend's ComplaintCourierDto sends it. The filer is only a kind: an admin's name
+// never reaches the phone (AC-4).
+export type Complaint = {
+  id: string;
+  // FILED_BY_YOU: the rider wrote it. ABOUT_YOU: a restaurant or the co-op wrote it about the rider.
+  role: 'FILED_BY_YOU' | 'ABOUT_YOU';
+  delivery: { id: string; pickupName: string; createdAt: string };
+  filedBy: ComplaintFiledBy;
+  about: ComplaintAbout;
+  category: ComplaintCategory;
+  text: string;
+  status: ComplaintStatus;
+  createdAt: string;
+  riderReply: string | null;
+  repliedAt: string | null;
+  // True when the co-op typed the reply from a phone call (the rider's account was deactivated).
+  replyEnteredForRider: boolean;
+  outcome: string | null;
+  decidedAt: string | null;
+  withdrawnReason: string | null;
+  withdrawnAt: string | null;
 };
 
 /** One page of a list the backend pages. `nextPage` is null on the last page. */

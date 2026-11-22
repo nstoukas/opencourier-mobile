@@ -37,4 +37,7 @@ export const QueryKeys = {
   // from yesterday would show a shift that has ended.
   timeWorkedCurrent: 'timeWorkedCurrent',
   coopTotals: 'coopTotals',
+  // Spec 0052: the complaints the rider filed and the ones about them. Never saved to disk: a reply box
+  // must show only while the server still waits for the reply.
+  complaints: 'complaints',
 };

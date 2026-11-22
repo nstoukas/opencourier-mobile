@@ -43,6 +43,11 @@ import {
   openReviewsFromNotice,
   receiveReviewAnswer,
 } from '@app/services/reviewNotice';
+import {
+  COMPLAINT_NEEDS_REPLY_TYPE,
+  openComplaintsFromNotice,
+  receiveComplaintNeedsReply,
+} from '@app/services/complaintNotice';
 
 // Where the message was caught: `onMessage` (the app open in front) or
 // `setBackgroundMessageHandler` (closed, in the background, or locked).
@@ -118,6 +123,16 @@ export const onRemoteMessage = async (
     }
     return;
   }
+  // Spec 0052 (AC-4): a complaint about this rider needs their reply. Only the complaint id travels;
+  // the phone draws a fixed line on chat's quiet channel, Online or not (complaintNotice.ts).
+  if (message.data?.type === COMPLAINT_NEEDS_REPLY_TYPE) {
+    if (await AsyncStorage.getItem('token')) {
+      await receiveComplaintNeedsReply().catch(error =>
+        console.log('Could not show the complaint notice', error),
+      );
+    }
+    return;
+  }
   const parsed = parseOfferMessage(message.data);
   if (parsed === null) {
     return;
@@ -189,6 +204,14 @@ export const onNotificationEvent = async ({
     detail.notification?.data?.type === REVIEW_ANSWERED_TYPE
   ) {
     openReviewsFromNotice();
+    return;
+  }
+  // A tap on the complaint notice opens the Complaints screen (spec 0052).
+  if (
+    type === EventType.PRESS &&
+    detail.notification?.data?.type === COMPLAINT_NEEDS_REPLY_TYPE
+  ) {
+    openComplaintsFromNotice();
     return;
   }
   if (type !== EventType.ACTION_PRESS) {

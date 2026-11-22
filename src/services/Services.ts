@@ -8,6 +8,8 @@ import sosService, { SosService } from './sosService';
 import chatService, { ChatService } from './chat/chatService';
 import reviewService, { ReviewService } from './reviewService';
 import timeWorkedService, { TimeWorkedService } from './timeWorkedService';
+import complaintService, { ComplaintService } from './complaintService';
+import { clearComplaintNotice } from './complaintNotice';
 import { clearReviewSeen } from './reviewSeen';
 import { clearReviewNotice } from './reviewNotice';
 import { clearChatSeen } from './chat/chatSeen';
@@ -37,6 +39,8 @@ export type Services = {
   reviewService: ReviewService;
   // The rider's time worked and the co-op totals (spec 0040).
   timeWorkedService: TimeWorkedService;
+  // Complaints the rider filed and the ones about them (spec 0052).
+  complaintService: ComplaintService;
   notificationDeviceService: NotificationDeviceService;
   logout: () => void;
 };
@@ -52,6 +56,7 @@ const Services = (): Services => {
   const chService = chatService(client);
   const rvService = reviewService(client);
   const twService = timeWorkedService(client);
+  const cpService = complaintService(client);
 
   const logout = () => {
     client.defaults.headers.common.Authorization = undefined;
@@ -75,6 +80,8 @@ const Services = (): Services => {
       console.log('Could not clear the review seen marks', error),
     );
     clearReviewNotice();
+    // Nor the notice of a complaint waiting for the last rider's reply (spec 0052).
+    clearComplaintNotice();
     clearHeldArrivals().catch(error =>
       console.log('Could not clear held arrivals', error),
     );
@@ -92,6 +99,7 @@ const Services = (): Services => {
     chatService: chService,
     reviewService: rvService,
     timeWorkedService: twService,
+    complaintService: cpService,
     notificationDeviceService: dService,
     logout,
   };
