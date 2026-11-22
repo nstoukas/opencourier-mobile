@@ -20,12 +20,23 @@ type Props = {
 // a pickup; for a drop off, the street (an offer's area), never a house
 // number or the customer's name, which the job card below shows for the stop
 // that is next.
-const placeOf = (stop: StackStop, order: Order | undefined): string => {
+// On an offer only the server's `dropoffArea` is used (agy review of row 80):
+// the server leaves it empty exactly when the street would give the house
+// away (spec 0019), so falling back to the street there would show what the
+// offer card must not.
+const placeOf = (
+  stop: StackStop,
+  order: Order | undefined,
+  isOffer: boolean,
+): string => {
   if (!order) {
     return '';
   }
   if (stop.stop === 'PICKUP') {
     return order.pickupBusinessName || order.pickupName || '';
+  }
+  if (isOffer) {
+    return order.dropoffArea || '';
   }
   return order.dropoffArea || order.dropoffLocation?.street || '';
 };
@@ -81,7 +92,7 @@ export const StackStopList = ({ stops, orders, isOffer }: Props) => {
                 stop.stop === 'PICKUP'
                   ? 'translations:stack_stop_pickup'
                   : 'translations:stack_stop_dropoff',
-                { place: placeOf(stop, orderOf(stop.deliveryId)) },
+                { place: placeOf(stop, orderOf(stop.deliveryId), isOffer) },
               )}
             </Text>
           </View>
