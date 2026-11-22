@@ -58,4 +58,14 @@ describe('Value 5 complaint guard (spec 0052, AC-8)', () => {
     // Chat has dot={chatUnseen}, but Complaints must never have a dot or badge
     expect(content).not.toMatch(/item\s*===\s*SideMenuItem\.Complaints[^}]+dot/);
   });
+
+  it('ComplaintPage type in types.ts carries no total or totalItems (AC-8, row 83 review)', () => {
+    const typesFile = path.join(srcDir, 'types/types.ts');
+    const content = fs.readFileSync(typesFile, 'utf-8');
+    const complaintPageBlock =
+      content.match(/export type ComplaintPage = \{[\s\S]*?\};/)?.[0] ?? '';
+
+    expect(complaintPageBlock).toBeTruthy();
+    expect(complaintPageBlock).not.toMatch(/total/i);
+  });
 });

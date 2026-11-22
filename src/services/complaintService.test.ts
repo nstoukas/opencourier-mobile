@@ -5,7 +5,7 @@ import complaintService, {
   COMPLAINT_PHOTO_MAX_BYTES,
 } from './complaintService';
 import type { UClient } from './Client';
-import { Complaint, PagedList } from '@app/types/types';
+import { Complaint, ComplaintPage } from '@app/types/types';
 
 // Spec 0052 (row 83): complaintService - filing (text and multipart photo), list, reply.
 describe('complaintService (spec 0052, AC-2, AC-5, AC-9)', () => {
@@ -137,11 +137,12 @@ describe('complaintService (spec 0052, AC-2, AC-5, AC-9)', () => {
     });
   });
 
-  describe('getComplaints (AC-4, AC-7)', () => {
-    it('calls GET complaints with page and perPage: 20', async () => {
-      const pagedResult: PagedList<Complaint> = {
+  describe('getComplaints (AC-4, AC-7, AC-8)', () => {
+    it('calls GET complaints with page and perPage: 20 and returns ComplaintPage without totalItems', async () => {
+      // Row 83 review (AC-8): the courier complaint page type carries no totalItems count.
+      const pagedResult: ComplaintPage = {
         data: [],
-        pagination: { currentPage: 1, nextPage: 2, totalItems: 30 },
+        pagination: { currentPage: 1, nextPage: 2 },
       };
 
       mockClient.get.mockResolvedValueOnce({
@@ -154,6 +155,7 @@ describe('complaintService (spec 0052, AC-2, AC-5, AC-9)', () => {
         params: { page: 1, perPage: COMPLAINT_PAGE_SIZE },
       });
       expect(result).toEqual(pagedResult);
+      expect((result.pagination as any).totalItems).toBeUndefined();
     });
   });
 

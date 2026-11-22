@@ -6,12 +6,17 @@ import axios from 'axios';
 import '@app/localization/i18n';
 import i18n from '@app/localization/i18n';
 import { services } from '@app/services/service';
+import { tidyPickedPhotos } from '@app/services/complaintPhotoFiles';
 import { QueryKeys } from '@app/utilities/queryKeys';
 import {
   useComplaints,
   useFileComplaint,
   useReplyToComplaint,
 } from './useComplaints';
+
+jest.mock('@app/services/complaintPhotoFiles', () => ({
+  tidyPickedPhotos: jest.fn(),
+}));
 
 // Spec 0052 (row 83): useComplaints, useFileComplaint, useReplyToComplaint.
 describe('useComplaints hooks (spec 0052, AC-2, AC-4, AC-5, AC-7)', () => {
@@ -41,15 +46,16 @@ describe('useComplaints hooks (spec 0052, AC-2, AC-4, AC-5, AC-7)', () => {
     queryClient?.clear();
   });
 
-  describe('useComplaints (AC-4, AC-7)', () => {
-    it('loads paged complaints and advances with fetchNextPage', async () => {
+  describe('useComplaints (AC-4, AC-7, AC-8)', () => {
+    it('loads paged complaints and advances with fetchNextPage (ComplaintPage without totalItems)', async () => {
+      // Row 83 review (AC-8): pagination carries only currentPage and nextPage, never totalItems.
       const page1 = {
         data: [{ id: 'comp-1', status: 'OPEN' as const }],
-        pagination: { currentPage: 1, nextPage: 2, totalItems: 2 },
+        pagination: { currentPage: 1, nextPage: 2 },
       };
       const page2 = {
         data: [{ id: 'comp-2', status: 'DECIDED' as const }],
-        pagination: { currentPage: 2, nextPage: null, totalItems: 2 },
+        pagination: { currentPage: 2, nextPage: null },
       };
 
       const getSpy = jest
@@ -78,7 +84,7 @@ describe('useComplaints hooks (spec 0052, AC-2, AC-4, AC-5, AC-7)', () => {
   });
 
   describe('useFileComplaint (AC-2)', () => {
-    it('calls fileComplaint and invalidates complaints cache on success', async () => {
+    it('calls fileComplaint, tidies photo, shows Sent alert, and invalidates complaints cache on success (row 83 review)', async () => {
       const created = { id: 'comp-new', status: 'OPEN' } as any;
       const fileSpy = jest
         .spyOn(services.complaintService, 'fileComplaint')
@@ -95,6 +101,11 @@ describe('useComplaints hooks (spec 0052, AC-2, AC-4, AC-5, AC-7)', () => {
           about: 'RESTAURANT',
           category: 'FOOD_NOT_READY',
           text: 'Food was not ready on time',
+          photo: {
+            uri: 'file:///cache/rn_image_picker_lib_temp_photo.jpg',
+            type: 'image/jpeg',
+            name: 'photo.jpg',
+          },
         });
       });
 
@@ -103,9 +114,55 @@ describe('useComplaints hooks (spec 0052, AC-2, AC-4, AC-5, AC-7)', () => {
         about: 'RESTAURANT',
         category: 'FOOD_NOT_READY',
         text: 'Food was not ready on time',
+        photo: {
+          uri: 'file:///cache/rn_image_picker_lib_temp_photo.jpg',
+          type: 'image/jpeg',
+          name: 'photo.jpg',
+        },
       });
+      // Review fix (row 83): picker photo copy is deleted and Sent is alerted by the hook
+      expect(tidyPickedPhotos).toHaveBeenCalledWith(
+        'file:///cache/rn_image_picker_lib_temp_photo.jpg',
+      );
+      expect(alertSpy).toHaveBeenCalledWith(
+        i18n.t('translations:complaint_sent_title'),
+        i18n.t('translations:complaint_sent_body'),
+      );
       expect(invalidateSpy).toHaveBeenCalledWith({
         queryKey: [QueryKeys.complaints],
+      });
+    });
+
+    it('shows Alert with complaint_photo_too_big when server answers 413 (row 83 review)', async () => {
+      const error413 = new axios.AxiosError(
+        'Payload Too Large',
+        '413',
+        undefined,
+        undefined,
+        { status: 413, data: {} } as any,
+      );
+
+      jest
+        .spyOn(services.complaintService, 'fileComplaint')
+        .mockRejectedValueOnce(error413);
+
+      const wrapper = createWrapper();
+      const { result } = renderHook(() => useFileComplaint(), { wrapper });
+
+      await act(async () => {
+        result.current.mutate({
+          deliveryId: 'del-10',
+          about: 'RESTAURANT',
+          category: 'FOOD_NOT_READY',
+          text: 'Food was not ready',
+        });
+      });
+
+      await waitFor(() => {
+        expect(alertSpy).toHaveBeenCalledWith(
+          i18n.t('translations:complaint_send_failed_title'),
+          i18n.t('translations:complaint_photo_too_big'),
+        );
       });
     });
 
@@ -250,13 +307,25 @@ describe('useComplaints hooks (spec 0052, AC-2, AC-4, AC-5, AC-7)', () => {
   });
 
   describe('useReplyToComplaint (AC-5)', () => {
-    it('calls replyToComplaint and invalidates complaints cache on success', async () => {
+    it('calls replyToComplaint, updates complaint in query cache, alerts Reply sent, and invalidates complaints cache on success (row 83 review)', async () => {
       const replied = { id: 'comp-1', status: 'OPEN', riderReply: 'My reply' } as any;
       const replySpy = jest
         .spyOn(services.complaintService, 'replyToComplaint')
         .mockResolvedValueOnce(replied);
 
       const wrapper = createWrapper();
+      queryClient.setQueryData([QueryKeys.complaints], {
+        pages: [
+          {
+            data: [
+              { id: 'comp-1', status: 'AWAITING_REPLY', riderReply: null },
+            ],
+            pagination: { currentPage: 1, nextPage: null },
+          },
+        ],
+        pageParams: [1],
+      });
+
       const invalidateSpy = jest.spyOn(queryClient, 'invalidateQueries');
 
       const { result } = renderHook(() => useReplyToComplaint(), { wrapper });
@@ -269,12 +338,20 @@ describe('useComplaints hooks (spec 0052, AC-2, AC-4, AC-5, AC-7)', () => {
       });
 
       expect(replySpy).toHaveBeenCalledWith('comp-1', 'My explanation');
+      // Major ruling (83.19): the updated complaint is placed into cache immediately
+      const cache = queryClient.getQueryData<any>([QueryKeys.complaints]);
+      expect(cache?.pages[0].data[0]).toEqual(replied);
+      // Alerts "Reply sent"
+      expect(alertSpy).toHaveBeenCalledWith(
+        i18n.t('translations:complaint_reply_sent_title'),
+        i18n.t('translations:complaint_reply_sent_body'),
+      );
       expect(invalidateSpy).toHaveBeenCalledWith({
         queryKey: [QueryKeys.complaints],
       });
     });
 
-    it('shows Alert with complaint_reply_conflict on 409 conflict', async () => {
+    it('shows Alert with complaint_reply_conflict on 409 conflict when complaint has no reply yet', async () => {
       const error409 = new axios.AxiosError(
         'Conflict',
         '409',
@@ -288,6 +365,18 @@ describe('useComplaints hooks (spec 0052, AC-2, AC-4, AC-5, AC-7)', () => {
         .mockRejectedValueOnce(error409);
 
       const wrapper = createWrapper();
+      queryClient.setQueryData([QueryKeys.complaints], {
+        pages: [
+          {
+            data: [
+              { id: 'comp-1', status: 'AWAITING_REPLY', riderReply: null },
+            ],
+            pagination: { currentPage: 1, nextPage: null },
+          },
+        ],
+        pageParams: [1],
+      });
+
       const { result } = renderHook(() => useReplyToComplaint(), { wrapper });
 
       await act(async () => {
@@ -301,6 +390,77 @@ describe('useComplaints hooks (spec 0052, AC-2, AC-4, AC-5, AC-7)', () => {
         expect(alertSpy).toHaveBeenCalledWith(
           i18n.t('translations:complaint_send_failed_title'),
           i18n.t('translations:complaint_reply_conflict'),
+        );
+      });
+    });
+
+    it('suppresses "Not sent" alert on 409 conflict when complaint in cache already has a reply (second tap / double tap, Major ruling)', async () => {
+      const error409 = new axios.AxiosError(
+        'Conflict',
+        '409',
+        undefined,
+        undefined,
+        { status: 409, data: {} } as any,
+      );
+
+      jest
+        .spyOn(services.complaintService, 'replyToComplaint')
+        .mockRejectedValueOnce(error409);
+
+      const wrapper = createWrapper();
+      // Cached complaint already has a reply from the rider's first tap
+      queryClient.setQueryData([QueryKeys.complaints], {
+        pages: [
+          {
+            data: [
+              { id: 'comp-1', status: 'OPEN', riderReply: 'My first tap reply' },
+            ],
+            pagination: { currentPage: 1, nextPage: null },
+          },
+        ],
+        pageParams: [1],
+      });
+
+      const { result } = renderHook(() => useReplyToComplaint(), { wrapper });
+
+      await act(async () => {
+        result.current.mutate({
+          id: 'comp-1',
+          text: 'Second tap reply',
+        });
+      });
+
+      // No alert should be shown
+      expect(alertSpy).not.toHaveBeenCalled();
+    });
+
+    it('shows Alert with complaint_not_found on 404', async () => {
+      const error404 = new axios.AxiosError(
+        'Not Found',
+        '404',
+        undefined,
+        undefined,
+        { status: 404, data: {} } as any,
+      );
+
+      jest
+        .spyOn(services.complaintService, 'replyToComplaint')
+        .mockRejectedValueOnce(error404);
+
+      const wrapper = createWrapper();
+      const { result } = renderHook(() => useReplyToComplaint(), { wrapper });
+
+      await act(async () => {
+        result.current.mutate({
+          id: 'comp-missing',
+          text: 'Reply to missing',
+        });
+      });
+
+      await waitFor(() => {
+        expect(alertSpy).toHaveBeenCalledWith(
+          i18n.t('translations:complaint_send_failed_title'),
+          i18n.t('translations:complaint_not_found'),
         );
       });
     });

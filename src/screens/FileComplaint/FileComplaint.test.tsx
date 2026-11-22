@@ -7,6 +7,11 @@ import i18n from '@app/localization/i18n';
 import { FileComplaint } from './FileComplaint';
 import { useFileComplaint } from '@app/hooks/useComplaints';
 import { COMPLAINT_PHOTO_MAX_BYTES } from '@app/services/complaintService';
+import { tidyPickedPhotos } from '@app/services/complaintPhotoFiles';
+
+jest.mock('@app/services/complaintPhotoFiles', () => ({
+  tidyPickedPhotos: jest.fn(),
+}));
 
 jest.mock('react-native-image-picker', () => ({
   launchImageLibrary: jest.fn(),
@@ -240,7 +245,27 @@ describe('FileComplaint screen (spec 0052, AC-2, AC-9)', () => {
       expect(screen.queryByTestId('complaint-photo-thumb')).toBeNull();
     });
 
-    it('shows complaint_photo_too_big alert when photo fileSize exceeds 5 MB (AC-2, AC-9)', async () => {
+    it('catches picker rejection and shows complaint_photo_failed alert (row 83 review)', async () => {
+      (launchImageLibrary as jest.Mock).mockRejectedValueOnce(
+        new Error('Native picker error'),
+      );
+
+      render(<FileComplaint {...defaultProps} />);
+
+      const addPhotoButton = screen.getByText(
+        i18n.t('translations:complaint_add_photo'),
+      );
+      await act(async () => {
+        fireEvent.press(addPhotoButton);
+      });
+
+      expect(alertSpy).toHaveBeenCalledWith(
+        i18n.t('translations:complaint_photo_failed'),
+      );
+      expect(screen.queryByTestId('complaint-photo-thumb')).toBeNull();
+    });
+
+    it('shows complaint_photo_too_big alert when photo fileSize exceeds 5 MB and tidies photo (AC-2, AC-9, row 83 review)', async () => {
       (launchImageLibrary as jest.Mock).mockResolvedValueOnce({
         assets: [
           {
@@ -263,10 +288,14 @@ describe('FileComplaint screen (spec 0052, AC-2, AC-9)', () => {
       expect(alertSpy).toHaveBeenCalledWith(
         i18n.t('translations:complaint_photo_too_big'),
       );
+      expect(tidyPickedPhotos).toHaveBeenCalledWith(
+        'file:///path/to/big.jpg',
+        undefined,
+      );
       expect(screen.queryByTestId('complaint-photo-thumb')).toBeNull();
     });
 
-    it('attaches valid photo, displays thumbnail, and handles removal', async () => {
+    it('attaches valid photo, displays thumbnail, tidies on removal, and tidies on replacement (row 83 review)', async () => {
       (launchImageLibrary as jest.Mock).mockResolvedValueOnce({
         assets: [
           {
@@ -292,6 +321,34 @@ describe('FileComplaint screen (spec 0052, AC-2, AC-9)', () => {
       expect(thumb.props.source).toEqual({
         uri: 'file:///data/user/0/cache/picked.jpg',
       });
+      expect(tidyPickedPhotos).toHaveBeenCalledWith(
+        undefined,
+        'file:///data/user/0/cache/picked.jpg',
+      );
+
+      // Replace photo with another photo
+      (launchImageLibrary as jest.Mock).mockResolvedValueOnce({
+        assets: [
+          {
+            uri: 'file:///data/user/0/cache/replacement.jpg',
+            fileSize: 1024 * 1024,
+            type: 'image/jpeg',
+          },
+        ],
+      });
+
+      const changePhotoButton = screen.getByText(
+        i18n.t('translations:complaint_change_photo'),
+      );
+      await act(async () => {
+        fireEvent.press(changePhotoButton);
+      });
+
+      // The old photo is tidied
+      expect(tidyPickedPhotos).toHaveBeenCalledWith(
+        'file:///data/user/0/cache/picked.jpg',
+        'file:///data/user/0/cache/replacement.jpg',
+      );
 
       // Remove photo button
       const removeButton = screen.getByTestId('complaint-photo-remove');
@@ -299,11 +356,85 @@ describe('FileComplaint screen (spec 0052, AC-2, AC-9)', () => {
 
       fireEvent.press(removeButton);
 
+      // Removed photo is tidied
+      expect(tidyPickedPhotos).toHaveBeenCalledWith(
+        'file:///data/user/0/cache/replacement.jpg',
+      );
+
       // Photo removed; Add photo button returns
       expect(screen.queryByTestId('complaint-photo-thumb')).toBeNull();
       expect(
         screen.getByText(i18n.t('translations:complaint_add_photo')),
       ).toBeTruthy();
+    });
+
+    it('cleans up picked photo on unmount when leaving form unsent (row 83 review)', async () => {
+      (launchImageLibrary as jest.Mock).mockResolvedValueOnce({
+        assets: [
+          {
+            uri: 'file:///cache/rn_image_picker_lib_temp_unsent.jpg',
+            fileSize: 1024 * 1024,
+            type: 'image/jpeg',
+          },
+        ],
+      });
+
+      const { unmount } = render(<FileComplaint {...defaultProps} />);
+
+      await act(async () => {
+        fireEvent.press(
+          screen.getByText(i18n.t('translations:complaint_add_photo')),
+        );
+      });
+
+      (tidyPickedPhotos as jest.Mock).mockClear();
+
+      // Rider leaves form without submitting
+      unmount();
+
+      expect(tidyPickedPhotos).toHaveBeenCalledWith(
+        'file:///cache/rn_image_picker_lib_temp_unsent.jpg',
+      );
+    });
+
+    it('does not clean up photo on unmount when mutation is in flight (handled by hook)', async () => {
+      (launchImageLibrary as jest.Mock).mockResolvedValueOnce({
+        assets: [
+          {
+            uri: 'file:///cache/rn_image_picker_lib_temp_uploading.jpg',
+            fileSize: 1024 * 1024,
+            type: 'image/jpeg',
+          },
+        ],
+      });
+
+      const { rerender, unmount } = render(<FileComplaint {...defaultProps} />);
+
+      await act(async () => {
+        fireEvent.press(
+          screen.getByText(i18n.t('translations:complaint_add_photo')),
+        );
+      });
+
+      (tidyPickedPhotos as jest.Mock).mockClear();
+
+      // Mutation starts in flight
+      (useFileComplaint as jest.Mock).mockReturnValue({
+        mutate: mockMutate,
+        isPending: true,
+      });
+      rerender(<FileComplaint {...defaultProps} />);
+
+      // Screen unmounts during active upload
+      unmount();
+
+      expect(tidyPickedPhotos).not.toHaveBeenCalled();
+
+      // Restore mock for subsequent tests
+      (useFileComplaint as jest.Mock).mockReturnValue({
+        mutate: mockMutate,
+        isPending: false,
+      });
     });
 
     it('correctly sets PNG mime type and name when image is PNG', async () => {
@@ -352,7 +483,7 @@ describe('FileComplaint screen (spec 0052, AC-2, AC-9)', () => {
   });
 
   describe('Form submission and success flow (AC-2)', () => {
-    it('submits complaint with trimmed text, shows success alert and navigates back on success', () => {
+    it('submits complaint with trimmed text and navigates back on success (alert shown by hook)', () => {
       render(<FileComplaint {...defaultProps} />);
 
       fireEvent.press(screen.getByTestId('complaint-about-RESTAURANT'));
@@ -376,16 +507,12 @@ describe('FileComplaint screen (spec 0052, AC-2, AC-9)', () => {
         expect.objectContaining({ onSuccess: expect.any(Function) }),
       );
 
-      // Trigger onSuccess callback
+      // Trigger onSuccess callback: the hook handles the alert, screen only navigates back
       const { onSuccess } = mockMutate.mock.calls[0][1];
       act(() => {
         onSuccess();
       });
 
-      expect(alertSpy).toHaveBeenCalledWith(
-        i18n.t('translations:complaint_sent_title'),
-        i18n.t('translations:complaint_sent_body'),
-      );
       expect(mockNavigation.goBack).toHaveBeenCalledTimes(1);
     });
   });
