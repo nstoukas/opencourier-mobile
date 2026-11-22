@@ -18,6 +18,7 @@ import i18next from 'i18next';
 import { formatCurrencyFromCents } from '@app/utilities/currency';
 import { offerTripLines } from '@app/utilities/offerTrip';
 import { escapeHtml } from '@app/utilities/escapeHtml';
+import { legLine } from '@app/utilities/legs';
 import {
   OfferAlertData,
   StoredOfferAlert,
@@ -85,23 +86,30 @@ export const ensureOfferChannels = async () => {
 export const payText = (offer: { payTotal: number; currencyCode: string }) =>
   formatCurrencyFromCents(offer.payTotal, offer.currencyCode || undefined);
 
+// What the alert's lines are made from. The leg fields are optional in
+// OfferAlertData, so they stay optional here.
+type AlertLineSource = Pick<
+  OfferAlertData,
+  'restaurantName' | 'dropoffArea' | 'trip' | 'legNumber' | 'legCount'
+>;
+
 // The alert's lines, in the offer card's order and words (row 100, spec 0019's
 // AC-3): "1.2 km to the restaurant · 2.9 km to the customer", "About 9 min",
-// then "Pizza Roma to Iasonos". A line whose figures are unknown is ''.
+// "Leg 1 of 2" for one leg of a bigger order (spec 0046, AC-7; agy's review of
+// row 10), then "Pizza Roma to Iasonos". A line with nothing to say is ''.
 export const offerAlertLines = (
-  offer: Pick<OfferAlertData, 'restaurantName' | 'dropoffArea' | 'trip'>,
-): { distances: string; minutes: string; place: string } => {
+  offer: AlertLineSource,
+): { distances: string; minutes: string; leg: string; place: string } => {
   // `i18next.t` read through a looser type, the one offerTripLines takes.
-  const trip = offerTripLines(
-    offer.trip,
-    i18next.t.bind(i18next) as (
-      key: string,
-      options?: Record<string, unknown>,
-    ) => string,
-  );
+  const t = i18next.t.bind(i18next) as (
+    key: string,
+    options?: Record<string, unknown>,
+  ) => string;
+  const trip = offerTripLines(offer.trip, t);
   return {
     distances: trip.distances,
     minutes: trip.minutes,
+    leg: legLine(offer, t),
     place:
       offer.dropoffArea !== ''
         ? i18next.t('translations:offer_alert_body_area', {
@@ -115,11 +123,9 @@ export const offerAlertLines = (
 // The alert's lines that have something in them, in the card's order. The
 // notification and the full screen both read this one list, so their order
 // can never drift apart (row 100 review).
-export const offerAlertLineList = (
-  offer: Pick<OfferAlertData, 'restaurantName' | 'dropoffArea' | 'trip'>,
-): string[] => {
+export const offerAlertLineList = (offer: AlertLineSource): string[] => {
   const lines = offerAlertLines(offer);
-  return [lines.distances, lines.minutes, lines.place].filter(
+  return [lines.distances, lines.minutes, lines.leg, lines.place].filter(
     line => line !== '',
   );
 };
@@ -128,9 +134,8 @@ export const offerAlertLineList = (
 // to the restaurant · 2.9 km to the customer · About 9 min · Pizza Roma to
 // Iasonos". A collapsed notification cuts it short, so the expanded alert
 // shows the same lines one per row (`BIGTEXT` in showOfferAlert).
-export const offerSummary = (
-  offer: Pick<OfferAlertData, 'restaurantName' | 'dropoffArea' | 'trip'>,
-): string => offerAlertLineList(offer).join(' · ');
+export const offerSummary = (offer: AlertLineSource): string =>
+  offerAlertLineList(offer).join(' · ');
 
 // On Android notifee reads the body and a BIGTEXT style's text as HTML: a
 // line break must be <br> (a '\n' shows as a space), and a restaurant's name

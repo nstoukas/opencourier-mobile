@@ -27,6 +27,11 @@ export type OfferAlertData = {
   // `distanceKm` for apps older than row 100; this app never shows it.
   trip: OfferTrip;
   insistent: boolean; // the server's 2 minute re send (AC-7)
+  // Spec 0046 (AC-7): "Leg 1 of 2" of a multi leg order; null for a single
+  // delivery (the server sends '' then, decision 10.2). `?` because a test or
+  // an older caller may leave them out, which reads as a single delivery.
+  legNumber?: number | null;
+  legCount?: number | null;
 };
 
 export type OfferMessage =
@@ -107,6 +112,8 @@ export const parseOfferMessage = (data: RawData): OfferMessage | null => {
       dropoffArea: text(data, 'dropoffArea'),
       trip: tripOf(data),
       insistent: text(data, 'insistent') === '1',
+      legNumber: numberOf(text(data, 'legNumber')),
+      legCount: numberOf(text(data, 'legCount')),
     },
   };
 };
@@ -136,6 +143,8 @@ export const toNotificationData = (
   toDropoffMetres: textOf(offer.trip.toDropoffMetres),
   minutes: textOf(offer.trip.minutes),
   insistent: offer.insistent ? '1' : '',
+  legNumber: textOf(offer.legNumber ?? null),
+  legCount: textOf(offer.legCount ?? null),
 });
 
 export const fromNotificationData = (
@@ -163,5 +172,7 @@ export const fromNotificationData = (
     dropoffArea: text(data, 'dropoffArea'),
     trip: tripOf(data),
     insistent: text(data, 'insistent') === '1',
+    legNumber: numberOf(text(data, 'legNumber')),
+    legCount: numberOf(text(data, 'legCount')),
   };
 };
