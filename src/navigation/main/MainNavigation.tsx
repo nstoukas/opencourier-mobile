@@ -22,6 +22,7 @@ import { RequestSplit } from '@app/screens/RequestSplit/RequestSplit';
 import { Chat } from '@app/screens/Chat/Chat';
 import { HowItWorks } from '@app/screens/HowItWorks/HowItWorks';
 import { RequestReview } from '@app/screens/RequestReview/RequestReview';
+import { FileComplaint } from '@app/screens/FileComplaint/FileComplaint';
 import { Permissions } from '@app/screens/Permissions/Permissions';
 import { takeJustLoggedIn } from '@app/services/afterLogin';
 
@@ -148,6 +149,11 @@ export const MainStack = () => {
       <MainStackNavigator.Screen
         name={MainScreens.RequestReview}
         component={RequestReview}
+        options={DEFAULT_OPTIONS}
+      />
+      <MainStackNavigator.Screen
+        name={MainScreens.FileComplaint}
+        component={FileComplaint}
         options={DEFAULT_OPTIONS}
       />
     </MainStackNavigator.Navigator>

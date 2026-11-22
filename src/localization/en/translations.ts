@@ -855,6 +855,72 @@ export default {
   review_withdraw_confirm: 'Withdraw',
   review_withdraw_failed_title: 'Not withdrawn',
   review_notice_title: 'Your review request has an answer',
+  // Spec 0052 (row 83): complaints both ways, with no ratings. Never a count of a rider's complaints.
+  complaints: 'Complaints',
+  complaint_from_delivery_hint:
+    'A problem with the restaurant or the customer on this job? Tell the co-op.',
+  complaint_file: 'Make a complaint',
+  complaint_title: 'Make a complaint',
+  complaint_intro: 'About {{delivery}}. Who is it about?',
+  complaint_about_restaurant: 'The restaurant',
+  complaint_about_customer: 'The customer',
+  complaint_what_happened: 'What happened?',
+  complaint_text_placeholder: 'What happened, in your words',
+  complaint_only_coop_restaurant:
+    'Only the co-op reads this. The restaurant is not told.',
+  complaint_only_coop_customer:
+    'Only the co-op reads this. The app never contacts the customer.',
+  complaint_send: 'Send',
+  complaint_sent_title: 'Sent',
+  complaint_sent_body:
+    'A person at the co-op reads it. The outcome shows in Complaints.',
+  complaint_send_failed_title: 'Not sent',
+  complaint_send_failed: 'It could not be sent. Try again in a moment.',
+  complaint_no_connection: 'No connection. Try again when you have signal.',
+  complaint_not_found:
+    'This complaint or job is no longer there. Pull down to refresh.',
+  complaint_already_open:
+    'You already have an open complaint about them on this job. The co-op is looking at it.',
+  complaint_reply_conflict:
+    'This complaint already has a reply, or the co-op has closed it. Pull down to see it.',
+  complaint_category_LONG_WAIT: 'Long wait',
+  complaint_category_FOOD_NOT_READY: 'Food not ready',
+  complaint_category_UNSAFE_PACKAGING: 'Unsafe packaging',
+  complaint_category_RUDE_STAFF: 'Rude staff',
+  complaint_category_ABUSE_OR_THREAT: 'Abuse or a threat',
+  complaint_category_UNSAFE_ADDRESS: 'Unsafe address',
+  complaint_category_NOT_ANSWERING: 'Not answering',
+  complaint_category_LATE: 'Late',
+  complaint_category_RUDE: 'Rude',
+  complaint_category_FOOD_DAMAGED: 'Food damaged',
+  complaint_category_OTHER: 'Something else',
+  complaint_about_you_restaurant: 'About you, from the restaurant',
+  complaint_about_you_coop: 'About you, from the co-op',
+  complaint_yours_restaurant: 'Your complaint about the restaurant',
+  complaint_yours_customer: 'Your complaint about the customer',
+  complaint_job_line: '{{restaurant}}, {{day}}',
+  complaint_filed_on: 'Made {{when}}',
+  complaint_needs_reply:
+    'Needs your reply. Nothing is decided before you reply, and there is no deadline.',
+  complaint_reply_placeholder: 'Your side of what happened',
+  complaint_reply_send: 'Send reply',
+  complaint_reply_confirm_title: 'Send your reply?',
+  complaint_reply_confirm_body:
+    'You can reply once, and the reply cannot be changed after it is sent.',
+  complaint_your_reply: 'Your reply',
+  complaint_reply_entered_for_you:
+    'The co-op wrote this down for you from a phone call.',
+  complaint_open_about_you: 'Your reply is with the co-op. A person decides.',
+  complaint_open_yours: 'With the co-op. A person decides.',
+  complaint_outcome: 'Outcome',
+  complaint_decided_on: 'On {{when}}',
+  complaint_withdrawn: 'Withdrawn by the co-op',
+  complaint_withdrawn_about_you: 'Withdrawn. No finding against you.',
+  complaint_list_failed: 'Complaints could not be loaded',
+  complaint_none: 'No complaints',
+  complaint_none_body:
+    'To complain about a restaurant or a customer, open the job in Earnings. Any complaint about you shows here too.',
+  complaint_notice_title: 'A complaint about a job needs your reply',
   // Row 17 (spec 0039): the co-op login and the password reset by email.
   // coop_name is a placeholder until the co-op names itself.
   coop_name: 'Volos Couriers Co-op',

@@ -8,6 +8,8 @@ export enum DrawerScreens {
   Earnings = 'Earnings',
   // Spec 0027: booking shifts, shown only while the co-op runs them.
   Shifts = 'Shifts',
+  // Spec 0052: complaints the rider filed and the ones about them, with the reply box.
+  Complaints = 'Complaints',
   PaymentMethods = 'PaymentMethods',
   Settings = 'Settings',
 }
@@ -16,6 +18,7 @@ export type DrawerStackParamList = {
   Home: undefined;
   Earnings: undefined;
   Shifts: undefined;
+  Complaints: undefined;
   PaymentMethods: undefined;
   Settings: undefined;
 };

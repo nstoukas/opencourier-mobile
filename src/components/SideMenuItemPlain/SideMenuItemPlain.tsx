@@ -13,6 +13,7 @@ import { Icon } from '@app/components/Icon/Icon';
 import { CaretRightIcon } from 'phosphor-react-native/src/icons/CaretRight';
 import { CardholderIcon } from 'phosphor-react-native/src/icons/Cardholder';
 import { ChatCircleIcon } from 'phosphor-react-native/src/icons/ChatCircle';
+import { MegaphoneSimpleIcon } from 'phosphor-react-native/src/icons/MegaphoneSimple';
 import { CalendarBlankIcon } from 'phosphor-react-native/src/icons/CalendarBlank';
 import { GearSixIcon } from 'phosphor-react-native/src/icons/GearSix';
 import { NoteIcon } from 'phosphor-react-native/src/icons/Note';
@@ -47,6 +48,8 @@ export const SideMenuItemPlain = ({
         return { glyph: CalendarBlankIcon, weight: 'fill' as const };
       case SideMenuItem.Earnings:
         return { glyph: PiggyBankIcon, weight: 'fill' as const };
+      case SideMenuItem.Complaints:
+        return { glyph: MegaphoneSimpleIcon, weight: 'fill' as const };
       case SideMenuItem.Payout:
         return { glyph: CardholderIcon, weight: 'fill' as const };
       case SideMenuItem.Support:

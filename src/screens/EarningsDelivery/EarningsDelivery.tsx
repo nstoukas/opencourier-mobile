@@ -147,6 +147,10 @@ export const EarningsDelivery = ({ navigation, route }: Props) => {
       formatCurrencyFromCents(cents, data.currencyCode);
     const { breakdown } = data;
     const firstJob = data.jobs[0];
+    // A short label for this job ("R101 Kitchen, 3 Nov"), for the review request and the complaint.
+    const deliveryLabel = firstJob
+      ? `${data.pickupName}, ${day(firstJob.acceptedAt)}`
+      : data.pickupName;
 
     return (
       <>
@@ -312,9 +316,26 @@ export const EarningsDelivery = ({ navigation, route }: Props) => {
               onPress={() =>
                 navigation.navigate(MainScreens.RequestReview, {
                   deliveryId: data.deliveryId,
-                  deliveryLabel: firstJob
-                    ? `${data.pickupName}, ${day(firstJob.acceptedAt)}`
-                    : data.pickupName,
+                  deliveryLabel,
+                })
+              }
+            />
+          </View>
+        </View>
+
+        {/* Spec 0052 (AC-2): complain about this job's restaurant or customer. Only the co-op reads it. */}
+        <View style={styles.card}>
+          <Text style={styles.rowLabel}>
+            {t('translations:complaint_from_delivery_hint')}
+          </Text>
+          <View style={styles.reviewButton}>
+            <Button
+              type={ButtonType.gray}
+              title={t('translations:complaint_file')}
+              onPress={() =>
+                navigation.navigate(MainScreens.FileComplaint, {
+                  deliveryId: data.deliveryId,
+                  deliveryLabel,
                 })
               }
             />

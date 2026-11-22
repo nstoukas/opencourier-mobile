@@ -7,6 +7,7 @@ import { Earnings } from '@app/screens/Earnings/Earnings';
 import { PaymentMethods } from '@app/screens/PaymentMethods/PaymentMethods';
 import { SettingsScreen } from '@app/screens/Settings/Settings';
 import { ShiftsScreen } from '@app/screens/Shifts/Shifts';
+import { Complaints } from '@app/screens/Complaints/Complaints';
 
 // Same idea as the main stack: the param list types each drawer screen's route.
 const DrawerNavigator = createDrawerNavigator<DrawerStackParamList>();
@@ -31,6 +32,11 @@ export const DrawerStack = () => {
       <DrawerNavigator.Screen
         name={DrawerScreens.Shifts}
         component={ShiftsScreen}
+        options={DEFAULT_OPTIONS}
+      />
+      <DrawerNavigator.Screen
+        name={DrawerScreens.Complaints}
+        component={Complaints}
         options={DEFAULT_OPTIONS}
       />
       <DrawerNavigator.Screen

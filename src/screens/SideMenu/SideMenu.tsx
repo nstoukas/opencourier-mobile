@@ -45,6 +45,7 @@ const section2 = [
   SideMenuItem.Orders,
   SideMenuItem.Chat,
   SideMenuItem.Earnings,
+  SideMenuItem.Complaints,
   SideMenuItem.Payout,
   SideMenuItem.Support,
   SideMenuItem.Settings,
@@ -58,6 +59,7 @@ const section2WithShifts = [
   SideMenuItem.Chat,
   SideMenuItem.Shifts,
   SideMenuItem.Earnings,
+  SideMenuItem.Complaints,
   SideMenuItem.Payout,
   SideMenuItem.Support,
   SideMenuItem.Settings,
@@ -224,6 +226,11 @@ export const SideMenu = ({ navigation }: Props) => {
         break;
       case SideMenuItem.Earnings:
         navigation.navigate(DrawerScreens.Earnings);
+        break;
+      case SideMenuItem.Complaints:
+        // Spec 0052 (cross check 11): Complaints sits in the side menu. No count or badge: the push and
+        // the card say when one needs a reply (value 5).
+        navigation.navigate(DrawerScreens.Complaints);
         break;
       case SideMenuItem.Payout:
         navigation.navigate(DrawerScreens.PaymentMethods);

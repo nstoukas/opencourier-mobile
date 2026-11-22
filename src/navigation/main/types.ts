@@ -34,6 +34,8 @@ export enum MainScreens {
   // How offers and pay work, the rider's review requests and what changed (spec 0038).
   HowItWorks = 'HowItWorks',
   RequestReview = 'RequestReview',
+  // Spec 0052: a complaint about the restaurant or the customer of one job, from Earnings.
+  FileComplaint = 'FileComplaint',
 }
 
 export type MainStackParamList = {
@@ -84,6 +86,11 @@ export type MainStackParamList = {
         deliveryLabel?: string;
       }
     | undefined;
+  // From a delivery's pay breakdown: its id and the same short label as RequestReview.
+  FileComplaint: {
+    deliveryId: string;
+    deliveryLabel: string;
+  };
 };
 
 /**
