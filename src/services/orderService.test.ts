@@ -740,7 +740,9 @@ describe('orderService & isOfferEndedError (spec 0002, AC-5)', () => {
       expect(res).toEqual({ data: null, error: null });
     });
 
-    it('throws when mark-as-dispatched answers 500 or 409 with other code', async () => {
+    it('resolves and logs a warning when mark-as-dispatched answers 500 or 409 with other code (row 80 review)', async () => {
+      const warnSpy = jest.spyOn(console, 'warn').mockImplementation(() => {});
+
       const error500 = makeAxiosError(500, { message: 'Server crashed' });
       const mockPost500 = jest
         .fn()
@@ -750,7 +752,10 @@ describe('orderService & isOfferEndedError (spec 0002, AC-5)', () => {
       const service500 = orderService({
         post: mockPost500,
       } as unknown as UClient);
-      await expect(service500.acceptOrder({ id: 'del-106' })).rejects.toThrow(
+      const res500 = await service500.acceptOrder({ id: 'del-106' });
+      expect(res500).toEqual({ data: null, error: null });
+      expect(warnSpy).toHaveBeenCalledWith(
+        'Could not mark order del-106 as dispatched',
         error500,
       );
 
@@ -765,9 +770,14 @@ describe('orderService & isOfferEndedError (spec 0002, AC-5)', () => {
       const service409 = orderService({
         post: mockPost409,
       } as unknown as UClient);
-      await expect(service409.acceptOrder({ id: 'del-107' })).rejects.toThrow(
+      const res409 = await service409.acceptOrder({ id: 'del-107' });
+      expect(res409).toEqual({ data: null, error: null });
+      expect(warnSpy).toHaveBeenCalledWith(
+        'Could not mark order del-107 as dispatched',
         error409Other,
       );
+
+      warnSpy.mockRestore();
     });
 
     it('throws when the initial accept call fails', async () => {

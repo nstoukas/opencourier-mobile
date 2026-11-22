@@ -181,10 +181,12 @@ describe('orderService.stack & serverSentenceOf (spec 0048, AC-5)', () => {
       warnSpy.mockRestore();
     });
 
-    it('when marking primary order as dispatched fails, the acceptOrder promise rejects', async () => {
+    it('when marking primary order as dispatched fails, acceptOrder resolves and logs a warning (row 80 review)', async () => {
+      const warnSpy = jest.spyOn(console, 'warn').mockImplementation(() => {});
+      const dispatchError = new Error('Primary dispatch failed');
       const mockPost = jest.fn().mockImplementation((url: string) => {
         if (url === 'deliveries/order-1/mark-as-dispatched') {
-          return Promise.reject(new Error('Primary dispatch failed'));
+          return Promise.reject(dispatchError);
         }
         return Promise.resolve({ data: { result: 'ok' } });
       });
@@ -197,7 +199,48 @@ describe('orderService.stack & serverSentenceOf (spec 0048, AC-5)', () => {
           partnerId: 'order-2',
           automatic: false,
         }),
-      ).rejects.toThrow('Primary dispatch failed');
+      ).resolves.toEqual({ data: null, error: null });
+
+      expect(warnSpy).toHaveBeenCalledWith(
+        'Could not mark order order-1 as dispatched',
+        dispatchError,
+      );
+      warnSpy.mockRestore();
+    });
+
+    it('when both partner and primary dispatch fail, acceptOrder still resolves and logs both warnings', async () => {
+      const warnSpy = jest.spyOn(console, 'warn').mockImplementation(() => {});
+      const partnerError = new Error('Partner dispatch failed');
+      const primaryError = new Error('Primary dispatch failed');
+      const mockPost = jest.fn().mockImplementation((url: string) => {
+        if (url === 'deliveries/order-2/mark-as-dispatched') {
+          return Promise.reject(partnerError);
+        }
+        if (url === 'deliveries/order-1/mark-as-dispatched') {
+          return Promise.reject(primaryError);
+        }
+        return Promise.resolve({ data: { result: 'ok' } });
+      });
+      const client = { post: mockPost } as unknown as UClient;
+      const service = orderService(client);
+
+      await expect(
+        service.acceptOrder({
+          id: 'order-1',
+          partnerId: 'order-2',
+          automatic: false,
+        }),
+      ).resolves.toEqual({ data: null, error: null });
+
+      expect(warnSpy).toHaveBeenCalledWith(
+        'Could not mark the other order order-2 as dispatched',
+        partnerError,
+      );
+      expect(warnSpy).toHaveBeenCalledWith(
+        'Could not mark order order-1 as dispatched',
+        primaryError,
+      );
+      warnSpy.mockRestore();
     });
   });
 });

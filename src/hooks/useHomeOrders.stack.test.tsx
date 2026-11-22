@@ -369,6 +369,53 @@ describe('useHomeOrders.stack (spec 0048, row 80, AC-5, AC-8)', () => {
       });
     });
 
+    it('drops both orders when decline fails with 409 OFFER_HAS_ENDED (gap from row 80 review)', async () => {
+      const offerEndedError = new AxiosError('Offer ended');
+      offerEndedError.response = {
+        status: 409,
+        statusText: 'Conflict',
+        headers: {},
+        config: {} as any,
+        data: {
+          error: true,
+          result: [
+            { code: OFFER_HAS_ENDED_CODE, message: 'This offer has ended' },
+          ],
+        },
+      };
+
+      mockDeclineOrder.mockRejectedValueOnce(offerEndedError);
+      queryClient.setQueryData(
+        [QueryKeys.newOrders],
+        [stackOffer1, stackOffer2],
+      );
+
+      let hookResult: ReturnType<typeof useHomeOrders> | undefined;
+      let tree: renderer.ReactTestRenderer;
+      await act(async () => {
+        tree = renderer.create(
+          <QueryClientProvider client={queryClient}>
+            <HookHost
+              onRender={h => {
+                hookResult = h;
+              }}
+            />
+          </QueryClientProvider>,
+        );
+      });
+
+      await act(async () => {
+        hookResult?.declineOrderFn('stack-1');
+      });
+
+      expect(alertSpy).toHaveBeenCalledWith('This offer has ended');
+      expect(hookResult?.dataSourceNew).toEqual([]);
+
+      act(() => {
+        tree.unmount();
+      });
+    });
+
     it('releases both orders and alerts the server sentence when stack accept is refused (e.g. partner changed)', async () => {
       const serverSentence =
         'One order of this pair changed before your answer arrived, so nothing was accepted. Check your offers again.';
@@ -410,6 +457,90 @@ describe('useHomeOrders.stack (spec 0048, row 80, AC-5, AC-8)', () => {
 
       // Shows the server sentence directly to the rider
       expect(alertSpy).toHaveBeenCalledWith(serverSentence, undefined);
+
+      act(() => {
+        tree.unmount();
+      });
+    });
+
+    it('releases both orders and alerts the server sentence when stack decline is refused (gap from row 80 review)', async () => {
+      const serverSentence =
+        'One order of this pair changed before your answer arrived, so nothing was declined. Check your offers again.';
+      const conflictError = new AxiosError('Conflict');
+      conflictError.response = {
+        status: 409,
+        statusText: 'Conflict',
+        headers: {},
+        config: {} as any,
+        data: {
+          error: true,
+          result: [{ code: 'ORDER_CHANGED', message: serverSentence }],
+        },
+      };
+
+      mockDeclineOrder.mockRejectedValueOnce(conflictError);
+      queryClient.setQueryData(
+        [QueryKeys.newOrders],
+        [stackOffer1, stackOffer2],
+      );
+
+      let hookResult: ReturnType<typeof useHomeOrders> | undefined;
+      let tree: renderer.ReactTestRenderer;
+      await act(async () => {
+        tree = renderer.create(
+          <QueryClientProvider client={queryClient}>
+            <HookHost
+              onRender={h => {
+                hookResult = h;
+              }}
+            />
+          </QueryClientProvider>,
+        );
+      });
+
+      await act(async () => {
+        hookResult?.declineOrderFn('stack-1');
+      });
+
+      // Shows the server sentence directly to the rider
+      expect(alertSpy).toHaveBeenCalledWith(serverSentence, undefined);
+
+      act(() => {
+        tree.unmount();
+      });
+    });
+
+    it('releases both orders and alerts the error message when stack decline encounters a generic error (gap from row 80 review)', async () => {
+      const genericError = new Error('Network timeout during decline');
+
+      mockDeclineOrder.mockRejectedValueOnce(genericError);
+      queryClient.setQueryData(
+        [QueryKeys.newOrders],
+        [stackOffer1, stackOffer2],
+      );
+
+      let hookResult: ReturnType<typeof useHomeOrders> | undefined;
+      let tree: renderer.ReactTestRenderer;
+      await act(async () => {
+        tree = renderer.create(
+          <QueryClientProvider client={queryClient}>
+            <HookHost
+              onRender={h => {
+                hookResult = h;
+              }}
+            />
+          </QueryClientProvider>,
+        );
+      });
+
+      await act(async () => {
+        hookResult?.declineOrderFn('stack-1');
+      });
+
+      expect(alertSpy).toHaveBeenCalledWith(
+        'Error declining order',
+        'Network timeout during decline',
+      );
 
       act(() => {
         tree.unmount();

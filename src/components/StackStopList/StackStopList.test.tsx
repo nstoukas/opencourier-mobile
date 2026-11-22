@@ -70,7 +70,36 @@ describe('StackStopList (spec 0048, row 80, AC-10)', () => {
     expect(getByLabelText('Stop 2')).toBeTruthy();
   });
 
-  it('falls back to pickupName or dropoffLocation street when businessName or dropoffArea are missing', () => {
+  it('on an offer: uses dropoffArea only and never falls back to street name (spec 0019, row 80 review)', () => {
+    // When dropoffArea is missing (or blanked by backend to protect privacy),
+    // an offer must never fall back to dropoffLocation street.
+    const fallbackOrder1: Order = {
+      id: 'order-1',
+      status: OrderStatus.dispatched,
+      pickupName: 'Fallback Pickup',
+      dropoffLocation: { street: 'Main St 123' } as any,
+    } as Order;
+
+    const { getByText, queryByText } = render(
+      <StackStopList
+        stops={stops}
+        orders={[fallbackOrder1, order2]}
+        isOffer={true}
+      />,
+    );
+
+    // Pickup business name missing falls back to pickupName
+    expect(getByText('Pick up · Fallback Pickup')).toBeTruthy();
+    // Dropoff must NOT leak the street address on an offer
+    expect(queryByText('Drop off · Main St 123')).toBeNull();
+    // Instead it renders the label with empty place
+    expect(getByText('Drop off · ')).toBeTruthy();
+    // Normal order with dropoffArea is rendered
+    expect(getByText('Drop off · Port Area')).toBeTruthy();
+  });
+
+  it('on a job: falls back to dropoffLocation street when dropoffArea is missing', () => {
+    // On a job (accepted), the rider holds the delivery so showing street name is allowed
     const fallbackOrder1: Order = {
       id: 'order-1',
       status: OrderStatus.dispatched,
@@ -82,7 +111,7 @@ describe('StackStopList (spec 0048, row 80, AC-10)', () => {
       <StackStopList
         stops={stops}
         orders={[fallbackOrder1, order2]}
-        isOffer={true}
+        isOffer={false}
       />,
     );
 
