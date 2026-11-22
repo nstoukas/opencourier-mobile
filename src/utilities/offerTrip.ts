@@ -1,3 +1,5 @@
+import { kmNumber } from '@app/utilities/locale';
+
 // Spec 0019: the ride an offer means, as the backend sends it (display only:
 // pay always comes from the stored quote).
 export type OfferTrip = {
@@ -6,9 +8,8 @@ export type OfferTrip = {
   minutes: number | null;
 };
 
-// Metres as the rider reads them: 1234 m is "1.2" (one decimal).
-export const kmText = (metres: number): string =>
-  (Math.round(metres / 100) / 10).toFixed(1);
+// Metres as the rider reads them: 1234 m is "1,2" in Greek, "1.2" in English (one decimal).
+export const kmText = (metres: number): string => kmNumber(metres / 1000);
 
 type Translate = (key: string, options?: Record<string, unknown>) => string;
 

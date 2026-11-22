@@ -1,5 +1,6 @@
 import { OrderStatus } from '@app/types/enums';
 import { RouteLeg, RouteLegKind, RoutePoint } from '@app/types/route';
+import { kmNumber } from '@app/utilities/locale';
 
 // Spec 0018's rules for drawing a route and the cards' distance lines, kept
 // apart from the screens so each rule can be tested on its own.
@@ -69,8 +70,8 @@ const figuresOf = (leg: RouteLeg | undefined): LegFigures | undefined =>
   leg === undefined
     ? undefined
     : {
-        // One decimal, as the rider reads it: 1234 m is "1.2".
-        km: (leg.distanceMetres / 1000).toFixed(1),
+        // One decimal, as the rider reads it: 1234 m is "1,2" in Greek, "1.2" in English.
+        km: kmNumber(leg.distanceMetres / 1000),
         // Whole minutes, never "0 min" for a short hop.
         minutes: Math.max(1, Math.round(leg.durationSeconds / 60)),
       };

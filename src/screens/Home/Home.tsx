@@ -78,6 +78,7 @@ import {
   restaurantLayerOn,
   visibleLegs,
 } from '@app/utilities/routeLegs';
+import { kmNumber } from '@app/utilities/locale';
 import { RouteLeg } from '@app/types/route';
 import { useChatUnseen } from '@app/hooks/useChat';
 
@@ -95,7 +96,7 @@ const rideOf = (legs: RouteLeg[]): LegFigures | undefined => {
   const metres = legs.reduce((sum, leg) => sum + leg.distanceMetres, 0);
   const seconds = legs.reduce((sum, leg) => sum + leg.durationSeconds, 0);
   return {
-    km: (metres / 1000).toFixed(1),
+    km: kmNumber(metres / 1000),
     minutes: Math.max(1, Math.round(seconds / 60)),
   };
 };

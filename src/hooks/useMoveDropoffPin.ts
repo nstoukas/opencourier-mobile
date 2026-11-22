@@ -8,6 +8,7 @@ import { useTranslation } from 'react-i18next';
 import { services } from '@app/services/service';
 import { Order } from '@app/types/types';
 import { QueryKeys } from '@app/utilities/queryKeys';
+import { kmNumber } from '@app/utilities/locale';
 
 // Spec 0016 (AC-8): a fix less precise than this is refused; between the
 // buildings of a street, a worse one could put the pin across the road.
@@ -43,7 +44,7 @@ const readFreshFix = (): Promise<Fix | null> =>
 export const formatPinDistance = (metres: number): string =>
   metres < 1000
     ? `${Math.round(metres)} m`
-    : `${(metres / 1000).toFixed(1)} km`;
+    : `${kmNumber(metres / 1000)} km`;
 
 // A fix the phone says is within 50 m. Android reports 0 when it has no
 // figure, iOS a negative number for an invalid fix: neither counts as precise.

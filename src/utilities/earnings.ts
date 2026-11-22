@@ -8,6 +8,7 @@ import {
   JobEndLabel,
 } from '@app/types/earnings';
 import { addDays, coopClock, coopDate } from '@app/utilities/timeWorked';
+import { kmNumber } from '@app/utilities/locale';
 
 // Spec 0042: small pure helpers for the Earnings screen. Every figure comes from the server; these only
 // pick which days, shifts and jobs a period shows, and how a value is written. Days are YYYY-MM-DD in
@@ -125,9 +126,8 @@ export const shiftsOnDay = (
     }))
     .sort((a, b) => (a.startedAt < b.startedAt ? -1 : 1));
 
-// "1.2 km", one decimal (AC-1).
-export const formatKm = (km: number): string =>
-  `${(Math.round(km * 10) / 10).toFixed(1)} km`;
+// "1,2 km" in Greek, "1.2 km" in English, one decimal (AC-1; spec 0054, AC-3).
+export const formatKm = (km: number): string => `${kmNumber(km)} km`;
 
 // A wait in whole minutes (AC-1: the median is kept in seconds and shown in minutes).
 export const waitMinutes = (seconds: number): number =>
