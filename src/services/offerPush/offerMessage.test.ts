@@ -49,6 +49,8 @@ describe('offerMessage (spec 0003, AC-4, AC-10)', () => {
         dropoffArea: 'Dimitriadis',
         trip: { toPickupMetres: 1834, toDropoffMetres: 1012, minutes: 6 },
         insistent: false,
+        legNumber: null,
+        legCount: null,
       });
     }
   });
@@ -173,7 +175,62 @@ describe('offerMessage (spec 0003, AC-4, AC-10)', () => {
       dropoffArea: 'Port Area',
       trip: { toPickupMetres: 1800, toDropoffMetres: 950, minutes: 8 },
       insistent: true,
+      legNumber: null,
+      legCount: null,
     });
+  });
+
+  // Row 10 (spec 0046, AC-7): multi-leg orders carry legNumber and legCount
+  it('parses legNumber and legCount as numbers from string numbers', () => {
+    const parsed = parseOfferMessage({
+      ...validData,
+      legNumber: '1',
+      legCount: '2',
+    });
+
+    expect(parsed?.kind).toBe('offer');
+    if (parsed?.kind === 'offer') {
+      expect(parsed.offer.legNumber).toBe(1);
+      expect(parsed.offer.legCount).toBe(2);
+    }
+  });
+
+  it('parses empty string or non-numeric legNumber and legCount as null (single delivery)', () => {
+    const parsedEmpty = parseOfferMessage({
+      ...validData,
+      legNumber: '',
+      legCount: '',
+    });
+    expect(parsedEmpty?.kind).toBe('offer');
+    if (parsedEmpty?.kind === 'offer') {
+      expect(parsedEmpty.offer.legNumber).toBeNull();
+      expect(parsedEmpty.offer.legCount).toBeNull();
+    }
+  });
+
+  it('toNotificationData and fromNotificationData roundtrip preserves legNumber and legCount', () => {
+    const offer: OfferAlertData = {
+      deliveryId: 'del-leg-roundtrip',
+      offeredAt: '2026-10-26T10:00:00.000Z',
+      msLeftAtSend: 30000,
+      payTotal: 450,
+      currencyCode: 'EUR',
+      restaurantName: 'Co-op Grill',
+      dropoffArea: 'Port Area',
+      trip: { toPickupMetres: 1800, toDropoffMetres: 950, minutes: 8 },
+      insistent: false,
+      legNumber: 1,
+      legCount: 2,
+    };
+
+    const deadlineAt = 1700000000000;
+    const notificationData = toNotificationData(offer, deadlineAt);
+    expect(notificationData.legNumber).toBe('1');
+    expect(notificationData.legCount).toBe('2');
+
+    const restored = fromNotificationData(notificationData);
+    expect(restored?.legNumber).toBe(1);
+    expect(restored?.legCount).toBe(2);
   });
 
   it('fromNotificationData rejects malformed notification data (not kind offer-alert or empty deliveryId)', () => {

@@ -134,6 +134,43 @@ describe('waitClock (spec 0033, AC-5, AC-6)', () => {
       expect(canLeaveWait(waitingToSendOrder, leaveFrom + 10_000)).toBe(false);
     });
 
+    // Row 11 (spec 0047, OR.4): no ordinary Leave while a split request is open.
+    it('refuses while a split request is open even if leaveFromOnPhone has passed', () => {
+      const openSplitOrder: Order = {
+        ...baseOrder,
+        splitRequest: {
+          id: 'split-1',
+          deliveryId: 'del-1',
+          status: 'OPEN',
+          proposedLegs: [{ boxSize: 'LARGE' }, { boxSize: 'SMALL' }],
+          finalLegs: null,
+          createdAt: '2026-11-21T12:00:00.000Z',
+          leaveFrom: '2026-11-21T12:10:00.000Z',
+          adminNote: null,
+        },
+      } as unknown as Order;
+      expect(canLeaveWait(openSplitOrder, leaveFrom + 10_000)).toBe(false);
+    });
+
+    it('allows after leaveFromOnPhone once a split request is no longer open (REFUSED or CONFIRMED)', () => {
+      for (const status of ['REFUSED', 'CONFIRMED'] as const) {
+        const closedSplitOrder: Order = {
+          ...baseOrder,
+          splitRequest: {
+            id: 'split-1',
+            deliveryId: 'del-1',
+            status,
+            proposedLegs: [{ boxSize: 'LARGE' }, { boxSize: 'SMALL' }],
+            finalLegs: null,
+            createdAt: '2026-11-21T12:00:00.000Z',
+            leaveFrom: '2026-11-21T12:10:00.000Z',
+            adminNote: null,
+          },
+        } as unknown as Order;
+        expect(canLeaveWait(closedSplitOrder, leaveFrom + 10_000)).toBe(true);
+      }
+    });
+
     it('refuses when leaveFromOnPhone is missing, null, or undefined', () => {
       const undefinedLeaveOrder: Order = {
         ...baseOrder,

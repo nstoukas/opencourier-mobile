@@ -1,9 +1,12 @@
 import React from 'react';
+import { Platform, StyleSheet } from 'react-native';
 import { act, fireEvent, render, screen } from '@testing-library/react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import '@app/localization/i18n';
 import i18n from '@app/localization/i18n';
 import { BackNavButton } from '@app/components/BackNavButton/BackNavButton';
 import { Button } from '@app/components/Button/Button';
+import { ScreenSafeArea } from '@app/components/ScreenSafeArea/ScreenSafeArea';
 import { useSendSplitRequest, useSplitBusy } from '@app/hooks/useSplitRequest';
 import { RequestSplit } from './RequestSplit';
 
@@ -193,5 +196,44 @@ describe('RequestSplit screen (spec 0047, AC-1)', () => {
 
     expect(navigation.goBack).toHaveBeenCalledTimes(1);
     expect(send).not.toHaveBeenCalled();
+  });
+
+  // Row 11 (spec 0047, OR.10): "Send to dispatch" sits above Android's navigation bar
+  describe('safe area insets on Android (row 11, OR.10)', () => {
+    const originalOS = Platform.OS;
+
+    afterEach(() => {
+      Platform.OS = originalOS;
+    });
+
+    it('pads the bottom with the safe area inset on Android so Send is above the navigation bar', () => {
+      Platform.OS = 'android';
+      (useSafeAreaInsets as jest.Mock).mockReturnValue({
+        top: 24,
+        bottom: 48,
+        left: 0,
+        right: 0,
+      });
+
+      render(<RequestSplit {...props} />);
+      const safeArea = screen.UNSAFE_getByType(ScreenSafeArea);
+      const flattened = StyleSheet.flatten(safeArea.props.style);
+      expect(flattened.paddingBottom).toBe(48);
+    });
+
+    it('does not pad the bottom on iOS (ScreenSafeArea pads it via edges)', () => {
+      Platform.OS = 'ios';
+      (useSafeAreaInsets as jest.Mock).mockReturnValue({
+        top: 44,
+        bottom: 34,
+        left: 0,
+        right: 0,
+      });
+
+      render(<RequestSplit {...props} />);
+      const safeArea = screen.UNSAFE_getByType(ScreenSafeArea);
+      const flattened = StyleSheet.flatten(safeArea.props.style);
+      expect(flattened.paddingBottom).toBe(0);
+    });
   });
 });

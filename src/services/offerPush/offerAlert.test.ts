@@ -283,6 +283,7 @@ describe('offerAlert (spec 0003, AC-3, AC-6, AC-7, Decisions 58.13, 58.15)', () 
       expect(offerAlertLines(baseOffer)).toEqual({
         distances: DISTANCES,
         minutes: MINUTES,
+        leg: '',
         place: PLACE,
       });
     });
@@ -298,6 +299,7 @@ describe('offerAlert (spec 0003, AC-3, AC-6, AC-7, Decisions 58.13, 58.15)', () 
       expect(offerAlertLines(offer)).toEqual({
         distances: '',
         minutes: '',
+        leg: '',
         place: PLACE,
       });
       expect(offerSummary(offer)).toBe(PLACE);
@@ -311,6 +313,7 @@ describe('offerAlert (spec 0003, AC-3, AC-6, AC-7, Decisions 58.13, 58.15)', () 
       expect(offerAlertLines(pickupOnly)).toEqual({
         distances: '1.8 km to the restaurant',
         minutes: '',
+        leg: '',
         place: PLACE,
       });
       expect(offerSummary(pickupOnly)).toBe(
@@ -324,6 +327,7 @@ describe('offerAlert (spec 0003, AC-3, AC-6, AC-7, Decisions 58.13, 58.15)', () 
       expect(offerAlertLines(dropoffOnly)).toEqual({
         distances: '1.0 km to the customer',
         minutes: MINUTES,
+        leg: '',
         place: PLACE,
       });
       expect(offerSummary(dropoffOnly)).toBe(
@@ -348,6 +352,65 @@ describe('offerAlert (spec 0003, AC-3, AC-6, AC-7, Decisions 58.13, 58.15)', () 
       ).toBe('Pizza Roma');
       expect(offerSummary({ ...baseOffer, dropoffArea: '' })).toBe(
         `${DISTANCES} · ${MINUTES} · Pizza Roma`,
+      );
+    });
+
+    // Row 10 (spec 0046, AC-7): the alert shows "Leg 1 of 2" in the card's order.
+    it('offerAlertLines and summary with legNumber and legCount shows Leg 1 of 2', () => {
+      const legOffer = {
+        ...baseOffer,
+        legNumber: 1,
+        legCount: 2,
+      };
+      expect(offerAlertLines(legOffer)).toEqual({
+        distances: DISTANCES,
+        minutes: MINUTES,
+        leg: 'Leg 1 of 2',
+        place: PLACE,
+      });
+      expect(offerAlertLineList(legOffer)).toEqual([
+        DISTANCES,
+        MINUTES,
+        'Leg 1 of 2',
+        PLACE,
+      ]);
+      expect(offerSummary(legOffer)).toBe(
+        `${DISTANCES} · ${MINUTES} · Leg 1 of 2 · ${PLACE}`,
+      );
+    });
+
+    it('single delivery (null or missing leg): no leg line in list or summary', () => {
+      const singleOffer = {
+        ...baseOffer,
+        legNumber: null,
+        legCount: null,
+      };
+      expect(offerAlertLines(singleOffer).leg).toBe('');
+      expect(offerAlertLineList(singleOffer)).toEqual([
+        DISTANCES,
+        MINUTES,
+        PLACE,
+      ]);
+      expect(offerSummary(singleOffer)).toBe(
+        `${DISTANCES} · ${MINUTES} · ${PLACE}`,
+      );
+    });
+
+    it('showOfferAlert for a multi-leg offer includes Leg 1 of 2 in body and expanded text', async () => {
+      const legOffer = {
+        ...baseOffer,
+        legNumber: 1,
+        legCount: 2,
+      };
+      await showOfferAlert(legOffer, Date.now(), 'full-screen');
+
+      const call = (notifee.displayNotification as jest.Mock).mock.calls[0][0];
+      expect(call.title).toBe('New offer: €5.50');
+      expect(call.body).toBe(
+        `${DISTANCES} · ${MINUTES} · Leg 1 of 2 · ${PLACE}`,
+      );
+      expect(call.android.style.text).toBe(
+        `${DISTANCES}<br>${MINUTES}<br>Leg 1 of 2<br>${PLACE}`,
       );
     });
 

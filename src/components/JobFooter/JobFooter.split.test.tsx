@@ -245,6 +245,45 @@ describe('JobFooter split at pickup (spec 0047, AC-1, AC-2, AC-7, AC-8)', () => 
       ).toBeTruthy();
     });
 
+    // Row 11 (spec 0047, OR.4): the ordinary Leave (spec 0033) does not show while a
+    // split request is open, even when leaveFromOnPhone is in the past. The split's
+    // own Leave still appears once its limit has passed.
+    it('an order with an open split and leaveFromOnPhone in the past renders no job-action-leave-wait, and split Leave shows once its limit passes', () => {
+      const onLeaveWait = jest.fn();
+      const onLeaveSplit = jest.fn();
+      const order = waiting({
+        leaveFromOnPhone: NOW - 60_000,
+        splitLeaveFromOnPhone: LEAVE_FROM_ON_PHONE,
+      });
+
+      // 1. Before split limit passes: neither leave-wait nor leave-split renders.
+      const view1 = render(footer(order, { onLeaveWait, onLeaveSplit }));
+      expect(view1.queryByTestId('job-action-leave-wait')).toBeNull();
+      expect(view1.queryByTestId('job-action-leave-split')).toBeNull();
+      view1.unmount();
+
+      // 2. Once split limit passes: split Leave shows, ordinary leave-wait still does not.
+      jest.setSystemTime(LEAVE_FROM_ON_PHONE + 1000);
+      const view2 = render(footer(order, { onLeaveWait, onLeaveSplit }));
+      expect(view2.queryByTestId('job-action-leave-wait')).toBeNull();
+      expect(view2.getByTestId('job-action-leave-split')).toBeTruthy();
+      view2.unmount();
+
+      // 3. Once split is refused and leaveFromOnPhone is in the past: ordinary leave-wait shows.
+      const resolved = render(
+        footer(
+          atRestaurant({
+            leaveFromOnPhone: NOW - 60_000,
+            splitRequest: request('REFUSED'),
+          }),
+          { onLeaveWait, onLeaveSplit },
+        ),
+      );
+      expect(resolved.getByTestId('job-action-leave-wait')).toBeTruthy();
+      expect(resolved.queryByTestId('job-action-leave-split')).toBeNull();
+      resolved.unmount();
+    });
+
     it('holds the Picked up swipe until dispatch answers', () => {
       const { UNSAFE_getByType } = render(footer(waiting()));
       expect(UNSAFE_getByType(ButtonSwipe).props.enabled).toBe(false);

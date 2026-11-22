@@ -461,8 +461,16 @@ describe('useSplitRequest hooks (spec 0047, AC-1, AC-8)', () => {
       expect(leaveSpy).not.toHaveBeenCalled();
     });
 
-    it('confirming leaves this order and then reads the job list again', async () => {
+    // Row 11 (spec 0047, AC-8, OR.5): leaving a split removes the job from the
+    // inProgressOrders cache immediately, refreshes offers and both earnings queries,
+    // and invalidates inProgressOrders on settled.
+    it('confirming leaves this order, removes it from cache, and refreshes offers and earnings', async () => {
       const wrapper = createWrapper();
+      const otherJob = job('del-B');
+      queryClient.setQueryData<Order[]>(
+        [QueryKeys.inProgressOrders],
+        [job('del-A'), otherJob],
+      );
       const leaveSpy = jest
         .spyOn(services.orderService, 'leaveSplit')
         .mockResolvedValue({ status: 'LEFT' });
@@ -478,11 +486,29 @@ describe('useSplitRequest hooks (spec 0047, AC-1, AC-8)', () => {
 
       await waitFor(() => expect(leaveSpy).toHaveBeenCalledTimes(1));
       expect(leaveSpy).toHaveBeenCalledWith('del-A');
-      await waitFor(() =>
-        expect(invalidate).toHaveBeenCalledWith({
-          queryKey: [QueryKeys.inProgressOrders],
-        }),
-      );
+
+      // The job is removed from inProgressOrders cache immediately (not waiting for refetch)
+      await waitFor(() => {
+        const cached = queryClient.getQueryData<Order[]>([
+          QueryKeys.inProgressOrders,
+        ]);
+        expect(cached).toEqual([otherJob]);
+      });
+
+      // Refreshes new orders, month earnings, and delivery earnings on success
+      expect(invalidate).toHaveBeenCalledWith({
+        queryKey: [QueryKeys.newOrders],
+      });
+      expect(invalidate).toHaveBeenCalledWith({
+        queryKey: [QueryKeys.earningsMonth],
+      });
+      expect(invalidate).toHaveBeenCalledWith({
+        queryKey: [QueryKeys.earningsDelivery],
+      });
+      // And inProgressOrders on settled
+      expect(invalidate).toHaveBeenCalledWith({
+        queryKey: [QueryKeys.inProgressOrders],
+      });
     });
 
     it("a refusal (409 before the limit) shows the server's sentence", async () => {
