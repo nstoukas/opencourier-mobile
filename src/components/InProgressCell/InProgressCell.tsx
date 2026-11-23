@@ -249,9 +249,12 @@ export const InProgressCell = ({
           {/* Row 138: the job's actions at the right of the customer and the address. */}
           <View style={styles.addressRow}>
             <View style={styles.addressText}>
-              <Text style={styles.name} testID="job-customer-name">
-                {order.dropoffName}
-              </Text>
+              {/* Row 142 review: the server sends the name only while the rider holds the job. */}
+              {order.dropoffName ? (
+                <Text style={styles.name} testID="job-customer-name">
+                  {order.dropoffName}
+                </Text>
+              ) : null}
               {customerAddress ? (
                 <Text style={styles.address}>{customerAddress}</Text>
               ) : null}

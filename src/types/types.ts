@@ -199,13 +199,14 @@ export type Order = {
   pickupLocationId: string;
   pickupReadyAt: string;
   pickupDeadlineAt: string;
-  // Row 142: the server sends the customer's name, the seller's note, the items and the customer's notes
-  // only once this rider has accepted, and the composed floor and doorbell note only while the rider
-  // holds the delivery (row 101). In an offer, or a job that ended, they are missing, so the type says so.
+  // Row 142: the server sends the customer's name, the business name (row 140), the seller's note, the
+  // items and the customer's notes only once this rider has accepted, and the composed floor and doorbell
+  // note only while the rider holds the delivery, the free hand back window excluded (row 101). In an
+  // offer, or a job that ended, they are missing, so the type says so.
   dropoffName?: string;
   // Only while this rider holds the delivery (row 33): left out in an offer and after the end.
   dropoffPhoneNumber?: string;
-  dropoffBusinessName: string;
+  dropoffBusinessName?: string | null;
   dropoffNotes?: string | null;
   dropoffSellerNotes?: string | null;
   // Spec 0016: the floor and the name on the doorbell. Like the phone, only while this rider holds
