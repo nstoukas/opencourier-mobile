@@ -1,6 +1,6 @@
 import React from 'react';
-import { cleanup, render, screen } from '@testing-library/react-native';
-import '@app/localization/i18n';
+import { act, cleanup, render, screen } from '@testing-library/react-native';
+import i18n from '@app/localization/i18n';
 import { TimeWorkedCounter } from './TimeWorkedCounter';
 import { useCurrentTimeWorked } from '@app/hooks/useTimeWorked';
 import { CounterView } from '@app/utilities/timeWorked';
@@ -136,6 +136,49 @@ describe('TimeWorkedCounter (spec 0040, AC-10)', () => {
     render(<TimeWorkedCounter />);
     expect(screen.getByText('48 min · €15.00 · €18.75/h')).toBeTruthy();
     expect(screen.queryByText(/online/i)).toBeNull();
+  });
+
+  // Row 137: the pill's minutes in the app's language; from an hour it reads the same in both.
+  describe('in Greek (row 137)', () => {
+    beforeEach(async () => {
+      await act(async () => {
+        await i18n.changeLanguage('el');
+      });
+    });
+
+    afterEach(async () => {
+      // jest.setup.js pins English; hand it back.
+      await act(async () => {
+        await i18n.changeLanguage('en');
+      });
+    });
+
+    it('starts with "48 λ." under an hour and never says "min"', () => {
+      mockView({
+        kind: 'working',
+        workSeconds: 48 * 60,
+        moneyCents: 1500,
+        centsPerHour: null,
+        currencyCode: 'EUR',
+      });
+
+      render(<TimeWorkedCounter />);
+      expect(screen.getByText(/^48 λ\. · /)).toBeTruthy();
+      expect(screen.queryByText(/min/)).toBeNull();
+    });
+
+    it('starts with "3h12" from an hour', () => {
+      mockView({
+        kind: 'working',
+        workSeconds: 11520,
+        moneyCents: 3850,
+        centsPerHour: null,
+        currencyCode: 'EUR',
+      });
+
+      render(<TimeWorkedCounter />);
+      expect(screen.getByText(/^3h12 · /)).toBeTruthy();
+    });
   });
 
   it('renders "—" for the rate under a minute (centsPerHour is null) without saying "online"', () => {

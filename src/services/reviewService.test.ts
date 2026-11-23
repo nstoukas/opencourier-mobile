@@ -154,9 +154,30 @@ describe('reviewService (spec 0038, AC-1, AC-8, AC-11, AC-13)', () => {
 
       const result = await service.getHowItWorks();
 
-      expect(mockClient.get).toHaveBeenCalledWith('how-it-works');
+      // Row 137: no language given, no `lang` sent (the server then words the page in English).
+      expect(mockClient.get).toHaveBeenCalledTimes(1);
+      const [path, config] = mockClient.get.mock.calls[0];
+      expect(path).toBe('how-it-works');
+      expect(config?.params).toBeUndefined();
       expect(result).toEqual(howItWorksData);
     });
+
+    // Row 137: the page is worded by the server, so the app says which language it is showing.
+    it.each(['el', 'en'] as const)(
+      'sends the app language as params { lang: "%s" } when one is given',
+      async language => {
+        const page = { offers: ['x'] } as unknown as HowItWorks;
+        mockClient.get.mockResolvedValueOnce({ data: { result: page } } as any);
+
+        const result = await service.getHowItWorks(language);
+
+        expect(mockClient.get).toHaveBeenCalledTimes(1);
+        expect(mockClient.get).toHaveBeenCalledWith('how-it-works', {
+          params: { lang: language },
+        });
+        expect(result).toEqual(page);
+      },
+    );
   });
 
   describe('getSettingChanges (AC-13)', () => {
@@ -182,7 +203,33 @@ describe('reviewService (spec 0038, AC-1, AC-8, AC-11, AC-13)', () => {
       expect(mockClient.get).toHaveBeenCalledWith('setting-changes', {
         params: { page: 1, perPage: REVIEW_PAGE_SIZE },
       });
+      // Row 137: no language given, no `lang` key at all.
+      expect(mockClient.get.mock.calls[0][1]?.params).not.toHaveProperty(
+        'lang',
+      );
       expect(result).toEqual(changesList);
     });
+
+    // Row 137: "What changed" in the app's language, like the page above it.
+    it.each(['el', 'en'] as const)(
+      'sends { page, perPage, lang: "%s" } when a language is given',
+      async language => {
+        const changesList: PagedList<SettingChangeLine> = {
+          data: [],
+          pagination: { currentPage: 3, nextPage: null, totalItems: 0 },
+        };
+        mockClient.get.mockResolvedValueOnce({
+          data: { result: changesList },
+        } as any);
+
+        const result = await service.getSettingChanges(3, language);
+
+        expect(mockClient.get).toHaveBeenCalledTimes(1);
+        expect(mockClient.get).toHaveBeenCalledWith('setting-changes', {
+          params: { page: 3, perPage: REVIEW_PAGE_SIZE, lang: language },
+        });
+        expect(result).toEqual(changesList);
+      },
+    );
   });
 });

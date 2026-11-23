@@ -1,5 +1,5 @@
 import React from 'react';
-import { render, fireEvent, within } from '@testing-library/react-native';
+import { render, fireEvent, within, act } from '@testing-library/react-native';
 import '@app/localization/i18n';
 import i18n from '@app/localization/i18n';
 import { OrderItem } from '@app/types/types';
@@ -260,18 +260,98 @@ describe('JobItemsLine drinks and sides (spec 0028)', () => {
       });
     });
 
-    it('shows the size for a single line', () => {
+    // Row 137 (the tour, problem 24): the size is worded in the app's language, never shown raw.
+    const openSingle = (deliveryId: string, size: unknown) => {
       const root = render(
         <JobItemsLine
-          deliveryId="del-s6"
-          items={items([{ name: 'Package', quantity: 1, size: 'SMALL' }])}
+          deliveryId={deliveryId}
+          items={items([{ name: 'Package', quantity: 1, size }])}
+        />,
+      );
+      fireEvent.press(root.getByTestId('job-items-line'));
+      return root;
+    };
+
+    describe('the size of a single line (row 137)', () => {
+      afterEach(async () => {
+        // jest.setup.js pins English; a Greek test must hand it back.
+        await act(async () => {
+          await i18n.changeLanguage('en');
+        });
+      });
+
+      it.each([
+        ['SMALL', 'Small'],
+        ['MEDIUM', 'Medium'],
+        ['LARGE', 'Large'],
+        ['Large', 'Large'],
+        ['small', 'Small'],
+      ])('shows %s as "%s" in English, never the raw value', (size, word) => {
+        const root = openSingle(`del-en-${size}`, size);
+        const row = root.getByTestId('job-item-0');
+
+        expect(within(row).getByText(word)).toBeTruthy();
+        expect(root.queryByText('SMALL')).toBeNull();
+        expect(root.queryByText('MEDIUM')).toBeNull();
+        expect(root.queryByText('LARGE')).toBeNull();
+        if (size !== word) {
+          expect(root.queryByText(size)).toBeNull();
+        }
+      });
+
+      it.each([
+        ['SMALL', 'Μικρό'],
+        ['MEDIUM', 'Μεσαίο'],
+        ['LARGE', 'Μεγάλο'],
+        ['Large', 'Μεγάλο'],
+        ['small', 'Μικρό'],
+      ])('shows %s as "%s" in Greek', async (size, word) => {
+        await act(async () => {
+          await i18n.changeLanguage('el');
+        });
+        const root = openSingle(`del-el-${size}`, size);
+        const row = root.getByTestId('job-item-0');
+
+        expect(within(row).getByText(word)).toBeTruthy();
+        expect(root.queryByText(size)).toBeNull();
+        expect(root.queryByText(/^(small|medium|large)$/i)).toBeNull();
+      });
+
+      it.each([['XL'], ['xl'], ['HUGE'], [''], [null], [undefined]])(
+        'shows nothing for a size it does not know (%p)',
+        size => {
+          const root = openSingle(`del-unknown-${String(size)}`, size);
+          const row = root.getByTestId('job-item-0');
+
+          // The row is there with its name, and no size text of any kind beside it.
+          expect(within(row).getByText('Package')).toBeTruthy();
+          if (typeof size === 'string' && size !== '') {
+            expect(root.queryByText(size)).toBeNull();
+            expect(root.queryByText(size.toUpperCase())).toBeNull();
+          }
+          expect(
+            root.queryByText(/^(small|medium|large|xl|huge)$/i),
+          ).toBeNull();
+          expect(root.queryByText(/item_size/)).toBeNull();
+        },
+      );
+    });
+
+    it('with several lines no size is shown, worded or raw (spec 0028, unchanged by row 137)', () => {
+      const root = render(
+        <JobItemsLine
+          deliveryId="del-s6b"
+          items={items([
+            { name: 'Souvlaki', quantity: 1, size: 'LARGE' },
+            { name: 'Pita', quantity: 1, size: 'small' },
+          ])}
         />,
       );
       fireEvent.press(root.getByTestId('job-items-line'));
 
-      expect(
-        within(root.getByTestId('job-item-0')).getByText('SMALL'),
-      ).toBeTruthy();
+      expect(root.getByTestId('job-item-0')).toBeTruthy();
+      expect(root.getByTestId('job-item-1')).toBeTruthy();
+      expect(root.queryByText(/^(small|medium|large)$/i)).toBeNull();
     });
 
     it("hides the size when more than one line was sent (it is the order's, not the first line's)", () => {

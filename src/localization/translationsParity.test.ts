@@ -27,6 +27,36 @@ describe('Translation Parity and Completeness Guard (spec 0054, AC-8)', () => {
     expect(enKeys.length).toBeGreaterThan(1000);
   });
 
+  // Row 137: the item size words and the minutes wording came in, in both languages; Support left both.
+  describe('row 137 keys', () => {
+    const enMap = en as Record<string, string>;
+    const elMap = el as Record<string, string>;
+
+    it('both languages have the three item size words and the minutes wording', () => {
+      expect(enMap.item_size_SMALL).toBe('Small');
+      expect(enMap.item_size_MEDIUM).toBe('Medium');
+      expect(enMap.item_size_LARGE).toBe('Large');
+      expect(elMap.item_size_SMALL).toBe('Μικρό');
+      expect(elMap.item_size_MEDIUM).toBe('Μεσαίο');
+      expect(elMap.item_size_LARGE).toBe('Μεγάλο');
+      expect(enMap.work_duration_minutes).toBe('{{minutes}} min');
+      expect(elMap.work_duration_minutes).toBe('{{minutes}} λ.');
+    });
+
+    it('neither language keeps a "support" key or a Support label', () => {
+      expect(enKeys).not.toContain('support');
+      expect(elKeys).not.toContain('support');
+      expect(enKeys.filter(k => /support/i.test(k))).toEqual([]);
+      expect(elKeys.filter(k => /support/i.test(k))).toEqual([]);
+      expect(Object.values(enMap).filter(v => /^support$/i.test(v))).toEqual(
+        [],
+      );
+      expect(Object.values(elMap).filter(v => /^υποστήριξη$/i.test(v))).toEqual(
+        [],
+      );
+    });
+  });
+
   it('contains no empty or whitespace-only translation strings in English', () => {
     for (const [_key, value] of Object.entries(en)) {
       expect(typeof value).toBe('string');

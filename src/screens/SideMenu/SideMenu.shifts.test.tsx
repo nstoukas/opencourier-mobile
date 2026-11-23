@@ -117,6 +117,73 @@ describe('SideMenu Shifts item (spec 0027, AC-1, AC-10)', () => {
     expect(on.filter(item => item !== SideMenuItem.Shifts)).toEqual(off);
   });
 
+  // Row 137: the Support entry, which did nothing, is out of both lists; the rest keep their order.
+  describe('no Support entry (row 137)', () => {
+    it('SideMenuItem has no Support value', () => {
+      expect(Object.keys(SideMenuItem)).not.toContain('Support');
+      expect(Object.values(SideMenuItem)).not.toContain('support');
+      expect(
+        Object.entries(SideMenuItem).filter(([name, value]) =>
+          /support/i.test(`${name} ${value}`),
+        ),
+      ).toEqual([]);
+    });
+
+    it('without shifts the list is Orders, Chat, Earnings, Complaints, Payout, Account, Settings, Logout', () => {
+      contact({ dispatchPhoneNumber: null, shiftsEnabled: false });
+      expect(items()).toEqual([
+        SideMenuItem.Orders,
+        SideMenuItem.Chat,
+        SideMenuItem.Earnings,
+        SideMenuItem.Complaints,
+        SideMenuItem.Payout,
+        SideMenuItem.Account,
+        SideMenuItem.Settings,
+        SideMenuItem.Logout,
+      ]);
+    });
+
+    it('with shifts the list is the same with Shifts after Chat', () => {
+      contact({ dispatchPhoneNumber: null, shiftsEnabled: true });
+      expect(items()).toEqual([
+        SideMenuItem.Orders,
+        SideMenuItem.Chat,
+        SideMenuItem.Shifts,
+        SideMenuItem.Earnings,
+        SideMenuItem.Complaints,
+        SideMenuItem.Payout,
+        SideMenuItem.Account,
+        SideMenuItem.Settings,
+        SideMenuItem.Logout,
+      ]);
+    });
+
+    it.each([
+      ['without shifts', { dispatchPhoneNumber: null, shiftsEnabled: false }],
+      ['with shifts', { dispatchPhoneNumber: null, shiftsEnabled: true }],
+      ['before the co-op switch is read', undefined],
+    ])('%s: no entry is, or reads, Support', (_case, data) => {
+      contact(data);
+      let component: renderer.ReactTestRenderer;
+      act(() => {
+        component = renderer.create(
+          <QueryClientProvider client={queryClient}>
+            <SideMenu {...({ navigation } as any)} />
+          </QueryClientProvider>,
+        );
+      });
+      const entries = component!.root.findAllByType(SideMenuItemPlain);
+      // Every entry is a value the app knows (a list naming a removed value would hold undefined).
+      for (const entry of entries) {
+        expect(Object.values(SideMenuItem)).toContain(entry.props.item);
+        expect(String(entry.props.item)).not.toMatch(/support/i);
+      }
+      const shown = JSON.stringify(component!.toJSON());
+      expect(shown).not.toMatch(/support/i);
+      expect(shown).not.toMatch(/Υποστήριξη/i);
+    });
+  });
+
   it.each([
     [
       'shiftsEnabled false',

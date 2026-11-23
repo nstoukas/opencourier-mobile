@@ -1,6 +1,12 @@
 import React from 'react';
 import { RefreshControl } from 'react-native';
-import { render, screen, fireEvent, act } from '@testing-library/react-native';
+import {
+  render,
+  screen,
+  fireEvent,
+  act,
+  within,
+} from '@testing-library/react-native';
 import { AxiosError } from 'axios';
 import '@app/localization/i18n';
 import i18n from '@app/localization/i18n';
@@ -309,6 +315,79 @@ describe('Earnings screen (spec 0042 AC-1, AC-2, AC-6, AC-8, AC-9, AC-13)', () =
           }),
         ),
       ).toBeTruthy();
+    });
+
+    // Row 137: the minutes in the figures card follow the app's language ("λ." in Greek).
+    describe('minutes in the app language (row 137)', () => {
+      const showDay = (day: EarningsDay) => {
+        (useEarningsMonths as jest.Mock).mockReturnValue([
+          {
+            data: { ...sampleMonthData, days: [day] },
+            isLoading: false,
+            isError: false,
+            isRefetching: false,
+            refetch: jest.fn(),
+            dataUpdatedAt: Date.now(),
+          },
+        ]);
+        render(<Earnings {...defaultProps} />);
+      };
+      // 48 minutes of work: 30 on jobs, 5 of paid waiting, 13 unpaid.
+      const shortDay: EarningsDay = {
+        ...sampleDay,
+        workSeconds: 48 * 60,
+        jobSeconds: 30 * 60,
+        paidWaitSeconds: 5 * 60,
+        unpaidSeconds: 13 * 60,
+      };
+
+      afterEach(async () => {
+        // jest.setup.js pins English; hand it back.
+        await act(async () => {
+          await i18n.changeLanguage('en');
+        });
+      });
+
+      it('in English the note and the time split read "48 min", "30 min", "5 min", "13 min"', () => {
+        showDay(shortDay);
+        const card = within(screen.getByTestId('earnings-figures'));
+
+        expect(card.getByText(/1 drop off · 48 min worked/)).toBeTruthy();
+        expect(
+          card.getByText('Jobs 30 min · Paid waiting 5 min · Unpaid 13 min'),
+        ).toBeTruthy();
+      });
+
+      it('in Greek the same figures read "48 λ.", "30 λ.", "5 λ.", "13 λ." and never "min"', async () => {
+        await act(async () => {
+          await i18n.changeLanguage('el');
+        });
+        showDay(shortDay);
+        const card = within(screen.getByTestId('earnings-figures'));
+
+        expect(card.getByText(/1 παράδοση · 48 λ\. εργασίας/)).toBeTruthy();
+        expect(
+          card.getByText(
+            'Παραγγελίες 30 λ. · Αμειβόμενη αναμονή 5 λ. · Χωρίς αμοιβή 13 λ.',
+          ),
+        ).toBeTruthy();
+        expect(card.queryByText(/\d+ min/)).toBeNull();
+      });
+
+      it('in Greek, times from an hour keep "5h00", "2h00", "2h55"', async () => {
+        await act(async () => {
+          await i18n.changeLanguage('el');
+        });
+        showDay(sampleDay);
+        const card = within(screen.getByTestId('earnings-figures'));
+
+        expect(card.getByText(/1 παράδοση · 5h00 εργασίας/)).toBeTruthy();
+        expect(
+          card.getByText(
+            'Παραγγελίες 2h00 · Αμειβόμενη αναμονή 5 λ. · Χωρίς αμοιβή 2h55',
+          ),
+        ).toBeTruthy();
+      });
     });
 
     it('shows "—" for each null rate or wait figure, and hides noJobMoneyCents when 0', () => {

@@ -8,6 +8,7 @@ import {
   formatShare,
 } from './timeWorked';
 import { CurrentTimeWorked } from '@app/types/timeWorked';
+import i18n from '@app/localization/i18n';
 
 describe('timeWorked utilities (spec 0040, AC-10, AC-7, AC-6)', () => {
   describe('formatWorkDuration (AC-10)', () => {
@@ -31,6 +32,40 @@ describe('timeWorked utilities (spec 0040, AC-10, AC-7, AC-6)', () => {
       // 3h12 = 3 * 3600 + 12 * 60 = 11520 s
       expect(formatWorkDuration(11520)).toBe('3h12');
       expect(formatWorkDuration(10 * 3600 + 45 * 60)).toBe('10h45');
+    });
+  });
+
+  // Row 137: the minutes are worded in the app's language; they said "min" in Greek too.
+  describe('formatWorkDuration in Greek (row 137)', () => {
+    beforeEach(async () => {
+      await i18n.changeLanguage('el');
+    });
+
+    afterEach(async () => {
+      // jest.setup.js pins English; hand it back.
+      await i18n.changeLanguage('en');
+    });
+
+    it('returns "<m> λ." under an hour, never "min"', () => {
+      expect(formatWorkDuration(48 * 60)).toBe('48 λ.');
+      expect(formatWorkDuration(0)).toBe('0 λ.');
+      expect(formatWorkDuration(-10)).toBe('0 λ.');
+      expect(formatWorkDuration(60)).toBe('1 λ.');
+      expect(formatWorkDuration(59 * 60 + 59)).toBe('59 λ.');
+      expect(formatWorkDuration(48 * 60)).not.toContain('min');
+    });
+
+    it('returns "<h>h<mm>" from an hour, the same as in English', () => {
+      expect(formatWorkDuration(3600)).toBe('1h00');
+      expect(formatWorkDuration(11520)).toBe('3h12');
+      expect(formatWorkDuration(10 * 3600 + 45 * 60)).toBe('10h45');
+    });
+
+    it('follows a language switch: "48 min" again once the app is back in English', async () => {
+      expect(formatWorkDuration(48 * 60)).toBe('48 λ.');
+      await i18n.changeLanguage('en');
+      expect(formatWorkDuration(48 * 60)).toBe('48 min');
+      expect(formatWorkDuration(11520)).toBe('3h12');
     });
   });
 

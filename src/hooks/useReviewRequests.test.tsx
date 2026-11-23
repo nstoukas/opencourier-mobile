@@ -63,11 +63,96 @@ describe('useReviewRequests hooks (spec 0038, AC-1, AC-2, AC-8, AC-11, AC-13)', 
       expect(result.current.data).toEqual(mockData);
       expect(services.reviewService.getHowItWorks).toHaveBeenCalledTimes(1);
 
-      // Verify staleTime is 0
+      // Verify staleTime is 0. Row 137: the key holds the language on show (English under Jest).
       const query = queryClient
         .getQueryCache()
-        .find({ queryKey: [QueryKeys.howItWorks] });
+        .find({ queryKey: [QueryKeys.howItWorks, 'en'], exact: true });
+      expect(query).toBeDefined();
       expect((query?.options as any)?.staleTime).toBe(0);
+    });
+
+    // Row 137: the page is worded by the server, so the hook asks for it in the app's language.
+    describe('the app language (row 137)', () => {
+      afterEach(async () => {
+        // jest.setup.js pins English; hand it back.
+        await act(async () => {
+          await i18n.changeLanguage('en');
+        });
+      });
+
+      it('asks the service for the page in the language on show', async () => {
+        const spy = jest
+          .spyOn(services.reviewService, 'getHowItWorks')
+          .mockResolvedValue({ offers: ['in English'] } as any);
+
+        const { result } = renderHook(() => useHowItWorks(), {
+          wrapper: createWrapper(),
+        });
+
+        await waitFor(() => expect(result.current.isSuccess).toBe(true));
+        expect(spy).toHaveBeenCalledTimes(1);
+        expect(spy).toHaveBeenCalledWith('en');
+      });
+
+      it('asks in Greek when the app is in Greek, under a key that holds "el"', async () => {
+        await act(async () => {
+          await i18n.changeLanguage('el');
+        });
+        const spy = jest
+          .spyOn(services.reviewService, 'getHowItWorks')
+          .mockResolvedValue({ offers: ['στα ελληνικά'] } as any);
+
+        const { result } = renderHook(() => useHowItWorks(), {
+          wrapper: createWrapper(),
+        });
+
+        await waitFor(() => expect(result.current.isSuccess).toBe(true));
+        expect(spy).toHaveBeenCalledTimes(1);
+        expect(spy).toHaveBeenCalledWith('el');
+        const keys = queryClient
+          .getQueryCache()
+          .getAll()
+          .map(query => query.queryKey);
+        expect(keys).toEqual([[QueryKeys.howItWorks, 'el']]);
+      });
+
+      it('switching the language fetches the page again, and shows the new language page', async () => {
+        const english = { offers: ['in English'] };
+        const greek = { offers: ['στα ελληνικά'] };
+        const spy = jest
+          .spyOn(services.reviewService, 'getHowItWorks')
+          .mockImplementation(async language =>
+            language === 'el' ? (greek as any) : (english as any),
+          );
+
+        const { result, rerender } = renderHook(() => useHowItWorks(), {
+          wrapper: createWrapper(),
+        });
+        await waitFor(() => expect(result.current.data).toEqual(english));
+        expect(spy).toHaveBeenCalledTimes(1);
+        expect(spy).toHaveBeenLastCalledWith('en');
+
+        // The rider picks Greek in Settings; the screen draws again.
+        await act(async () => {
+          await i18n.changeLanguage('el');
+        });
+        rerender({});
+
+        await waitFor(() => expect(result.current.data).toEqual(greek));
+        expect(spy).toHaveBeenCalledTimes(2);
+        expect(spy).toHaveBeenLastCalledWith('el');
+        // One saved answer per language: the English page is never shown as the Greek one.
+        const keys = queryClient
+          .getQueryCache()
+          .getAll()
+          .map(query => query.queryKey);
+        expect(keys).toEqual(
+          expect.arrayContaining([
+            [QueryKeys.howItWorks, 'en'],
+            [QueryKeys.howItWorks, 'el'],
+          ]),
+        );
+      });
     });
   });
 
@@ -128,7 +213,8 @@ describe('useReviewRequests hooks (spec 0038, AC-1, AC-2, AC-8, AC-11, AC-13)', 
       });
 
       await waitFor(() => expect(result.current.isSuccess).toBe(true));
-      expect(getChangesSpy).toHaveBeenCalledWith(1);
+      // Row 137: the page number and the language on show (English under Jest).
+      expect(getChangesSpy).toHaveBeenCalledWith(1, 'en');
       expect(result.current.hasNextPage).toBe(true);
 
       await act(async () => {
@@ -136,8 +222,64 @@ describe('useReviewRequests hooks (spec 0038, AC-1, AC-2, AC-8, AC-11, AC-13)', 
       });
 
       await waitFor(() => {
-        expect(getChangesSpy).toHaveBeenCalledWith(2);
+        expect(getChangesSpy).toHaveBeenCalledWith(2, 'en');
         expect(result.current.data?.pages).toHaveLength(2);
+      });
+    });
+
+    // Row 137: "What changed" in the app's language, like the page above it.
+    describe('the app language (row 137)', () => {
+      afterEach(async () => {
+        await act(async () => {
+          await i18n.changeLanguage('en');
+        });
+      });
+
+      const onePage = (label: string) => ({
+        data: [{ at: '2026-11-19T00:00:00Z', label }],
+        pagination: { currentPage: 1, nextPage: null, totalItems: 1 },
+      });
+
+      it('switching the language fetches the changes again in that language, under its own key', async () => {
+        const spy = jest
+          .spyOn(services.reviewService, 'getSettingChanges')
+          .mockImplementation(async (_page, language) =>
+            language === 'el'
+              ? (onePage('Βασική αμοιβή') as any)
+              : (onePage('Base fee') as any),
+          );
+
+        const { result, rerender } = renderHook(() => useSettingChanges(), {
+          wrapper: createWrapper(),
+        });
+        await waitFor(() =>
+          expect(result.current.data?.pages[0]).toEqual(onePage('Base fee')),
+        );
+        expect(spy).toHaveBeenCalledTimes(1);
+        expect(spy).toHaveBeenLastCalledWith(1, 'en');
+
+        await act(async () => {
+          await i18n.changeLanguage('el');
+        });
+        rerender({});
+
+        await waitFor(() =>
+          expect(result.current.data?.pages[0]).toEqual(
+            onePage('Βασική αμοιβή'),
+          ),
+        );
+        expect(spy).toHaveBeenCalledTimes(2);
+        expect(spy).toHaveBeenLastCalledWith(1, 'el');
+        const keys = queryClient
+          .getQueryCache()
+          .getAll()
+          .map(query => query.queryKey);
+        expect(keys).toEqual(
+          expect.arrayContaining([
+            [QueryKeys.settingChanges, 'en'],
+            [QueryKeys.settingChanges, 'el'],
+          ]),
+        );
       });
     });
   });
