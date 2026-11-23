@@ -214,7 +214,8 @@ export const InProgressCell = ({
           <View style={styles.addressRow}>
             <Text
               style={[styles.secondary, styles.addressText]}
-              numberOfLines={2}>
+              // Three lines: the ⋯ button beside it takes some width (row 138 review).
+              numberOfLines={3}>
               {[restaurantName, restaurantAddress].filter(Boolean).join(' · ')}
             </Text>
             {actionsButton}

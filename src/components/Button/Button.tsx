@@ -104,6 +104,9 @@ type Props = {
   iconWeight?: IconWeight;
   isLoading?: boolean;
   iconPosition?: 'left' | 'right';
+  // What a screen reader says instead of the title, when the title alone is not enough
+  // ("Chat, unread", row 138).
+  accessibilityLabel?: string;
 };
 
 export const Button = ({
@@ -117,6 +120,7 @@ export const Button = ({
   iconWeight = 'regular',
   isLoading,
   iconPosition = 'left',
+  accessibilityLabel,
 }: Props) => {
   // The type's colors from the design system tokens (spec 0007, the button table). A disabled button
   // keeps them and fades to 50 % instead of turning gray.
@@ -127,6 +131,9 @@ export const Button = ({
       activeOpacity={0.9}
       onPress={onPress}
       disabled={disabled}
+      // Row 138 review: a screen reader says "button" for every one.
+      accessibilityRole="button"
+      accessibilityLabel={accessibilityLabel}
       style={[
         styles.container,
         {

@@ -3,6 +3,7 @@ import { Order } from '@app/types/types';
 import { OrderStatus } from '@app/types/enums';
 import useOrder from '@app/hooks/useOrder';
 import { useHandBackCountdown } from '@app/hooks/useHandBack';
+import { useWaitClock } from '@app/hooks/useLeaveWait';
 import { canHandBack } from '@app/utilities/handBackWindow';
 import { canRequestRemoval } from '@app/utilities/removalRequest';
 import {
@@ -10,7 +11,7 @@ import {
   canRequestSplit,
   isSplitOpen,
 } from '@app/utilities/splitRequest';
-import { canLeaveWait } from '@app/utilities/waitClock';
+import { canLeaveWait, isWaitingAtPickup } from '@app/utilities/waitClock';
 import { isJobOver } from '@app/utilities/jobContact';
 import { hasReachedStep } from '@app/utilities/jobSteps';
 import { ARRIVAL_STEP } from '@app/utilities/arrival';
@@ -85,6 +86,8 @@ export const useJobActions = ({
   actions: JobAction[];
   // True while a timed action is open, or the chat has something unread.
   attention: boolean;
+  // Which kind, for the screen reader: an action open for a short time, or an unread message.
+  attentionKind: 'timed' | 'unread' | null;
 } => {
   const { t } = useTranslation();
   const { imHere } = useOrder();
@@ -98,6 +101,10 @@ export const useJobActions = ({
   const showLeaveWait = !!onLeaveWait && canLeaveWait(order, Date.now());
   const removalOpen = order.removalRequest?.status === 'OPEN';
   const splitOpen = isSplitOpen(order);
+  // Draw again each second while waiting at the restaurant or for a split, as the footer did, so
+  // Leave (and the button's dot) appears by itself when its time comes (row 138, a bug the tests found).
+  useWaitClock(order.arrivedAtOnPhone, isWaitingAtPickup(order));
+  useWaitClock(order.splitCreatedAtOnPhone, splitOpen);
 
   const actions: JobAction[] = [];
   // Row 138 (operator, 23 Nov): only on the way to and at the restaurant, where the arrival starts
@@ -205,7 +212,7 @@ export const useJobActions = ({
     });
   }
 
-  const attention =
-    !!chatUnseen || actions.some(action => TIMED_ACTIONS.includes(action.key));
-  return { actions, attention };
+  const timed = actions.some(action => TIMED_ACTIONS.includes(action.key));
+  const attentionKind = timed ? 'timed' : chatUnseen ? 'unread' : null;
+  return { actions, attention: attentionKind !== null, attentionKind };
 };

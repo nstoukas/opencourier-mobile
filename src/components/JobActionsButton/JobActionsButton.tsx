@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { StyleSheet, TouchableOpacity, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { DotsThreeIcon } from 'phosphor-react-native/src/icons/DotsThree';
@@ -20,9 +20,15 @@ import { color, control, radius, space } from '@app/styles/theme';
 // something unread, so neither hides behind the button.
 export const JobActionsButton = (props: JobActionProps) => {
   const { t } = useTranslation();
-  const { actions, attention } = useJobActions(props);
+  const { actions, attention, attentionKind } = useJobActions(props);
   // Whether the sheet is open. `useState` keeps it across redraws.
   const [open, setOpen] = useState(false);
+  // With no actions left the sheet closes, so it cannot reopen by itself when they return (review).
+  useEffect(() => {
+    if (actions.length === 0) {
+      setOpen(false);
+    }
+  }, [actions.length]);
 
   if (actions.length === 0) {
     return null;
@@ -35,8 +41,10 @@ export const JobActionsButton = (props: JobActionProps) => {
         onPress={() => setOpen(true)}
         accessibilityRole="button"
         accessibilityLabel={
-          attention
-            ? t('translations:job_actions_button_attention')
+          attentionKind === 'timed'
+            ? t('translations:job_actions_button_timed')
+            : attentionKind === 'unread'
+            ? t('translations:job_actions_button_unread')
             : t('translations:job_actions_button')
         }
         testID="job-actions-button">
@@ -61,6 +69,12 @@ export const JobActionsButton = (props: JobActionProps) => {
                     : ButtonType.white
                 }
                 disabled={action.disabled}
+                // The chat's unread dot, said out loud too (review).
+                accessibilityLabel={
+                  action.dot
+                    ? `${action.label}, ${t('translations:chat_unread')}`
+                    : undefined
+                }
                 onPress={() => {
                   // Close first, so a screen or a question the action opens is not under the sheet.
                   setOpen(false);
@@ -71,7 +85,6 @@ export const JobActionsButton = (props: JobActionProps) => {
                 <View
                   style={styles.rowDot}
                   testID={`job-action-${action.key}-dot`}
-                  accessibilityLabel={t('translations:chat_unread')}
                 />
               ) : null}
             </View>

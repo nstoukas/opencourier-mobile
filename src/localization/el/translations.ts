@@ -1156,8 +1156,10 @@ const translations: typeof en = {
   time_worked_day_total: '{{time}} εργασίας · {{amount}}',
   // Row 138: the job's actions behind one button beside the address.
   job_actions_button: 'Ενέργειες παραγγελίας',
-  job_actions_button_attention:
-    'Ενέργειες παραγγελίας, κάτι χρειάζεται τώρα την προσοχή σας',
+  job_actions_button_timed:
+    'Ενέργειες παραγγελίας, μία είναι διαθέσιμη για λίγο',
+  job_actions_button_unread:
+    'Ενέργειες παραγγελίας, υπάρχει μήνυμα που δεν διαβάσατε',
   job_actions_title: 'Ενέργειες',
   // Row 137: a time under an hour, as the counter and the Earnings figures show it.
   work_duration_minutes: '{{minutes}} λ.',

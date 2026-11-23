@@ -1100,7 +1100,8 @@ export default {
   time_worked_day_total: '{{time}} worked · {{amount}}',
   // Row 138: the job's actions behind one button beside the address.
   job_actions_button: 'Job actions',
-  job_actions_button_attention: 'Job actions, something needs you now',
+  job_actions_button_timed: 'Job actions, one is open for a short time',
+  job_actions_button_unread: 'Job actions, a message is unread',
   job_actions_title: 'Actions',
   // Row 137: a time under an hour, as the counter and the Earnings figures show it.
   work_duration_minutes: '{{minutes}} min',
