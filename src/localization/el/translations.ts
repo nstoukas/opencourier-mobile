@@ -754,6 +754,7 @@ const translations: typeof en = {
   auto_accepted_channel: 'Παραγγελίες με αυτόματη αποδοχή',
   auto_accepted_title: 'Αυτόματη αποδοχή: {{restaurant}}',
   auto_accepted_pair_title: 'Αυτόματη αποδοχή δύο παραγγελιών: {{restaurant}}',
+  auto_accepted_pair_no_name: 'Αυτόματη αποδοχή δύο παραγγελιών',
   auto_accepted_no_name: 'νέα παραγγελία',
   hand_back_not_yours:
     'Αυτή η παραγγελία δεν είναι πια δική σας. Ελέγξτε τις παραγγελίες σας.',

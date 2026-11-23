@@ -64,6 +64,16 @@ export const useHomeOrders = () => {
   const queryClient = useQueryClient();
   const [dataSourceNew, setDataSourceNew] = useState<Order[]>([]);
   const [dataSourceInProgress, setDataSourceInProgress] = useState<Order[]>([]);
+  // Decision 128.6: orders of a pair the phone tried to take by itself and
+  // could not (the accept failed, or only one order could be claimed), or
+  // chose not to (see autoAcceptStack). The phone tries once only, so Home
+  // shows these as a card even to a rider on auto accept, to answer by hand.
+  const [handAnswerIds, setHandAnswerIds] = useState<string[]>([]);
+  const leaveToRider = (ids: string[]) =>
+    setHandAnswerIds(current => [
+      ...current,
+      ...ids.filter(id => !current.includes(id)),
+    ]);
 
   // quieries
 
@@ -223,11 +233,14 @@ export const useHomeOrders = () => {
       }
       // The phone took this order by itself: say so, with its own sound, once
       // (spec 0020, AC-12). A tapped accept plays nothing new.
-      // A pair (decision 128.0) says it is two orders.
+      // A pair (decision 128.0) says it is two orders; with no restaurant
+      // name it names none (decision 128.6), never "a new order".
       if (automatic) {
         announceAutoAccept(
           orderId,
-          restaurantName || i18next.t('translations:auto_accepted_no_name'),
+          partnerId
+            ? restaurantName ?? ''
+            : restaurantName || i18next.t('translations:auto_accepted_no_name'),
           !!partnerId,
         );
       }
@@ -241,12 +254,19 @@ export const useHomeOrders = () => {
       });
       await queryClient.invalidateQueries({ queryKey: [QueryKeys.user] });
     },
-    onError: (error, { id: orderId, partnerId }) => {
+    onError: (error, { id: orderId, automatic, partnerId }) => {
       if (isOfferEndedError(error)) {
         dropEndedOffer(orderId, partnerId);
         return;
       }
       if (partnerId) {
+        // Decision 128.6: an automatic pair that failed (no network, the
+        // pair changed, a dispatch stop) goes to the rider as a card. If the
+        // server split the pair, the order left on offer keeps its id, so it
+        // shows too, as a single order.
+        if (automatic) {
+          leaveToRider([orderId, partnerId]);
+        }
         refusedStackAnswer(
           orderId,
           partnerId,
@@ -429,29 +449,61 @@ export const useHomeOrders = () => {
 
   const autoAccept = user?.deliverySetting === OrderSetting.auto_accept;
 
+  // Half pairs this screen has already fetched again for, by delivery id and
+  // offer time, so each asks once and a refetch that still brings half a pair
+  // does not loop (decision 128.6).
+  const askedForPartnerRef = useRef<Set<string>>(new Set());
+
   // Decision 128.0: the phone takes a stack for an auto accept rider, once,
   // when it has both orders (the server takes both on the one call, and the
-  // phone marks both dispatched). Half a pair waits for the next fetch. The
-  // second order of the pair finds itself claimed and sends nothing. A failed
-  // accept puts both back on home for the rider (refusedStackAnswer), and the
-  // phone does not try again by itself, as for a single order.
-  const autoAcceptStack = (order: Order, offers: Order[]) => {
+  // phone marks both dispatched). The second order of the pair finds itself
+  // claimed and sends nothing. The phone does not try again by itself, as for
+  // a single order: a pair it could not take goes to the rider as a card
+  // (leaveToRider, decision 128.6). `mayTake` is false when the rider already
+  // holds a job or the phone took another offer in this pass: the server's
+  // offer limit should make that impossible, but the phone never asks for a
+  // third order (decision 128.6). Returns true when an accept was sent.
+  const autoAcceptStack = (
+    order: Order,
+    offers: Order[],
+    mayTake: boolean,
+  ): boolean => {
     const partner = offers.find(
       other =>
         other.id !== order.id && other.offerGroupId === order.offerGroupId,
     );
+    if (!partner) {
+      // Half a pair: ask for the other order now, once, rather than wait for
+      // the next message or deadline check (decision 128.6).
+      const key = offerKeyOf(order.id, order.offeredAt);
+      if (!askedForPartnerRef.current.has(key)) {
+        askedForPartnerRef.current.add(key);
+        refetchNewRef.current();
+      }
+      return false;
+    }
     if (
-      !partner ||
       answeredFromAlert(order.id) ||
       answeredFromAlert(partner.id) ||
-      !countdowns.isOpen(partner.id) ||
-      !countdowns.claimForAutoAccept(order.id)
+      !countdowns.isOpen(order.id) ||
+      !countdowns.isOpen(partner.id)
     ) {
-      return;
+      return false;
+    }
+    if (!mayTake) {
+      leaveToRider([order.id, partner.id]);
+      return false;
+    }
+    if (!countdowns.claimForAutoAccept(order.id)) {
+      leaveToRider([order.id, partner.id]);
+      return false;
     }
     if (!countdowns.claimForAutoAccept(partner.id)) {
+      // Only one of the two could be claimed: neither is sent, both go to
+      // the rider.
       countdowns.release(order.id);
-      return;
+      leaveToRider([order.id, partner.id]);
+      return false;
     }
     answerHere(order.id);
     answerHere(partner.id);
@@ -466,6 +518,7 @@ export const useHomeOrders = () => {
       restaurantName: names.join(' · '),
       partnerId: partner.id,
     });
+    return true;
   };
 
   useEffect(() => {
@@ -479,6 +532,11 @@ export const useHomeOrders = () => {
       // so by itself (spec 0020, AC-11). The server never accepts on the
       // rider's behalf.
       if (autoAccept && !sosSharingRef.current) {
+        // Decision 128.6: whether the phone sent an accept in this pass, and
+        // whether that accept was a pair (which fills the limit of two).
+        let sentThisPass = false;
+        let pairSent = false;
+        const holdsJob = (inProgressOrders?.length ?? 0) > 0;
         for (const order of offers) {
           // Row 81 (spec 0048, AC-8): an add on is never accepted by the
           // phone: the rider must see what it adds to the job they are on. It
@@ -490,7 +548,14 @@ export const useHomeOrders = () => {
           // order, by one call naming both. The server checked the box and
           // the limit of two when it offered the pair.
           if (order.offerGroupId) {
-            autoAcceptStack(order, offers);
+            if (autoAcceptStack(order, offers, !sentThisPass && !holdsJob)) {
+              sentThisPass = true;
+              pairSent = true;
+            }
+            continue;
+          }
+          // A pair already sent in this pass fills the limit of two.
+          if (pairSent) {
             continue;
           }
           if (
@@ -503,6 +568,7 @@ export const useHomeOrders = () => {
               automatic: true,
               restaurantName: restaurantNameOf(order),
             });
+            sentThisPass = true;
           }
         }
       }
@@ -590,6 +656,9 @@ export const useHomeOrders = () => {
   return {
     dataSourceNew,
     dataSourceInProgress,
+    // Offers Home shows to a rider on auto accept, to answer by hand
+    // (decision 128.6).
+    handAnswerIds,
     // The jobs as the SERVER has them, without the outbox's waiting steps:
     // the route is asked for the server's status (spec 0018, AC-6).
     serverInProgress: inProgressOrders ?? [],

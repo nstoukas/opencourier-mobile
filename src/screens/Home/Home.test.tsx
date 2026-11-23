@@ -130,6 +130,7 @@ const mockJob: Order = {
 let mockHomeOrders = {
   dataSourceNew: [] as Order[],
   dataSourceInProgress: [mockJob] as Order[],
+  handAnswerIds: [] as string[],
   serverInProgress: [mockJob] as Order[],
   timeLeftForOffer: jest.fn().mockReturnValue(30000),
   totalTimeForOffer: jest.fn().mockReturnValue(60000),
@@ -239,6 +240,7 @@ describe('HomeScreen (spec 0018, AC-5 to AC-15)', () => {
     mockHomeOrders = {
       dataSourceNew: [],
       dataSourceInProgress: [mockJob],
+      handAnswerIds: [],
       serverInProgress: [mockJob],
       timeLeftForOffer: jest.fn().mockReturnValue(30000),
       totalTimeForOffer: jest.fn().mockReturnValue(60000),

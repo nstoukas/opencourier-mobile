@@ -140,6 +140,7 @@ export const HomeScreen = ({ navigation }: Props) => {
   const {
     dataSourceNew,
     dataSourceInProgress,
+    handAnswerIds,
     serverInProgress,
     timeLeftForOffer,
     totalTimeForOffer,
@@ -225,13 +226,17 @@ export const HomeScreen = ({ navigation }: Props) => {
   // two orders included (decision 128.0). An add on is the exception (row 81,
   // spec 0048 AC-8): the phone never takes it by itself, so it shows to every
   // rider; its card holds the job too (attachAddOnJobs), for the stops and
-  // both orders' pay. A stack's two orders share one card.
+  // both orders' pay. A stack's two orders share one card. So does a pair the
+  // phone could not take by itself (handAnswerIds, decision 128.6): it tries
+  // once only, so the rider answers it by hand.
   const items = useMemo<CardItem[]>(
     () => [
       ...attachAddOnJobs(
         groupOffers(
           autoAcceptOrders
-            ? dataSourceNew.filter(order => order.addOn)
+            ? dataSourceNew.filter(
+                order => order.addOn || handAnswerIds.includes(order.id),
+              )
             : dataSourceNew,
         ),
         dataSourceInProgress,
@@ -241,7 +246,7 @@ export const HomeScreen = ({ navigation }: Props) => {
         ...card,
       })),
     ],
-    [autoAcceptOrders, dataSourceNew, dataSourceInProgress],
+    [autoAcceptOrders, dataSourceNew, dataSourceInProgress, handAnswerIds],
   );
   // Back to the first whenever the list changes (an offer ending, a 409 on
   // accept, a job finishing), so the position never points past the end.

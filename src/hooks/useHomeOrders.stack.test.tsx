@@ -211,7 +211,7 @@ describe('useHomeOrders.stack (spec 0048, row 80, AC-5, AC-8 as amended by decis
       });
     });
 
-    it('auto-accepts a single order and a stacked pair in the same fetch', async () => {
+    it('auto-accepts the single order but not a stacked pair in the same fetch (decision 128.6)', async () => {
       mockDeliverySetting = OrderSetting.auto_accept;
       const singleOffer: Order = {
         id: 'single-1',
@@ -233,16 +233,12 @@ describe('useHomeOrders.stack (spec 0048, row 80, AC-5, AC-8 as amended by decis
         );
       });
 
-      // The single offer, then the pair in one call
-      expect(mockAcceptOrder).toHaveBeenCalledTimes(2);
+      // The single offer only: a pair after it would make three orders
+      // (decision 128.6), so the pair is left to the rider.
+      expect(mockAcceptOrder).toHaveBeenCalledTimes(1);
       expect(mockAcceptOrder).toHaveBeenCalledWith({
         id: 'single-1',
         automatic: true,
-      });
-      expect(mockAcceptOrder).toHaveBeenCalledWith({
-        id: 'stack-1',
-        automatic: true,
-        partnerId: 'stack-2',
       });
 
       act(() => {
