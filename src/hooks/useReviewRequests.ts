@@ -11,6 +11,7 @@ import { services } from '@app/services/service';
 import { SendReviewInput } from '@app/services/reviewService';
 import { QueryKeys } from '@app/utilities/queryKeys';
 import { serverMessage } from './useMoveDropoffPin';
+import { currentLanguage } from '@app/localization/appLanguage';
 
 // Spec 0038: the explanation page, the rider's review requests and what changed. None of these is
 // saved to disk (`queryPersistence.ts` keeps only the keys it lists), so the page always shows the
@@ -18,8 +19,9 @@ import { serverMessage } from './useMoveDropoffPin';
 
 export const useHowItWorks = () =>
   useQuery({
-    queryKey: [QueryKeys.howItWorks],
-    queryFn: () => services.reviewService.getHowItWorks(),
+    // The language is in the key, so switching it in Settings fetches the page again in that language (row 137).
+    queryKey: [QueryKeys.howItWorks, currentLanguage()],
+    queryFn: () => services.reviewService.getHowItWorks(currentLanguage()),
     // Fetched again each time the page opens: a representative may have changed a setting.
     staleTime: 0,
   });

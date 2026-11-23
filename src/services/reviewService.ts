@@ -1,3 +1,4 @@
+import type { AppLanguage } from '@app/localization/appLanguage';
 import {
   HowItWorks,
   PagedList,
@@ -18,7 +19,7 @@ export interface ReviewService {
   sendReviewRequest: (input: SendReviewInput) => Promise<ReviewRequest>;
   getReviewRequests: (page: number) => Promise<PagedList<ReviewRequest>>;
   withdrawReviewRequest: (id: string) => Promise<ReviewRequest>;
-  getHowItWorks: () => Promise<HowItWorks>;
+  getHowItWorks: (language?: AppLanguage) => Promise<HowItWorks>;
   getSettingChanges: (page: number) => Promise<PagedList<SettingChangeLine>>;
 }
 
@@ -48,8 +49,11 @@ const reviewService = (client: UClient): ReviewService => {
     return data.result;
   };
 
-  const getHowItWorks = async (): Promise<HowItWorks> => {
-    const { data } = await client.get('how-it-works');
+  // Row 137: the server words the page in the app's language ("el" or "en"); left out, it reads English.
+  const getHowItWorks = async (language?: AppLanguage): Promise<HowItWorks> => {
+    const { data } = await client.get('how-it-works', {
+      params: language ? { lang: language } : undefined,
+    });
     return data.result;
   };
 

@@ -41,14 +41,14 @@ type Props = DrawerContentComponentProps;
 
 // Row 84: auto accept moved to Settings, one of its six; Location stays here.
 const section1 = [SideMenuItem.Location];
-// Row 84: Account (Change password, Changes by the co-op, licences) sits before Settings.
+// Row 84: Account (Change password, Changes by the co-op, licences) sits before Settings. Row 137: the
+// Support entry, which never did anything, is gone (operator, 23 Nov); Chat reaches dispatch.
 const section2 = [
   SideMenuItem.Orders,
   SideMenuItem.Chat,
   SideMenuItem.Earnings,
   SideMenuItem.Complaints,
   SideMenuItem.Payout,
-  SideMenuItem.Support,
   SideMenuItem.Account,
   SideMenuItem.Settings,
   SideMenuItem.Logout,
@@ -63,7 +63,6 @@ const section2WithShifts = [
   SideMenuItem.Earnings,
   SideMenuItem.Complaints,
   SideMenuItem.Payout,
-  SideMenuItem.Support,
   SideMenuItem.Account,
   SideMenuItem.Settings,
   SideMenuItem.Logout,
@@ -230,8 +229,6 @@ export const SideMenu = ({ navigation }: Props) => {
         break;
       case SideMenuItem.Payout:
         navigation.navigate(DrawerScreens.PaymentMethods);
-        break;
-      case SideMenuItem.Support:
         break;
       case SideMenuItem.Account:
         // A screen of the main stack, which holds the drawer (row 84).

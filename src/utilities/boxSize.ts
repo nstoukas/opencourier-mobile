@@ -15,3 +15,11 @@ export const boxSizeLine = (
   boxSize && BOX_SIZES.includes(boxSize)
     ? t(`translations:box_size_order_${boxSize}`)
     : '';
+
+// Row 137 (the tour, problem 24): an item's own size on the items sheet, in the app's language
+// ("Small", "Μικρό"); '' for a size this app does not know, never the raw value ("SMALL").
+export const itemSizeWord = (
+  size: string | null | undefined,
+  t: (key: string) => string,
+): string =>
+  size && BOX_SIZES.includes(size) ? t(`translations:item_size_${size}`) : '';

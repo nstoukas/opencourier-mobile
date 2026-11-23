@@ -111,7 +111,6 @@ const translations: typeof en = {
   orders: 'Παραγγελίες',
   earnings: 'Αποδοχές',
   payout_method: 'Τρόπος πληρωμής',
-  support: 'Υποστήριξη',
   settings: 'Ρυθμίσεις',
   // Row 84 (wishlist item 35): Settings holds six things; the account moved to the side menu.
   account: 'Λογαριασμός',
@@ -608,6 +607,10 @@ const translations: typeof en = {
   box_size_order_SMALL: 'Μικρή παραγγελία',
   box_size_order_MEDIUM: 'Μεσαία παραγγελία',
   box_size_order_LARGE: 'Μεγάλη παραγγελία',
+  // Row 137: one item's size on the items sheet.
+  item_size_SMALL: 'Μικρό',
+  item_size_MEDIUM: 'Μεσαίο',
+  item_size_LARGE: 'Μεγάλο',
   // Spec 0046 (AC-7): one leg of an order sent as several deliveries.
   order_leg_of: 'Σκέλος {{legNumber}} από {{legCount}}',
   offer_waiting_just_now: 'Σε αναμονή λιγότερο από 1 λ.',

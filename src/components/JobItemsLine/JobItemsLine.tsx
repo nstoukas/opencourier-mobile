@@ -9,6 +9,7 @@ import { CaretRightIcon } from 'phosphor-react-native/src/icons/CaretRight';
 import { JobSheet } from '@app/components/JobSheet/JobSheet';
 import { OrderItem } from '@app/types/types';
 import { itemsDrinksFirst, kindCounts } from '@app/utilities/itemKinds';
+import { itemSizeWord } from '@app/utilities/boxSize';
 import { color, control, radius, space, typeScale } from '@app/styles/theme';
 
 // Ticks per delivery, in memory only: they are never sent (value 5) and never
@@ -99,8 +100,10 @@ export const JobItemsLine = ({ deliveryId, items }: Props) => {
                   ) : null}
                 </View>
                 {/* With several lines the size is the order's, not this line's (spec 0028). */}
-                {item.size && items.length === 1 ? (
-                  <Text style={styles.itemSize}>{item.size}</Text>
+                {itemSizeWord(item.size, t) && items.length === 1 ? (
+                  <Text style={styles.itemSize}>
+                    {itemSizeWord(item.size, t)}
+                  </Text>
                 ) : null}
               </View>
             </TouchableOpacity>

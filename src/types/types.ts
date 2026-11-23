@@ -31,7 +31,6 @@ export enum SideMenuItem {
   // Spec 0052: complaints both ways.
   Complaints = 'complaints',
   Payout = 'payout_method',
-  Support = 'support',
   // Row 84: the rider's account, out of Settings.
   Account = 'account',
   Settings = 'settings',
