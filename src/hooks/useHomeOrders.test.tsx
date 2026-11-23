@@ -2,7 +2,7 @@ import React from 'react';
 import renderer, { act } from 'react-test-renderer';
 import { Alert } from 'react-native';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { OrderSetting } from '@app/types/enums';
+import { OrderSetting, OrderStatus } from '@app/types/enums';
 import { Order, UserStatus } from '@app/types/types';
 import { QueryKeys } from '@app/utilities/queryKeys';
 import {
@@ -62,14 +62,14 @@ jest.mock('./useUser', () => () => ({
 const mockAcceptOrder = jest.fn();
 const mockDeclineOrder = jest.fn();
 const mockGetNewOrders = jest.fn();
+const mockGetInProgressOrders = jest.fn();
 const mockGetOrdersHistory = jest.fn();
 
 jest.mock('@app/services/service', () => ({
   services: {
     orderService: {
       getNewOrders: () => mockGetNewOrders(),
-      getInProgressOrders: () =>
-        Promise.resolve({ data: { result: { data: [] } } }),
+      getInProgressOrders: () => mockGetInProgressOrders(),
       getOrdersHistory: () => mockGetOrdersHistory(),
       acceptOrder: (params: { id: string; automatic?: boolean }) =>
         mockAcceptOrder(params),
@@ -128,6 +128,7 @@ describe('useHomeOrders', () => {
     jest.clearAllMocks();
     mockAnsweredSet.clear();
     mockGetNewOrders.mockReturnValue(new Promise(() => {}));
+    mockGetInProgressOrders.mockResolvedValue([]);
     mockAcceptOrder.mockResolvedValue({});
     mockDeclineOrder.mockResolvedValue({});
     mockDeliverySetting = OrderSetting.manual;
@@ -1835,6 +1836,211 @@ describe('useHomeOrders', () => {
         'order-manual-fail',
       ]);
 
+      act(() => {
+        tree.unmount();
+      });
+    });
+
+    it('refetches new offers and invalidates inProgressOrders when automatic accept of a single order fails (decision 130.3)', async () => {
+      mockDeliverySetting = OrderSetting.auto_accept;
+      const testOffer: Order = {
+        id: 'order-fail-refetch',
+        offeredAt: '2026-11-23T10:00:00.000Z',
+        phoneClock: { offeredAt: 100000, expiresAt: 160000 },
+      } as Order;
+
+      const invalidateSpy = jest.spyOn(queryClient, 'invalidateQueries');
+      mockAcceptOrder.mockRejectedValueOnce(new Error('Network error'));
+      queryClient.setQueryData([QueryKeys.newOrders], [testOffer]);
+      mockGetNewOrders.mockClear();
+
+      let tree: renderer.ReactTestRenderer;
+      await act(async () => {
+        tree = renderer.create(
+          <QueryClientProvider client={queryClient}>
+            <HookHost onRender={() => undefined} />
+          </QueryClientProvider>,
+        );
+      });
+
+      expect(mockAcceptOrder).toHaveBeenCalledTimes(1);
+      expect(mockAcceptOrder).toHaveBeenCalledWith({
+        id: 'order-fail-refetch',
+        automatic: true,
+        partnerId: undefined,
+      });
+
+      // Decision 130.3: when failed accept was automatic, both lists are fetched again
+      // 1. inProgressOrders query is invalidated
+      expect(invalidateSpy).toHaveBeenCalledWith({
+        queryKey: [QueryKeys.inProgressOrders],
+      });
+      // 2. getNewOrders is called again to refetch new offers
+      expect(mockGetNewOrders).toHaveBeenCalled();
+
+      // Not retried: still no second automatic accept
+      expect(mockAcceptOrder).toHaveBeenCalledTimes(1);
+
+      invalidateSpy.mockRestore();
+      act(() => {
+        tree.unmount();
+      });
+    });
+
+    it('when automatic accept times out but server accepted, refetch clears offer card and shows in-progress job (decision 130.3)', async () => {
+      mockDeliverySetting = OrderSetting.auto_accept;
+      const testOffer: Order = {
+        id: 'order-timeout-accepted',
+        offeredAt: '2026-11-23T10:00:00.000Z',
+        phoneClock: { offeredAt: 100000, expiresAt: 160000 },
+      } as Order;
+
+      const acceptedJob: Order = {
+        id: 'order-timeout-accepted',
+        status: OrderStatus.dispatched,
+      } as Order;
+
+      // Initial state: offer is in newOrders, no jobs in progress
+      queryClient.setQueryData([QueryKeys.newOrders], [testOffer]);
+      queryClient.setQueryData([QueryKeys.inProgressOrders], []);
+
+      // Accept times out on phone
+      mockAcceptOrder.mockRejectedValueOnce(new Error('timeout'));
+
+      // Next refetches: server has no offer, but has the job in progress
+      mockGetNewOrders.mockResolvedValueOnce([]);
+      mockGetInProgressOrders.mockResolvedValueOnce([acceptedJob]);
+
+      let hookResult: ReturnType<typeof useHomeOrders> | undefined;
+      let tree: renderer.ReactTestRenderer;
+      await act(async () => {
+        tree = renderer.create(
+          <QueryClientProvider client={queryClient}>
+            <HookHost
+              onRender={h => {
+                hookResult = h;
+              }}
+            />
+          </QueryClientProvider>,
+        );
+      });
+
+      await act(async () => {
+        jest.runOnlyPendingTimers();
+        await Promise.resolve();
+      });
+
+      // Automatic accept was attempted once
+      expect(mockAcceptOrder).toHaveBeenCalledTimes(1);
+
+      // Offer card disappears (no offers in dataSourceNew)
+      expect(hookResult?.dataSourceNew).toEqual([]);
+
+      // Job shows in progress
+      expect(hookResult?.serverInProgress.map(o => o.id)).toEqual([
+        'order-timeout-accepted',
+      ]);
+      expect(hookResult?.dataSourceInProgress.map(o => o.id)).toEqual([
+        'order-timeout-accepted',
+      ]);
+
+      act(() => {
+        tree.unmount();
+      });
+    });
+
+    it('failed manual tap accept does NOT invalidate inProgressOrders and does NOT refetch new offers (decision 130.3)', async () => {
+      mockDeliverySetting = OrderSetting.manual;
+      const testOffer: Order = {
+        id: 'order-manual-no-refetch',
+        offeredAt: '2026-11-23T10:00:00.000Z',
+        phoneClock: { offeredAt: 100000, expiresAt: 160000 },
+      } as Order;
+
+      queryClient.setQueryData([QueryKeys.newOrders], [testOffer]);
+
+      let hookResult: ReturnType<typeof useHomeOrders> | undefined;
+      let tree: renderer.ReactTestRenderer;
+      await act(async () => {
+        tree = renderer.create(
+          <QueryClientProvider client={queryClient}>
+            <HookHost
+              onRender={h => {
+                hookResult = h;
+              }}
+            />
+          </QueryClientProvider>,
+        );
+      });
+
+      // Clear any mount fetches and setup spy
+      mockGetNewOrders.mockClear();
+      const invalidateSpy = jest.spyOn(queryClient, 'invalidateQueries');
+
+      // Rider taps accept by hand, which fails with network error
+      mockAcceptOrder.mockRejectedValueOnce(new Error('Network error'));
+      await act(async () => {
+        hookResult?.acceptOrderFn('order-manual-no-refetch');
+        await Promise.resolve();
+      });
+
+      expect(mockAcceptOrder).toHaveBeenCalledTimes(1);
+      expect(mockAcceptOrder).toHaveBeenCalledWith({
+        id: 'order-manual-no-refetch',
+        automatic: false,
+        partnerId: undefined,
+      });
+
+      // Decision 130.3: tapped accept failure does NOT trigger extra fetch of jobs or offers
+      expect(invalidateSpy).not.toHaveBeenCalledWith(
+        expect.objectContaining({
+          queryKey: [QueryKeys.inProgressOrders],
+        }),
+      );
+      expect(mockGetNewOrders).not.toHaveBeenCalled();
+
+      // Old behaviour kept: offer stays on screen in dataSourceNew for retry
+      expect(hookResult?.dataSourceNew.map(o => o.id)).toEqual([
+        'order-manual-no-refetch',
+      ]);
+      expect(hookResult?.handAnswerIds).toEqual([]);
+
+      invalidateSpy.mockRestore();
+      act(() => {
+        tree.unmount();
+      });
+    });
+
+    it('automatic accept failure with OFFER_HAS_ENDED does not invalidate inProgressOrders (decision 130.3)', async () => {
+      mockDeliverySetting = OrderSetting.auto_accept;
+      const testOffer: Order = {
+        id: 'order-ended-no-job-invalidation',
+        offeredAt: '2026-11-23T10:00:00.000Z',
+        phoneClock: { offeredAt: 100000, expiresAt: 160000 },
+      } as Order;
+
+      const invalidateSpy = jest.spyOn(queryClient, 'invalidateQueries');
+      mockAcceptOrder.mockRejectedValueOnce(makeOfferEndedError());
+      queryClient.setQueryData([QueryKeys.newOrders], [testOffer]);
+
+      let tree: renderer.ReactTestRenderer;
+      await act(async () => {
+        tree = renderer.create(
+          <QueryClientProvider client={queryClient}>
+            <HookHost onRender={() => undefined} />
+          </QueryClientProvider>,
+        );
+      });
+
+      expect(mockAcceptOrder).toHaveBeenCalledTimes(1);
+      // OFFER_HAS_ENDED drops the offer, but does not invalidate inProgressOrders
+      expect(invalidateSpy).not.toHaveBeenCalledWith(
+        expect.objectContaining({
+          queryKey: [QueryKeys.inProgressOrders],
+        }),
+      );
+
+      invalidateSpy.mockRestore();
       act(() => {
         tree.unmount();
       });

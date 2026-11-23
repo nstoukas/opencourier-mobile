@@ -144,6 +144,30 @@ describe('NewOrderCell (spec 0002, spec 0018, spec 0019, AC-3, AC-5, AC-7, AC-8,
     });
   });
 
+  it('hides countdown bar when autoAcceptOrders is true even when offer has a deadline (decision 130.3)', () => {
+    let component: renderer.ReactTestRenderer;
+    act(() => {
+      component = renderer.create(
+        <NewOrderCell
+          order={dummyOrder}
+          autoAcceptOrders={true}
+          onAccept={jest.fn()}
+          onDecline={jest.fn()}
+          millisRemaining={30000}
+          totalMillis={60000}
+          millisWaited={30000}
+        />,
+      );
+    });
+
+    const paralelograms = component!.root.findAllByType(Paralelogram);
+    expect(paralelograms).toHaveLength(0);
+
+    act(() => {
+      component.unmount();
+    });
+  });
+
   it('renders distances from route in "km" and never "mi" (AC-7)', async () => {
     const orderWithTrip: Order = {
       ...dummyOrder,

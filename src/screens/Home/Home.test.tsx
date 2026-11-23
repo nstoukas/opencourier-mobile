@@ -421,6 +421,24 @@ describe('HomeScreen (spec 0018, AC-5 to AC-15)', () => {
       unmount();
     });
 
+    it('passes autoAcceptOrders={false} to NewOrderCell for a rider on auto accept with order in handAnswerIds (decision 130.3)', () => {
+      mockUser!.deliverySetting = OrderSetting.auto_accept;
+      mockHomeOrders.dataSourceNew = [mockOffer];
+      mockHomeOrders.dataSourceInProgress = [];
+      mockHomeOrders.serverInProgress = [];
+      mockHomeOrders.handAnswerIds = [mockOffer.id];
+
+      const { UNSAFE_getByType, unmount } = renderHome();
+
+      // Decision 130.3: an offer card drawn on Home always gets autoAcceptOrders={false}
+      // so the handed back card draws its countdown bar like a hand answered offer
+      const cell = UNSAFE_getByType(NewOrderCell);
+      expect(cell).toBeTruthy();
+      expect(cell.props.autoAcceptOrders).toBe(false);
+
+      unmount();
+    });
+
     it('with two items shows "1 of 2", next/previous moves between them, and resets to first on list change', async () => {
       const job2: Order = { ...mockJob, id: 'job-456' };
       mockHomeOrders.dataSourceNew = [];
