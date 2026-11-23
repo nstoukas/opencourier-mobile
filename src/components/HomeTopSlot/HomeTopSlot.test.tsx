@@ -1,7 +1,7 @@
 import React from 'react';
-import { StyleSheet, Text, View } from 'react-native';
-import { render, fireEvent } from '@testing-library/react-native';
-import '@app/localization/i18n';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { render, fireEvent, act } from '@testing-library/react-native';
+import i18n from '@app/localization/i18n';
 import { HomeTopSlot } from './HomeTopSlot';
 import { ProfileBadge } from '@app/components/ProfileBadge/ProfileBadge';
 import { UserStatus } from '@app/types/types';
@@ -23,13 +23,13 @@ describe('HomeTopSlot (spec 0018, AC-14, row 134 Clauses 2 & 3)', () => {
     );
 
     expect(getByTestId('home-top-slot')).toBeTruthy();
-    expect(getByText('Online')).toBeTruthy();
+    expect(getByText('Online', { includeHiddenElements: true })).toBeTruthy();
     expect(getByTestId('connection-dot')).toBeTruthy();
     expect(getByTestId('mock-banner')).toBeTruthy();
     expect(getByText('Dispatch Stop Banner')).toBeTruthy();
 
     // Tapping the status word under the frame opens menu (Clause 2)
-    fireEvent.press(getByText('Online'));
+    fireEvent.press(getByText('Online', { includeHiddenElements: true }));
     expect(onMenuMock).toHaveBeenCalledTimes(1);
 
     // Tapping the avatar badge also opens menu
@@ -62,11 +62,13 @@ describe('HomeTopSlot (spec 0018, AC-14, row 134 Clauses 2 & 3)', () => {
       />,
     );
 
-    const statusWord = getByTestId('status-word');
+    const statusWord = getByTestId('status-word', {
+      includeHiddenElements: true,
+    });
     expect(statusWord).toBeTruthy();
 
     // Tapping status word triggers onMenu
-    fireEvent.press(getByText('Online'));
+    fireEvent.press(getByText('Online', { includeHiddenElements: true }));
     expect(onMenuMock).toHaveBeenCalledTimes(1);
   });
 
@@ -79,8 +81,10 @@ describe('HomeTopSlot (spec 0018, AC-14, row 134 Clauses 2 & 3)', () => {
       />,
     );
 
-    expect(getByTestId('status-word')).toBeTruthy();
-    const text = getByText('Last Call');
+    expect(
+      getByTestId('status-word', { includeHiddenElements: true }),
+    ).toBeTruthy();
+    const text = getByText('Last Call', { includeHiddenElements: true });
     const flatStyle = StyleSheet.flatten(text.props.style);
     expect(flatStyle.color).toBe(color['warning-foreground']);
   });
@@ -115,5 +119,84 @@ describe('HomeTopSlot (spec 0018, AC-14, row 134 Clauses 2 & 3)', () => {
     expect(foundStyle).not.toBeNull();
     expect(foundStyle.flex).toBe(1);
     expect(foundStyle.minWidth).toBe(0);
+  });
+
+  // Pinned tests for row 134 review finding:
+  // "The menu button has no name for a screen reader on Home"
+
+  it('pins (a): avatar badge button role and its "Menu, Online" / "Menu, Last Call" / "Menu, Offline" label', () => {
+    const statuses = [
+      { status: UserStatus.Online, label: 'Menu, Online' },
+      { status: UserStatus.LastCall, label: 'Menu, Last Call' },
+      { status: UserStatus.Offline, label: 'Menu, Offline' },
+    ];
+
+    for (const { status, label } of statuses) {
+      const { getByRole, getByLabelText } = render(
+        <HomeTopSlot
+          userStatus={status}
+          connectionStatus="connected"
+          onMenu={jest.fn()}
+        />,
+      );
+      const button = getByRole('button');
+      expect(button.props.accessibilityRole).toBe('button');
+      expect(button.props.accessibilityLabel).toBe(label);
+      expect(getByLabelText(label)).toBeTruthy();
+    }
+  });
+
+  it('pins (b): status word under the frame is hidden from screen readers (no-hide-descendants) yet still visible and tappable', () => {
+    const onMenuMock = jest.fn();
+    const { queryByText, queryByTestId, getByText, getByTestId, UNSAFE_getByType } = render(
+      <HomeTopSlot
+        userStatus={UserStatus.Online}
+        connectionStatus="connected"
+        onMenu={onMenuMock}
+      />,
+    );
+
+    // Screen readers should not find the status word (it is hidden by no-hide-descendants)
+    expect(queryByText('Online')).toBeNull();
+    expect(queryByTestId('status-word')).toBeNull();
+
+    // The Pressable under the badge frame has accessible={false} and importantForAccessibility="no-hide-descendants"
+    const pressable = UNSAFE_getByType(Pressable);
+    expect(pressable.props.accessible).toBe(false);
+    expect(pressable.props.importantForAccessibility).toBe('no-hide-descendants');
+
+    // Yet it is still visible in the component tree
+    const statusWord = getByTestId('status-word', { includeHiddenElements: true });
+    expect(statusWord).toBeTruthy();
+    const statusText = getByText('Online', { includeHiddenElements: true });
+    expect(statusText).toBeTruthy();
+
+    // And tapping the status word still calls onMenu
+    fireEvent.press(statusText);
+    expect(onMenuMock).toHaveBeenCalledTimes(1);
+  });
+
+  it('translates avatar button accessibilityLabel in Greek on HomeTopSlot', async () => {
+    await act(async () => {
+      await i18n.changeLanguage('el');
+    });
+    try {
+      const { getByRole, getByLabelText, unmount } = render(
+        <HomeTopSlot
+          userStatus={UserStatus.Online}
+          connectionStatus="connected"
+          onMenu={jest.fn()}
+        />,
+      );
+      const button = getByRole('button');
+      expect(button.props.accessibilityRole).toBe('button');
+      expect(button.props.accessibilityLabel).toBe('Μενού, Σε σύνδεση');
+      expect(getByLabelText('Μενού, Σε σύνδεση')).toBeTruthy();
+      unmount();
+    } finally {
+      await act(async () => {
+        await i18n.changeLanguage('en');
+      });
+    }
   });
 });

@@ -1,7 +1,7 @@
 import React from 'react';
 import { StyleSheet } from 'react-native';
-import { render } from '@testing-library/react-native';
-import '@app/localization/i18n';
+import { render, act } from '@testing-library/react-native';
+import i18n from '@app/localization/i18n';
 import { ProfileBadge, StatusWord } from './ProfileBadge';
 import { UserStatus } from '@app/types/types';
 import { Colors } from '@app/styles/colors';
@@ -96,5 +96,71 @@ describe('ProfileBadge with hideStatusWord (Clause 2)', () => {
 
     expect(queryByTestId('status-word')).toBeNull();
     expect(queryByText('Online')).toBeNull();
+  });
+});
+
+describe('ProfileBadge accessibility (row 134 review)', () => {
+  it('sets accessibilityRole="button" and accessibilityLabel="Menu, Online" for UserStatus.Online', () => {
+    const { getByRole, getByLabelText } = render(
+      <ProfileBadge userStatus={UserStatus.Online} onPress={jest.fn()} />,
+    );
+    const button = getByRole('button');
+    expect(button.props.accessibilityRole).toBe('button');
+    expect(button.props.accessibilityLabel).toBe('Menu, Online');
+    expect(getByLabelText('Menu, Online')).toBeTruthy();
+  });
+
+  it('sets accessibilityRole="button" and accessibilityLabel="Menu, Last Call" for UserStatus.LastCall', () => {
+    const { getByRole, getByLabelText } = render(
+      <ProfileBadge userStatus={UserStatus.LastCall} onPress={jest.fn()} />,
+    );
+    const button = getByRole('button');
+    expect(button.props.accessibilityRole).toBe('button');
+    expect(button.props.accessibilityLabel).toBe('Menu, Last Call');
+    expect(getByLabelText('Menu, Last Call')).toBeTruthy();
+  });
+
+  it('sets accessibilityRole="button" and accessibilityLabel="Menu, Offline" for UserStatus.Offline', () => {
+    const { getByRole, getByLabelText } = render(
+      <ProfileBadge userStatus={UserStatus.Offline} onPress={jest.fn()} />,
+    );
+    const button = getByRole('button');
+    expect(button.props.accessibilityRole).toBe('button');
+    expect(button.props.accessibilityLabel).toBe('Menu, Offline');
+    expect(getByLabelText('Menu, Offline')).toBeTruthy();
+  });
+
+  it('preserves button role and accessibilityLabel when hideStatusWord is true', () => {
+    const { getByRole, getByLabelText } = render(
+      <ProfileBadge
+        userStatus={UserStatus.Online}
+        onPress={jest.fn()}
+        hideStatusWord={true}
+      />,
+    );
+    const button = getByRole('button');
+    expect(button.props.accessibilityRole).toBe('button');
+    expect(button.props.accessibilityLabel).toBe('Menu, Online');
+    expect(getByLabelText('Menu, Online')).toBeTruthy();
+  });
+
+  it('translates accessibilityLabel to Greek ("Μενού, {{status}}") when language is el', async () => {
+    await act(async () => {
+      await i18n.changeLanguage('el');
+    });
+    try {
+      const { getByRole, getByLabelText, unmount } = render(
+        <ProfileBadge userStatus={UserStatus.Online} onPress={jest.fn()} />,
+      );
+      const button = getByRole('button');
+      expect(button.props.accessibilityRole).toBe('button');
+      expect(button.props.accessibilityLabel).toBe('Μενού, Σε σύνδεση');
+      expect(getByLabelText('Μενού, Σε σύνδεση')).toBeTruthy();
+      unmount();
+    } finally {
+      await act(async () => {
+        await i18n.changeLanguage('en');
+      });
+    }
   });
 });
