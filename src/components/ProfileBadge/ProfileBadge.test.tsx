@@ -204,16 +204,20 @@ describe('Last call status tag word (row 134 follow-up, 23 Nov operator decision
       await i18n.changeLanguage('el');
     });
     try {
-      const { getByText: getOnlineEl, queryByText: queryOnlineEl, unmount: unmountOnline } = render(
-        <StatusWord userStatus={UserStatus.Online} />,
-      );
+      const {
+        getByText: getOnlineEl,
+        queryByText: queryOnlineEl,
+        unmount: unmountOnline,
+      } = render(<StatusWord userStatus={UserStatus.Online} />);
       expect(getOnlineEl('Σε σύνδεση')).toBeTruthy();
       expect(queryOnlineEl('online')).toBeNull();
       unmountOnline();
 
-      const { getByText: getOfflineEl, queryByText: queryOfflineEl, unmount: unmountOffline } = render(
-        <StatusWord userStatus={UserStatus.Offline} />,
-      );
+      const {
+        getByText: getOfflineEl,
+        queryByText: queryOfflineEl,
+        unmount: unmountOffline,
+      } = render(<StatusWord userStatus={UserStatus.Offline} />);
       expect(getOfflineEl('Εκτός σύνδεσης')).toBeTruthy();
       expect(queryOfflineEl('offline')).toBeNull();
       unmountOffline();
@@ -248,7 +252,9 @@ describe('Last call status tag word (row 134 follow-up, 23 Nov operator decision
         <ProfileBadge userStatus={UserStatus.LastCall} onPress={jest.fn()} />,
       );
       const button = getByRole('button');
-      expect(button.props.accessibilityLabel).toBe('Μενού, Τελευταία παραγγελία');
+      expect(button.props.accessibilityLabel).toBe(
+        'Μενού, Τελευταία παραγγελία',
+      );
       expect(getByLabelText('Μενού, Τελευταία παραγγελία')).toBeTruthy();
       expect(queryByLabelText('Μενού, Τελευταία')).toBeNull();
       unmount();
@@ -297,7 +303,9 @@ describe('Last call status tag word (row 134 follow-up, 23 Nov operator decision
       expect(queryByText('Τελευταία παραγγελία')).toBeNull();
 
       // Accessibility label on the button
-      expect(button.props.accessibilityLabel).toBe('Μενού, Τελευταία παραγγελία');
+      expect(button.props.accessibilityLabel).toBe(
+        'Μενού, Τελευταία παραγγελία',
+      );
       unmount();
     } finally {
       await act(async () => {
