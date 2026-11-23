@@ -68,6 +68,7 @@ export const JobItemsLine = ({ deliveryId, items }: Props) => {
         testID="job-items-sheet">
         {itemsDrinksFirst(items).map(({ item, sentIndex: index }) => {
           const ticked = ticks.has(index);
+          const sizeWord = itemSizeWord(item.size, t);
           return (
             <TouchableOpacity
               key={index}
@@ -100,10 +101,8 @@ export const JobItemsLine = ({ deliveryId, items }: Props) => {
                   ) : null}
                 </View>
                 {/* With several lines the size is the order's, not this line's (spec 0028). */}
-                {itemSizeWord(item.size, t) && items.length === 1 ? (
-                  <Text style={styles.itemSize}>
-                    {itemSizeWord(item.size, t)}
-                  </Text>
+                {sizeWord && items.length === 1 ? (
+                  <Text style={styles.itemSize}>{sizeWord}</Text>
                 ) : null}
               </View>
             </TouchableOpacity>

@@ -1098,6 +1098,8 @@ export default {
     'Time worked could not be loaded. Pull down to try again.',
   time_worked_earlier: 'Earlier',
   time_worked_day_total: '{{time}} worked · {{amount}}',
+  // Row 137: a time under an hour, as the counter and the Earnings figures show it.
+  work_duration_minutes: '{{minutes}} min',
   time_worked_split: 'Jobs {{job}} · Paid waiting {{wait}} · Unpaid {{unpaid}}',
   time_worked_not_in_shift: '{{amount}} paid for work outside a recorded shift',
   time_worked_shift: '{{start}} to {{end}}',

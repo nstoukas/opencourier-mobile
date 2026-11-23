@@ -22,4 +22,7 @@ export const itemSizeWord = (
   size: string | null | undefined,
   t: (key: string) => string,
 ): string =>
-  size && BOX_SIZES.includes(size) ? t(`translations:item_size_${size}`) : '';
+  // Any case ("Large" from a direct API caller too, review minor); still nothing for an unknown size.
+  size && BOX_SIZES.includes(size.toUpperCase())
+    ? t(`translations:item_size_${size.toUpperCase()}`)
+    : '';

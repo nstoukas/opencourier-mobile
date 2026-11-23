@@ -1,4 +1,5 @@
 import moment from 'moment';
+import i18n from 'i18next';
 import { CurrentTimeWorked } from '@app/types/timeWorked';
 
 // Spec 0040: the co-op's days run midnight to midnight in this timezone, as the server counts them.
@@ -11,11 +12,12 @@ export const COUNTER_TICK_MS = 30 * 1000;
 // € per hour is shown once work time reaches a minute (AC-6).
 const MIN_SECONDS_FOR_RATE = 60;
 
-// "48 min" under an hour, "3h12" from an hour (AC-10).
+// "48 min" ("48 λ." in Greek) under an hour, "3h12" from an hour (AC-10). Row 137: the minutes are
+// worded in the app's language; they said "min" in Greek too.
 export const formatWorkDuration = (seconds: number): string => {
   const minutes = Math.max(0, Math.floor(seconds / 60));
   if (minutes < 60) {
-    return `${minutes} min`;
+    return i18n.t('translations:work_duration_minutes', { minutes });
   }
   const hours = Math.floor(minutes / 60);
   return `${hours}h${String(minutes % 60).padStart(2, '0')}`;
