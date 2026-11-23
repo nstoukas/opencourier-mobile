@@ -87,7 +87,8 @@ const styles = StyleSheet.create({
     alignSelf: 'center',
     gap: space['3'],
   },
-  // Spec 0019 (AC-5): both as tall as a thumb sized target (100 px).
+  // Both as tall as a thumb sized target (100 px): row 135, the height kept
+  // from spec 0019.
   decline: {
     flex: 1,
     height: control.offer,
