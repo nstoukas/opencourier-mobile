@@ -9,9 +9,16 @@ import {
   saveSession,
   refreshSession,
   endExpiredSession,
+  clearRiderDataOnPhone,
   onResponseError,
   installSessionRefresh,
 } from './session';
+import {
+  clearDeclineFailed,
+  isDeclineFailed,
+  markDeclineFailed,
+  offerKeyOf,
+} from './offerPush/answeredOffers';
 import { queryClient } from './queryClient';
 import { StackActions } from '@react-navigation/native';
 import { navigationRef } from '@app/navigation/navigationRef';
@@ -38,6 +45,7 @@ describe('session service (Row 66, Clause 3)', () => {
   beforeEach(async () => {
     jest.clearAllMocks();
     await AsyncStorage.clear();
+    await clearDeclineFailed();
 
     mockHttp = jest.fn() as any;
     mockHttp.defaults = {
@@ -206,6 +214,22 @@ describe('session service (Row 66, Clause 3)', () => {
       await endExpiredSession(mockHttp);
 
       expect(dispatchSpy).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('clearRiderDataOnPhone (Row 131, Point 9)', () => {
+    it('empties decline failed offers from memory and storage', async () => {
+      const key = offerKeyOf('del-clear-rider-data', '2026-11-23T10:00:00Z');
+      markDeclineFailed(key);
+      expect(isDeclineFailed(key)).toBe(true);
+      expect(
+        await AsyncStorage.getItem('decline_failed_offer_ids'),
+      ).not.toBeNull();
+
+      await clearRiderDataOnPhone(mockHttp);
+
+      expect(isDeclineFailed(key)).toBe(false);
+      expect(await AsyncStorage.getItem('decline_failed_offer_ids')).toBeNull();
     });
   });
 

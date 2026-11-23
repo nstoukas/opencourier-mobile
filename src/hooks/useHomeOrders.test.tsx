@@ -13,7 +13,11 @@ import { OFFER_HAS_ENDED_CODE } from '@app/services/orderService';
 import { AxiosError } from 'axios';
 import '@app/localization/i18n';
 import {
+  clearDeclineFailed,
+  isDeclineFailed,
   isOfferAnswered,
+  loadAnsweredOffers,
+  markDeclineFailed,
   markOfferAnswered,
   offerKeyOf,
 } from '@app/services/offerPush/answeredOffers';
@@ -123,10 +127,12 @@ describe('useHomeOrders', () => {
     return err;
   };
 
-  beforeEach(() => {
+  beforeEach(async () => {
     jest.useFakeTimers();
     jest.clearAllMocks();
     mockAnsweredSet.clear();
+    await clearDeclineFailed();
+    (loadAnsweredOffers as jest.Mock).mockResolvedValue(undefined);
     mockGetNewOrders.mockReturnValue(new Promise(() => {}));
     mockGetInProgressOrders.mockResolvedValue([]);
     mockAcceptOrder.mockResolvedValue({});
@@ -2041,6 +2047,360 @@ describe('useHomeOrders', () => {
       );
 
       invalidateSpy.mockRestore();
+      act(() => {
+        tree.unmount();
+      });
+    });
+  });
+
+  describe('Row 131: A Decline from the alert that fails is not accepted by the phone', () => {
+    // Clause 1, Clause 2, Clause 4, Point 1:
+    // With auto accept on, an offer the rider declined from alert where decline failed to send
+    // is NEVER accepted by the phone by itself, and shows as a card for rider to answer by hand
+    // (id in handAnswerIds).
+    it('with auto accept on, an offer in decline failed list is never accepted by the phone, and shows in handAnswerIds (Clause 1, Clause 2, Point 1)', async () => {
+      mockDeliverySetting = OrderSetting.auto_accept;
+      const orderId = 'order-dec-failed';
+      const offeredAt = '2026-11-23T10:00:00.000Z';
+      const testOffer: Order = {
+        id: orderId,
+        offeredAt,
+        phoneClock: { offeredAt: 100000, expiresAt: 160000 },
+      } as Order;
+
+      // Rider tapped Decline from alert, which failed to send (network down)
+      markDeclineFailed(offerKeyOf(orderId, offeredAt));
+
+      queryClient.setQueryData([QueryKeys.newOrders], [testOffer]);
+
+      let hookResult: ReturnType<typeof useHomeOrders> | undefined;
+      let tree: renderer.ReactTestRenderer;
+      await act(async () => {
+        tree = renderer.create(
+          <QueryClientProvider client={queryClient}>
+            <HookHost
+              onRender={h => {
+                hookResult = h;
+              }}
+            />
+          </QueryClientProvider>,
+        );
+      });
+
+      // Clause 1 & Clause 4: Phone NEVER accepts the offer itself
+      expect(mockAcceptOrder).not.toHaveBeenCalled();
+      // Clause 2: Handed to rider for manual answer (in handAnswerIds)
+      expect(hookResult?.handAnswerIds).toEqual([orderId]);
+      // Shown on screen as card in dataSourceNew
+      expect(hookResult?.dataSourceNew.map(o => o.id)).toEqual([orderId]);
+
+      // Later refetches / re-evaluations must still never accept it automatically
+      mockGetNewOrders.mockResolvedValueOnce([testOffer]);
+      await act(async () => {
+        await queryClient.refetchQueries({ queryKey: [QueryKeys.newOrders] });
+      });
+      expect(mockAcceptOrder).not.toHaveBeenCalled();
+      expect(hookResult?.handAnswerIds).toEqual([orderId]);
+
+      act(() => {
+        tree.unmount();
+      });
+    });
+
+    // Clause 3, Point 3:
+    // A failed Accept from the alert still ends with the order taken (the app then accepts it by itself).
+    it('with auto accept on, a failed Accept from alert still ends with the order taken by the app (Clause 3, Point 3)', async () => {
+      mockDeliverySetting = OrderSetting.auto_accept;
+      const orderId = 'order-acc-failed';
+      const offeredAt = '2026-11-23T10:05:00.000Z';
+      const testOffer: Order = {
+        id: orderId,
+        offeredAt,
+        phoneClock: { offeredAt: 100000, expiresAt: 160000 },
+      } as Order;
+
+      // Accept from alert failed: it is NOT in decline failed list, and unmarkOfferAnswered cleared it.
+      expect(isDeclineFailed(offerKeyOf(orderId, offeredAt))).toBe(false);
+
+      queryClient.setQueryData([QueryKeys.newOrders], [testOffer]);
+
+      let hookResult: ReturnType<typeof useHomeOrders> | undefined;
+      let tree: renderer.ReactTestRenderer;
+      await act(async () => {
+        tree = renderer.create(
+          <QueryClientProvider client={queryClient}>
+            <HookHost
+              onRender={h => {
+                hookResult = h;
+              }}
+            />
+          </QueryClientProvider>,
+        );
+      });
+
+      // Clause 3: The app accepts the offer by itself as before
+      expect(mockAcceptOrder).toHaveBeenCalledTimes(1);
+      expect(mockAcceptOrder).toHaveBeenCalledWith(
+        expect.objectContaining({
+          id: orderId,
+          automatic: true,
+        }),
+      );
+      expect(hookResult?.handAnswerIds).not.toContain(orderId);
+
+      act(() => {
+        tree.unmount();
+      });
+    });
+
+    // Point 6:
+    // A new offer of the same delivery (different offeredAt) is accepted as usual.
+    it('a new offer of the same delivery with a different offeredAt is accepted as usual (Point 6)', async () => {
+      mockDeliverySetting = OrderSetting.auto_accept;
+      const deliveryId = 'del-reoffered';
+      const oldOfferedAt = '2026-11-23T10:00:00.000Z';
+      const newOfferedAt = '2026-11-23T10:20:00.000Z';
+
+      // Old offer was declined from alert and failed
+      markDeclineFailed(offerKeyOf(deliveryId, oldOfferedAt));
+
+      // New offer arrives for same delivery with updated offeredAt
+      const reoffer: Order = {
+        id: deliveryId,
+        offeredAt: newOfferedAt,
+        phoneClock: { offeredAt: 200000, expiresAt: 260000 },
+      } as Order;
+
+      queryClient.setQueryData([QueryKeys.newOrders], [reoffer]);
+
+      let hookResult: ReturnType<typeof useHomeOrders> | undefined;
+      let tree: renderer.ReactTestRenderer;
+      await act(async () => {
+        tree = renderer.create(
+          <QueryClientProvider client={queryClient}>
+            <HookHost
+              onRender={h => {
+                hookResult = h;
+              }}
+            />
+          </QueryClientProvider>,
+        );
+      });
+
+      // The new offer has a different key and is auto-accepted as usual
+      expect(mockAcceptOrder).toHaveBeenCalledTimes(1);
+      expect(mockAcceptOrder).toHaveBeenCalledWith(
+        expect.objectContaining({
+          id: deliveryId,
+          automatic: true,
+        }),
+      );
+      expect(hookResult?.handAnswerIds).not.toContain(deliveryId);
+
+      act(() => {
+        tree.unmount();
+      });
+    });
+
+    // Point 7:
+    // The card can be answered by hand: Decline and Accept from Home both send for a decline failed offer.
+    it('decline-failed offer shown in Home can be declined by hand from the card (Point 7)', async () => {
+      mockDeliverySetting = OrderSetting.auto_accept;
+      const orderId = 'order-hand-decline';
+      const offeredAt = '2026-11-23T10:00:00.000Z';
+      const testOffer: Order = {
+        id: orderId,
+        offeredAt,
+        phoneClock: { offeredAt: 100000, expiresAt: 160000 },
+      } as Order;
+
+      markDeclineFailed(offerKeyOf(orderId, offeredAt));
+      queryClient.setQueryData([QueryKeys.newOrders], [testOffer]);
+
+      let hookResult: ReturnType<typeof useHomeOrders> | undefined;
+      let tree: renderer.ReactTestRenderer;
+      await act(async () => {
+        tree = renderer.create(
+          <QueryClientProvider client={queryClient}>
+            <HookHost
+              onRender={h => {
+                hookResult = h;
+              }}
+            />
+          </QueryClientProvider>,
+        );
+      });
+
+      expect(hookResult?.handAnswerIds).toEqual([orderId]);
+
+      // Rider taps Decline from Home card: declineOrder sends
+      await act(async () => {
+        hookResult?.declineOrderFn(orderId);
+      });
+      expect(mockDeclineOrder).toHaveBeenCalledTimes(1);
+      expect(mockDeclineOrder).toHaveBeenCalledWith(orderId);
+
+      act(() => {
+        tree.unmount();
+      });
+    });
+
+    it('decline-failed offer shown in Home can be accepted by hand from the card (Point 7)', async () => {
+      mockDeliverySetting = OrderSetting.auto_accept;
+      const orderId = 'order-hand-accept';
+      const offeredAt = '2026-11-23T10:00:00.000Z';
+      const testOffer: Order = {
+        id: orderId,
+        offeredAt,
+        phoneClock: { offeredAt: 100000, expiresAt: 160000 },
+      } as Order;
+
+      markDeclineFailed(offerKeyOf(orderId, offeredAt));
+      queryClient.setQueryData([QueryKeys.newOrders], [testOffer]);
+
+      let hookResult: ReturnType<typeof useHomeOrders> | undefined;
+      let tree: renderer.ReactTestRenderer;
+      await act(async () => {
+        tree = renderer.create(
+          <QueryClientProvider client={queryClient}>
+            <HookHost
+              onRender={h => {
+                hookResult = h;
+              }}
+            />
+          </QueryClientProvider>,
+        );
+      });
+
+      expect(hookResult?.handAnswerIds).toEqual([orderId]);
+
+      // Rider taps Accept from Home card: acceptOrder sends (automatic: false)
+      await act(async () => {
+        hookResult?.acceptOrderFn(orderId);
+      });
+      expect(mockAcceptOrder).toHaveBeenCalledTimes(1);
+      expect(mockAcceptOrder).toHaveBeenCalledWith(
+        expect.objectContaining({
+          id: orderId,
+          automatic: false,
+        }),
+      );
+
+      act(() => {
+        tree.unmount();
+      });
+    });
+
+    // Point 5:
+    // The gate: with storage read still pending, an auto accept rider's offer is not accepted;
+    // once it resolves, an ordinary offer is accepted and a decline failed one is not.
+    it('the gate: auto accept waits until loadAnsweredOffers resolves before accepting; then ordinary offer is accepted and decline-failed is not (Point 5)', async () => {
+      mockDeliverySetting = OrderSetting.auto_accept;
+
+      let resolveStorageLoad!: () => void;
+      const pendingStorageLoad = new Promise<void>(res => {
+        resolveStorageLoad = res;
+      });
+      // Storage read is in flight
+      (loadAnsweredOffers as jest.Mock).mockReturnValueOnce(pendingStorageLoad);
+
+      const ordId = 'order-gate-ord';
+      const decId = 'order-gate-dec';
+      const decOfferedAt = '2026-11-23T10:00:00.000Z';
+
+      const ordinaryOffer: Order = {
+        id: ordId,
+        offeredAt: '2026-11-23T10:00:00.000Z',
+        phoneClock: { offeredAt: 100000, expiresAt: 160000 },
+      } as Order;
+      const declineFailedOffer: Order = {
+        id: decId,
+        offeredAt: decOfferedAt,
+        phoneClock: { offeredAt: 100000, expiresAt: 160000 },
+      } as Order;
+
+      queryClient.setQueryData(
+        [QueryKeys.newOrders],
+        [ordinaryOffer, declineFailedOffer],
+      );
+
+      let hookResult: ReturnType<typeof useHomeOrders> | undefined;
+      let tree: renderer.ReactTestRenderer;
+      await act(async () => {
+        tree = renderer.create(
+          <QueryClientProvider client={queryClient}>
+            <HookHost
+              onRender={h => {
+                hookResult = h;
+              }}
+            />
+          </QueryClientProvider>,
+        );
+      });
+
+      // While storage load is pending (answeredLoaded false): NO offer may be auto-accepted!
+      expect(mockAcceptOrder).not.toHaveBeenCalled();
+      expect(hookResult?.handAnswerIds).toEqual([]);
+
+      // Storage finishes reading: loads decline-failed key into memory, then promise resolves
+      markDeclineFailed(offerKeyOf(decId, decOfferedAt));
+      await act(async () => {
+        resolveStorageLoad();
+      });
+
+      // Now answeredLoaded is true:
+      // Ordinary offer is auto-accepted
+      expect(mockAcceptOrder).toHaveBeenCalledTimes(1);
+      expect(mockAcceptOrder).toHaveBeenCalledWith(
+        expect.objectContaining({
+          id: ordId,
+          automatic: true,
+        }),
+      );
+      // Decline-failed offer is NOT accepted by the phone and handed to rider
+      expect(mockAcceptOrder).not.toHaveBeenCalledWith(
+        expect.objectContaining({ id: decId }),
+      );
+      expect(hookResult?.handAnswerIds).toEqual([decId]);
+
+      act(() => {
+        tree.unmount();
+      });
+    });
+
+    // Point 8:
+    // Pairs and add-ons behave as before.
+    it('pairs and add-ons behave as before (Point 8)', async () => {
+      mockDeliverySetting = OrderSetting.auto_accept;
+      const pair1 = {
+        id: 'order-pair-1',
+        offeredAt: '2026-11-23T10:00:00.000Z',
+        pairWith: 'order-pair-2',
+        phoneClock: { offeredAt: 100000, expiresAt: 160000 },
+      } as unknown as Order;
+      const pair2 = {
+        id: 'order-pair-2',
+        offeredAt: '2026-11-23T10:00:00.000Z',
+        pairWith: 'order-pair-1',
+        phoneClock: { offeredAt: 100000, expiresAt: 160000 },
+      } as unknown as Order;
+
+      queryClient.setQueryData([QueryKeys.newOrders], [pair1, pair2]);
+
+      let tree: renderer.ReactTestRenderer;
+      await act(async () => {
+        tree = renderer.create(
+          <QueryClientProvider client={queryClient}>
+            <HookHost onRender={() => undefined} />
+          </QueryClientProvider>,
+        );
+      });
+
+      // Pair is auto-accepted as before
+      expect(mockAcceptOrder).toHaveBeenCalledWith(
+        expect.objectContaining({ id: 'order-pair-1', automatic: true }),
+      );
+
       act(() => {
         tree.unmount();
       });

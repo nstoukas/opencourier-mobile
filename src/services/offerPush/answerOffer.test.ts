@@ -11,7 +11,13 @@ import { QueryKeys } from '@app/utilities/queryKeys';
 import { apiUrl } from '@app/utilities/config';
 import '@app/localization/i18n';
 import { answerOffer } from './answerOffer';
-import { loadAnsweredOffers, offerKeyOf } from './answeredOffers';
+import {
+  clearDeclineFailed,
+  isDeclineFailed,
+  isOfferAnswered,
+  loadAnsweredOffers,
+  offerKeyOf,
+} from './answeredOffers';
 
 jest.mock('axios', () => {
   const fakeAxiosClient: any = {
@@ -43,6 +49,7 @@ describe('answerOffer (spec 0003, AC-5)', () => {
   beforeEach(async () => {
     jest.clearAllMocks();
     await AsyncStorage.clear();
+    await clearDeclineFailed();
 
     mockPost.mockReset();
     mockedAxios.isAxiosError.mockImplementation(
@@ -357,6 +364,100 @@ describe('answerOffer (spec 0003, AC-5)', () => {
     const stored = await AsyncStorage.getItem('answered_offer_ids');
     const parsed = stored ? JSON.parse(stored) : [];
     expect(parsed).not.toContain(key);
+  });
+
+  describe('Row 131: alert Decline failure handling', () => {
+    it("answerOffer(offer, 'decline') with a network failure: key in decline failed list, stored under decline_failed_offer_ids, and un-marked from answered (Point 2)", async () => {
+      const offer = {
+        deliveryId: 'del-dec-fail-1',
+        offeredAt: '2026-11-23T10:00:00.000Z',
+      };
+      const key = offerKeyOf(offer.deliveryId, offer.offeredAt);
+
+      mockPost.mockRejectedValueOnce(new Error('Network Error'));
+
+      const outcome = await answerOffer(offer, 'decline');
+
+      expect(outcome).toBe('failed');
+
+      // Clause 1 & Point 2: key is recorded as decline-failed in memory and storage
+      expect(isDeclineFailed(key)).toBe(true);
+      const storedDec = await AsyncStorage.getItem('decline_failed_offer_ids');
+      expect(storedDec).not.toBeNull();
+      expect(JSON.parse(storedDec!)).toContain(key);
+
+      // Offer is un-marked from answered list so rider can answer from the app
+      expect(isOfferAnswered(key)).toBe(false);
+      const storedAns = await AsyncStorage.getItem('answered_offer_ids');
+      const parsedAns = storedAns ? JSON.parse(storedAns) : [];
+      expect(parsedAns).not.toContain(key);
+
+      // Failure notice shown and app queries refreshed
+      expect(notifee.displayNotification).toHaveBeenCalledWith(
+        expect.objectContaining({
+          id: 'offer-notice-del-dec-fail-1',
+          title: 'Could not send your answer. Open the app to try again.',
+        }),
+      );
+      expect(invalidateSpy).toHaveBeenCalledWith({
+        queryKey: [QueryKeys.newOrders],
+      });
+    });
+
+    it("answerOffer(offer, 'accept') with a network failure marks nothing in decline failed (Point 3)", async () => {
+      const offer = {
+        deliveryId: 'del-acc-fail-1',
+        offeredAt: '2026-11-23T10:05:00.000Z',
+      };
+      const key = offerKeyOf(offer.deliveryId, offer.offeredAt);
+
+      mockPost.mockRejectedValueOnce(new Error('Network Error'));
+
+      const outcome = await answerOffer(offer, 'accept');
+
+      expect(outcome).toBe('failed');
+
+      // Point 3: failed accept marks nothing in decline failed list
+      expect(isDeclineFailed(key)).toBe(false);
+      const storedDec = await AsyncStorage.getItem('decline_failed_offer_ids');
+      const parsedDec = storedDec ? JSON.parse(storedDec) : [];
+      expect(parsedDec).not.toContain(key);
+
+      // Offer is un-marked from answered list so auto-accept or manual retry can take it
+      expect(isOfferAnswered(key)).toBe(false);
+    });
+
+    it('a decline that ends with 409 (offer ended) marks nothing in decline failed (Point 4)', async () => {
+      const offer = {
+        deliveryId: 'del-dec-409-ended',
+        offeredAt: '2026-11-23T10:10:00.000Z',
+      };
+      const key = offerKeyOf(offer.deliveryId, offer.offeredAt);
+
+      const conflictError: any = new Error(
+        'Request failed with status code 409',
+      );
+      conflictError.response = {
+        status: 409,
+        data: {
+          error: true,
+          result: [
+            { code: OFFER_HAS_ENDED_CODE, message: 'This offer has ended' },
+          ],
+        },
+      };
+      mockPost.mockRejectedValueOnce(conflictError);
+
+      const outcome = await answerOffer(offer, 'decline');
+
+      expect(outcome).toBe('ended');
+
+      // Point 4: ended offer marks nothing in decline failed
+      expect(isDeclineFailed(key)).toBe(false);
+      const storedDec = await AsyncStorage.getItem('decline_failed_offer_ids');
+      const parsedDec = storedDec ? JSON.parse(storedDec) : [];
+      expect(parsedDec).not.toContain(key);
+    });
   });
 
   it('returns failed without sending if token is missing from storage', async () => {
