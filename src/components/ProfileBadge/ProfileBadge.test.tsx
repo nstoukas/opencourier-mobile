@@ -33,6 +33,7 @@ describe('ProfileBadge (spec 0018, AC-14)', () => {
 
     expect(getByText('Last Call')).toBeTruthy();
     expect(queryByText('last_call')).toBeNull();
+    expect(queryByText('last_call_tag')).toBeNull();
   });
 });
 
@@ -156,6 +157,178 @@ describe('ProfileBadge accessibility (row 134 review)', () => {
       expect(button.props.accessibilityRole).toBe('button');
       expect(button.props.accessibilityLabel).toBe('Μενού, Σε σύνδεση');
       expect(getByLabelText('Μενού, Σε σύνδεση')).toBeTruthy();
+      unmount();
+    } finally {
+      await act(async () => {
+        await i18n.changeLanguage('en');
+      });
+    }
+  });
+});
+
+describe('Last call status tag word (row 134 follow-up, 23 Nov operator decision)', () => {
+  // Pin 1: StatusWord for UserStatus.LastCall shows "Τελευταία" in el and "Last Call" in en.
+  it('StatusWord for UserStatus.LastCall shows "Τελευταία" with the language set to el and "Last Call" in en', async () => {
+    // In Greek (el): uses short tag word last_call_tag ("Τελευταία"), never the full phrase ("Τελευταία παραγγελία")
+    await act(async () => {
+      await i18n.changeLanguage('el');
+    });
+    try {
+      const { getByText, queryByText, unmount } = render(
+        <StatusWord userStatus={UserStatus.LastCall} />,
+      );
+      expect(getByText('Τελευταία')).toBeTruthy();
+      expect(queryByText('Τελευταία παραγγελία')).toBeNull();
+      expect(queryByText('last_call')).toBeNull();
+      expect(queryByText('last_call_tag')).toBeNull();
+      unmount();
+    } finally {
+      await act(async () => {
+        await i18n.changeLanguage('en');
+      });
+    }
+
+    // In English (en): shows "Last Call"
+    const { getByText, queryByText } = render(
+      <StatusWord userStatus={UserStatus.LastCall} />,
+    );
+    expect(getByText('Last Call')).toBeTruthy();
+    expect(queryByText('last_call')).toBeNull();
+    expect(queryByText('last_call_tag')).toBeNull();
+  });
+
+  // Pin 2: Online and Offline words are unchanged in both languages.
+  it('keeps Online and Offline words unchanged in Greek and English', async () => {
+    // In Greek (el): Online is "Σε σύνδεση", Offline is "Εκτός σύνδεσης"
+    await act(async () => {
+      await i18n.changeLanguage('el');
+    });
+    try {
+      const { getByText: getOnlineEl, queryByText: queryOnlineEl, unmount: unmountOnline } = render(
+        <StatusWord userStatus={UserStatus.Online} />,
+      );
+      expect(getOnlineEl('Σε σύνδεση')).toBeTruthy();
+      expect(queryOnlineEl('online')).toBeNull();
+      unmountOnline();
+
+      const { getByText: getOfflineEl, queryByText: queryOfflineEl, unmount: unmountOffline } = render(
+        <StatusWord userStatus={UserStatus.Offline} />,
+      );
+      expect(getOfflineEl('Εκτός σύνδεσης')).toBeTruthy();
+      expect(queryOfflineEl('offline')).toBeNull();
+      unmountOffline();
+    } finally {
+      await act(async () => {
+        await i18n.changeLanguage('en');
+      });
+    }
+
+    // In English (en): Online is "Online", Offline is "Offline"
+    const { getByText: getOnlineEn, queryByText: queryOnlineEn } = render(
+      <StatusWord userStatus={UserStatus.Online} />,
+    );
+    expect(getOnlineEn('Online')).toBeTruthy();
+    expect(queryOnlineEn('online')).toBeNull();
+
+    const { getByText: getOfflineEn, queryByText: queryOfflineEn } = render(
+      <StatusWord userStatus={UserStatus.Offline} />,
+    );
+    expect(getOfflineEn('Offline')).toBeTruthy();
+    expect(queryOfflineEn('offline')).toBeNull();
+  });
+
+  // Pin 3: The badge's accessibilityLabel still uses the full Last call words.
+  it("badge's accessibilityLabel still uses the full Last call words in Greek and English", async () => {
+    // In Greek (el): screen reader hears "Μενού, Τελευταία παραγγελία", never the short tag "Μενού, Τελευταία"
+    await act(async () => {
+      await i18n.changeLanguage('el');
+    });
+    try {
+      const { getByRole, getByLabelText, queryByLabelText, unmount } = render(
+        <ProfileBadge userStatus={UserStatus.LastCall} onPress={jest.fn()} />,
+      );
+      const button = getByRole('button');
+      expect(button.props.accessibilityLabel).toBe('Μενού, Τελευταία παραγγελία');
+      expect(getByLabelText('Μενού, Τελευταία παραγγελία')).toBeTruthy();
+      expect(queryByLabelText('Μενού, Τελευταία')).toBeNull();
+      unmount();
+
+      // When hideStatusWord is true (as on Home header)
+      const { getByRole: getByRoleHidden, unmount: unmountHidden } = render(
+        <ProfileBadge
+          userStatus={UserStatus.LastCall}
+          onPress={jest.fn()}
+          hideStatusWord={true}
+        />,
+      );
+      expect(getByRoleHidden('button').props.accessibilityLabel).toBe(
+        'Μενού, Τελευταία παραγγελία',
+      );
+      unmountHidden();
+    } finally {
+      await act(async () => {
+        await i18n.changeLanguage('en');
+      });
+    }
+
+    // In English (en): screen reader hears "Menu, Last Call"
+    const { getByRole, getByLabelText } = render(
+      <ProfileBadge userStatus={UserStatus.LastCall} onPress={jest.fn()} />,
+    );
+    const button = getByRole('button');
+    expect(button.props.accessibilityLabel).toBe('Menu, Last Call');
+    expect(getByLabelText('Menu, Last Call')).toBeTruthy();
+  });
+
+  // Edge / integration case: ProfileBadge displays the short tag word visually but keeps full words in accessibilityLabel
+  it('renders short tag word visually ("Τελευταία") while retaining full phrase in accessibilityLabel in Greek', async () => {
+    await act(async () => {
+      await i18n.changeLanguage('el');
+    });
+    try {
+      // ProfileBadge with default hideStatusWord=false renders both the button and child StatusWord
+      const { getByRole, getByText, queryByText, unmount } = render(
+        <ProfileBadge userStatus={UserStatus.LastCall} onPress={jest.fn()} />,
+      );
+      const button = getByRole('button');
+
+      // Visual tag word inside the badge
+      expect(getByText('Τελευταία')).toBeTruthy();
+      expect(queryByText('Τελευταία παραγγελία')).toBeNull();
+
+      // Accessibility label on the button
+      expect(button.props.accessibilityLabel).toBe('Μενού, Τελευταία παραγγελία');
+      unmount();
+    } finally {
+      await act(async () => {
+        await i18n.changeLanguage('en');
+      });
+    }
+  });
+
+  // Edge case: missing or undefined userStatus falls back to plain menu label
+  it('falls back to plain Menu label when userStatus is undefined and hideStatusWord is true', async () => {
+    const { getByRole: getByRoleEn } = render(
+      <ProfileBadge
+        userStatus={undefined as any}
+        onPress={jest.fn()}
+        hideStatusWord={true}
+      />,
+    );
+    expect(getByRoleEn('button').props.accessibilityLabel).toBe('Menu');
+
+    await act(async () => {
+      await i18n.changeLanguage('el');
+    });
+    try {
+      const { getByRole: getByRoleEl, unmount } = render(
+        <ProfileBadge
+          userStatus={undefined as any}
+          onPress={jest.fn()}
+          hideStatusWord={true}
+        />,
+      );
+      expect(getByRoleEl('button').props.accessibilityLabel).toBe('Μενού');
       unmount();
     } finally {
       await act(async () => {
