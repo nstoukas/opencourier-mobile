@@ -381,6 +381,8 @@ describe('useHomeOrders', () => {
       expect(mockAnnounceAutoAccept).toHaveBeenCalledWith(
         'order-auto-1',
         'Souvlaki Palace',
+        // Not a pair (decision 128.0)
+        false,
       );
 
       act(() => {
@@ -413,6 +415,8 @@ describe('useHomeOrders', () => {
       expect(mockAnnounceAutoAccept).toHaveBeenCalledWith(
         'order-auto-no-name',
         'a new order',
+        // Not a pair (decision 128.0)
+        false,
       );
 
       act(() => {

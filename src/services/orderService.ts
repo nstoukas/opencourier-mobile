@@ -79,8 +79,8 @@ export type AcceptOrderParams = {
 };
 
 // Spec 0048: the server's own sentence on a refused answer to a stack (a 409
-// whose message says what happened: one order of the pair changed first, or a
-// pair is never accepted automatically). null when there is none.
+// whose message says what happened, such as one order of the pair changed
+// first). null when there is none.
 export const serverSentenceOf = (error: unknown): string | null => {
   if (!axios.isAxiosError(error) || error.response?.status !== 409) {
     return null;

@@ -184,8 +184,9 @@ export const showOfferAlert = async (
   // Spec 0048 (cross check 11, AC-8): two orders offered together. The push
   // carries only the first order's figures, so the alert names no pay and has
   // no Accept or Decline: a tap opens the app, whose home card shows both
-  // orders and their stops. Taking two orders blind from a lock screen would
-  // be as unchecked as the phone taking them by itself.
+  // orders and their stops. For a rider on auto accept it behaves as a single
+  // order's alert does: the app takes the pair the moment it sees it and the
+  // alert stops (useHomeOrders, decision 128.0).
   const isStack = !!offer.partnerDeliveryId;
   // Row 81: an add on is answered in the app too, where its card shows what it
   // adds to the job and the stops (the push carries neither); the alert says

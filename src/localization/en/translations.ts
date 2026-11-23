@@ -717,6 +717,7 @@ export default {
   hand_back_failed: 'Could not hand the order back. Try again.',
   auto_accepted_channel: 'Orders accepted automatically',
   auto_accepted_title: 'Order accepted automatically: {{restaurant}}',
+  auto_accepted_pair_title: 'Two orders accepted automatically: {{restaurant}}',
   auto_accepted_no_name: 'a new order',
   hand_back_not_yours: 'This order is no longer yours. Check your jobs.',
   // Spec 0021: the one stop job card, its footer and its sheets.

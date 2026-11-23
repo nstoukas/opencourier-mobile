@@ -175,7 +175,7 @@ export const useHomeOrders = () => {
   };
 
   // Spec 0048 (AC-5): a stack's answer was refused because one of its two
-  // orders changed first (or a pair was sent as automatic). Nothing was
+  // orders changed first. Nothing was
   // accepted or declined: both come back to the rider, the server's own
   // sentence says what happened, and the list is fetched again.
   const refusedStackAnswer = (
@@ -223,10 +223,12 @@ export const useHomeOrders = () => {
       }
       // The phone took this order by itself: say so, with its own sound, once
       // (spec 0020, AC-12). A tapped accept plays nothing new.
+      // A pair (decision 128.0) says it is two orders.
       if (automatic) {
         announceAutoAccept(
           orderId,
           restaurantName || i18next.t('translations:auto_accepted_no_name'),
+          !!partnerId,
         );
       }
       refetchNew();
@@ -427,6 +429,45 @@ export const useHomeOrders = () => {
 
   const autoAccept = user?.deliverySetting === OrderSetting.auto_accept;
 
+  // Decision 128.0: the phone takes a stack for an auto accept rider, once,
+  // when it has both orders (the server takes both on the one call, and the
+  // phone marks both dispatched). Half a pair waits for the next fetch. The
+  // second order of the pair finds itself claimed and sends nothing. A failed
+  // accept puts both back on home for the rider (refusedStackAnswer), and the
+  // phone does not try again by itself, as for a single order.
+  const autoAcceptStack = (order: Order, offers: Order[]) => {
+    const partner = offers.find(
+      other =>
+        other.id !== order.id && other.offerGroupId === order.offerGroupId,
+    );
+    if (
+      !partner ||
+      answeredFromAlert(order.id) ||
+      answeredFromAlert(partner.id) ||
+      !countdowns.isOpen(partner.id) ||
+      !countdowns.claimForAutoAccept(order.id)
+    ) {
+      return;
+    }
+    if (!countdowns.claimForAutoAccept(partner.id)) {
+      countdowns.release(order.id);
+      return;
+    }
+    answerHere(order.id);
+    answerHere(partner.id);
+    // Both restaurants in the notice, once each (two orders from one
+    // restaurant name it once).
+    const names = [restaurantNameOf(order), restaurantNameOf(partner)].filter(
+      (name, index, all) => name !== '' && all.indexOf(name) === index,
+    );
+    acceptOrder({
+      id: order.id,
+      automatic: true,
+      restaurantName: names.join(' · '),
+      partnerId: partner.id,
+    });
+  };
+
   useEffect(() => {
     const offers = newOrdersRef.current;
     if (offers !== undefined) {
@@ -439,11 +480,17 @@ export const useHomeOrders = () => {
       // rider's behalf.
       if (autoAccept && !sosSharingRef.current) {
         for (const order of offers) {
-          // Spec 0048 (AC-8): a stack is never accepted by the phone: the
-          // rider must see both orders and check both bags fit. Nor is an add
-          // on (row 81): the rider must see what it adds to the job they are
-          // on. Both stay offers on home, even for a rider on auto accept.
-          if (order.offerGroupId || order.addOn) {
+          // Row 81 (spec 0048, AC-8): an add on is never accepted by the
+          // phone: the rider must see what it adds to the job they are on. It
+          // stays an offer on home, even for a rider on auto accept.
+          if (order.addOn) {
+            continue;
+          }
+          // Decision 128.0 (AC-8 as amended): a stack is taken like a single
+          // order, by one call naming both. The server checked the box and
+          // the limit of two when it offered the pair.
+          if (order.offerGroupId) {
+            autoAcceptStack(order, offers);
             continue;
           }
           if (
@@ -480,10 +527,11 @@ export const useHomeOrders = () => {
       const key = offerKeyOf(order.id, order.offeredAt);
       if (!rungForRef.current.has(key)) {
         rungForRef.current.add(key);
-        // Spec 0048: a stack rings even for a rider on auto accept, who must
-        // answer it by hand; so does an add on (row 81). One sound, never
-        // repeated: that is also all a calm add on gets (cross check 2).
-        if (!autoAccept || order.offerGroupId || order.addOn) {
+        // Row 81: an add on rings even for a rider on auto accept, who must
+        // answer it by hand. One sound, never repeated: that is also all a
+        // calm add on gets (cross check 2). A stack is taken by the phone
+        // like a single order since decision 128.0, so it does not ring.
+        if (!autoAccept || order.addOn) {
           anyNew = true;
         }
       }

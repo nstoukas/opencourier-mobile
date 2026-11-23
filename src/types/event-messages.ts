@@ -77,6 +77,11 @@ export const EVENT_MESSAGE_CODES = {
   ACCEPTED: ['courierId', 'deliveryId'],
   ACCEPTED_AUTOMATICALLY: ['courierId', 'deliveryId'],
   ACCEPTED_TOGETHER: ['courierId', 'deliveryId', 'otherDeliveryId'],
+  ACCEPTED_TOGETHER_AUTOMATICALLY: [
+    'courierId',
+    'deliveryId',
+    'otherDeliveryId',
+  ],
   ACCEPTED_BY_SWEEP: ['courierId', 'deliveryId'],
   REJECTED: ['courierId', 'deliveryId'],
   REJECTED_TOGETHER: ['courierId', 'deliveryId', 'otherDeliveryId'],

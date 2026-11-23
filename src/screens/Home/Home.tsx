@@ -221,17 +221,17 @@ export const HomeScreen = ({ navigation }: Props) => {
   const ownPosition = locationPermission ? storedOwnPosition : null;
 
   // AC-8: offers first, then jobs. Riders on auto accept never see an offer
-  // card: their offers are claimed on arrival and come back as jobs. A stack
-  // is the exception (spec 0048, AC-8): the phone never takes two orders by
-  // itself, so it shows to every rider. A stack's two orders share one card.
-  // Row 81: so does an add on, one more order offered while on a job; its card
-  // holds the job too (attachAddOnJobs), for the stops and both orders' pay.
+  // card: their offers are claimed on arrival and come back as jobs, a stack's
+  // two orders included (decision 128.0). An add on is the exception (row 81,
+  // spec 0048 AC-8): the phone never takes it by itself, so it shows to every
+  // rider; its card holds the job too (attachAddOnJobs), for the stops and
+  // both orders' pay. A stack's two orders share one card.
   const items = useMemo<CardItem[]>(
     () => [
       ...attachAddOnJobs(
         groupOffers(
           autoAcceptOrders
-            ? dataSourceNew.filter(order => order.offerGroupId || order.addOn)
+            ? dataSourceNew.filter(order => order.addOn)
             : dataSourceNew,
         ),
         dataSourceInProgress,

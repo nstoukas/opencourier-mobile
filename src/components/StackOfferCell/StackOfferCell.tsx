@@ -40,8 +40,8 @@ type Props = {
 // One card for the pair: the total and each order's own pay (each is paid in
 // full, binding value 3), the ride through all four stops, the stops in their
 // order (numbered as on the map), and one Accept and one Decline acting on
-// both. Never accepted by the phone itself (AC-8), so it shows even to a rider
-// on auto accept.
+// both. A rider on auto accept never sees it: the phone takes the pair as it
+// takes a single order (decision 128.0).
 export const StackOfferCell = ({
   order,
   partner,

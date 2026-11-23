@@ -40,9 +40,12 @@ const ensureAutoAcceptedChannel = async () => {
 
 // One notice per accepted offer: its id is the delivery id, so a repeat for
 // the same delivery replaces it rather than ringing twice in the tray.
+// `pair` (decision 128.0): the phone took two orders offered together, so the
+// notice says two, naming both restaurants in `restaurantName`.
 export const announceAutoAccept = async (
   deliveryId: string,
   restaurantName: string,
+  pair = false,
 ): Promise<void> => {
   try {
     await ensureAutoAcceptedChannel();
@@ -50,9 +53,14 @@ export const announceAutoAccept = async (
       id: `auto-accepted-${deliveryId}`,
       // The restaurant's name is outside text: escaped on Android (row 105).
       title: notificationText(
-        i18next.t('translations:auto_accepted_title', {
-          restaurant: restaurantName,
-        }),
+        i18next.t(
+          pair
+            ? 'translations:auto_accepted_pair_title'
+            : 'translations:auto_accepted_title',
+          {
+            restaurant: restaurantName,
+          },
+        ),
       ),
       android: {
         channelId: AUTO_ACCEPTED_CHANNEL_ID,

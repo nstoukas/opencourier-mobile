@@ -872,16 +872,16 @@ describe('HomeScreen (spec 0018, AC-5 to AC-15)', () => {
       unmount();
     });
 
-    it('AC-8: displays stacked offer card even when user is on auto_accept', () => {
+    it('AC-8 (decision 128.0): a rider on auto accept sees no stacked offer card', () => {
       mockUser!.deliverySetting = OrderSetting.auto_accept;
       mockHomeOrders.dataSourceNew = [stackOfferA, stackOfferB];
       mockHomeOrders.dataSourceInProgress = [];
       mockHomeOrders.serverInProgress = [];
 
-      const { UNSAFE_getByType, unmount } = renderHome();
+      const { UNSAFE_queryByType, unmount } = renderHome();
 
-      // On auto accept: single offers are claimed on arrival, but stacks must show to the rider
-      expect(UNSAFE_getByType(StackOfferCell)).toBeTruthy();
+      // On auto accept the phone takes a pair on arrival, as it takes a single offer
+      expect(UNSAFE_queryByType(StackOfferCell)).toBeNull();
       unmount();
     });
 

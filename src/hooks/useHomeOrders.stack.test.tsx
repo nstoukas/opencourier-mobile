@@ -87,7 +87,7 @@ function HookHost({
   return null;
 }
 
-describe('useHomeOrders.stack (spec 0048, row 80, AC-5, AC-8)', () => {
+describe('useHomeOrders.stack (spec 0048, row 80, AC-5, AC-8 as amended by decision 128.0)', () => {
   let queryClient: QueryClient;
   let alertSpy: jest.SpyInstance;
 
@@ -147,8 +147,8 @@ describe('useHomeOrders.stack (spec 0048, row 80, AC-5, AC-8)', () => {
     jest.useRealTimers();
   });
 
-  describe('AC-8: Auto-accept skips stacked orders', () => {
-    it('does NOT automatically accept offers that have an offerGroupId', async () => {
+  describe('AC-8 (decision 128.0): Auto-accept takes stacked orders as a pair', () => {
+    it('automatically accepts a stack once, naming both orders, and hides both', async () => {
       mockDeliverySetting = OrderSetting.auto_accept;
       queryClient.setQueryData(
         [QueryKeys.newOrders],
@@ -169,21 +169,23 @@ describe('useHomeOrders.stack (spec 0048, row 80, AC-5, AC-8)', () => {
         );
       });
 
-      // The stack was NOT auto-accepted
-      expect(mockAcceptOrder).not.toHaveBeenCalled();
+      // One accept for the pair, marked automatic, carrying the other order
+      expect(mockAcceptOrder).toHaveBeenCalledTimes(1);
+      expect(mockAcceptOrder).toHaveBeenCalledWith({
+        id: 'stack-1',
+        automatic: true,
+        partnerId: 'stack-2',
+      });
 
-      // But both orders remain visible in dataSourceNew
-      expect(hookResult?.dataSourceNew.map(o => o.id)).toEqual([
-        'stack-1',
-        'stack-2',
-      ]);
+      // Neither order is left on the offers list
+      expect(hookResult?.dataSourceNew).toEqual([]);
 
       act(() => {
         tree.unmount();
       });
     });
 
-    it('plays offer sound for stacked orders even when auto_accept is enabled', async () => {
+    it('does not play the offer sound for a stack when auto_accept is enabled', async () => {
       mockDeliverySetting = OrderSetting.auto_accept;
       queryClient.setQueryData(
         [QueryKeys.newOrders],
@@ -201,15 +203,15 @@ describe('useHomeOrders.stack (spec 0048, row 80, AC-5, AC-8)', () => {
         await Promise.resolve();
       });
 
-      // A stack rings even for auto-accept rider, who must answer by hand
-      expect(mockPlayOfferSound).toHaveBeenCalledTimes(1);
+      // The phone takes the pair, as it takes a single offer: no ring
+      expect(mockPlayOfferSound).not.toHaveBeenCalled();
 
       act(() => {
         tree.unmount();
       });
     });
 
-    it('auto-accepts single order while skipping stacked order in the same fetch', async () => {
+    it('auto-accepts a single order and a stacked pair in the same fetch', async () => {
       mockDeliverySetting = OrderSetting.auto_accept;
       const singleOffer: Order = {
         id: 'single-1',
@@ -231,11 +233,16 @@ describe('useHomeOrders.stack (spec 0048, row 80, AC-5, AC-8)', () => {
         );
       });
 
-      // Single offer was accepted automatically
-      expect(mockAcceptOrder).toHaveBeenCalledTimes(1);
+      // The single offer, then the pair in one call
+      expect(mockAcceptOrder).toHaveBeenCalledTimes(2);
       expect(mockAcceptOrder).toHaveBeenCalledWith({
         id: 'single-1',
         automatic: true,
+      });
+      expect(mockAcceptOrder).toHaveBeenCalledWith({
+        id: 'stack-1',
+        automatic: true,
+        partnerId: 'stack-2',
       });
 
       act(() => {
