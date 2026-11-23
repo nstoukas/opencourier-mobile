@@ -180,7 +180,10 @@ const ButtonSwipe: FunctionComponent<Props> = ({
             {subtitle !== '' && (
               <Animated.Text
                 style={[styles.swipeTextSubtitle, AnimatedStyles.swipeText]}
-                numberOfLines={2}
+                // A standard 48 px swipe has room for one line under the
+                // title (a second one was cut by its edge in Greek, the
+                // screenshot tour, 23 Nov); only a taller swipe takes two.
+                numberOfLines={height > BUTTON_HEIGHT ? 2 : 1}
                 adjustsFontSizeToFit
                 minimumFontScale={0.7}>
                 {subtitle}

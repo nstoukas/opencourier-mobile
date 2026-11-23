@@ -12,6 +12,7 @@ import { Images } from '@app/utilities/images';
 import { styles } from './ProfileBadge.styles';
 import { UserStatus } from '@app/types/types';
 import { Colors } from '@app/styles/colors';
+import { color } from '@app/styles/theme';
 import { hitSlopFor } from '@app/utilities/touch';
 
 type Props = {
@@ -36,6 +37,13 @@ const statusColor = (userStatus: UserStatus) => {
   }
 };
 
+// The word's colour on that tag: white on green and red, ink on the pale
+// yellow, which white is unreadable on (design system: warning takes ink text).
+const statusTextColor = (userStatus: UserStatus) =>
+  userStatus === UserStatus.LastCall
+    ? color['warning-foreground']
+    : Colors.white;
+
 // The status word on its coloured tag: Online, Last call or Offline.
 // Up to two lines, centred, so a long Greek word wraps instead of being cut.
 export const StatusWord = ({
@@ -54,7 +62,9 @@ export const StatusWord = ({
         style,
       ]}
       testID="status-word">
-      <Text style={styles.textStatus} numberOfLines={2}>
+      <Text
+        style={[styles.textStatus, { color: statusTextColor(userStatus) }]}
+        numberOfLines={2}>
         {/* 'online', 'offline' and 'last_call' are translation keys: the
             rider reads Online, Offline or Last Call, never the raw value. */}
         {t(`translations:${userStatus.toLowerCase()}`)}
