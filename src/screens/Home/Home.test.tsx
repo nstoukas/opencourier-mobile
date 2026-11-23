@@ -5,6 +5,7 @@ import {
   act,
   fireEvent,
   cleanup,
+  within,
   waitFor,
 } from '@testing-library/react-native';
 import { NavigationContainer } from '@react-navigation/native';
@@ -24,6 +25,7 @@ import { RouteMap } from '@app/components/RouteMap/RouteMap';
 import { HomeTopSlot } from '@app/components/HomeTopSlot/HomeTopSlot';
 import { HomeCard } from '@app/components/HomeCard/HomeCard';
 import { JobFooter } from '@app/components/JobFooter/JobFooter';
+import { JobActionsButton } from '@app/components/JobActionsButton/JobActionsButton';
 import ButtonSwipe from '@app/components/ButtonSwipe/ButtonSwipe';
 import { DispatchStopBanner } from '@app/components/DispatchStopBanner/DispatchStopBanner';
 import { CancelledJobCard } from '@app/components/CancelledJobCard/CancelledJobCard';
@@ -593,7 +595,7 @@ describe('HomeScreen (spec 0018, AC-5 to AC-15)', () => {
     it('wires onCallDispatch when dispatchPhoneNumber is set', async () => {
       const { UNSAFE_getByType } = renderHome();
 
-      const footer = UNSAFE_getByType(JobFooter);
+      const footer = UNSAFE_getByType(JobActionsButton);
       expect(footer.props.onCallDispatch).toBeDefined();
 
       await act(async () => {
@@ -605,7 +607,7 @@ describe('HomeScreen (spec 0018, AC-5 to AC-15)', () => {
     it('wires onReportProduct to navigate to ReportProduct screen with the order (spec 0032, AC-9)', async () => {
       const { UNSAFE_getByType } = renderHome();
 
-      const footer = UNSAFE_getByType(JobFooter);
+      const footer = UNSAFE_getByType(JobActionsButton);
       expect(footer.props.onReportProduct).toBeDefined();
 
       await act(async () => {
@@ -619,7 +621,7 @@ describe('HomeScreen (spec 0018, AC-5 to AC-15)', () => {
     it('wires onReportIssue to navigate to ReportIssue screen with the order', async () => {
       const { UNSAFE_getByType } = renderHome();
 
-      const footer = UNSAFE_getByType(JobFooter);
+      const footer = UNSAFE_getByType(JobActionsButton);
       expect(footer.props.onReportIssue).toBeDefined();
 
       await act(async () => {
@@ -630,12 +632,80 @@ describe('HomeScreen (spec 0018, AC-5 to AC-15)', () => {
       });
     });
 
-    it('wires onLeaveWait and leavingWait to JobFooter (spec 0033, AC-6)', () => {
+    it('wires onLeaveWait and leavingWait to the ⋯ button, and leavingWait to JobFooter (spec 0033, AC-6)', () => {
       const { UNSAFE_getByType } = renderHome();
 
-      const footer = UNSAFE_getByType(JobFooter);
+      const footer = UNSAFE_getByType(JobActionsButton);
       expect(footer.props.onLeaveWait).toBeDefined();
       expect(footer.props.leavingWait).toBe(false);
+      // The swipe still waits while a leave is on its way.
+      expect(UNSAFE_getByType(JobFooter).props.leavingWait).toBe(false);
+    });
+
+    it('wires the hand back and the split to the ⋯ button (spec 0020, spec 0047)', async () => {
+      const { UNSAFE_getByType } = renderHome();
+
+      const actions = UNSAFE_getByType(JobActionsButton);
+      expect(typeof actions.props.onHandBack).toBe('function');
+      expect(actions.props.handingBack).toBe(false);
+      expect(typeof actions.props.onLeaveSplit).toBe('function');
+      expect(actions.props.splitBusy).toBe(false);
+
+      await act(async () => {
+        actions.props.onRequestSplit!(mockJob);
+      });
+      expect(mockNav.navigate).toHaveBeenCalledWith(MainScreens.RequestSplit, {
+        order: mockJob,
+      });
+    });
+
+    // Row 138: the actions sit behind one ⋯ button on the card, beside the address;
+    // the footer under the card keeps the swipe only.
+    it('draws the ⋯ button for the shown job inside the job card, and gives the footer no action', () => {
+      const { UNSAFE_getByType, getByTestId, queryByTestId } = renderHome();
+
+      const cell = UNSAFE_getByType(InProgressCell);
+      expect(cell.props.actionsButton).toBeTruthy();
+      expect(cell.props.actionsButton.type).toBe(JobActionsButton);
+      expect(UNSAFE_getByType(JobActionsButton).props.order.id).toBe(
+        cell.props.order.id,
+      );
+      expect(getByTestId('job-actions-button')).toBeTruthy();
+      // Closed until tapped: no action is on screen.
+      expect(queryByTestId('job-actions-sheet')).toBeNull();
+      expect(queryByTestId(/^job-action-/)).toBeNull();
+
+      const footer = UNSAFE_getByType(JobFooter);
+      expect(Object.keys(footer.props).sort()).toEqual([
+        'leavingWait',
+        'order',
+      ]);
+      expect(
+        within(getByTestId('job-footer')).queryByTestId('job-actions-button'),
+      ).toBeNull();
+    });
+
+    it('a tap on ⋯ opens the sheet, and choosing Report a problem opens the report and closes it', async () => {
+      const { getByTestId, queryByTestId } = renderHome();
+
+      fireEvent.press(getByTestId('job-actions-button'));
+      const sheet = getByTestId('job-actions-sheet');
+      expect(
+        within(sheet).getByText(i18n.t('translations:job_actions_title')),
+      ).toBeTruthy();
+
+      await act(async () => {
+        fireEvent.press(
+          within(getByTestId('job-action-report')).getByText(
+            i18n.t('translations:report_issue'),
+          ),
+        );
+      });
+
+      expect(mockNav.navigate).toHaveBeenCalledWith(MainScreens.ReportIssue, {
+        order: expect.objectContaining({ id: mockJob.id }),
+      });
+      expect(queryByTestId('job-actions-sheet')).toBeNull();
     });
 
     it('shows preset messages via ActionSheet for onTextCustomer', async () => {

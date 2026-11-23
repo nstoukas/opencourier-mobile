@@ -7,6 +7,7 @@ import { HomeScreen } from './Home';
 import { Order, User, UserStatus } from '@app/types/types';
 import { OrderSetting, OrderStatus } from '@app/types/enums';
 import { JobFooter } from '@app/components/JobFooter/JobFooter';
+import { JobActionsButton } from '@app/components/JobActionsButton/JobActionsButton';
 import { DrawerScreens } from '@app/navigation/drawer/types';
 import { MainScreens } from '@app/navigation/main/types';
 import { useChatUnseen } from '@app/hooks/useChat';
@@ -141,14 +142,14 @@ describe('HomeScreen chat wiring (spec 0034, AC-12)', () => {
     return currentRender;
   };
 
-  it('wires onOpenChat on JobFooter to navigate to MainScreens.Chat with { deliveryId, orderReference } of that job', async () => {
+  it('wires onOpenChat on the job’s ⋯ button to navigate to MainScreens.Chat with { deliveryId, orderReference } of that job', async () => {
     const { UNSAFE_getByType } = renderHome();
 
-    const footer = UNSAFE_getByType(JobFooter);
-    expect(footer.props.onOpenChat).toBeDefined();
+    const actions = UNSAFE_getByType(JobActionsButton);
+    expect(actions.props.onOpenChat).toBeDefined();
 
     await act(async () => {
-      footer.props.onOpenChat!(mockJob);
+      actions.props.onOpenChat!(mockJob);
     });
 
     expect(mockNav.navigate).toHaveBeenCalledWith(MainScreens.Chat, {
@@ -164,9 +165,9 @@ describe('HomeScreen chat wiring (spec 0034, AC-12)', () => {
     };
     const { UNSAFE_getByType } = renderHome();
 
-    const footer = UNSAFE_getByType(JobFooter);
+    const actions = UNSAFE_getByType(JobActionsButton);
     await act(async () => {
-      footer.props.onOpenChat!(jobWithNullRef);
+      actions.props.onOpenChat!(jobWithNullRef);
     });
 
     expect(mockNav.navigate).toHaveBeenCalledWith(MainScreens.Chat, {
@@ -175,11 +176,26 @@ describe('HomeScreen chat wiring (spec 0034, AC-12)', () => {
     });
   });
 
-  it('passes chatUnseen from useChatUnseen to JobFooter', () => {
+  it('passes chatUnseen from useChatUnseen to the job’s ⋯ button, which shows its dot', () => {
     (useChatUnseen as jest.Mock).mockReturnValue(true);
-    const { UNSAFE_getByType } = renderHome();
+    const { UNSAFE_getByType, getByTestId } = renderHome();
+
+    const actions = UNSAFE_getByType(JobActionsButton);
+    expect(actions.props.chatUnseen).toBe(true);
+    expect(actions.props.order.id).toBe('del-job-chat-1');
+    expect(getByTestId('job-actions-button-dot')).toBeTruthy();
+  });
+
+  it('with nothing unread the ⋯ button has no dot, and the footer takes no chat props (row 138)', () => {
+    (useChatUnseen as jest.Mock).mockReturnValue(false);
+    const { UNSAFE_getByType, getByTestId, queryByTestId } = renderHome();
+
+    expect(UNSAFE_getByType(JobActionsButton).props.chatUnseen).toBe(false);
+    expect(getByTestId('job-actions-button')).toBeTruthy();
+    expect(queryByTestId('job-actions-button-dot')).toBeNull();
 
     const footer = UNSAFE_getByType(JobFooter);
-    expect(footer.props.chatUnseen).toBe(true);
+    expect(footer.props.onOpenChat).toBeUndefined();
+    expect(footer.props.chatUnseen).toBeUndefined();
   });
 });

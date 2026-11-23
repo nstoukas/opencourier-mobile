@@ -60,7 +60,7 @@ describe('the Picked up swipe never waits on the checklist (spec 0028)', () => {
     const { getByText, UNSAFE_getByType } = render(
       <View>
         <InProgressCell order={order} {...noop} />
-        <JobFooter order={order} onReportIssue={jest.fn()} />
+        <JobFooter order={order} />
       </View>,
     );
 
@@ -84,7 +84,7 @@ describe('the Picked up swipe never waits on the checklist (spec 0028)', () => {
     const { getByTestId, UNSAFE_getByType } = render(
       <View>
         <InProgressCell order={order} {...noop} />
-        <JobFooter order={order} onReportIssue={jest.fn()} />
+        <JobFooter order={order} />
       </View>,
     );
 

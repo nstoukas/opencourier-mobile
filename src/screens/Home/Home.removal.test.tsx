@@ -6,7 +6,7 @@ import '@app/localization/i18n';
 import { HomeScreen } from './Home';
 import { Order, User, UserStatus } from '@app/types/types';
 import { OrderSetting, OrderStatus } from '@app/types/enums';
-import { JobFooter } from '@app/components/JobFooter/JobFooter';
+import { JobActionsButton } from '@app/components/JobActionsButton/JobActionsButton';
 import { RemovalNotices } from '@app/components/RemovalNotices/RemovalNotices';
 import { DrawerScreens } from '@app/navigation/drawer/types';
 import { MainScreens } from '@app/navigation/main/types';
@@ -161,10 +161,10 @@ describe('HomeScreen removal wiring (spec 0035, AC-3, AC-5, AC-11, decision 24.2
       </QueryClientProvider>,
     );
 
-  it("wires JobFooter's onRequestRemoval to navigate to MainScreens.RequestRemoval with { order }", async () => {
+  it("wires the job’s ⋯ button's onRequestRemoval to navigate to MainScreens.RequestRemoval with { order }", async () => {
     const { UNSAFE_getByType } = renderHome();
 
-    const footer = UNSAFE_getByType(JobFooter);
+    const footer = UNSAFE_getByType(JobActionsButton);
     expect(footer.props.onRequestRemoval).toBeDefined();
 
     await act(async () => {
@@ -176,14 +176,14 @@ describe('HomeScreen removal wiring (spec 0035, AC-3, AC-5, AC-11, decision 24.2
     });
   });
 
-  it("wires JobFooter's onWithdrawRemoval to the hook's function", () => {
+  it("wires the job’s ⋯ button's onWithdrawRemoval to the hook's function", () => {
     const { UNSAFE_getByType } = renderHome();
 
-    const footer = UNSAFE_getByType(JobFooter);
+    const footer = UNSAFE_getByType(JobActionsButton);
     expect(footer.props.onWithdrawRemoval).toBe(mockWithdrawFn);
   });
 
-  it('sets removalBusy to true on JobFooter when useRemovalBusy is true for the shown job, and false when false', () => {
+  it('sets removalBusy to true on the job’s ⋯ button when useRemovalBusy is true for the shown job, and false when false', () => {
     (useRemovalBusy as jest.Mock).mockImplementation(
       (deliveryId: string | undefined) =>
         deliveryId === 'delivery-job-removal-wiring',
@@ -191,7 +191,7 @@ describe('HomeScreen removal wiring (spec 0035, AC-3, AC-5, AC-11, decision 24.2
 
     const { UNSAFE_getByType, rerender } = renderHome();
 
-    let footer = UNSAFE_getByType(JobFooter);
+    let footer = UNSAFE_getByType(JobActionsButton);
     expect(footer.props.removalBusy).toBe(true);
     expect(useRemovalBusy).toHaveBeenCalledWith('delivery-job-removal-wiring');
 
@@ -205,7 +205,7 @@ describe('HomeScreen removal wiring (spec 0035, AC-3, AC-5, AC-11, decision 24.2
       </QueryClientProvider>,
     );
 
-    footer = UNSAFE_getByType(JobFooter);
+    footer = UNSAFE_getByType(JobActionsButton);
     expect(footer.props.removalBusy).toBe(false);
   });
 

@@ -14,8 +14,9 @@ jest.mock('@app/hooks/useOrder', () => () => ({
   delivered: jest.fn().mockResolvedValue(true),
 }));
 
-// Spec 0047 (row 11): what the job card shows for a split at pickup.
-describe('JobFooter split at pickup (spec 0047, AC-1, AC-2, AC-7, AC-8)', () => {
+// Spec 0047 (row 11): what the footer says about a split at pickup. When "Doesn't fit one
+// box" and Leave are offered moved behind the ⋯ button with row 138: see `useJobActions.test.tsx`.
+describe('JobFooter split at pickup (spec 0047, AC-2, AC-7)', () => {
   // The phone's clock in these tests; the request was flagged 3 min 5 s before it.
   const NOW = 1_800_000_000_000;
   const FLAGGED_ON_PHONE = NOW - (3 * 60 + 5) * 1000;
@@ -61,18 +62,7 @@ describe('JobFooter split at pickup (spec 0047, AC-1, AC-2, AC-7, AC-8)', () => 
     return `${two(date.getHours())}:${two(date.getMinutes())}`;
   };
 
-  const footer = (
-    order: Order,
-    props: Partial<React.ComponentProps<typeof JobFooter>> = {},
-  ) => (
-    <JobFooter
-      order={order}
-      onReportIssue={jest.fn()}
-      onRequestSplit={jest.fn()}
-      onLeaveSplit={jest.fn()}
-      {...props}
-    />
-  );
+  const footer = (order: Order) => <JobFooter order={order} />;
 
   let alertSpy: jest.SpyInstance;
 
@@ -85,61 +75,6 @@ describe('JobFooter split at pickup (spec 0047, AC-1, AC-2, AC-7, AC-8)', () => 
   afterEach(() => {
     alertSpy.mockRestore();
     jest.useRealTimers();
-  });
-
-  describe('"Doesn\'t fit one box" (AC-1: at the restaurant only)', () => {
-    it('is offered at the restaurant and opens the proposal for this order', () => {
-      const onRequestSplit = jest.fn();
-      const order = atRestaurant();
-      const { getByTestId, getByText } = render(
-        footer(order, { onRequestSplit }),
-      );
-
-      expect(getByText("Doesn't fit one box")).toBeTruthy();
-      fireEvent.press(getByTestId('job-action-request-split'));
-
-      expect(onRequestSplit).toHaveBeenCalledTimes(1);
-      expect(onRequestSplit).toHaveBeenCalledWith(order);
-    });
-
-    it.each([
-      OrderStatus.accepted,
-      OrderStatus.dispatched,
-      OrderStatus.picked_up,
-      OrderStatus.on_the_way,
-      OrderStatus.courier_arrived_at_dropoff_location,
-      OrderStatus.dropped_off,
-      OrderStatus.canceled,
-    ])('is not offered in status %s', status => {
-      const { queryByTestId } = render(footer(atRestaurant({ status })));
-      expect(queryByTestId('job-action-request-split')).toBeNull();
-    });
-
-    it('is not offered while a request is already waiting for dispatch', () => {
-      const { queryByTestId } = render(footer(waiting()));
-      expect(queryByTestId('job-action-request-split')).toBeNull();
-    });
-
-    it('is not offered while a step of this job still waits to be sent', () => {
-      const { queryByTestId } = render(
-        footer(atRestaurant({ waitingToSend: true })),
-      );
-      expect(queryByTestId('job-action-request-split')).toBeNull();
-    });
-
-    it('is not offered while a send is on its way (a second tap cannot send twice)', () => {
-      const { queryByTestId } = render(
-        footer(atRestaurant(), { splitBusy: true }),
-      );
-      expect(queryByTestId('job-action-request-split')).toBeNull();
-    });
-
-    it('is not drawn when the screen gave no handler for it', () => {
-      const { queryByTestId } = render(
-        <JobFooter order={atRestaurant()} onReportIssue={jest.fn()} />,
-      );
-      expect(queryByTestId('job-action-request-split')).toBeNull();
-    });
   });
 
   describe('while the request is OPEN (AC-2)', () => {
@@ -177,13 +112,12 @@ describe('JobFooter split at pickup (spec 0047, AC-1, AC-2, AC-7, AC-8)', () => 
 
     it('once the limit has passed the line no longer promises a Leave time (the button is there)', () => {
       jest.setSystemTime(LEAVE_FROM_ON_PHONE + 1000);
-      const { getByText, queryByText, getByTestId } = render(footer(waiting()));
+      const { getByText, queryByText } = render(footer(waiting()));
 
       expect(
         getByText('Waiting for dispatch to split this order · 10:01'),
       ).toBeTruthy();
       expect(queryByText(/Leave from/)).toBeNull();
-      expect(getByTestId('job-action-leave-split')).toBeTruthy();
     });
 
     it('with no leave time on the phone yet it keeps the counter and names no time', () => {
@@ -245,45 +179,6 @@ describe('JobFooter split at pickup (spec 0047, AC-1, AC-2, AC-7, AC-8)', () => 
       ).toBeTruthy();
     });
 
-    // Row 11 (spec 0047, OR.4): the ordinary Leave (spec 0033) does not show while a
-    // split request is open, even when leaveFromOnPhone is in the past. The split's
-    // own Leave still appears once its limit has passed.
-    it('an order with an open split and leaveFromOnPhone in the past renders no job-action-leave-wait, and split Leave shows once its limit passes', () => {
-      const onLeaveWait = jest.fn();
-      const onLeaveSplit = jest.fn();
-      const order = waiting({
-        leaveFromOnPhone: NOW - 60_000,
-        splitLeaveFromOnPhone: LEAVE_FROM_ON_PHONE,
-      });
-
-      // 1. Before split limit passes: neither leave-wait nor leave-split renders.
-      const view1 = render(footer(order, { onLeaveWait, onLeaveSplit }));
-      expect(view1.queryByTestId('job-action-leave-wait')).toBeNull();
-      expect(view1.queryByTestId('job-action-leave-split')).toBeNull();
-      view1.unmount();
-
-      // 2. Once split limit passes: split Leave shows, ordinary leave-wait still does not.
-      jest.setSystemTime(LEAVE_FROM_ON_PHONE + 1000);
-      const view2 = render(footer(order, { onLeaveWait, onLeaveSplit }));
-      expect(view2.queryByTestId('job-action-leave-wait')).toBeNull();
-      expect(view2.getByTestId('job-action-leave-split')).toBeTruthy();
-      view2.unmount();
-
-      // 3. Once split is refused and leaveFromOnPhone is in the past: ordinary leave-wait shows.
-      const resolved = render(
-        footer(
-          atRestaurant({
-            leaveFromOnPhone: NOW - 60_000,
-            splitRequest: request('REFUSED'),
-          }),
-          { onLeaveWait, onLeaveSplit },
-        ),
-      );
-      expect(resolved.getByTestId('job-action-leave-wait')).toBeTruthy();
-      expect(resolved.queryByTestId('job-action-leave-split')).toBeNull();
-      resolved.unmount();
-    });
-
     it('holds the Picked up swipe until dispatch answers', () => {
       const { UNSAFE_getByType } = render(footer(waiting()));
       expect(UNSAFE_getByType(ButtonSwipe).props.enabled).toBe(false);
@@ -306,59 +201,6 @@ describe('JobFooter split at pickup (spec 0047, AC-1, AC-2, AC-7, AC-8)', () => 
           footer(atRestaurant({ splitRequest: request(status) })),
         );
         expect(view.queryByTestId('job-split-waiting')).toBeNull();
-        view.unmount();
-      }
-    });
-  });
-
-  describe('Leave, once the limit has passed (AC-2, AC-8)', () => {
-    it('is not offered before the leave time', () => {
-      const { queryByTestId } = render(footer(waiting()));
-      expect(queryByTestId('job-action-leave-split')).toBeNull();
-    });
-
-    it('appears by itself when the leave time comes, while the card stays open', () => {
-      const { queryByTestId } = render(footer(waiting()));
-      expect(queryByTestId('job-action-leave-split')).toBeNull();
-
-      // 6 min 55 s to go; one second short, still nothing.
-      act(() => {
-        jest.advanceTimersByTime(LEAVE_FROM_ON_PHONE - NOW - 1000);
-      });
-      expect(queryByTestId('job-action-leave-split')).toBeNull();
-
-      act(() => {
-        jest.advanceTimersByTime(1000);
-      });
-      expect(queryByTestId('job-action-leave-split')).toBeTruthy();
-    });
-
-    it('calls onLeaveSplit with the order when tapped', () => {
-      jest.setSystemTime(LEAVE_FROM_ON_PHONE + 1000);
-      const onLeaveSplit = jest.fn();
-      const order = waiting();
-      const { getByTestId, getByText } = render(
-        footer(order, { onLeaveSplit }),
-      );
-
-      expect(getByText(i18n.t('translations:split_leave_button'))).toBeTruthy();
-      fireEvent.press(getByTestId('job-action-leave-split'));
-
-      expect(onLeaveSplit).toHaveBeenCalledTimes(1);
-      expect(onLeaveSplit).toHaveBeenCalledWith(order);
-    });
-
-    it('is not offered while a leave is on its way', () => {
-      jest.setSystemTime(LEAVE_FROM_ON_PHONE + 1000);
-      const { queryByTestId } = render(footer(waiting(), { splitBusy: true }));
-      expect(queryByTestId('job-action-leave-split')).toBeNull();
-    });
-
-    it('is not offered for a request that is no longer open, however late it is', () => {
-      jest.setSystemTime(LEAVE_FROM_ON_PHONE + 60_000);
-      for (const status of ['CONFIRMED', 'REFUSED'] as const) {
-        const view = render(footer(waiting({ splitRequest: request(status) })));
-        expect(view.queryByTestId('job-action-leave-split')).toBeNull();
         view.unmount();
       }
     });
