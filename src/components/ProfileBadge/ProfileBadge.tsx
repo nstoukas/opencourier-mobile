@@ -88,9 +88,15 @@ export const ProfileBadge = ({
       // A screen reader hears "Menu, Online": what the button opens and the
       // rider's status, which on Home is drawn outside it (review, 23 Nov).
       accessibilityRole="button"
-      accessibilityLabel={t('translations:menu_button_a11y', {
-        status: t(`translations:${userStatus.toLowerCase()}`),
-      })}
+      // The side menu can pass no status at all after logout (its value is
+      // cast, row 116), so the label must not assume one: then just "Menu".
+      accessibilityLabel={
+        userStatus
+          ? t('translations:menu_button_a11y', {
+              status: t(`translations:${userStatus.toLowerCase()}`),
+            })
+          : t('translations:menu_button_a11y_plain')
+      }
       hitSlop={hitSlopFor(40)}
       style={[styles.container, style]}
       onPress={onPress}

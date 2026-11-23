@@ -359,6 +359,7 @@ export default {
   later_stay_offline: 'Later & Stay Offline',
   stay_online: 'Stay Online',
   menu_button_a11y: 'Menu, {{status}}',
+  menu_button_a11y_plain: 'Menu',
   continue_orders: 'Continue Orders',
   accept_now: 'Accept Now',
   decline: 'Decline',
