@@ -70,6 +70,24 @@ def enableProguardInReleaseBuilds = false
  */
 def jscFlavor = 'org.webkit:android-jsc:+'
 
+/**
+ * The Google Maps key: MAPS_API_KEY from android/local.properties, else the environment variable of
+ * the same name. Without one the app still builds, but the map draws nothing, so say so loudly.
+ */
+def mapsApiKey() {
+    def properties = new Properties()
+    def file = rootProject.file('local.properties')
+    if (file.exists()) {
+        file.withInputStream { properties.load(it) }
+    }
+    def key = properties.getProperty('MAPS_API_KEY') ?: System.getenv('MAPS_API_KEY')
+    if (!key) {
+        logger.warn('MAPS_API_KEY is not set in android/local.properties or the environment: the map will draw nothing.')
+        return ''
+    }
+    return key
+}
+
 android {
     ndkVersion rootProject.ext.ndkVersion
     buildToolsVersion rootProject.ext.buildToolsVersion
@@ -83,6 +101,10 @@ android {
         // targetSdkVersion rootProject.ext.targetSdkVersion
         versionCode 24
         versionName "1"
+        // The Google Maps key is no longer written in AndroidManifest.xml, which git tracks and our
+        // public fork publishes (scope row 1). It comes from MAPS_API_KEY in android/local.properties
+        // (untracked) or the MAPS_API_KEY environment variable, and fills ${mapsApiKey} in the manifest.
+        manifestPlaceholders = [mapsApiKey: mapsApiKey()]
     }
     signingConfigs {
         debug {

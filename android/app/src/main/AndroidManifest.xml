@@ -79,7 +79,7 @@
         tools:targetApi="o_mr1" />
         <meta-data
             android:name="com.google.android.geo.API_KEY"
-            android:value="AIzaSyBfl3iU6uGbW6rlO4nmO67-Gaw4v5veYow"/>
+            android:value="${mapsApiKey}"/>
         <meta-data
             android:name="com.google.firebase.messaging.default_notification_channel_id"
             android:value="fcm_channel_opendeli"
