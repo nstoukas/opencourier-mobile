@@ -10,6 +10,10 @@
 // the delivery id alone: the same delivery can be offered to the same rider
 // again later, and that new offer must still be answerable.
 //
+// Row 131 adds a second list beside it: the offers whose Decline from the
+// alert could not be sent, so the phone never accepts them by itself. Same
+// offer key, same storage rules.
+//
 // Kept on the phone only, with no time attached, and never sent anywhere
 // (value 5): it says nothing about how fast anyone answered.
 
@@ -55,6 +59,10 @@ export const loadAnsweredOffers = (): Promise<void> => {
           answered = list;
         })
         .catch(() => undefined),
+      // Decision 131.2: if this list cannot be read (a storage error, bad
+      // JSON), auto accept goes on without it. That is accepted on purpose:
+      // the read practically never fails, and the other choice, no auto
+      // accept for the rest of the session, would cost every rider offers.
       mergedWithStored(DECLINE_FAILED_KEY, declineFailed)
         .then(list => {
           declineFailed = list;
@@ -102,6 +110,8 @@ export const markDeclineFailed = (key: string) => {
   );
 };
 
+// An entry stays after the rider answers from the app; that is harmless,
+// since the server never offers the same key again, and the list keeps 50.
 export const isDeclineFailed = (key: string): boolean =>
   declineFailed.includes(key);
 

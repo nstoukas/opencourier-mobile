@@ -580,7 +580,7 @@ export const useHomeOrders = () => {
           // Row 131: the rider declined this offer from its alert and the
           // decline could not be sent. Their own choice wins: the phone never
           // accepts it, and Home shows it for the rider to answer by hand.
-          if (isDeclineFailed(answeredKeyOf(order.id))) {
+          if (isDeclineFailed(offerKeyOf(order.id, order.offeredAt))) {
             leaveToRider([order.id]);
             continue;
           }
@@ -645,6 +645,9 @@ export const useHomeOrders = () => {
   // once, so a tap here can check it straight away. Row 131: auto accept
   // waits for it, so an offer the rider declined from the alert (and whose
   // decline failed) is never taken just because the list was not read yet.
+  // The read cannot reject (each list catches its own error); if storage
+  // never answered, auto accept would wait with it (decision 131.2: Android's
+  // AsyncStorage always answers, so no time limit is added).
   useEffect(() => {
     loadAnsweredOffers().then(() => setAnsweredLoaded(true));
   }, []);
