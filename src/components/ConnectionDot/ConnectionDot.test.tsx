@@ -6,7 +6,7 @@ import { ConnectionStatus } from '@app/services/liveConnection';
 import { ConnectionDot, connectionDotLook } from './ConnectionDot';
 import '@app/localization/i18n';
 
-describe('ConnectionDot (Clause 1: Different colour AND words for each status)', () => {
+describe('ConnectionDot (Clause 1: Different colour AND hollow ring, no words on screen)', () => {
   const statuses: ConnectionStatus[] = [
     'connected',
     'connecting',
@@ -48,29 +48,34 @@ describe('ConnectionDot (Clause 1: Different colour AND words for each status)',
     });
   });
 
-  describe('rendered component', () => {
-    it('renders distinct localized text for all four statuses (colour AND words for colorblind riders)', () => {
-      const renderedLabels = statuses.map(status => {
+  describe('rendered component (Clause 1)', () => {
+    it('shows NO words on screen for any status', () => {
+      [...statuses, 'refused' as ConnectionStatus].forEach(status => {
         const tree = renderer.create(<ConnectionDot status={status} />);
-        const textNode = tree.root.findByType(Text);
-        return textNode.props.children;
+        const textNodes = tree.root.findAllByType(Text);
+        expect(textNodes).toHaveLength(0);
       });
-
-      // Assert each status renders its expected localized text
-      expect(renderedLabels).toEqual([
-        'Connected',
-        'Connecting…',
-        'No connection, retrying',
-        'Not connected',
-      ]);
-
-      // Assert all 4 rendered text labels are distinct from each other
-      const uniqueLabels = new Set(renderedLabels);
-      expect(uniqueLabels.size).toBe(4);
     });
 
-    it('applies matching dot backgroundColor for each status', () => {
-      statuses.forEach(status => {
+    it('applies filled dot for connected and hollow ring for non-connected statuses (told apart without colour)', () => {
+      // Live connection is a filled dot (not transparent, background is green8)
+      const liveTree = renderer.create(<ConnectionDot status="connected" />);
+      const liveDot = liveTree.root.find(
+        (node: ReactTestInstance) =>
+          node.props.testID === 'connection-dot-connected',
+      );
+      const liveStyle = StyleSheet.flatten(liveDot.props.style);
+      expect(liveStyle.backgroundColor).toBe(Colors.green8);
+      expect(liveStyle.borderWidth).toBeUndefined();
+
+      // Non-live statuses are hollow rings (transparent background, borderWidth 3, borderColor)
+      const nonLiveStatuses: ConnectionStatus[] = [
+        'connecting',
+        'disconnected',
+        'off',
+        'refused',
+      ];
+      nonLiveStatuses.forEach(status => {
         const tree = renderer.create(<ConnectionDot status={status} />);
         const dotNode = tree.root.find(
           (node: ReactTestInstance) =>
@@ -79,12 +84,23 @@ describe('ConnectionDot (Clause 1: Different colour AND words for each status)',
         expect(dotNode).toBeDefined();
 
         const flatStyle = StyleSheet.flatten(dotNode.props.style);
-        expect(flatStyle.backgroundColor).toBe(connectionDotLook(status).color);
+        expect(flatStyle.backgroundColor).toBe('transparent');
+        expect(flatStyle.borderWidth).toBe(3);
+        expect(flatStyle.borderColor).toBe(connectionDotLook(status).color);
       });
     });
 
-    it('provides accessible text role and accessibility label matching the visible status words', () => {
-      statuses.forEach(status => {
+    it('provides accessible text role and accessibility label with status words for screen readers', () => {
+      const allStatuses: ConnectionStatus[] = [...statuses, 'refused'];
+      const expectedLabels = [
+        'Connected',
+        'Connecting…',
+        'No connection, retrying',
+        'Not connected',
+        'Not connected, reopen the app to retry',
+      ];
+
+      allStatuses.forEach((status, idx) => {
         const tree = renderer.create(<ConnectionDot status={status} />);
         const container = tree.root.find(
           (node: ReactTestInstance) => node.props.testID === 'connection-dot',
@@ -92,11 +108,7 @@ describe('ConnectionDot (Clause 1: Different colour AND words for each status)',
 
         expect(container.props.accessible).toBe(true);
         expect(container.props.accessibilityRole).toBe('text');
-
-        const textNode = tree.root.findByType(Text);
-        expect(container.props.accessibilityLabel).toBe(
-          textNode.props.children,
-        );
+        expect(container.props.accessibilityLabel).toBe(expectedLabels[idx]);
       });
     });
 
@@ -123,10 +135,14 @@ describe('ConnectionDot (Clause 1: Different colour AND words for each status)',
       });
     });
 
-    it('renders localized text "Not connected, reopen the app to retry" and red dot', () => {
+    it('renders hollow red ring with no visible text and localized accessibilityLabel', () => {
       const tree = renderer.create(<ConnectionDot status="refused" />);
-      const textNode = tree.root.findByType(Text);
-      expect(textNode.props.children).toBe(
+      expect(tree.root.findAllByType(Text)).toHaveLength(0);
+
+      const container = tree.root.find(
+        (node: ReactTestInstance) => node.props.testID === 'connection-dot',
+      );
+      expect(container.props.accessibilityLabel).toBe(
         'Not connected, reopen the app to retry',
       );
 
@@ -135,7 +151,9 @@ describe('ConnectionDot (Clause 1: Different colour AND words for each status)',
           node.props.testID === 'connection-dot-refused',
       );
       const flatStyle = StyleSheet.flatten(dotNode.props.style);
-      expect(flatStyle.backgroundColor).toBe(Colors.red1);
+      expect(flatStyle.backgroundColor).toBe('transparent');
+      expect(flatStyle.borderWidth).toBe(3);
+      expect(flatStyle.borderColor).toBe(Colors.red1);
     });
   });
 });

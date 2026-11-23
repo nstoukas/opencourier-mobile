@@ -7,14 +7,22 @@ import { CaretDownIcon } from 'phosphor-react-native/src/icons/CaretDown';
 import { Icon } from '@app/components/Icon/Icon';
 
 describe('AC-5, AC-6, AC-7: Button component', () => {
-  it('renders container with height 48 (control.xl)', () => {
-    const { UNSAFE_getByType } = render(
-      <Button title="Test" onPress={() => {}} />,
+  it('renders container with minHeight 48 (control.xl), side padding, and 2-line centred title without fixed height (Clause 5)', () => {
+    const { UNSAFE_getByType, getByText } = render(
+      <Button title="Test long label that wraps" onPress={() => {}} />,
     );
     const touchable = UNSAFE_getByType(TouchableOpacity);
     const flatStyle = StyleSheet.flatten(touchable.props.style);
-    expect(flatStyle.height).toBe(control.xl);
-    expect(flatStyle.height).toBe(48);
+    expect(flatStyle.minHeight).toBe(control.xl);
+    expect(flatStyle.minHeight).toBe(48);
+    expect(flatStyle.height).toBeUndefined();
+    expect(flatStyle.paddingHorizontal).toBeDefined();
+
+    const titleText = getByText('Test long label that wraps');
+    const textStyle = StyleSheet.flatten(titleText.props.style);
+    expect(titleText.props.numberOfLines).toBe(2);
+    expect(textStyle.flexShrink).toBe(1);
+    expect(textStyle.textAlign).toBe('center');
   });
 
   const buttonLookCases = [

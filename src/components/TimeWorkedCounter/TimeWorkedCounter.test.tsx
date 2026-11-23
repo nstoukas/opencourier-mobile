@@ -106,7 +106,7 @@ describe('TimeWorkedCounter (spec 0040, AC-10)', () => {
     expect(screen.queryByTestId('time-worked-counter')).toBeNull();
   });
 
-  it('renders "3h12 online · €38.50 · €12.00/h" for a working view', () => {
+  it('renders "3h12 · €38.50 · €12.00/h" for a working view without saying "online"', () => {
     mockView({
       kind: 'working',
       workSeconds: 11520, // 3h12
@@ -116,10 +116,15 @@ describe('TimeWorkedCounter (spec 0040, AC-10)', () => {
     });
 
     render(<TimeWorkedCounter />);
-    expect(screen.getByText('3h12 online · €38.50 · €12.00/h')).toBeTruthy();
+    const textElement = screen.getByText('3h12 · €38.50 · €12.00/h');
+    expect(textElement).toBeTruthy();
+    expect(screen.queryByText(/online/i)).toBeNull();
+    expect(textElement.props.numberOfLines).toBe(1);
+    expect(textElement.props.adjustsFontSizeToFit).toBe(true);
+    expect(textElement.props.minimumFontScale).toBe(0.75);
   });
 
-  it('renders "48 min online" under an hour', () => {
+  it('renders "48 min · €15.00 · €18.75/h" under an hour without saying "online"', () => {
     mockView({
       kind: 'working',
       workSeconds: 48 * 60, // 48 min
@@ -129,10 +134,11 @@ describe('TimeWorkedCounter (spec 0040, AC-10)', () => {
     });
 
     render(<TimeWorkedCounter />);
-    expect(screen.getByText('48 min online · €15.00 · €18.75/h')).toBeTruthy();
+    expect(screen.getByText('48 min · €15.00 · €18.75/h')).toBeTruthy();
+    expect(screen.queryByText(/online/i)).toBeNull();
   });
 
-  it('renders "—" for the rate under a minute (centsPerHour is null)', () => {
+  it('renders "—" for the rate under a minute (centsPerHour is null) without saying "online"', () => {
     mockView({
       kind: 'working',
       workSeconds: 45, // 0 min
@@ -142,7 +148,8 @@ describe('TimeWorkedCounter (spec 0040, AC-10)', () => {
     });
 
     render(<TimeWorkedCounter />);
-    expect(screen.getByText('0 min online · €0.00 · —')).toBeTruthy();
+    expect(screen.getByText('0 min · €0.00 · —')).toBeTruthy();
+    expect(screen.queryByText(/online/i)).toBeNull();
   });
 
   it('renders "On break 12 min" on a break', () => {

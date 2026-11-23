@@ -5,6 +5,7 @@ import { AddOnOfferCell } from './AddOnOfferCell';
 import { Order, StackStop } from '@app/types/types';
 import ButtonSwipe from '../ButtonSwipe/ButtonSwipe';
 import { ButtonOrder } from '../ButtonOrder/ButtonOrder';
+import { OfferAnswers } from '../OfferAnswers/OfferAnswers';
 import { Paralelogram } from '../Paralelogram/Paralelogram';
 import { StackStopList } from '../StackStopList/StackStopList';
 
@@ -444,6 +445,55 @@ describe('AddOnOfferCell (spec 0048, row 81, AC-9, AC-10, cross check 2)', () =>
 
       const stopLists = component!.root.findAllByType(StackStopList);
       expect(stopLists).toHaveLength(0);
+
+      act(() => {
+        component.unmount();
+      });
+    });
+  });
+
+  describe('OfferAnswers and answersBelow prop (Clause 6)', () => {
+    it('renders OfferAnswers when answersBelow is false or omitted', () => {
+      let component: renderer.ReactTestRenderer;
+      act(() => {
+        component = renderer.create(
+          <AddOnOfferCell
+            order={addOnOrder}
+            job={heldJob}
+            stops={stops}
+            calm={false}
+            onAccept={jest.fn()}
+            onDecline={jest.fn()}
+          />,
+        );
+      });
+
+      const offerAnswers = component!.root.findAllByType(OfferAnswers);
+      expect(offerAnswers).toHaveLength(1);
+
+      act(() => {
+        component.unmount();
+      });
+    });
+
+    it('leaves OfferAnswers out when answersBelow is true', () => {
+      let component: renderer.ReactTestRenderer;
+      act(() => {
+        component = renderer.create(
+          <AddOnOfferCell
+            order={addOnOrder}
+            job={heldJob}
+            stops={stops}
+            calm={false}
+            onAccept={jest.fn()}
+            onDecline={jest.fn()}
+            answersBelow={true}
+          />,
+        );
+      });
+
+      const offerAnswers = component!.root.findAllByType(OfferAnswers);
+      expect(offerAnswers).toHaveLength(0);
 
       act(() => {
         component.unmount();

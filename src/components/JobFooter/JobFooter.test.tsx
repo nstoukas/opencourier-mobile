@@ -1,4 +1,5 @@
 import React from 'react';
+import { StyleSheet } from 'react-native';
 import { render, fireEvent, act } from '@testing-library/react-native';
 import '@app/localization/i18n';
 import i18n from '@app/localization/i18n';
@@ -687,6 +688,40 @@ describe('JobFooter (spec 0021, AC-3, AC-5, AC-9, AC-12)', () => {
       );
 
       expect(queryByTestId('job-action-leave-wait')).toBeNull();
+    });
+  });
+
+  describe('Actions layout (Clause 5: two per row, centred)', () => {
+    it('renders action links two per row, centred with flexBasis 45% and flexGrow 1', () => {
+      const { getByTestId } = render(
+        <JobFooter
+          order={{ ...baseOrder, status: OrderStatus.dispatched }}
+          onReportIssue={jest.fn()}
+          onCallDispatch={jest.fn()}
+        />,
+      );
+
+      const reportAction = getByTestId('job-action-report');
+      const actionStyle = StyleSheet.flatten(reportAction.props.style);
+      expect(actionStyle.flexBasis).toBe('45%');
+      expect(actionStyle.flexGrow).toBe(1);
+      expect(actionStyle.alignItems).toBe('center');
+      expect(actionStyle.justifyContent).toBe('center');
+
+      // The container wrapping actions
+      let actionsContainer: any = reportAction;
+      while (
+        actionsContainer &&
+        (!actionsContainer.props?.style ||
+          StyleSheet.flatten(actionsContainer.props.style).flexDirection !==
+            'row')
+      ) {
+        actionsContainer = actionsContainer.parent;
+      }
+      expect(actionsContainer).toBeTruthy();
+      const containerStyle = StyleSheet.flatten(actionsContainer.props.style);
+      expect(containerStyle.flexDirection).toBe('row');
+      expect(containerStyle.flexWrap).toBe('wrap');
     });
   });
 });

@@ -1,11 +1,11 @@
 import React from 'react';
-import { StyleSheet, View } from 'react-native';
+import { StyleSheet } from 'react-native';
 import { render } from '@testing-library/react-native';
 import { PanGestureHandler } from 'react-native-gesture-handler';
-import Animated, * as Reanimated from 'react-native-reanimated';
+import * as Reanimated from 'react-native-reanimated';
 import ButtonSwipe, { BUTTON_WIDTH } from './ButtonSwipe';
 
-describe('ButtonSwipe (spec 0018, spec 0019, AC-5, Pin 4)', () => {
+describe('ButtonSwipe (spec 0018, spec 0019, AC-5, Pin 4, row 134 Clause 5)', () => {
   it('passes activeOffsetX [-10, 10] to its PanGestureHandler', () => {
     const { UNSAFE_getByType } = render(
       <ButtonSwipe
@@ -133,5 +133,94 @@ describe('ButtonSwipe (spec 0018, spec 0019, AC-5, Pin 4)', () => {
 
     unmount();
     gestureSpy.mockRestore();
+  });
+
+  describe('Centred text layout and subtitle line count (Clause 5)', () => {
+    it('centres title and subtitle on whole button keeping knobRoom free on both sides', () => {
+      const { getByText } = render(
+        <ButtonSwipe
+          isSwiped={false}
+          onSwiped={jest.fn()}
+          enabled={true}
+          title="Accept"
+          subtitle="Slide to accept"
+          isLoading={false}
+        />,
+      );
+
+      // Default height is 48 -> knobRoom = 48 - 14 = 34
+      // BUTTON_PADDING = 7
+      // left and right should both be BUTTON_PADDING + knobRoom = 7 + 34 = 41
+      const title = getByText('Accept');
+      let textArea: any = title;
+      while (
+        textArea &&
+        (!textArea.props?.style ||
+          StyleSheet.flatten(textArea.props.style).left === undefined)
+      ) {
+        textArea = textArea.parent;
+      }
+      expect(textArea).toBeTruthy();
+      const style = StyleSheet.flatten(textArea.props.style);
+      expect(style.left).toBe(41);
+      expect(style.right).toBe(41);
+    });
+
+    it('subtitle takes 1 line on standard 48 px swipe and shrinks to fit', () => {
+      const { getByText } = render(
+        <ButtonSwipe
+          isSwiped={false}
+          onSwiped={jest.fn()}
+          enabled={true}
+          title="Accept"
+          subtitle="Slide to accept on one line"
+          isLoading={false}
+        />,
+      );
+
+      const title = getByText('Accept');
+      expect(title.props.numberOfLines).toBe(1);
+      expect(title.props.adjustsFontSizeToFit).toBe(true);
+      expect(title.props.minimumFontScale).toBe(0.7);
+
+      const subtitle = getByText('Slide to accept on one line');
+      expect(subtitle.props.numberOfLines).toBe(1);
+      expect(subtitle.props.adjustsFontSizeToFit).toBe(true);
+      expect(subtitle.props.minimumFontScale).toBe(0.7);
+    });
+
+    it('subtitle takes 2 lines when swipe is taller (height > 48, e.g. 100 px offer swipe)', () => {
+      const { getByText } = render(
+        <ButtonSwipe
+          height={100}
+          isSwiped={false}
+          onSwiped={jest.fn()}
+          enabled={true}
+          title="Accept"
+          subtitle="Slide to accept which wraps to two lines when taller"
+          isLoading={false}
+        />,
+      );
+
+      const subtitle = getByText(
+        'Slide to accept which wraps to two lines when taller',
+      );
+      expect(subtitle.props.numberOfLines).toBe(2);
+    });
+
+    it('renders no subtitle text when subtitle is empty string', () => {
+      const { queryByText } = render(
+        <ButtonSwipe
+          isSwiped={false}
+          onSwiped={jest.fn()}
+          enabled={true}
+          title="Lone Title"
+          subtitle=""
+          isLoading={false}
+        />,
+      );
+
+      expect(queryByText('Lone Title')).toBeTruthy();
+    });
   });
 });

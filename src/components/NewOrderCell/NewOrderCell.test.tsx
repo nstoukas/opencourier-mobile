@@ -5,6 +5,7 @@ import { Order } from '@app/types/types';
 import '@app/localization/i18n';
 import ButtonSwipe, { BUTTON_WIDTH } from '../ButtonSwipe/ButtonSwipe';
 import { ButtonOrder } from '../ButtonOrder/ButtonOrder';
+import { OfferAnswers } from '../OfferAnswers/OfferAnswers';
 import { NewOrderCell } from './NewOrderCell';
 import { Paralelogram } from '../Paralelogram/Paralelogram';
 import { control } from '@app/styles/theme';
@@ -507,6 +508,51 @@ describe('NewOrderCell (spec 0002, spec 0018, spec 0019, AC-3, AC-5, AC-7, AC-8,
           component.unmount();
         });
       }
+    });
+  });
+
+  describe('OfferAnswers and answersBelow prop (Clause 6)', () => {
+    it('renders OfferAnswers when answersBelow is false or omitted', () => {
+      let component: renderer.ReactTestRenderer;
+      act(() => {
+        component = renderer.create(
+          <NewOrderCell
+            order={dummyOrder}
+            autoAcceptOrders={false}
+            onAccept={jest.fn()}
+            onDecline={jest.fn()}
+          />,
+        );
+      });
+
+      const offerAnswers = component!.root.findAllByType(OfferAnswers);
+      expect(offerAnswers).toHaveLength(1);
+
+      act(() => {
+        component.unmount();
+      });
+    });
+
+    it('leaves OfferAnswers out when answersBelow is true', () => {
+      let component: renderer.ReactTestRenderer;
+      act(() => {
+        component = renderer.create(
+          <NewOrderCell
+            order={dummyOrder}
+            autoAcceptOrders={false}
+            onAccept={jest.fn()}
+            onDecline={jest.fn()}
+            answersBelow={true}
+          />,
+        );
+      });
+
+      const offerAnswers = component!.root.findAllByType(OfferAnswers);
+      expect(offerAnswers).toHaveLength(0);
+
+      act(() => {
+        component.unmount();
+      });
     });
   });
 });

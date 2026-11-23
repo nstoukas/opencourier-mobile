@@ -1,9 +1,11 @@
 import React from 'react';
+import { StyleSheet, Text } from 'react-native';
 import { render, fireEvent, act } from '@testing-library/react-native';
 import '@app/localization/i18n';
 import { SOS_HOLD_MS, SosHoldButton } from './SosHoldButton';
+import { radius } from '@app/styles/theme';
 
-describe('SosHoldButton (spec 0022, AC-2)', () => {
+describe('SosHoldButton (spec 0022, AC-2, row 134 Clause 4)', () => {
   beforeEach(() => {
     jest.useFakeTimers();
     jest.clearAllMocks();
@@ -115,5 +117,31 @@ describe('SosHoldButton (spec 0022, AC-2)', () => {
       jest.advanceTimersByTime(5000);
     });
     expect(onHeld).not.toHaveBeenCalled();
+  });
+
+  describe('Round siren and screen reader accessibility (Clause 4)', () => {
+    it('is a round 48x48 button with NO visible text words', () => {
+      const { getByTestId, UNSAFE_queryByType } = render(
+        <SosHoldButton onHeld={jest.fn()} />,
+      );
+      const button = getByTestId('sos-hold-button');
+      const flatStyle = StyleSheet.flatten(button.props.style);
+
+      expect(flatStyle.width).toBe(48);
+      expect(flatStyle.height).toBe(48);
+      expect(flatStyle.borderRadius).toBe(radius.full);
+
+      // Shows NO visible words
+      expect(UNSAFE_queryByType(Text)).toBeNull();
+    });
+
+    it('provides accessible button role and localized accessibilityLabel for screen readers', () => {
+      const { getByTestId } = render(<SosHoldButton onHeld={jest.fn()} />);
+      const button = getByTestId('sos-hold-button');
+
+      expect(button.props.accessibilityRole).toBe('button');
+      expect(button.props.accessibilityLabel).toBe('SOS');
+      expect(button.props.accessibilityHint).toBeTruthy();
+    });
   });
 });
