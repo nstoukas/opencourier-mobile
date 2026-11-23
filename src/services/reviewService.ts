@@ -20,7 +20,10 @@ export interface ReviewService {
   getReviewRequests: (page: number) => Promise<PagedList<ReviewRequest>>;
   withdrawReviewRequest: (id: string) => Promise<ReviewRequest>;
   getHowItWorks: (language?: AppLanguage) => Promise<HowItWorks>;
-  getSettingChanges: (page: number) => Promise<PagedList<SettingChangeLine>>;
+  getSettingChanges: (
+    page: number,
+    language?: AppLanguage,
+  ) => Promise<PagedList<SettingChangeLine>>;
 }
 
 export const REVIEW_PAGE_SIZE = 20;
@@ -57,11 +60,15 @@ const reviewService = (client: UClient): ReviewService => {
     return data.result;
   };
 
+  // Row 137: the "What changed" lines in the app's language, like the page above them.
   const getSettingChanges = async (
     page: number,
+    language?: AppLanguage,
   ): Promise<PagedList<SettingChangeLine>> => {
     const { data } = await client.get('setting-changes', {
-      params: { page, perPage: REVIEW_PAGE_SIZE },
+      params: language
+        ? { page, perPage: REVIEW_PAGE_SIZE, lang: language }
+        : { page, perPage: REVIEW_PAGE_SIZE },
     });
     return data.result;
   };

@@ -39,9 +39,9 @@ export const useReviewRequests = () =>
 // Pages of "What changed" (AC-13), newest first.
 export const useSettingChanges = () =>
   useInfiniteQuery({
-    queryKey: [QueryKeys.settingChanges],
+    queryKey: [QueryKeys.settingChanges, currentLanguage()],
     queryFn: ({ pageParam }) =>
-      services.reviewService.getSettingChanges(pageParam),
+      services.reviewService.getSettingChanges(pageParam, currentLanguage()),
     initialPageParam: 1,
     getNextPageParam: last => last.pagination?.nextPage ?? undefined,
   });
