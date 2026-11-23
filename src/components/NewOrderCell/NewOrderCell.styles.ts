@@ -1,7 +1,6 @@
 import { Colors } from '@app/styles/colors';
 import { StyleSheet } from 'react-native';
 import { radius, space, typeScale } from '@app/styles/theme';
-import { BUTTON_WIDTH } from '../ButtonSwipe/ButtonSwipe';
 
 export const styles = StyleSheet.create({
   container: {
@@ -28,9 +27,6 @@ export const styles = StyleSheet.create({
     height: 2,
     backgroundColor: Colors.gray1,
     marginVertical: 12,
-  },
-  buttonTop: {
-    marginBottom: 12,
   },
   // flexShrink lets a long name or street wrap inside its row instead of
   // being cut off at the card's edge (Fable's review).
@@ -74,10 +70,5 @@ export const styles = StyleSheet.create({
     fontSize: typeScale.body.fontSize,
     color: Colors.black3,
     flexShrink: 1,
-  },
-  // Decline matches the Accept swipe's width (spec 0019, AC-5).
-  buttonDecline: {
-    width: BUTTON_WIDTH,
-    alignSelf: 'center',
   },
 });

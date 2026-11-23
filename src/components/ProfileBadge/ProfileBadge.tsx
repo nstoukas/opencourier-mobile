@@ -80,10 +80,17 @@ export const ProfileBadge = ({
   discreteStatusIndicator,
   hideStatusWord,
 }: Props) => {
+  const { t } = useTranslation();
   const backgroundColor = statusColor(userStatus);
 
   return (
     <TouchableOpacity
+      // A screen reader hears "Menu, Online": what the button opens and the
+      // rider's status, which on Home is drawn outside it (review, 23 Nov).
+      accessibilityRole="button"
+      accessibilityLabel={t('translations:menu_button_a11y', {
+        status: t(`translations:${userStatus.toLowerCase()}`),
+      })}
       hitSlop={hitSlopFor(40)}
       style={[styles.container, style]}
       onPress={onPress}

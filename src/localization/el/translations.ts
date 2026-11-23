@@ -386,6 +386,7 @@ const translations: typeof en = {
   confirm_last_call: 'Επιβεβαίωση τελευταίας παραγγελίας',
   later_stay_offline: 'Αργότερα, παραμονή εκτός σύνδεσης',
   stay_online: 'Παραμονή σε σύνδεση',
+  menu_button_a11y: 'Μενού, {{status}}',
   continue_orders: 'Συνέχεια παραγγελιών',
   accept_now: 'Αποδοχή τώρα',
   decline: 'Απόρριψη',

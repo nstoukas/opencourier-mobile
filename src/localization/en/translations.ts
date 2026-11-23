@@ -358,6 +358,7 @@ export default {
   confirm_last_call: 'Confirm Last Call',
   later_stay_offline: 'Later & Stay Offline',
   stay_online: 'Stay Online',
+  menu_button_a11y: 'Menu, {{status}}',
   continue_orders: 'Continue Orders',
   accept_now: 'Accept Now',
   decline: 'Decline',

@@ -58,12 +58,13 @@ export const HomeTopSlot = ({
             <ConnectionDot status={connectionStatus} />
           </View>
           {/* Tapping the word opens the menu too, as it did when it sat on
-              the avatar. Hidden from screen readers: the avatar is the button. */}
+              the avatar. Hidden from screen readers, words and all (the avatar
+              button already says "Menu, Online"). */}
           <Pressable
             style={styles.statusUnder}
             onPress={onMenu}
             accessible={false}
-            importantForAccessibility="no">
+            importantForAccessibility="no-hide-descendants">
             <StatusWord userStatus={userStatus} />
           </Pressable>
         </View>
