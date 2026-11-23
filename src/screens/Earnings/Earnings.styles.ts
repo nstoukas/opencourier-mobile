@@ -24,10 +24,12 @@ export const styles = StyleSheet.create({
     flexShrink: 1,
   },
   // Spec 0038: the link to "How offers and pay work".
+  // Centred like every button; the words wrap so the "New" tag stays on screen.
   howLink: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
+    justifyContent: 'center',
+    gap: 8,
     borderRadius: radius['2xl'],
     backgroundColor: Colors.white,
     paddingVertical: 12,
@@ -36,12 +38,15 @@ export const styles = StyleSheet.create({
     minHeight: control.xl,
   },
   howLinkText: {
+    flexShrink: 1,
+    textAlign: 'center',
     fontSize: typeScale.body.fontSize,
     fontWeight: '600',
     color: Colors.black1,
     textDecorationLine: 'underline',
   },
   howLinkNew: {
+    flexShrink: 0,
     fontSize: typeScale.caption.fontSize,
     fontWeight: '700',
     color: Colors.white,

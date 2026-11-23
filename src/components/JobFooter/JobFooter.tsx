@@ -439,19 +439,26 @@ const styles = StyleSheet.create({
     ...typeScale.label,
     color: color.foreground,
   },
+  // Two per row, each centred in its half; a link alone on its row takes the
+  // whole width and is centred there (operator, 23 Nov: centred text in every button).
   actions: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    justifyContent: 'space-between',
   },
   action: {
+    flexGrow: 1,
+    flexBasis: '45%',
     minHeight: control.xl,
+    alignItems: 'center',
     justifyContent: 'center',
     paddingHorizontal: space['1'],
   },
+  // flexShrink: a long Greek label wraps, centred, inside its half.
   actionText: {
     ...typeScale.label,
     color: color.foreground,
+    textAlign: 'center',
+    flexShrink: 1,
   },
   destructive: {
     color: color.destructive,
@@ -459,7 +466,9 @@ const styles = StyleSheet.create({
   actionLabel: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
     gap: 4,
+    maxWidth: '100%',
   },
   dot: {
     width: 8,

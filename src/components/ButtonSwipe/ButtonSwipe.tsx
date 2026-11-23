@@ -102,22 +102,15 @@ const ButtonSwipe: FunctionComponent<Props> = ({
     }),
     swipeText: useAnimatedStyle(() => {
       return {
+        // Gone by half way, and moving with the knob, so the knob never
+        // passes over visible words (operator, 23 Nov).
         opacity: interpolate(
           X.value,
-          [0, swipeRange],
+          [0, swipeRange / 2],
           [1, 0],
           Extrapolate.CLAMP,
         ),
-        transform: [
-          {
-            translateX: interpolate(
-              X.value,
-              [0, swipeRange],
-              [0, BUTTON_WIDTH / 2 - knobRoom],
-              Extrapolate.CLAMP,
-            ),
-          },
-        ],
+        transform: [{ translateX: X.value }],
       };
     }),
   };
@@ -163,14 +156,18 @@ const ButtonSwipe: FunctionComponent<Props> = ({
               </LinearGradient>
             </Animated.View>
           </PanGestureHandler>
-          {/* The words sit in the room right of the knob, centred there, so
-              the knob never covers them. Each line shrinks its letters to fit
-              rather than being cut (long Greek labels). No subtitle, no empty
-              second line, so a lone title is centred top to bottom. */}
+          {/* The words are centred on the whole button, with the knob's room
+              kept free on both sides, so the knob never covers them. Each line
+              shrinks its letters to fit rather than being cut (long Greek
+              labels). No subtitle, no empty second line, so a lone title is
+              centred top to bottom. */}
           <View
             style={[
               styles.textArea,
-              { left: BUTTON_PADDING + knobRoom, right: BUTTON_PADDING },
+              {
+                left: BUTTON_PADDING + knobRoom,
+                right: BUTTON_PADDING + knobRoom,
+              },
             ]}
             pointerEvents="none">
             <Animated.Text
@@ -183,7 +180,7 @@ const ButtonSwipe: FunctionComponent<Props> = ({
             {subtitle !== '' && (
               <Animated.Text
                 style={[styles.swipeTextSubtitle, AnimatedStyles.swipeText]}
-                numberOfLines={1}
+                numberOfLines={2}
                 adjustsFontSizeToFit
                 minimumFontScale={0.7}>
                 {subtitle}
@@ -207,6 +204,8 @@ const styles = StyleSheet.create({
     borderRadius: radius.full,
     backgroundColor: Colors.black1,
     alignSelf: 'center',
+    // The words slide right with the knob; whatever passes the edge is hidden.
+    overflow: 'hidden',
   },
   swipeable: {
     borderRadius: radius.full,
@@ -222,7 +221,7 @@ const styles = StyleSheet.create({
     position: 'absolute',
     top: 0,
     bottom: 0,
-    paddingHorizontal: 8,
+    paddingHorizontal: 4,
     alignItems: 'center',
     justifyContent: 'center',
   },
