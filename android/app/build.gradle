@@ -72,7 +72,8 @@ def jscFlavor = 'org.webkit:android-jsc:+'
 
 /**
  * The Google Maps key: MAPS_API_KEY from android/local.properties, else the environment variable of
- * the same name. Without one the app still builds, but the map draws nothing, so say so loudly.
+ * the same name. A debug build without one still builds (with a warning), but the map will not work;
+ * a release build without one stops, so a store build can never ship without a key.
  */
 def mapsApiKey() {
     def properties = new Properties()
@@ -80,9 +81,15 @@ def mapsApiKey() {
     if (file.exists()) {
         file.withInputStream { properties.load(it) }
     }
-    def key = properties.getProperty('MAPS_API_KEY') ?: System.getenv('MAPS_API_KEY')
+    // trim() drops stray spaces pasted after the key; `?.` skips it when the value is missing.
+    def key = (properties.getProperty('MAPS_API_KEY') ?: System.getenv('MAPS_API_KEY'))?.trim()
     if (!key) {
-        logger.warn('MAPS_API_KEY is not set in android/local.properties or the environment: the map will draw nothing.')
+        def message = 'MAPS_API_KEY is not set in android/local.properties or the environment: the map will not work.'
+        // gradle.startParameter.taskNames is what was asked for on the command line, e.g. assembleRelease.
+        if (gradle.startParameter.taskNames.any { it.toLowerCase().contains('release') }) {
+            throw new GradleException(message)
+        }
+        logger.warn(message)
         return ''
     }
     return key

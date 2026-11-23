@@ -25,7 +25,7 @@ react-native-maps. It uses the backend's `courier` API.
 Yarn 4 via Corepack (never 3.6.4). Android needs JDK 17 and the `adb reverse` wiring;
 the workspace rulebook has the setup, and `../devup.sh mobile` automates it.
 The Google Maps key is read from `MAPS_API_KEY` in `android/local.properties` (untracked) or the
-environment, never from `AndroidManifest.xml`; without it the build warns and the map draws nothing (scope row 1).
+environment, never from `AndroidManifest.xml`; without it a debug build warns and the map will not work, and a release build stops (scope row 1).
 
 **Typecheck gate: `corepack yarn typecheck:baseline`.** It runs `tsc --noEmit`, fails when
 the error count is above `typecheck-baseline.json`, and lowers the file when the count drops
