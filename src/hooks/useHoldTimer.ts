@@ -56,7 +56,8 @@ export const useHoldTimer = (holdMs: number, onHeld: () => void) => {
     }
   };
 
-  // Never fire after the button is gone.
+  // Never fire after the button is gone: an offer that left the screen mid hold is never answered,
+  // and leaving Home mid hold never starts an SOS.
   useEffect(
     () => () => {
       if (timer.current) {
