@@ -74,12 +74,19 @@ the error count is above `typecheck-baseline.json`, and lowers the file when the
   from the backend's `deliveries/:id/route`, asked by the SERVER status (not the outbox's); no routing server is ever called
   from the app (`routingSourceGuard.test.ts` fails on `project-osrm`). The rider marker is the phone's own newest fix
   (`ownPosition.ts`, memory only, cleared at logout), never the `user` cache, which each refetch resets to the server copy.
-- Every main action is a `ButtonSwipe`, which only moves its knob back when `isSwiped` changes: give each one a `key` that
+- Every main action of a job (and Go online) is a `ButtonSwipe`, which only moves its knob back when `isSwiped` changes: give each one a `key` that
   changes after its action runs (status plus an attempt counter), or a refused step leaves the knob at the end.
 - The Jest map mock is a `forwardRef` with `fitToCoordinates` and `animateToRegion` as `jest.fn()` and fires `onMapReady` on
   mount. On the emulator, the Google Maps SDK can time out reaching Google after a restart and draw nothing at all (no
   streets, no markers): that is the network, not the screen (decision 69.16).
 
+- An offer is answered with two held buttons, not a swipe (row 135, replacing spec 0018 AC-9 and 0019 AC-5): `OfferAnswers`
+  draws Decline (`DECLINE_HOLD_MS`, 1 s) and Accept (`ACCEPT_HOLD_MS`, 0.2 s) as `HoldButton`s for the single, pair and add on
+  offer; on Home it sits in `HomeCard`'s `footer`, and the cells get `answersBelow` so they leave it out. Any other action that
+  must not fire on a brush reuses `HoldButton`: a timer decides, the fill only shows progress, and a screen reader's
+  `activate` fires at once (it cannot hold). `SosHoldButton` still has its own copy of the same logic.
+- React Native Testing Library skips anything hidden from screen readers (`importantForAccessibility="no-hide-descendants"`,
+  like the status word under Home's badge frame): query it with `includeHiddenElements: true` (row 134).
 - The offer card (spec 0019) shows only the total, the km to the restaurant and to the customer, the minutes, the
   restaurant and the drop off area, from the offer's `offerTrip` and `dropoffArea` (the backend works them out; null parts
   are left out). Never add the customer's name, items, a full address or €/km to it. `ButtonSwipe` takes a `height`; its
