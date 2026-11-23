@@ -3,8 +3,6 @@ import renderer, { act } from 'react-test-renderer';
 import '@app/localization/i18n';
 import { AddOnOfferCell } from './AddOnOfferCell';
 import { Order, StackStop } from '@app/types/types';
-import ButtonSwipe from '../ButtonSwipe/ButtonSwipe';
-import { ButtonOrder } from '../ButtonOrder/ButtonOrder';
 import { OfferAnswers } from '../OfferAnswers/OfferAnswers';
 import { Paralelogram } from '../Paralelogram/Paralelogram';
 import { StackStopList } from '../StackStopList/StackStopList';
@@ -168,7 +166,7 @@ describe('AddOnOfferCell (spec 0048, row 81, AC-9, AC-10, cross check 2)', () =>
     });
   });
 
-  it('swiping Accept calls onAccept with the added order', () => {
+  it('holding or activating Accept in OfferAnswers calls onAccept with the added order', () => {
     const onAcceptMock = jest.fn();
     let component: renderer.ReactTestRenderer;
     act(() => {
@@ -184,9 +182,15 @@ describe('AddOnOfferCell (spec 0048, row 81, AC-9, AC-10, cross check 2)', () =>
       );
     });
 
-    const swipeButton = component!.root.findByType(ButtonSwipe);
+    const offerAnswers = component!.root.findByType(OfferAnswers);
+    expect(offerAnswers.props.acceptLabel).toBe('Accept');
+    expect(offerAnswers.props.acceptHint).toBe('Hold to add this order');
+
+    const acceptButton = component!.root.findByProps({
+      testID: 'offer-accept',
+    });
     act(() => {
-      swipeButton.props.onSwiped(true);
+      acceptButton.props.onHeld();
     });
 
     expect(onAcceptMock).toHaveBeenCalledTimes(1);
@@ -197,7 +201,7 @@ describe('AddOnOfferCell (spec 0048, row 81, AC-9, AC-10, cross check 2)', () =>
     });
   });
 
-  it('AC-7: tapping Decline calls onDecline with the added order (leaves held job untouched)', () => {
+  it('AC-7: holding or activating Decline in OfferAnswers calls onDecline with the added order (leaves held job untouched)', () => {
     const onDeclineMock = jest.fn();
     let component: renderer.ReactTestRenderer;
     act(() => {
@@ -213,9 +217,11 @@ describe('AddOnOfferCell (spec 0048, row 81, AC-9, AC-10, cross check 2)', () =>
       );
     });
 
-    const declineButton = component!.root.findByType(ButtonOrder);
+    const declineButton = component!.root.findByProps({
+      testID: 'offer-decline',
+    });
     act(() => {
-      declineButton.props.onPress();
+      declineButton.props.onHeld();
     });
 
     expect(onDeclineMock).toHaveBeenCalledTimes(1);
@@ -340,17 +346,21 @@ describe('AddOnOfferCell (spec 0048, row 81, AC-9, AC-10, cross check 2)', () =>
       const stopLists = component!.root.findAllByType(StackStopList);
       expect(stopLists).toHaveLength(0);
 
-      // Swiping Accept still works and passes the added order
-      const swipeButton = component!.root.findByType(ButtonSwipe);
+      // Holding or activating Accept still works and passes the added order
+      const acceptButton = component!.root.findByProps({
+        testID: 'offer-accept',
+      });
       act(() => {
-        swipeButton.props.onSwiped(true);
+        acceptButton.props.onHeld();
       });
       expect(onAcceptMock).toHaveBeenCalledWith(addOnOrder);
 
-      // Tapping Decline still works and passes the added order
-      const declineButton = component!.root.findByType(ButtonOrder);
+      // Holding or activating Decline still works and passes the added order
+      const declineButton = component!.root.findByProps({
+        testID: 'offer-decline',
+      });
       act(() => {
-        declineButton.props.onPress();
+        declineButton.props.onHeld();
       });
       expect(onDeclineMock).toHaveBeenCalledWith(addOnOrder);
 

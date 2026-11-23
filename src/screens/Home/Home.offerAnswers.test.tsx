@@ -1,5 +1,5 @@
 import React from 'react';
-import { render, act } from '@testing-library/react-native';
+import { render, act, fireEvent } from '@testing-library/react-native';
 import { NavigationContainer } from '@react-navigation/native';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import '@app/localization/i18n';
@@ -148,12 +148,12 @@ describe('Home offer answers pinned in footer (Clause 6)', () => {
     dropoffArea: 'Center',
   } as unknown as Order;
 
-  it('pins OfferAnswers in footer with accept / slide_to_accept for single offer, passing answersBelow to NewOrderCell', () => {
+  it('pins OfferAnswers in footer with accept / accept_hold_hint for single offer, passing answersBelow to NewOrderCell', () => {
     mockHomeOrders.dataSourceNew = [singleOffer];
     mockHomeOrders.dataSourceInProgress = [];
     mockHomeOrders.serverInProgress = [];
 
-    const { UNSAFE_getByType, unmount } = renderHome();
+    const { UNSAFE_getByType, getByTestId, unmount } = renderHome();
 
     // NewOrderCell is rendered with answersBelow={true}
     const cell = UNSAFE_getByType(NewOrderCell);
@@ -162,20 +162,24 @@ describe('Home offer answers pinned in footer (Clause 6)', () => {
     // OfferAnswers is rendered in the footer with pinned={true}
     const answers = UNSAFE_getByType(OfferAnswers);
     expect(answers.props.pinned).toBe(true);
-    expect(answers.props.acceptTitle).toBe(i18n.t('translations:accept'));
-    expect(answers.props.acceptSubtitle).toBe(
-      i18n.t('translations:slide_to_accept'),
+    expect(answers.props.acceptLabel).toBe(i18n.t('translations:accept'));
+    expect(answers.props.acceptHint).toBe(
+      i18n.t('translations:accept_hold_hint'),
     );
 
-    // Accepting calls acceptOrderFn with the offer id
+    // Holding Accept fires acceptOrderFn with the offer id
+    const acceptBtn = getByTestId('offer-accept');
+    fireEvent(acceptBtn, 'pressIn');
     act(() => {
-      answers.props.onAccept(singleOffer);
+      jest.advanceTimersByTime(200);
     });
     expect(mockHomeOrders.acceptOrderFn).toHaveBeenCalledWith('single-offer-1');
 
-    // Declining calls declineOrderFn with the offer id
+    // Holding Decline fires declineOrderFn with the offer id
+    const declineBtn = getByTestId('offer-decline');
+    fireEvent(declineBtn, 'pressIn');
     act(() => {
-      answers.props.onDecline(singleOffer);
+      jest.advanceTimersByTime(1000);
     });
     expect(mockHomeOrders.declineOrderFn).toHaveBeenCalledWith(
       'single-offer-1',
@@ -184,7 +188,7 @@ describe('Home offer answers pinned in footer (Clause 6)', () => {
     unmount();
   });
 
-  it('pins OfferAnswers in footer with stack_offer_accept / stack_offer_slide for pair offer, passing answersBelow to StackOfferCell', () => {
+  it('pins OfferAnswers in footer with stack_offer_accept / stack_offer_hold_hint for pair offer, passing answersBelow to StackOfferCell', () => {
     const stops: StackStop[] = [
       { deliveryId: 'stack-1', stop: 'PICKUP' },
       { deliveryId: 'stack-2', stop: 'PICKUP' },
@@ -214,7 +218,7 @@ describe('Home offer answers pinned in footer (Clause 6)', () => {
     mockHomeOrders.dataSourceInProgress = [];
     mockHomeOrders.serverInProgress = [];
 
-    const { UNSAFE_getByType, unmount } = renderHome();
+    const { UNSAFE_getByType, getByTestId, unmount } = renderHome();
 
     // StackOfferCell is rendered with answersBelow={true}
     const cell = UNSAFE_getByType(StackOfferCell);
@@ -223,29 +227,31 @@ describe('Home offer answers pinned in footer (Clause 6)', () => {
     // OfferAnswers is rendered in footer with pinned={true} and stack offer words
     const answers = UNSAFE_getByType(OfferAnswers);
     expect(answers.props.pinned).toBe(true);
-    expect(answers.props.acceptTitle).toBe(
+    expect(answers.props.acceptLabel).toBe(
       i18n.t('translations:stack_offer_accept'),
     );
-    expect(answers.props.acceptSubtitle).toBe(
-      i18n.t('translations:stack_offer_slide'),
+    expect(answers.props.acceptHint).toBe(
+      i18n.t('translations:stack_offer_hold_hint'),
     );
 
-    // Accepting calls acceptOrderFn with pair1.id
-    act(() => {
-      answers.props.onAccept(pair1);
+    // Screen reader activate action on Accept calls acceptOrderFn with pair1.id
+    const acceptBtn = getByTestId('offer-accept');
+    fireEvent(acceptBtn, 'accessibilityAction', {
+      nativeEvent: { actionName: 'activate' },
     });
     expect(mockHomeOrders.acceptOrderFn).toHaveBeenCalledWith('stack-1');
 
-    // Declining calls declineOrderFn with pair1.id
-    act(() => {
-      answers.props.onDecline(pair1);
+    // Screen reader activate action on Decline calls declineOrderFn with pair1.id
+    const declineBtn = getByTestId('offer-decline');
+    fireEvent(declineBtn, 'accessibilityAction', {
+      nativeEvent: { actionName: 'activate' },
     });
     expect(mockHomeOrders.declineOrderFn).toHaveBeenCalledWith('stack-1');
 
     unmount();
   });
 
-  it('pins OfferAnswers in footer with add_on_offer_accept / add_on_offer_slide for add on offer, passing answersBelow to AddOnOfferCell', () => {
+  it('pins OfferAnswers in footer with add_on_offer_accept / add_on_offer_hold_hint for add on offer, passing answersBelow to AddOnOfferCell', () => {
     const heldJob: Order = {
       id: 'held-job-1',
       status: OrderStatus.dispatched,
@@ -274,7 +280,7 @@ describe('Home offer answers pinned in footer (Clause 6)', () => {
     mockHomeOrders.dataSourceInProgress = [heldJob];
     mockHomeOrders.serverInProgress = [heldJob];
 
-    const { UNSAFE_getByType, unmount } = renderHome();
+    const { UNSAFE_getByType, getByTestId, unmount } = renderHome();
 
     // AddOnOfferCell is rendered with answersBelow={true}
     const cell = UNSAFE_getByType(AddOnOfferCell);
@@ -283,22 +289,26 @@ describe('Home offer answers pinned in footer (Clause 6)', () => {
     // OfferAnswers is rendered in footer with pinned={true} and add-on words
     const answers = UNSAFE_getByType(OfferAnswers);
     expect(answers.props.pinned).toBe(true);
-    expect(answers.props.acceptTitle).toBe(
+    expect(answers.props.acceptLabel).toBe(
       i18n.t('translations:add_on_offer_accept'),
     );
-    expect(answers.props.acceptSubtitle).toBe(
-      i18n.t('translations:add_on_offer_slide'),
+    expect(answers.props.acceptHint).toBe(
+      i18n.t('translations:add_on_offer_hold_hint'),
     );
 
-    // Accepting calls acceptOrderFn with addon id
+    // Holding Accept calls acceptOrderFn with addon id
+    const acceptBtn = getByTestId('offer-accept');
+    fireEvent(acceptBtn, 'pressIn');
     act(() => {
-      answers.props.onAccept(addOnOffer);
+      jest.advanceTimersByTime(200);
     });
     expect(mockHomeOrders.acceptOrderFn).toHaveBeenCalledWith('addon-offer-1');
 
-    // Declining calls declineOrderFn with addon id
+    // Holding Decline calls declineOrderFn with addon id
+    const declineBtn = getByTestId('offer-decline');
+    fireEvent(declineBtn, 'pressIn');
     act(() => {
-      answers.props.onDecline(addOnOffer);
+      jest.advanceTimersByTime(1000);
     });
     expect(mockHomeOrders.declineOrderFn).toHaveBeenCalledWith('addon-offer-1');
 

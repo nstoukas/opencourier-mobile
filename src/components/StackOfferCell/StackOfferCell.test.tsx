@@ -3,8 +3,6 @@ import renderer, { act } from 'react-test-renderer';
 import '@app/localization/i18n';
 import { StackOfferCell } from './StackOfferCell';
 import { Order, StackStop } from '@app/types/types';
-import ButtonSwipe from '../ButtonSwipe/ButtonSwipe';
-import { ButtonOrder } from '../ButtonOrder/ButtonOrder';
 import { OfferAnswers } from '../OfferAnswers/OfferAnswers';
 import { Paralelogram } from '../Paralelogram/Paralelogram';
 
@@ -127,7 +125,7 @@ describe('StackOfferCell (spec 0048, row 80, AC-9, AC-10)', () => {
     });
   });
 
-  it('swiping Accept calls onAccept with the order', () => {
+  it('holding or activating Accept in OfferAnswers calls onAccept with the order', () => {
     const onAcceptMock = jest.fn();
     let component: renderer.ReactTestRenderer;
     act(() => {
@@ -142,9 +140,15 @@ describe('StackOfferCell (spec 0048, row 80, AC-9, AC-10)', () => {
       );
     });
 
-    const swipeButton = component!.root.findByType(ButtonSwipe);
+    const offerAnswers = component!.root.findByType(OfferAnswers);
+    expect(offerAnswers.props.acceptLabel).toBe('Accept both');
+    expect(offerAnswers.props.acceptHint).toBe('Hold to take both orders');
+
+    const acceptButton = component!.root.findByProps({
+      testID: 'offer-accept',
+    });
     act(() => {
-      swipeButton.props.onSwiped(true);
+      acceptButton.props.onHeld();
     });
 
     expect(onAcceptMock).toHaveBeenCalledTimes(1);
@@ -155,7 +159,7 @@ describe('StackOfferCell (spec 0048, row 80, AC-9, AC-10)', () => {
     });
   });
 
-  it('tapping Decline calls onDecline with the order', () => {
+  it('holding or activating Decline in OfferAnswers calls onDecline with the order', () => {
     const onDeclineMock = jest.fn();
     let component: renderer.ReactTestRenderer;
     act(() => {
@@ -170,9 +174,11 @@ describe('StackOfferCell (spec 0048, row 80, AC-9, AC-10)', () => {
       );
     });
 
-    const declineButton = component!.root.findByType(ButtonOrder);
+    const declineButton = component!.root.findByProps({
+      testID: 'offer-decline',
+    });
     act(() => {
-      declineButton.props.onPress();
+      declineButton.props.onHeld();
     });
 
     expect(onDeclineMock).toHaveBeenCalledTimes(1);

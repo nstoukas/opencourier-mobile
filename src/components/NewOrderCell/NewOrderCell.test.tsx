@@ -1,10 +1,8 @@
 import React from 'react';
-import { Text } from 'react-native';
+import { StyleSheet, Text } from 'react-native';
 import renderer, { act } from 'react-test-renderer';
 import { Order } from '@app/types/types';
 import '@app/localization/i18n';
-import ButtonSwipe, { BUTTON_WIDTH } from '../ButtonSwipe/ButtonSwipe';
-import { ButtonOrder } from '../ButtonOrder/ButtonOrder';
 import { OfferAnswers } from '../OfferAnswers/OfferAnswers';
 import { NewOrderCell } from './NewOrderCell';
 import { Paralelogram } from '../Paralelogram/Paralelogram';
@@ -337,7 +335,7 @@ describe('NewOrderCell (spec 0002, spec 0018, spec 0019, AC-3, AC-5, AC-7, AC-8,
     });
   });
 
-  it('Accept swipe has height control.offer (100) and calls onAccept once on full swipe; Decline calls onDecline and has BUTTON_WIDTH (Pin 3, AC-5, AC-9)', () => {
+  it('renders OfferAnswers with Accept (100 tall, flex 2) and Decline (100 tall, flex 1) and calls onAccept / onDecline with order (Clause 1, 2, 5)', () => {
     const onAcceptMock = jest.fn();
     const onDeclineMock = jest.fn();
 
@@ -353,38 +351,32 @@ describe('NewOrderCell (spec 0002, spec 0018, spec 0019, AC-3, AC-5, AC-7, AC-8,
       );
     });
 
-    const swipeBefore = component!.root.findByType(ButtonSwipe);
-    expect(swipeBefore.props.title).toBe('Accept');
-    // Pin 3: Accept is a ButtonSwipe with height control.offer (100)
-    expect(swipeBefore.props.height).toBe(control.offer);
-    expect(swipeBefore.props.height).toBe(100);
-    expect((swipeBefore as any)._fiber.key).toBe('0');
+    const offerAnswers = component!.root.findByType(OfferAnswers);
+    expect(offerAnswers.props.acceptLabel).toBe('Accept');
+    expect(offerAnswers.props.acceptHint).toBe('Hold to take this order');
 
-    // Incomplete swipe (half swipe / let go early) calls nothing and does not redraw
-    act(() => {
-      swipeBefore.props.onSwiped(false);
-    });
-    expect(onAcceptMock).not.toHaveBeenCalled();
-    const swipeAfterHalf = component!.root.findByType(ButtonSwipe);
-    expect((swipeAfterHalf as any)._fiber.key).toBe('0');
+    const acceptBtn = component!.root.findByProps({ testID: 'offer-accept' });
+    const acceptStyle = StyleSheet.flatten(acceptBtn.props.style);
+    expect(acceptStyle.height).toBe(control.offer);
+    expect(acceptStyle.height).toBe(100);
+    expect(acceptStyle.flex).toBe(2);
 
-    // Successful full swipe calls onAccept once and redraws with new attempt key
+    const declineBtn = component!.root.findByProps({ testID: 'offer-decline' });
+    const declineStyle = StyleSheet.flatten(declineBtn.props.style);
+    expect(declineStyle.height).toBe(control.offer);
+    expect(declineStyle.height).toBe(100);
+    expect(declineStyle.flex).toBe(1);
+
+    // Holding or activating Accept calls onAccept with order
     act(() => {
-      swipeBefore.props.onSwiped(true);
+      acceptBtn.props.onHeld();
     });
     expect(onAcceptMock).toHaveBeenCalledTimes(1);
     expect(onAcceptMock).toHaveBeenCalledWith(dummyOrder);
 
-    const swipeAfterFull = component!.root.findByType(ButtonSwipe);
-    expect((swipeAfterFull as any)._fiber.key).toBe('1');
-
-    // Decline button: calls onDecline and has BUTTON_WIDTH as its width
-    const declineBtn = component!.root.findByType(ButtonOrder);
-    expect(declineBtn.props.style).toEqual(
-      expect.objectContaining({ width: BUTTON_WIDTH }),
-    );
+    // Holding or activating Decline calls onDecline with order
     act(() => {
-      declineBtn.props.onPress();
+      declineBtn.props.onHeld();
     });
     expect(onDeclineMock).toHaveBeenCalledTimes(1);
     expect(onDeclineMock).toHaveBeenCalledWith(dummyOrder);
