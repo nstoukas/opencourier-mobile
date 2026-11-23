@@ -66,8 +66,9 @@ export const useHomeOrders = () => {
   const [dataSourceInProgress, setDataSourceInProgress] = useState<Order[]>([]);
   // Decision 128.6: orders of a pair the phone tried to take by itself and
   // could not (the accept failed, or only one order could be claimed), or
-  // chose not to (see autoAcceptStack). The phone tries once only, so Home
-  // shows these as a card even to a rider on auto accept, to answer by hand.
+  // chose not to (see autoAcceptStack). Row 130: a single order whose
+  // automatic accept failed, too. The phone tries once only, so Home shows
+  // these as a card even to a rider on auto accept, to answer by hand.
   const [handAnswerIds, setHandAnswerIds] = useState<string[]>([]);
   const leaveToRider = (ids: string[]) =>
     setHandAnswerIds(current => [
@@ -274,6 +275,13 @@ export const useHomeOrders = () => {
           i18next.t('translations:accept_failed_title'),
         );
         return;
+      }
+      // Row 130: a single order the phone could not take by itself goes to
+      // the rider as a card too, as a pair does (decision 128.6). The phone
+      // tried once and will not try again, so without this the offer would
+      // stay hidden from a rider on auto accept until it ended.
+      if (automatic) {
+        leaveToRider([orderId]);
       }
       releaseOffer(orderId);
       // In the rider's language (spec 0054): the refusal's words when the server sent one.
