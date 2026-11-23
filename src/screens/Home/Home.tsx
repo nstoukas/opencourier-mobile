@@ -62,6 +62,7 @@ import {
 import { usePickupPoints } from '@app/hooks/usePickupPoints';
 import { useNavigateTo } from '@app/hooks/useNavigateTo';
 import { useLocationPermission } from '@app/hooks/useLocationPermission';
+import { OfferAnswers } from '@app/components/OfferAnswers/OfferAnswers';
 import { SosHoldButton } from '@app/components/SosHoldButton/SosHoldButton';
 import { SosActiveBanner } from '@app/components/SosActiveBanner/SosActiveBanner';
 import { beginSos, openSosScreen, useSosRecord } from '@app/hooks/useSos';
@@ -455,6 +456,7 @@ export const HomeScreen = ({ navigation }: Props) => {
           millisWaited={waitedTimeForOffer(order.id)}
           onAccept={offer => acceptOrderFn(offer.id)}
           onDecline={offer => declineOrderFn(offer.id)}
+          answersBelow
         />
       );
     }
@@ -472,6 +474,7 @@ export const HomeScreen = ({ navigation }: Props) => {
           millisWaited={waitedTimeForOffer(order.id)}
           onAccept={offer => acceptOrderFn(offer.id)}
           onDecline={offer => declineOrderFn(offer.id)}
+          answersBelow
         />
       );
     }
@@ -489,6 +492,7 @@ export const HomeScreen = ({ navigation }: Props) => {
           order={order}
           onAccept={offer => acceptOrderFn(offer.id)}
           onDecline={offer => declineOrderFn(offer.id)}
+          answersBelow
         />
       );
     }
@@ -532,6 +536,28 @@ export const HomeScreen = ({ navigation }: Props) => {
 
   // Spec 0021 (AC-9): the job's swipe and small actions, pinned below the card.
   const renderFooter = () => {
+    // An offer's Accept and Decline, pinned below the card's scrolling part so
+    // both are on screen without scrolling (operator, 23 Nov). The words follow
+    // the card above: an add on, a pair, or a single order.
+    if (shown?.kind === 'offer') {
+      const offer = shown.order;
+      const [title, subtitle] = offer.addOn
+        ? ['add_on_offer_accept', 'add_on_offer_slide']
+        : shown.partner
+        ? ['stack_offer_accept', 'stack_offer_slide']
+        : ['accept', 'slide_to_accept'];
+      return (
+        <OfferAnswers
+          key={`${offer.id}-${offer.offeredAt ?? ''}`}
+          order={offer}
+          acceptTitle={t(`translations:${title}`)}
+          acceptSubtitle={t(`translations:${subtitle}`)}
+          onAccept={answered => acceptOrderFn(answered.id)}
+          onDecline={answered => declineOrderFn(answered.id)}
+          pinned
+        />
+      );
+    }
     if (shown?.kind !== 'job') {
       return null;
     }

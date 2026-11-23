@@ -1,14 +1,12 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { StyleProp, ViewStyle, View, Text, Animated } from 'react-native';
 import { styles } from './NewOrderCell.styles';
 import { Order } from '@app/types/types';
-import { ButtonOrder, ButtonOrderType } from '../ButtonOrder/ButtonOrder';
 import { useTranslation } from 'react-i18next';
-import ButtonSwipe from '../ButtonSwipe/ButtonSwipe';
+import { OfferAnswers } from '../OfferAnswers/OfferAnswers';
 import { offerTripLines } from '@app/utilities/offerTrip';
 import { boxSizeLine } from '@app/utilities/boxSize';
 import { legLine } from '@app/utilities/legs';
-import { control } from '@app/styles/theme';
 import { formatCurrencyFromCents } from '@app/utilities/currency';
 import { SCREEN_WIDTH } from '@app/utilities/constants';
 import { Paralelogram } from '../Paralelogram/Paralelogram';
@@ -37,6 +35,9 @@ type Props = {
   // How long the offer has waited, for the "Waiting X min" line shown when
   // there is no deadline (AC-4).
   millisWaited?: number | null;
+  // True when Home draws Accept and Decline below the card, outside its
+  // scrolling part; the card then shows only the offer's details.
+  answersBelow?: boolean;
 };
 
 // "Waiting 3 min", or "Waiting less than 1 min" for a fresh offer.
@@ -59,6 +60,7 @@ export const NewOrderCell = ({
   millisRemaining = null,
   totalMillis = null,
   millisWaited = null,
+  answersBelow = false,
 }: Props) => {
   const { t } = useTranslation();
   // Spec 0019 (AC-1, AC-3): the figures come with the offer from the backend.
@@ -67,9 +69,6 @@ export const NewOrderCell = ({
   const boxSize = boxSizeLine(order.boxSize, t);
   // Spec 0046 (AC-7): "Leg 1 of 2" when the order goes as several deliveries.
   const leg = legLine(order, t);
-  // A new key after each attempt draws the swipe fresh, so an accept that did
-  // not go through (already answered, a refused claim) leaves no knob at the end.
-  const [acceptAttempt, setAcceptAttempt] = useState(0);
   const numberOfParalelograms = Math.floor(SCREEN_WIDTH / PARALELOGRAM_WIDTH);
 
   // An offer with a deadline shows a countdown bar; one without shows how
@@ -133,35 +132,20 @@ export const NewOrderCell = ({
           </Text>
         </View>
       ) : null}
-      <>
-        {/* Spec 0018 (AC-9): Accept is a swipe, so a brush of the thumb cannot
-            take an offer. A swipe let go early does nothing. With auto accept
-            the offer is claimed on arrival, and home shows this card only
-            when the phone could not take it (rows 128 and 130). */}
-        <ButtonSwipe
-          key={acceptAttempt}
-          style={styles.buttonTop}
-          // Spec 0019 (AC-5): as tall as Decline, with a thumb sized knob.
-          height={control.offer}
-          isSwiped={false}
-          onSwiped={didSwipe => {
-            if (didSwipe) {
-              onAccept(order);
-              setAcceptAttempt(attempt => attempt + 1);
-            }
-          }}
-          enabled={true}
-          title={t('translations:accept')}
-          subtitle={t('translations:slide_to_accept')}
-          isLoading={false}
+      {/* Spec 0018 (AC-9) and 0019 (AC-5): Accept and Decline. With auto
+          accept the offer is claimed on arrival, and home shows this card only
+          when the phone could not take it (rows 128 and 130). Home draws them
+          in its pinned footer instead (`answersBelow`), so they never need a
+          scroll (operator, 23 Nov). */}
+      {!answersBelow && (
+        <OfferAnswers
+          order={order}
+          acceptTitle={t('translations:accept')}
+          acceptSubtitle={t('translations:slide_to_accept')}
+          onAccept={onAccept}
+          onDecline={onDecline}
         />
-        <ButtonOrder
-          style={styles.buttonDecline}
-          type={ButtonOrderType.decline}
-          onPress={() => onDecline(order)}
-          autoAcceptOrders={autoAcceptOrders}
-        />
-      </>
+      )}
       {!autoAcceptOrders && hasDeadline && (
         <View style={[styles.containerLoader, { height: PARALELOGRAM_HEIGHT }]}>
           {[...Array(numberOfParalelograms).keys()]

@@ -1,13 +1,12 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { Animated, StyleSheet, Text, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { Order, StackStop } from '@app/types/types';
-import { ButtonOrder, ButtonOrderType } from '../ButtonOrder/ButtonOrder';
-import ButtonSwipe from '../ButtonSwipe/ButtonSwipe';
+import { OfferAnswers } from '../OfferAnswers/OfferAnswers';
 import { StackStopList } from '../StackStopList/StackStopList';
 import { Paralelogram } from '../Paralelogram/Paralelogram';
 import { styles as offerStyles } from '../NewOrderCell/NewOrderCell.styles';
-import { control, color, space, typeScale } from '@app/styles/theme';
+import { color, space, typeScale } from '@app/styles/theme';
 import { Colors } from '@app/styles/colors';
 import { formatCurrencyFromCents } from '@app/utilities/currency';
 import { SCREEN_WIDTH } from '@app/utilities/constants';
@@ -34,6 +33,9 @@ type Props = {
   millisRemaining?: number | null;
   totalMillis?: number | null;
   millisWaited?: number | null;
+  // True when Home draws Accept and Decline below the card, outside its
+  // scrolling part; the card then shows only the offer's details.
+  answersBelow?: boolean;
   // The answer is about the added order only: the job is never touched (AC-7).
   onAccept: (order: Order) => void;
   onDecline: (order: Order) => void;
@@ -54,13 +56,11 @@ export const AddOnOfferCell = ({
   millisRemaining = null,
   totalMillis = null,
   millisWaited = null,
+  answersBelow = false,
   onAccept,
   onDecline,
 }: Props) => {
   const { t } = useTranslation();
-  // A new key after each attempt draws the swipe fresh (a refused accept
-  // leaves no knob at the end), as on the single offer card.
-  const [acceptAttempt, setAcceptAttempt] = useState(0);
   const money = (cents: number | null | undefined) =>
     formatCurrencyFromCents(cents, order.currencyCode);
   // Review fix: the total only when both pays are known. A missing pay counted
@@ -121,28 +121,17 @@ export const AddOnOfferCell = ({
           addOn={true}
         />
       )}
-      <ButtonSwipe
-        key={acceptAttempt}
-        style={offerStyles.buttonTop}
-        height={control.offer}
-        isSwiped={false}
-        onSwiped={didSwipe => {
-          if (didSwipe) {
-            onAccept(order);
-            setAcceptAttempt(attempt => attempt + 1);
-          }
-        }}
-        enabled={true}
-        title={t('translations:add_on_offer_accept')}
-        subtitle={t('translations:add_on_offer_slide')}
-        isLoading={false}
-      />
-      <ButtonOrder
-        style={offerStyles.buttonDecline}
-        type={ButtonOrderType.decline}
-        onPress={() => onDecline(order)}
-        autoAcceptOrders={false}
-      />
+      {/* Home draws Accept and Decline in its pinned footer instead
+          (`answersBelow`), so they never need a scroll (operator, 23 Nov). */}
+      {!answersBelow && (
+        <OfferAnswers
+          order={order}
+          acceptTitle={t('translations:add_on_offer_accept')}
+          acceptSubtitle={t('translations:add_on_offer_slide')}
+          onAccept={onAccept}
+          onDecline={onDecline}
+        />
+      )}
       {hasDeadline && (
         <View
           style={[
