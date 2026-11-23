@@ -70,6 +70,8 @@ const translations: typeof en = {
   connection_off: 'Χωρίς σύνδεση',
   offline: 'Εκτός σύνδεσης',
   last_call: 'Τελευταία παραγγελία',
+  // The short word on the status tag under Home's badge frame.
+  last_call_tag: 'Τελευταία',
   new: 'Νέες',
   in_progress: 'Σε εξέλιξη',
   history: 'Ιστορικό',

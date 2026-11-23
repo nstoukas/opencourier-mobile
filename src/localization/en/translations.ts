@@ -58,6 +58,8 @@ export default {
   connection_off: 'Not connected',
   offline: 'Offline',
   last_call: 'Last Call',
+  // The short word on the status tag under Home's badge frame.
+  last_call_tag: 'Last Call',
   new: 'New',
   in_progress: 'In Progress',
   history: 'History',

@@ -65,9 +65,15 @@ export const StatusWord = ({
       <Text
         style={[styles.textStatus, { color: statusTextColor(userStatus) }]}
         numberOfLines={2}>
-        {/* 'online', 'offline' and 'last_call' are translation keys: the
-            rider reads Online, Offline or Last Call, never the raw value. */}
-        {t(`translations:${userStatus.toLowerCase()}`)}
+        {/* 'online' and 'offline' are translation keys: the rider reads
+            Online or Offline, never the raw value. Last call has a short tag
+            word of its own, so the Greek fits one line ("Τελευταία",
+            operator, 23 Nov); buttons and dialogs keep the full words. */}
+        {t(
+          userStatus === UserStatus.LastCall
+            ? 'translations:last_call_tag'
+            : `translations:${userStatus.toLowerCase()}`,
+        )}
       </Text>
     </View>
   );
