@@ -45,6 +45,7 @@ export const styles = StyleSheet.create({
     lineHeight: typeScale.caption.lineHeight,
     // Android adds space above and below text by default; without it the word sits centered.
     includeFontPadding: false,
+    textAlign: 'center',
     color: Colors.white,
   },
   statusIndicatorSmall: {

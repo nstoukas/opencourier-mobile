@@ -1,5 +1,5 @@
 import { useTranslation } from 'react-i18next';
-import React, { useMemo } from 'react';
+import React from 'react';
 import {
   Image,
   StyleProp,
@@ -19,6 +19,48 @@ type Props = {
   onPress: () => void;
   userStatus: UserStatus;
   discreteStatusIndicator?: boolean;
+  // True when the screen draws the status word itself (Home centres it under
+  // the badge's frame, operator 23 Nov); the avatar then shows no word.
+  hideStatusWord?: boolean;
+};
+
+// The status colour: green Online, yellow Last call, red Offline.
+const statusColor = (userStatus: UserStatus) => {
+  switch (userStatus) {
+    case UserStatus.Online:
+      return Colors.green1;
+    case UserStatus.Offline:
+      return Colors.red1;
+    case UserStatus.LastCall:
+      return Colors.yellow1;
+  }
+};
+
+// The status word on its coloured tag: Online, Last call or Offline.
+// Up to two lines, centred, so a long Greek word wraps instead of being cut.
+export const StatusWord = ({
+  userStatus,
+  style,
+}: {
+  userStatus: UserStatus;
+  style?: StyleProp<ViewStyle>;
+}) => {
+  const { t } = useTranslation();
+  return (
+    <View
+      style={[
+        styles.containerStatus,
+        { backgroundColor: statusColor(userStatus) },
+        style,
+      ]}
+      testID="status-word">
+      <Text style={styles.textStatus} numberOfLines={2}>
+        {/* 'online', 'offline' and 'last_call' are translation keys: the
+            rider reads Online, Offline or Last Call, never the raw value. */}
+        {t(`translations:${userStatus.toLowerCase()}`)}
+      </Text>
+    </View>
+  );
 };
 
 export const ProfileBadge = ({
@@ -26,18 +68,9 @@ export const ProfileBadge = ({
   onPress,
   userStatus,
   discreteStatusIndicator,
+  hideStatusWord,
 }: Props) => {
-  const backgroundColor = useMemo(() => {
-    switch (userStatus) {
-      case UserStatus.Online:
-        return Colors.green1;
-      case UserStatus.Offline:
-        return Colors.red1;
-      case UserStatus.LastCall:
-        return Colors.yellow1;
-    }
-  }, [userStatus]);
-  const { t } = useTranslation();
+  const backgroundColor = statusColor(userStatus);
 
   return (
     <TouchableOpacity
@@ -56,21 +89,11 @@ export const ProfileBadge = ({
           ]}
         />
       )}
-      {!discreteStatusIndicator && (
+      {!discreteStatusIndicator && !hideStatusWord && (
         // pointerEvents "none": the row is wider than the avatar and only shows
         // the word; a tap goes to whatever is under it, as before.
         <View style={styles.statusRow} pointerEvents="none">
-          <View
-            style={[
-              styles.containerStatus,
-              { backgroundColor: backgroundColor },
-            ]}>
-            <Text style={styles.textStatus} numberOfLines={1}>
-              {/* 'online', 'offline' and 'last_call' are translation keys: the
-                  rider reads Online, Offline or Last Call, never the raw value. */}
-              {t(`translations:${userStatus.toLowerCase()}`)}
-            </Text>
-          </View>
+          <StatusWord userStatus={userStatus} />
         </View>
       )}
     </TouchableOpacity>

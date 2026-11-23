@@ -139,7 +139,13 @@ export const ReportIssue = ({ navigation, route }: Props) => {
         {!didSelectIssue && (
           <>
             <View style={styles.navHeader}>
-              <Text style={styles.title}>{t('translations:report_issue')}</Text>
+              <Text
+                style={styles.title}
+                numberOfLines={1}
+                adjustsFontSizeToFit
+                minimumFontScale={0.7}>
+                {t('translations:report_issue')}
+              </Text>
               <BackNavButton onPress={() => navigation.goBack()} />
             </View>
 

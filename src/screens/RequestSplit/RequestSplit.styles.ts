@@ -22,10 +22,12 @@ export const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
   },
+  // Centred, but kept 48 px clear of each side so a long (Greek) title never runs under the
+  // 40 px back button; the screen also lets it shrink its letters to fit one line.
   title: {
     position: 'absolute',
-    left: 0,
-    right: 0,
+    left: 48,
+    right: 48,
     textAlign: 'center',
     fontWeight: '700',
     fontSize: typeScale.h1.fontSize,

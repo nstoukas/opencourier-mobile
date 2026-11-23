@@ -94,7 +94,13 @@ export const RequestReview = ({ navigation, route }: Props) => {
       />
       <ScreenSafeArea style={styles.safe}>
         <View style={styles.navHeader}>
-          <Text style={styles.title}>{t('translations:review_title')}</Text>
+          <Text
+            style={styles.title}
+            numberOfLines={1}
+            adjustsFontSizeToFit
+            minimumFontScale={0.7}>
+            {t('translations:review_title')}
+          </Text>
           <BackNavButton onPress={() => navigation.goBack()} />
         </View>
         {/* Lifts the note above the keyboard on both systems (SDK 35, row 114). */}

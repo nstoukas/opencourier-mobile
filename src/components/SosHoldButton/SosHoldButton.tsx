@@ -1,34 +1,22 @@
 import React, { useEffect, useRef } from 'react';
-import {
-  Animated,
-  Easing,
-  Pressable,
-  StyleSheet,
-  Text,
-  View,
-} from 'react-native';
+import { Animated, Easing, Pressable, StyleSheet, View } from 'react-native';
 import Svg, { Rect } from 'react-native-svg';
 import { useTranslation } from 'react-i18next';
 import { SirenIcon } from 'phosphor-react-native/src/icons/Siren';
 import { Icon } from '@app/components/Icon/Icon';
-import {
-  color,
-  control,
-  radius,
-  shadow,
-  space,
-  typeScale,
-} from '@app/styles/theme';
+import { color, control, radius, shadow } from '@app/styles/theme';
 
 // How long the rider holds before the SOS starts (spec 0022, AC-2): long
 // enough to be deliberate, so a brush in a pocket never calls 112.
 export const SOS_HOLD_MS = 3000;
 
-const WIDTH = 88;
-const HEIGHT = control.lg;
+// A round button, the size a rider's thumb needs (spec 0007: 48 px), with the
+// siren only: the word SOS is read out by a screen reader (operator, 23 Nov).
+const WIDTH = control.xl;
+const HEIGHT = control.xl;
 const STROKE = 3;
-// The ring runs just inside the pill's edge: a rounded rectangle whose
-// corners are half its height, so it follows the pill's shape.
+// The ring runs just inside the button's edge: a rounded rectangle whose
+// corners are half its height, which for a square is a circle.
 const RING_WIDTH = WIDTH - STROKE;
 const RING_HEIGHT = HEIGHT - STROKE;
 const RING_RADIUS = RING_HEIGHT / 2;
@@ -43,7 +31,7 @@ type Props = {
   onHeld: () => void;
 };
 
-// Spec 0022 (AC-1, AC-2): the red SOS pill in Home's top slot. Pressing it
+// Spec 0022 (AC-1, AC-2): the red SOS button in Home's top slot. Pressing it
 // starts a ring filling around its edge; letting go before the ring is full
 // does nothing at all (no call, no request, no record) and the ring empties.
 export const SosHoldButton = ({ onHeld }: Props) => {
@@ -110,7 +98,7 @@ export const SosHoldButton = ({ onHeld }: Props) => {
       accessibilityLabel={t('translations:sos_button')}
       accessibilityHint={t('translations:sos_button_hint')}
       testID="sos-hold-button"
-      style={styles.pill}>
+      style={styles.button}>
       <Svg width={WIDTH} height={HEIGHT} style={StyleSheet.absoluteFill}>
         <AnimatedRect
           x={STROKE / 2}
@@ -129,18 +117,17 @@ export const SosHoldButton = ({ onHeld }: Props) => {
       <View style={styles.content} pointerEvents="none">
         <Icon
           icon={SirenIcon}
-          size={18}
+          size={24}
           tone="destructive-foreground"
           weight="fill"
         />
-        <Text style={styles.label}>{t('translations:sos_button')}</Text>
       </View>
     </Pressable>
   );
 };
 
 const styles = StyleSheet.create({
-  pill: {
+  button: {
     width: WIDTH,
     height: HEIGHT,
     borderRadius: radius.full,
@@ -150,13 +137,7 @@ const styles = StyleSheet.create({
     ...shadow.md,
   },
   content: {
-    flexDirection: 'row',
     alignItems: 'center',
-    gap: space['1'],
-  },
-  label: {
-    ...typeScale.label,
-    fontWeight: '700',
-    color: color['destructive-foreground'],
+    justifyContent: 'center',
   },
 });

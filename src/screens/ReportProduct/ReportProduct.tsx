@@ -88,43 +88,61 @@ export const ReportProduct = ({ navigation, route }: Props) => {
   return (
     <ScreenSafeArea style={styles.safe}>
       <View style={styles.navHeader}>
-        <Text style={styles.title}>{t('translations:report_product')}</Text>
+        <Text
+          style={styles.title}
+          numberOfLines={1}
+          adjustsFontSizeToFit
+          minimumFontScale={0.7}>
+          {t('translations:report_product')}
+        </Text>
         <BackNavButton onPress={() => navigation.goBack()} />
       </View>
       {/* Lifts the note above the keyboard on both systems, as in ReportIssue. Android no longer
           makes room by itself since the app draws edge to edge (SDK 35), so it needs the padding
           too (row 114); the ScrollView inside can then scroll the note into view. */}
       <KeyboardAvoidingView style={styles.keyboardArea} behavior="padding">
-      <ScrollView
-        contentContainerStyle={[
-          styles.content,
-          // Android: ScreenSafeArea pads only iOS, so Send stays clear of the gesture bar.
-          { paddingBottom: Platform.OS === 'android' ? bottom + 16 : 16 },
-        ]}>
-        <View style={styles.row}>
-          {chip(t('translations:report_product_wrong'), kind === 'WRONG_ITEM', () => setKind('WRONG_ITEM'))}
-          {chip(t('translations:report_product_missing'), kind === 'MISSING_ITEM', () => setKind('MISSING_ITEM'))}
-        </View>
-        <View style={styles.row}>
-          {names.map(name => chip(name, item === name, () => setItem(name)))}
-          {chip(t('translations:report_product_something_else'), item === SOMETHING_ELSE, () => setItem(SOMETHING_ELSE))}
-        </View>
-        <TextInput
-          style={styles.noteInput}
-          value={note}
-          onChangeText={setNote}
-          placeholder={t('translations:report_note_placeholder')}
-          multiline
-          maxLength={NOTE_MAX_LENGTH}
-        />
-        <Button
-          type={ButtonType.redBGRedText}
-          title={t('translations:report_send')}
-          disabled={sending || !canSend}
-          isLoading={sending}
-          onPress={send}
-        />
-      </ScrollView>
+        <ScrollView
+          contentContainerStyle={[
+            styles.content,
+            // Android: ScreenSafeArea pads only iOS, so Send stays clear of the gesture bar.
+            { paddingBottom: Platform.OS === 'android' ? bottom + 16 : 16 },
+          ]}>
+          <View style={styles.row}>
+            {chip(
+              t('translations:report_product_wrong'),
+              kind === 'WRONG_ITEM',
+              () => setKind('WRONG_ITEM'),
+            )}
+            {chip(
+              t('translations:report_product_missing'),
+              kind === 'MISSING_ITEM',
+              () => setKind('MISSING_ITEM'),
+            )}
+          </View>
+          <View style={styles.row}>
+            {names.map(name => chip(name, item === name, () => setItem(name)))}
+            {chip(
+              t('translations:report_product_something_else'),
+              item === SOMETHING_ELSE,
+              () => setItem(SOMETHING_ELSE),
+            )}
+          </View>
+          <TextInput
+            style={styles.noteInput}
+            value={note}
+            onChangeText={setNote}
+            placeholder={t('translations:report_note_placeholder')}
+            multiline
+            maxLength={NOTE_MAX_LENGTH}
+          />
+          <Button
+            type={ButtonType.redBGRedText}
+            title={t('translations:report_send')}
+            disabled={sending || !canSend}
+            isLoading={sending}
+            onPress={send}
+          />
+        </ScrollView>
       </KeyboardAvoidingView>
     </ScreenSafeArea>
   );

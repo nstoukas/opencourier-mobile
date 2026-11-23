@@ -14,10 +14,12 @@ export const styles = StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: 16,
   },
+  // Centred, but kept 48 px clear of each side so a long (Greek) title never runs under the
+  // 40 px back button; the screen also lets it shrink its letters to fit one line.
   title: {
     position: 'absolute',
-    left: 0,
-    right: 0,
+    left: 48,
+    right: 48,
     textAlign: 'center',
     fontWeight: '700',
     fontSize: typeScale.h2.fontSize,
@@ -144,6 +146,7 @@ export const styles = StyleSheet.create({
   },
   input: {
     flex: 1,
+    minWidth: 0,
     minHeight: 48,
     maxHeight: 120,
     borderWidth: 1,
@@ -154,8 +157,11 @@ export const styles = StyleSheet.create({
     fontSize: typeScale.body.fontSize,
     color: color.foreground,
   },
+  // flexShrink 0: the text box gives way, never the button, so "Αποστολή" stays whole.
   send: {
     minHeight: 48,
     minWidth: 72,
+    flexShrink: 0,
+    alignSelf: 'flex-end',
   },
 });

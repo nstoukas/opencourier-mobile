@@ -277,7 +277,13 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: space['4'],
   },
-  title: { ...typeScale.h1, color: color.foreground, marginLeft: space['4'] },
+  // flexShrink: wraps rather than running off the screen (long Greek titles).
+  title: {
+    ...typeScale.h1,
+    color: color.foreground,
+    marginLeft: space['4'],
+    flexShrink: 1,
+  },
   message: { color: color.destructive, marginBottom: space['3'] },
   section: {
     ...typeScale.h3,

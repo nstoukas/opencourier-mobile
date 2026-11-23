@@ -1138,7 +1138,6 @@ const translations: typeof en = {
   location_precise_needed:
     'Επιλέξτε «Ακριβής» τοποθεσία: τη χρειάζονται ο συντονισμός και η καταγραφή της άφιξης.',
   // Spec 0040: time worked, the home counter, the Earnings section and the co-op card.
-  time_worked_online: '{{time}} σε σύνδεση',
   time_worked_per_hour: '{{amount}}/ώρα',
   time_worked_on_break: 'Σε διάλειμμα {{minutes}} λ.',
   time_worked_title: 'Χρόνος εργασίας',

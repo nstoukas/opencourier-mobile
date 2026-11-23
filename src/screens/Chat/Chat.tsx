@@ -268,7 +268,13 @@ export const Chat = ({ navigation, route }: Props) => {
     <View style={styles.container}>
       <ScreenSafeArea style={styles.safe}>
         <View style={styles.navHeader}>
-          <Text style={styles.title}>{t('translations:chat_dispatch')}</Text>
+          <Text
+            style={styles.title}
+            numberOfLines={1}
+            adjustsFontSizeToFit
+            minimumFontScale={0.7}>
+            {t('translations:chat_dispatch')}
+          </Text>
           <BackNavButton onPress={() => navigation.goBack()} />
         </View>
         {orderReference ? (

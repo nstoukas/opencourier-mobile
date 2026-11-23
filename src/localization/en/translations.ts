@@ -1082,7 +1082,6 @@ export default {
   location_precise_needed:
     'Choose Precise location: dispatch and arrival need it.',
   // Spec 0040: time worked, the home counter, the Earnings section and the co-op card.
-  time_worked_online: '{{time}} online',
   time_worked_per_hour: '{{amount}}/h',
   time_worked_on_break: 'On break {{minutes}} min',
   time_worked_title: 'Time worked',

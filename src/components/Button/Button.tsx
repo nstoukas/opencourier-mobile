@@ -150,7 +150,8 @@ export const Button = ({
       )}
       {!isLoading && (
         <Text
-          style={[styles.textTitle, { color: color[look.text] }, textStyle]}>
+          style={[styles.textTitle, { color: color[look.text] }, textStyle]}
+          numberOfLines={2}>
           {title}
         </Text>
       )}

@@ -624,13 +624,14 @@ export const HomeScreen = ({ navigation }: Props) => {
         onMenu={() => navigation.toggleDrawer()}
         sosAction={
           showSosPill ? <SosHoldButton onHeld={onSosHeld} /> : undefined
-        }>
+        }
+        // The open shift's time, money and € per hour (spec 0040, AC-10),
+        // in the top row between the badge and SOS.
+        middle={<TimeWorkedCounter inFront={isFocused} />}>
         {/* The rider's own SOS is active (spec 0022, AC-3). */}
         {sosActive && <SosActiveBanner onPress={() => openSosScreen()} />}
         {/* On shift or free, while the co-op runs shifts (spec 0027). */}
         <ShiftBanner inFront={isFocused} />
-        {/* The open shift's time, money and € per hour (spec 0040, AC-10). */}
-        <TimeWorkedCounter inFront={isFocused} />
         {/* Dispatch stopped for heat or a storm, or about to be (spec 0014). */}
         <DispatchStopBanner inFront={isFocused} />
         {/* Spec 0015: a job this rider held was cancelled. */}

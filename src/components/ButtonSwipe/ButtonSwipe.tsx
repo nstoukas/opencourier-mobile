@@ -163,14 +163,32 @@ const ButtonSwipe: FunctionComponent<Props> = ({
               </LinearGradient>
             </Animated.View>
           </PanGestureHandler>
-          <View>
-            <Animated.Text style={[styles.swipeText, AnimatedStyles.swipeText]}>
+          {/* The words sit in the room right of the knob, centred there, so
+              the knob never covers them. Each line shrinks its letters to fit
+              rather than being cut (long Greek labels). No subtitle, no empty
+              second line, so a lone title is centred top to bottom. */}
+          <View
+            style={[
+              styles.textArea,
+              { left: BUTTON_PADDING + knobRoom, right: BUTTON_PADDING },
+            ]}
+            pointerEvents="none">
+            <Animated.Text
+              style={[styles.swipeText, AnimatedStyles.swipeText]}
+              numberOfLines={1}
+              adjustsFontSizeToFit
+              minimumFontScale={0.7}>
               {title}
             </Animated.Text>
-            <Animated.Text
-              style={[styles.swipeTextSubtitle, AnimatedStyles.swipeText]}>
-              {subtitle}
-            </Animated.Text>
+            {subtitle !== '' && (
+              <Animated.Text
+                style={[styles.swipeTextSubtitle, AnimatedStyles.swipeText]}
+                numberOfLines={1}
+                adjustsFontSizeToFit
+                minimumFontScale={0.7}>
+                {subtitle}
+              </Animated.Text>
+            )}
           </View>
         </>
       )}
@@ -200,13 +218,23 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
+  textArea: {
+    position: 'absolute',
+    top: 0,
+    bottom: 0,
+    paddingHorizontal: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   swipeText: {
+    textAlign: 'center',
     color: Colors.white,
     fontSize: typeScale.h3.fontSize,
     fontWeight: '700',
     zIndex: 2,
   },
   swipeTextSubtitle: {
+    textAlign: 'center',
     color: Colors.white,
     fontSize: typeScale.caption.fontSize,
     zIndex: 2,

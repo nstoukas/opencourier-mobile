@@ -86,7 +86,13 @@ export const RequestSplit = ({ navigation, route }: Props) => {
       />
       <ScreenSafeArea style={[styles.safe, bottomInset]}>
         <View style={styles.navHeader}>
-          <Text style={styles.title}>{t('translations:split_title')}</Text>
+          <Text
+            style={styles.title}
+            numberOfLines={1}
+            adjustsFontSizeToFit
+            minimumFontScale={0.7}>
+            {t('translations:split_title')}
+          </Text>
           <BackNavButton onPress={() => navigation.goBack()} />
         </View>
         <ScrollView contentContainerStyle={styles.content}>

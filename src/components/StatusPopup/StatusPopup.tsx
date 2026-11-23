@@ -76,27 +76,26 @@ export const StatusPopup = ({ style, type, onAccept, onCancel }: Props) => {
 
   return (
     <View style={styles.content}>
+      {/* The icon above, then the words and buttons centred under it, each
+          as wide as the card. Before, the icon sat in a column of its own and
+          the words beside it ran past the card's right edge in Greek. */}
       <View style={[styles.container, style]}>
-        <View style={styles.containerHorizontal}>
-          {image && <Icon icon={image} style={styles.image} />}
-          <View>
-            <Text style={styles.title}>{title}</Text>
-            <Text style={styles.subtitle}>{subtitle}</Text>
-            <Button
-              style={{ marginBottom: 12 }}
-              type={primaryButtonType}
-              title={primaryButtonTitle}
-              onPress={() => onAccept(type)}
-              textStyle={{ fontSize: typeScale['body-sm'].fontSize }}
-            />
-            <Button
-              type={ButtonType.grayBGBlackText}
-              title={t('translations:cancel')}
-              onPress={onCancel}
-              textStyle={{ fontSize: typeScale['body-sm'].fontSize }}
-            />
-          </View>
-        </View>
+        {image && <Icon icon={image} style={styles.image} />}
+        <Text style={styles.title}>{title}</Text>
+        <Text style={styles.subtitle}>{subtitle}</Text>
+        <Button
+          style={{ marginBottom: 12 }}
+          type={primaryButtonType}
+          title={primaryButtonTitle}
+          onPress={() => onAccept(type)}
+          textStyle={{ fontSize: typeScale['body-sm'].fontSize }}
+        />
+        <Button
+          type={ButtonType.grayBGBlackText}
+          title={t('translations:cancel')}
+          onPress={onCancel}
+          textStyle={{ fontSize: typeScale['body-sm'].fontSize }}
+        />
       </View>
     </View>
   );

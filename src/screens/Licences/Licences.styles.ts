@@ -20,6 +20,8 @@ export const styles = StyleSheet.create({
     fontWeight: '700',
     color: Colors.black1,
     marginLeft: 16,
+    // Wraps to a second line rather than running off the screen (long Greek titles).
+    flexShrink: 1,
   },
   cell: {
     // A rider taps this: at least 48 px tall (spec 0007).

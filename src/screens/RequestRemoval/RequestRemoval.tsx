@@ -144,7 +144,13 @@ export const RequestRemoval = ({ navigation, route }: Props) => {
       />
       <ScreenSafeArea style={styles.safe}>
         <View style={styles.navHeader}>
-          <Text style={styles.title}>{t('translations:removal_title')}</Text>
+          <Text
+            style={styles.title}
+            numberOfLines={1}
+            adjustsFontSizeToFit
+            minimumFontScale={0.7}>
+            {t('translations:removal_title')}
+          </Text>
           <BackNavButton onPress={() => navigation.goBack()} />
         </View>
         <Text style={styles.intro}>{t('translations:removal_intro')}</Text>

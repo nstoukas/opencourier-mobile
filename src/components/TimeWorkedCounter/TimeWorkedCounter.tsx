@@ -13,9 +13,9 @@ type Props = {
   inFront?: boolean;
 };
 
-// Spec 0040 (AC-10): one small line on the home map while a shift is open, "3h12 online · €38.50 ·
-// €12.00/h", or "On break 12 min" while Offline with no job. It sits in the top slot with the other
-// banners, so it never covers the offer or job card. It shows nothing when there is no open shift.
+// Spec 0040 (AC-10): one small line on the home map while a shift is open, "3h12 · €38.50 ·
+// €12.00/h", or "On break 12 min" while Offline with no job. It sits in Home's top row between the
+// badge and SOS, so it never covers the offer or job card. It shows nothing when there is no open shift.
 export const TimeWorkedCounter = ({ inFront = true }: Props) => {
   const { t } = useTranslation();
   const { view } = useCurrentTimeWorked(inFront);
@@ -27,9 +27,8 @@ export const TimeWorkedCounter = ({ inFront = true }: Props) => {
     view.kind === 'break'
       ? t('translations:time_worked_on_break', { minutes: view.breakMinutes })
       : [
-          t('translations:time_worked_online', {
-            time: formatWorkDuration(view.workSeconds),
-          }),
+          // Just the time: the timer icon says what it is (operator, 23 Nov).
+          formatWorkDuration(view.workSeconds),
           formatCurrencyFromCents(view.moneyCents, view.currencyCode),
           view.centsPerHour === null
             ? '—'
@@ -45,7 +44,12 @@ export const TimeWorkedCounter = ({ inFront = true }: Props) => {
     <View style={styles.wrap} testID="time-worked-counter">
       <View style={styles.pill}>
         <Icon icon={TimerIcon} size={16} tone="muted-foreground" />
-        <Text style={styles.text} numberOfLines={1}>
+        {/* One line that shrinks its letters to fit a narrow phone, never cut off. */}
+        <Text
+          style={styles.text}
+          numberOfLines={1}
+          adjustsFontSizeToFit
+          minimumFontScale={0.75}>
           {text}
         </Text>
       </View>

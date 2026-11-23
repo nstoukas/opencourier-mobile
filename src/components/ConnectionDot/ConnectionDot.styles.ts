@@ -1,28 +1,23 @@
-import { Colors } from '@app/styles/colors';
 import { StyleSheet } from 'react-native';
-import { radius, typeScale } from '@app/styles/theme';
+import { radius } from '@app/styles/theme';
 
 export const styles = StyleSheet.create({
+  // A square the size of a fingertip's target around the dot, so it sits
+  // centred in whatever holds it.
   container: {
-    flexDirection: 'row',
+    width: 24,
+    height: 24,
     alignItems: 'center',
-    alignSelf: 'flex-start',
-    marginHorizontal: 16,
-    marginBottom: 8,
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: radius.xl,
-    backgroundColor: Colors.white,
+    justifyContent: 'center',
   },
   dot: {
-    width: 10,
-    height: 10,
+    width: 12,
+    height: 12,
     borderRadius: radius.full,
-    marginRight: 6,
   },
-  label: {
-    fontSize: typeScale['body-sm'].fontSize,
-    fontWeight: '600',
-    color: Colors.black1,
+  // Every status but a live connection: a hollow ring in the status colour.
+  ring: {
+    borderWidth: 3,
+    backgroundColor: 'transparent',
   },
 });

@@ -2,10 +2,10 @@ import { StyleSheet } from 'react-native';
 import { color, radius, shadow, typeScale } from '@app/styles/theme';
 
 export const styles = StyleSheet.create({
+  // Centred in the space Home's top row gives it, and never wider than it.
   wrap: {
-    paddingHorizontal: 12,
-    paddingTop: 8,
-    alignItems: 'flex-start',
+    alignItems: 'center',
+    maxWidth: '100%',
   },
   // A small pill rather than a full width card: it is read at a glance and takes one line.
   pill: {
@@ -15,9 +15,11 @@ export const styles = StyleSheet.create({
     paddingVertical: 6,
     borderRadius: radius.full,
     backgroundColor: color.card,
+    maxWidth: '100%',
     ...shadow.sm,
   },
   text: {
+    flexShrink: 1,
     marginLeft: 6,
     fontSize: typeScale.caption.fontSize,
     fontWeight: '700',
