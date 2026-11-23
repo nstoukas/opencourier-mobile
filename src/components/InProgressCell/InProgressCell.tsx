@@ -61,6 +61,9 @@ type Props = {
   // The route could not be had (OSRM down, no signal): the card says so
   // instead of the km (spec 0018, AC-6).
   routeUnavailable?: boolean;
+  // Row 138: the job's ⋯ button (`JobActionsButton`), drawn at the right of the current
+  // stop's address. Left out, nothing is drawn there.
+  actionsButton?: React.ReactNode;
 };
 
 // Spec 0016 (AC-8): the pin can be moved while the shown status is "arrived at
@@ -97,9 +100,9 @@ const IconAction = ({ icon, label, onPress, testID }: IconActionProps) => (
 // The job card (spec 0021, AC-6 to AC-8, AC-14): one stop at a time, the
 // person at that stop leading. At the restaurant, the order code and the
 // customer's first name (the bag's label); at the door, the customer's name,
-// address, floor and doorbell. Notes and items are one line each. The swipe
-// and the small actions are not here: they sit in the card's pinned footer
-// (`JobFooter`), so they never scroll away.
+// address, floor and doorbell. Notes and items are one line each. The swipe is
+// not here: it sits in the card's pinned footer (`JobFooter`), so it never
+// scrolls away. The small actions sit behind the ⋯ button beside the address (row 138).
 export const InProgressCell = ({
   style,
   order,
@@ -113,6 +116,7 @@ export const InProgressCell = ({
   toRestaurant,
   toCustomer,
   routeUnavailable = false,
+  actionsButton,
 }: Props) => {
   const { t } = useTranslation();
   const stage = cardStageOf(order.status);
@@ -206,9 +210,15 @@ export const InProgressCell = ({
               {boxSizeLine(order.boxSize, t)}
             </Text>
           ) : null}
-          <Text style={styles.secondary} numberOfLines={2}>
-            {[restaurantName, restaurantAddress].filter(Boolean).join(' · ')}
-          </Text>
+          {/* Row 138: the job's actions at the right of the address. */}
+          <View style={styles.addressRow}>
+            <Text
+              style={[styles.secondary, styles.addressText]}
+              numberOfLines={2}>
+              {[restaurantName, restaurantAddress].filter(Boolean).join(' · ')}
+            </Text>
+            {actionsButton}
+          </View>
           <View style={styles.actions}>
             {canReachRestaurant ? (
               <IconAction
@@ -235,17 +245,23 @@ export const InProgressCell = ({
         </View>
       ) : (
         <View style={styles.hero}>
-          <Text style={styles.name} testID="job-customer-name">
-            {order.dropoffName}
-          </Text>
-          {customerAddress ? (
-            <Text style={styles.address}>{customerAddress}</Text>
-          ) : null}
-          {floorAndBell ? (
-            <Text style={styles.address} testID="job-floor-bell">
-              {floorAndBell}
-            </Text>
-          ) : null}
+          {/* Row 138: the job's actions at the right of the customer and the address. */}
+          <View style={styles.addressRow}>
+            <View style={styles.addressText}>
+              <Text style={styles.name} testID="job-customer-name">
+                {order.dropoffName}
+              </Text>
+              {customerAddress ? (
+                <Text style={styles.address}>{customerAddress}</Text>
+              ) : null}
+              {floorAndBell ? (
+                <Text style={styles.address} testID="job-floor-bell">
+                  {floorAndBell}
+                </Text>
+              ) : null}
+            </View>
+            {actionsButton}
+          </View>
           <View style={styles.actions}>
             {canReachCustomer ? (
               <IconAction
@@ -321,6 +337,16 @@ const styles = StyleSheet.create({
   },
   hero: {
     gap: space['1'],
+  },
+  // The address (or the customer and the address) beside the ⋯ button (row 138).
+  addressRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: space['3'],
+  },
+  // Takes the room the button leaves, so a long address wraps instead of pushing it off.
+  addressText: {
+    flex: 1,
   },
   codeRow: {
     flexDirection: 'row',

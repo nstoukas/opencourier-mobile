@@ -1154,6 +1154,11 @@ const translations: typeof en = {
     'Ο χρόνος εργασίας δεν ήταν δυνατό να φορτωθεί. Σύρετε προς τα κάτω για νέα προσπάθεια.',
   time_worked_earlier: 'Νωρίτερα',
   time_worked_day_total: '{{time}} εργασίας · {{amount}}',
+  // Row 138: the job's actions behind one button beside the address.
+  job_actions_button: 'Ενέργειες παραγγελίας',
+  job_actions_button_attention:
+    'Ενέργειες παραγγελίας, κάτι χρειάζεται τώρα την προσοχή σας',
+  job_actions_title: 'Ενέργειες',
   // Row 137: a time under an hour, as the counter and the Earnings figures show it.
   work_duration_minutes: '{{minutes}} λ.',
   time_worked_split:

@@ -17,6 +17,8 @@ import { AddOnOfferCell } from '@app/components/AddOnOfferCell/AddOnOfferCell';
 import { StackStopList } from '@app/components/StackStopList/StackStopList';
 import { InProgressCell } from '@app/components/InProgressCell/InProgressCell';
 import { JobFooter } from '@app/components/JobFooter/JobFooter';
+import { JobActionsButton } from '@app/components/JobActionsButton/JobActionsButton';
+import type { JobActionProps } from '@app/components/JobFooter/useJobActions';
 import { RouteMap } from '@app/components/RouteMap/RouteMap';
 import { HomeTopSlot } from '@app/components/HomeTopSlot/HomeTopSlot';
 import { HomeCard, HomeCardMode } from '@app/components/HomeCard/HomeCard';
@@ -512,6 +514,7 @@ export const HomeScreen = ({ navigation }: Props) => {
         toCustomer={lines.toCustomer}
         routeUnavailable={routeUnavailable}
         onNavigate={onNavigate}
+        actionsButton={<JobActionsButton {...jobActionProps(order)} />}
       />
     );
     // Spec 0048 (AC-10): a stacked job shows its stops in order above the one
@@ -534,7 +537,38 @@ export const HomeScreen = ({ navigation }: Props) => {
   // Spec 0034 (AC-12): the chat's unread dot, worked out on the phone.
   const chatUnseen = useChatUnseen();
 
-  // Spec 0021 (AC-9): the job's swipe and small actions, pinned below the card.
+  // Row 138: what the job's ⋯ button needs, each handler the footer used to take.
+  const jobActionProps = (order: Order): JobActionProps => ({
+    order,
+    onReportIssue: job =>
+      navigation.navigate(MainScreens.ReportIssue, { order: job }),
+    onReportProduct: job =>
+      navigation.navigate(MainScreens.ReportProduct, { order: job }),
+    onCallDispatch: dispatchPhoneNumber
+      ? () => openContactUrl(telUrl(dispatchPhoneNumber))
+      : undefined,
+    onHandBack: handBack,
+    handingBack: handingBackId === order.id,
+    onLeaveWait: leaveWait,
+    leavingWait: leavingId === order.id,
+    onRequestRemoval: job =>
+      navigation.navigate(MainScreens.RequestRemoval, { order: job }),
+    onWithdrawRemoval: withdrawRemoval,
+    removalBusy: removalBusy,
+    onRequestSplit: job =>
+      navigation.navigate(MainScreens.RequestSplit, { order: job }),
+    onLeaveSplit: leaveSplit,
+    splitBusy: splitBusy,
+    onOpenChat: job =>
+      navigation.navigate(MainScreens.Chat, {
+        deliveryId: job.id,
+        orderReference: job.orderReference ?? null,
+      }),
+    chatUnseen: chatUnseen,
+  });
+
+  // Spec 0021 (AC-9): the job's swipe, pinned below the card; its small actions
+  // sit behind the ⋯ button beside the address (row 138).
   const renderFooter = () => {
     // An offer's Accept and Decline, pinned below the card's scrolling part so
     // both are on screen without scrolling (operator, 23 Nov). The words follow
@@ -566,38 +600,7 @@ export const HomeScreen = ({ navigation }: Props) => {
       <JobFooter
         key={order.id}
         order={order}
-        onReportIssue={job =>
-          navigation.navigate(MainScreens.ReportIssue, { order: job })
-        }
-        onReportProduct={job =>
-          navigation.navigate(MainScreens.ReportProduct, { order: job })
-        }
-        onCallDispatch={
-          dispatchPhoneNumber
-            ? () => openContactUrl(telUrl(dispatchPhoneNumber))
-            : undefined
-        }
-        onHandBack={handBack}
-        handingBack={handingBackId === order.id}
-        onLeaveWait={leaveWait}
         leavingWait={leavingId === order.id}
-        onRequestRemoval={job =>
-          navigation.navigate(MainScreens.RequestRemoval, { order: job })
-        }
-        onWithdrawRemoval={withdrawRemoval}
-        removalBusy={removalBusy}
-        onRequestSplit={job =>
-          navigation.navigate(MainScreens.RequestSplit, { order: job })
-        }
-        onLeaveSplit={leaveSplit}
-        splitBusy={splitBusy}
-        onOpenChat={job =>
-          navigation.navigate(MainScreens.Chat, {
-            deliveryId: job.id,
-            orderReference: job.orderReference ?? null,
-          })
-        }
-        chatUnseen={chatUnseen}
       />
     );
   };
