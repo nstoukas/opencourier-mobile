@@ -20,6 +20,7 @@ import { cancelAllOfferAlerts } from './offerPush/offerAlert';
 import { clearStatementFiles } from './statements/statementsApi';
 import { clearPickedPhotoFiles } from './complaintPhotoFiles';
 import { clearAddressNotesRulesSeen } from './addressNotesRules';
+import { clearDeclineFailed } from './offerPush/answeredOffers';
 import { StackActions } from '@react-navigation/native';
 import { navigationRef } from '@app/navigation/navigationRef';
 import { RootScreen } from '@app/navigation/types';
@@ -180,6 +181,8 @@ export const clearRiderDataOnPhone = async (http: UClient): Promise<void> => {
   await clearPickedPhotoFiles();
   // Nor whether they had seen the address notes rules (spec 0053), as logging out does.
   await clearAddressNotesRulesSeen().catch(() => undefined);
+  // Nor the offers whose alert Decline failed (row 131), as logging out does.
+  await clearDeclineFailed().catch(() => undefined);
 };
 
 // Logs the rider out on this phone after the backend refused to renew the

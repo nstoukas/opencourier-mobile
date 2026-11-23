@@ -21,6 +21,7 @@ import {
 import i18next from 'i18next';
 import { isCalmAddOn, stackStopsOf } from '@app/utilities/stack';
 import {
+  isDeclineFailed,
   isOfferAnswered,
   loadAnsweredOffers,
   markOfferAnswered,
@@ -70,11 +71,15 @@ export const useHomeOrders = () => {
   // automatic accept failed, too. The phone tries once only, so Home shows
   // these as a card even to a rider on auto accept, to answer by hand.
   const [handAnswerIds, setHandAnswerIds] = useState<string[]>([]);
+  // Row 131: true once the phone's lists of answered offers are read from
+  // storage (see the effect that loads them, further down).
+  const [answeredLoaded, setAnsweredLoaded] = useState(false);
+  // Returns the same list when nothing is new, so React does not draw again.
   const leaveToRider = (ids: string[]) =>
-    setHandAnswerIds(current => [
-      ...current,
-      ...ids.filter(id => !current.includes(id)),
-    ]);
+    setHandAnswerIds(current => {
+      const added = ids.filter(id => !current.includes(id));
+      return added.length > 0 ? [...current, ...added] : current;
+    });
 
   // quieries
 
@@ -549,7 +554,7 @@ export const useHomeOrders = () => {
       // arrives (AC-8), at most once per offer, and tells the server it did
       // so by itself (spec 0020, AC-11). The server never accepts on the
       // rider's behalf.
-      if (autoAccept && !sosSharingRef.current) {
+      if (autoAccept && answeredLoaded && !sosSharingRef.current) {
         // Decision 128.6: whether the phone sent an accept in this pass, and
         // whether that accept was a pair (which fills the limit of two).
         let sentThisPass = false;
@@ -570,6 +575,13 @@ export const useHomeOrders = () => {
               sentThisPass = true;
               pairSent = true;
             }
+            continue;
+          }
+          // Row 131: the rider declined this offer from its alert and the
+          // decline could not be sent. Their own choice wins: the phone never
+          // accepts it, and Home shows it for the rider to answer by hand.
+          if (isDeclineFailed(answeredKeyOf(order.id))) {
+            leaveToRider([order.id]);
             continue;
           }
           // A pair already sent in this pass fills the limit of two.
@@ -597,7 +609,7 @@ export const useHomeOrders = () => {
     // `showUnclaimedOffers` reads refs, so only a new fetch, going Offline or
     // a change of the rider's setting should rerun this.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [newOrders, autoAccept, isOffline]);
+  }, [newOrders, autoAccept, isOffline, answeredLoaded]);
 
   // The offers this screen has already rung for, by delivery id and offer
   // time, so each new offer rings once and a refetch never rings again.
@@ -630,9 +642,11 @@ export const useHomeOrders = () => {
   };
 
   // The list of offers the alert buttons answered lives in storage: read it
-  // once, so a tap here can check it straight away.
+  // once, so a tap here can check it straight away. Row 131: auto accept
+  // waits for it, so an offer the rider declined from the alert (and whose
+  // decline failed) is never taken just because the list was not read yet.
   useEffect(() => {
-    loadAnsweredOffers();
+    loadAnsweredOffers().then(() => setAnsweredLoaded(true));
   }, []);
 
   // Stop every countdown when the screen goes away.

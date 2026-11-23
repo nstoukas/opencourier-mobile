@@ -23,6 +23,7 @@ import { apiUrl } from '@app/utilities/config';
 import { QueryKeys } from '@app/utilities/queryKeys';
 import {
   loadAnsweredOffers,
+  markDeclineFailed,
   markOfferAnswered,
   offerKeyOf,
   unmarkOfferAnswered,
@@ -104,6 +105,11 @@ export const answerOffer = async (
     }
     // No network, for example. Let the rider try again from the app, which
     // still lists the offer.
+    // Row 131: a Decline that failed is remembered, so the app never accepts
+    // this offer by itself for a rider on auto accept; it shows it instead.
+    if (answer === 'decline') {
+      markDeclineFailed(key);
+    }
     unmarkOfferAnswered(key);
     await showOfferNotice(
       offer,

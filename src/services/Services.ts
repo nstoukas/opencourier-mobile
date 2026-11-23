@@ -23,6 +23,7 @@ import { clearHeldArrivals } from './heldArrivals';
 import { clearStatementFiles } from './statements/statementsApi';
 import { clearPickedPhotoFiles } from './complaintPhotoFiles';
 import { clearAddressNotesRulesSeen } from './addressNotesRules';
+import { clearDeclineFailed } from './offerPush/answeredOffers';
 import { clearPickedUpTimes } from './pickupTimes';
 import notificationDeviceService, {
   NotificationDeviceService,
@@ -93,6 +94,8 @@ const Services = (): Services => {
     clearPickedPhotoFiles().catch(() => undefined);
     // Spec 0053: the next rider on this phone sees the address notes rules again.
     clearAddressNotesRulesSeen().catch(() => undefined);
+    // Nor the offers whose alert Decline failed (row 131).
+    clearDeclineFailed().catch(() => undefined);
   };
 
   return {

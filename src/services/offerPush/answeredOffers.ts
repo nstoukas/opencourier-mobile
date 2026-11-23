@@ -16,6 +16,10 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const STORAGE_KEY = 'answered_offer_ids';
+// Row 131: the offers whose Decline from the alert could not be sent. Kept
+// apart from the answered list, which a failed send leaves, so the rider can
+// still answer from the app; this one only stops the phone accepting them.
+const DECLINE_FAILED_KEY = 'decline_failed_offer_ids';
 // Enough to cover every offer a rider could still see; older ones drop off.
 const KEEP_AT_MOST = 50;
 
@@ -25,20 +29,38 @@ export const offerKeyOf = (deliveryId: string, offeredAt?: string | null) =>
 // The list in memory, so the app's tap check stays synchronous. Loaded from
 // storage once; `answerOffer` waits for the load before it checks.
 let answered: string[] = [];
+let declineFailed: string[] = [];
 let loading: Promise<void> | null = null;
+
+// The stored list under `key`, joined with what is already in memory (kept
+// first from storage, then anything added before the load finished).
+const mergedWithStored = async (
+  key: string,
+  inMemory: string[],
+): Promise<string[]> => {
+  const stored = await AsyncStorage.getItem(key);
+  const fromStorage: unknown = stored ? JSON.parse(stored) : [];
+  if (!Array.isArray(fromStorage)) {
+    return inMemory;
+  }
+  const merged = [...fromStorage.map(String), ...inMemory];
+  return merged.filter((item, i) => merged.indexOf(item) === i);
+};
 
 export const loadAnsweredOffers = (): Promise<void> => {
   if (loading === null) {
-    loading = AsyncStorage.getItem(STORAGE_KEY)
-      .then(stored => {
-        const fromStorage: unknown = stored ? JSON.parse(stored) : [];
-        if (Array.isArray(fromStorage)) {
-          // Keep anything added in memory before the load finished.
-          const merged = [...fromStorage.map(String), ...answered];
-          answered = merged.filter((key, i) => merged.indexOf(key) === i);
-        }
-      })
-      .catch(() => undefined);
+    loading = Promise.all([
+      mergedWithStored(STORAGE_KEY, answered)
+        .then(list => {
+          answered = list;
+        })
+        .catch(() => undefined),
+      mergedWithStored(DECLINE_FAILED_KEY, declineFailed)
+        .then(list => {
+          declineFailed = list;
+        })
+        .catch(() => undefined),
+    ]).then(() => undefined);
   }
   return loading;
 };
@@ -65,4 +87,27 @@ export const unmarkOfferAnswered = (key: string) => {
   AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(answered)).catch(
     () => undefined,
   );
+};
+
+// Row 131: the rider tapped Decline on the alert and it could not be sent.
+// The phone must never accept this offer by itself (value 4: the rider's own
+// choice wins); the app shows it for the rider to answer by hand instead.
+export const markDeclineFailed = (key: string) => {
+  if (declineFailed.includes(key)) {
+    return;
+  }
+  declineFailed = [...declineFailed, key].slice(-KEEP_AT_MOST);
+  AsyncStorage.setItem(DECLINE_FAILED_KEY, JSON.stringify(declineFailed)).catch(
+    () => undefined,
+  );
+};
+
+export const isDeclineFailed = (key: string): boolean =>
+  declineFailed.includes(key);
+
+// Logging out, or a session the co-op ended: the next rider on this phone
+// starts with no such list.
+export const clearDeclineFailed = async (): Promise<void> => {
+  declineFailed = [];
+  await AsyncStorage.removeItem(DECLINE_FAILED_KEY);
 };
