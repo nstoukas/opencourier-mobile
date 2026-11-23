@@ -197,6 +197,43 @@ describe('jobCard utilities (spec 0021, AC-6 to AC-10, AC-14)', () => {
         const notes = notesFor(baseOrder, 'dropoff');
         expect(notes).toEqual([]);
       });
+
+      it('handles dropoffNotes, dropoffSellerNotes, and customerNotes each absent without throwing or adding empty notes', () => {
+        const order = {
+          ...baseOrder,
+          dropoffNotes: undefined,
+          dropoffSellerNotes: undefined,
+          customerNotes: undefined,
+        } as unknown as Order;
+
+        const notes = notesFor(order, 'dropoff');
+        expect(notes).toEqual([]);
+      });
+
+      it('handles dropoffNotes and dropoffSellerNotes as null without throwing or adding empty notes', () => {
+        const order = {
+          ...baseOrder,
+          dropoffNotes: null,
+          dropoffSellerNotes: null,
+          customerNotes: undefined,
+        } as unknown as Order;
+
+        const notes = notesFor(order, 'dropoff');
+        expect(notes).toEqual([]);
+      });
+
+      it('preserves leave-at-door note when dropoffNotes and dropoffSellerNotes are null and customerNotes is undefined', () => {
+        const order = {
+          ...baseOrder,
+          deliverableAction: LEAVE_AT_DOOR,
+          dropoffNotes: null,
+          dropoffSellerNotes: null,
+          customerNotes: undefined,
+        } as unknown as Order;
+
+        const notes = notesFor(order, 'dropoff');
+        expect(notes).toEqual([{ author: 'door', text: LEAVE_AT_DOOR }]);
+      });
     });
   });
 });

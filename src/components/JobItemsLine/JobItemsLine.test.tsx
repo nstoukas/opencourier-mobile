@@ -20,20 +20,22 @@ describe('JobItemsLine (spec 0021, AC-7)', () => {
   });
 
   it('renders null when items is null, undefined, or empty (no items, no row)', () => {
-    const { toJSON: toJSONNull } = render(
+    const { toJSON: toJSONNull, queryByTestId: queryByTestIdNull } = render(
       <JobItemsLine deliveryId="del-1" items={null} />,
     );
     expect(toJSONNull()).toBeNull();
+    expect(queryByTestIdNull('job-items-line')).toBeNull();
 
-    const { toJSON: toJSONEmpty } = render(
+    const { toJSON: toJSONEmpty, queryByTestId: queryByTestIdEmpty } = render(
       <JobItemsLine deliveryId="del-1" items={[]} />,
     );
     expect(toJSONEmpty()).toBeNull();
+    expect(queryByTestIdEmpty('job-items-line')).toBeNull();
 
-    const { toJSON: toJSONUndefined } = render(
-      <JobItemsLine deliveryId="del-1" items={undefined} />,
-    );
+    const { toJSON: toJSONUndefined, queryByTestId: queryByTestIdUndefined } =
+      render(<JobItemsLine deliveryId="del-1" items={undefined} />);
     expect(toJSONUndefined()).toBeNull();
+    expect(queryByTestIdUndefined('job-items-line')).toBeNull();
   });
 
   it('renders compact line with items count and opens sheet on press', () => {

@@ -173,6 +173,45 @@ describe('ReportProduct screen (spec 0032, AC-1, AC-2, AC-9)', () => {
       ).toBeTruthy();
       expect(getSendButton().props.disabled).toBe(true);
     });
+
+    it('opens with only the Something else choice and does not crash when orderItems is absent or null', () => {
+      // 1. orderItems completely absent from order object
+      const orderWithoutItems = {
+        id: 'del-absent-items',
+      } as unknown as Order;
+
+      const { unmount } = render(
+        <ReportProduct {...buildProps(orderWithoutItems)} />,
+      );
+
+      const somethingElseChip = screen.getByRole('button', {
+        name: i18n.t('translations:report_product_something_else'),
+      });
+      expect(somethingElseChip.props.accessibilityState).toEqual({
+        selected: true,
+      });
+      expect(screen.queryByText('Pork Gyros Pita')).toBeNull();
+      expect(getSendButton().props.disabled).toBe(true);
+
+      unmount();
+
+      // 2. orderItems explicitly null
+      const orderWithNullItems = {
+        id: 'del-null-items',
+        orderItems: null,
+      } as unknown as Order;
+
+      render(<ReportProduct {...buildProps(orderWithNullItems)} />);
+
+      const somethingElseChipNull = screen.getByRole('button', {
+        name: i18n.t('translations:report_product_something_else'),
+      });
+      expect(somethingElseChipNull.props.accessibilityState).toEqual({
+        selected: true,
+      });
+      expect(screen.queryByText('Pork Gyros Pita')).toBeNull();
+      expect(getSendButton().props.disabled).toBe(true);
+    });
   });
 
   describe('Kind and item switching', () => {

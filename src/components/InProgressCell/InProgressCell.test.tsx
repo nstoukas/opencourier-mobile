@@ -141,6 +141,42 @@ describe('InProgressCell (spec 0021, AC-6 to AC-8, AC-14, spec 0016)', () => {
       expect(queryByTestId('job-first-name')).toBeNull();
     });
 
+    it('omits "for <name>" label when dropoffName is absent', () => {
+      const orderWithoutName = {
+        ...baseOrder,
+        dropoffName: undefined,
+      } as unknown as Order;
+
+      const { queryByTestId, getByTestId } = render(
+        <InProgressCell order={orderWithoutName} {...noopProps} />,
+      );
+
+      expect(getByTestId('job-order-code')).toBeTruthy();
+      expect(queryByTestId('job-first-name')).toBeNull();
+    });
+
+    it('omits items line when orderItems is absent or null', () => {
+      const orderWithoutItems = {
+        ...baseOrder,
+        orderItems: undefined,
+      } as unknown as Order;
+
+      const { queryByTestId: query1 } = render(
+        <InProgressCell order={orderWithoutItems} {...noopProps} />,
+      );
+      expect(query1('job-items-line')).toBeNull();
+
+      const orderWithNullItems = {
+        ...baseOrder,
+        orderItems: null,
+      } as unknown as Order;
+
+      const { queryByTestId: query2 } = render(
+        <InProgressCell order={orderWithNullItems} {...noopProps} />,
+      );
+      expect(query2('job-items-line')).toBeNull();
+    });
+
     it('hides call restaurant button when pickupPhoneNumber is absent', () => {
       const orderWithoutPhone = {
         ...baseOrder,
@@ -218,6 +254,23 @@ describe('InProgressCell (spec 0021, AC-6 to AC-8, AC-14, spec 0016)', () => {
       });
       expect(getByTestId('job-restaurant-line')).toBeTruthy();
       expect(getByText(expectedText)).toBeTruthy();
+    });
+
+    it('omits customer name element when dropoffName is absent', () => {
+      const orderWithoutName = {
+        ...dropoffOrder,
+        dropoffName: undefined,
+      } as unknown as Order;
+
+      const { queryByTestId, getByText } = render(
+        <InProgressCell order={orderWithoutName} {...noopProps} />,
+      );
+
+      // Row 142: dropoffName is optional; no empty or placeholder name element is rendered
+      expect(queryByTestId('job-customer-name')).toBeNull();
+
+      // Address is still rendered
+      expect(getByText('Dimitriadis 45, Volos')).toBeTruthy();
     });
 
     it('shows the swipe time from pickupTimes, never pickupReadyAt (which may be hours ago)', () => {
