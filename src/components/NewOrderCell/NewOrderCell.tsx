@@ -136,7 +136,8 @@ export const NewOrderCell = ({
       <>
         {/* Spec 0018 (AC-9): Accept is a swipe, so a brush of the thumb cannot
             take an offer. A swipe let go early does nothing. With auto accept
-            the offer is claimed on arrival and home never shows this card. */}
+            the offer is claimed on arrival, and home shows this card only
+            when the phone could not take it (rows 128 and 130). */}
         <ButtonSwipe
           key={acceptAttempt}
           style={styles.buttonTop}

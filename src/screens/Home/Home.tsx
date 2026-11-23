@@ -482,7 +482,10 @@ export const HomeScreen = ({ navigation }: Props) => {
           millisRemaining={timeLeftForOffer(order.id)}
           totalMillis={totalTimeForOffer(order.id)}
           millisWaited={waitedTimeForOffer(order.id)}
-          autoAcceptOrders={autoAcceptOrders}
+          // Decision 130.3: a card on Home is always answered by hand (an
+          // auto accept rider sees one only when the phone could not take
+          // it), so it shows its countdown, as the pair and add on cards do.
+          autoAcceptOrders={false}
           order={order}
           onAccept={offer => acceptOrderFn(offer.id)}
           onDecline={offer => declineOrderFn(offer.id)}

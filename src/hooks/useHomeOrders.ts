@@ -284,6 +284,16 @@ export const useHomeOrders = () => {
         leaveToRider([orderId]);
       }
       releaseOffer(orderId);
+      // Decision 130.3: the phone's own accept can fail after the server
+      // took it (a 10 s timeout), or because the offer changed. Fetch both
+      // lists again, so the rider sees the job, or the offer as it is now,
+      // rather than an old card. Not retried: the phone still tries once.
+      if (automatic) {
+        refetchNewRef.current();
+        queryClient.invalidateQueries({
+          queryKey: [QueryKeys.inProgressOrders],
+        });
+      }
       // In the rider's language (spec 0054): the refusal's words when the server sent one.
       Alert.alert(
         i18next.t('translations:accept_failed_title'),
