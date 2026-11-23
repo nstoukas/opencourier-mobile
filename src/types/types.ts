@@ -199,12 +199,15 @@ export type Order = {
   pickupLocationId: string;
   pickupReadyAt: string;
   pickupDeadlineAt: string;
-  dropoffName: string;
+  // Row 142: the server sends the customer's name, the seller's note, the items and the customer's notes
+  // only once this rider has accepted, and the composed floor and doorbell note only while the rider
+  // holds the delivery (row 101). In an offer, or a job that ended, they are missing, so the type says so.
+  dropoffName?: string;
   // Only while this rider holds the delivery (row 33): left out in an offer and after the end.
   dropoffPhoneNumber?: string;
   dropoffBusinessName: string;
-  dropoffNotes: string;
-  dropoffSellerNotes: string;
+  dropoffNotes?: string | null;
+  dropoffSellerNotes?: string | null;
   // Spec 0016: the floor and the name on the doorbell. Like the phone, only while this rider holds
   // the delivery (row 33): left out in an offer and after the end.
   dropoffFloor?: string | null;
@@ -224,12 +227,12 @@ export type Order = {
   requiresId: boolean;
   orderReference: string;
   orderTotalValue: number;
-  orderItems: OrderItem[];
+  orderItems?: OrderItem[] | null;
   status: string;
   // Set by the app, never by the server: a step of this delivery waits in the
   // outbox for signal, and `status` above already shows it (spec 0009).
   waitingToSend?: boolean;
-  customerNotes: string[];
+  customerNotes?: string[];
   currencyCode: string;
   totalCost: number;
   fee: number;
