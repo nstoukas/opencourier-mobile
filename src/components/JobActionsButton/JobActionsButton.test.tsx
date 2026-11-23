@@ -1,5 +1,5 @@
 import React from 'react';
-import { Modal, Text } from 'react-native';
+import { Modal, Text, TouchableOpacity } from 'react-native';
 import { act, fireEvent, render, within } from '@testing-library/react-native';
 import '@app/localization/i18n';
 import i18n from '@app/localization/i18n';
@@ -103,22 +103,126 @@ describe('JobActionsButton (row 138)', () => {
       ).toBeTruthy();
     });
 
-    it('with the dot, a screen reader hears that something needs the rider now', () => {
-      const view = draw(job({ handBackUntilOnPhone: NOW + 45_000 }), {
+    // Row 138 review: with the dot, the name says which of the two it is.
+    it.each([
+      [
+        'the hand back',
+        { handBackUntilOnPhone: NOW + 45_000 },
+        { onHandBack: jest.fn() },
+      ],
+      [
+        'leaving a late restaurant',
+        {
+          status: OrderStatus.courier_arrived_at_pickup_location,
+          leaveFromOnPhone: NOW - 1000,
+        },
+        { onLeaveWait: jest.fn() },
+      ],
+      [
+        'leaving an unsplit order',
+        {
+          status: OrderStatus.courier_arrived_at_pickup_location,
+          splitRequest: { status: 'OPEN' } as SplitRequest,
+          splitLeaveFromOnPhone: NOW - 1000,
+        },
+        { onLeaveSplit: jest.fn() },
+      ],
+    ] as const)(
+      'with the dot for %s, a screen reader hears that an action is open for a short time',
+      (_name, overrides, props) => {
+        const view = draw(job(overrides as Partial<Order>), props);
+        expect(view.getByTestId('job-actions-button-dot')).toBeTruthy();
+        const button = view.getByTestId('job-actions-button');
+        expect(button.props.accessibilityRole).toBe('button');
+        expect(button.props.accessibilityLabel).toBe(
+          'Job actions, one is open for a short time',
+        );
+        expect(button.props.accessibilityLabel).toBe(
+          i18n.t('translations:job_actions_button_timed'),
+        );
+      },
+    );
+
+    it('with the dot for an unread chat only, a screen reader hears that a message is unread', () => {
+      const view = draw(job(), { onOpenChat: jest.fn(), chatUnseen: true });
+      expect(view.getByTestId('job-actions-button-dot')).toBeTruthy();
+      const button = view.getByTestId('job-actions-button');
+      expect(button.props.accessibilityRole).toBe('button');
+      expect(button.props.accessibilityLabel).toBe(
+        'Job actions, a message is unread',
+      );
+      expect(button.props.accessibilityLabel).toBe(
+        i18n.t('translations:job_actions_button_unread'),
+      );
+    });
+
+    // The timed action is the one that runs out, so it is the one named.
+    it.each([
+      [
+        'the hand back',
+        { handBackUntilOnPhone: NOW + 45_000 },
+        { onHandBack: jest.fn() },
+      ],
+      [
+        'leaving a late restaurant',
+        {
+          status: OrderStatus.courier_arrived_at_pickup_location,
+          leaveFromOnPhone: NOW - 1000,
+        },
+        { onLeaveWait: jest.fn() },
+      ],
+      [
+        'leaving an unsplit order',
+        {
+          status: OrderStatus.courier_arrived_at_pickup_location,
+          splitRequest: { status: 'OPEN' } as SplitRequest,
+          splitLeaveFromOnPhone: NOW - 1000,
+        },
+        { onLeaveSplit: jest.fn() },
+      ],
+    ] as const)(
+      'with %s open and the chat unread as well, the name is the timed one',
+      (_name, overrides, props) => {
+        const view = draw(job(overrides as Partial<Order>), {
+          ...props,
+          onOpenChat: jest.fn(),
+          chatUnseen: true,
+        });
+        expect(view.getByTestId('job-actions-button-dot')).toBeTruthy();
+        expect(
+          view.getByTestId('job-actions-button').props.accessibilityLabel,
+        ).toBe('Job actions, one is open for a short time');
+      },
+    );
+
+    it('when the hand back window closes with the chat still unread, the name turns to the unread one', () => {
+      const view = draw(job({ handBackUntilOnPhone: NOW + 3000 }), {
         onHandBack: jest.fn(),
+        onOpenChat: jest.fn(),
+        chatUnseen: true,
       });
+      expect(
+        view.getByTestId('job-actions-button').props.accessibilityLabel,
+      ).toBe('Job actions, one is open for a short time');
+
+      act(() => {
+        jest.advanceTimersByTime(3000);
+      });
+
       expect(view.getByTestId('job-actions-button-dot')).toBeTruthy();
       expect(
         view.getByTestId('job-actions-button').props.accessibilityLabel,
-      ).toBe('Job actions, something needs you now');
+      ).toBe('Job actions, a message is unread');
     });
 
-    it('both languages have the three new keys, each with its own words', () => {
-      for (const key of [
+    it('both languages have the four keys, each with its own words', () => {
+      const keys = [
         'job_actions_button',
-        'job_actions_button_attention',
+        'job_actions_button_timed',
+        'job_actions_button_unread',
         'job_actions_title',
-      ] as const) {
+      ] as const;
+      for (const key of keys) {
         expect(typeof en[key]).toBe('string');
         expect(en[key].trim()).not.toBe('');
         expect(typeof el[key]).toBe('string');
@@ -127,9 +231,28 @@ describe('JobActionsButton (row 138)', () => {
         expect(el[key]).not.toBe(en[key]);
         expect(el[key]).toMatch(/[Ͱ-Ͽ]/);
       }
-      // With and without the dot must not sound the same.
-      expect(en.job_actions_button_attention).not.toBe(en.job_actions_button);
-      expect(el.job_actions_button_attention).not.toBe(el.job_actions_button);
+      // Plain, timed and unread must not sound the same, in either language.
+      for (const words of [en, el]) {
+        expect(
+          new Set([
+            words.job_actions_button,
+            words.job_actions_button_timed,
+            words.job_actions_button_unread,
+          ]).size,
+        ).toBe(3);
+        // Each longer name starts with the plain one, so the button is named first.
+        expect(
+          words.job_actions_button_timed.startsWith(words.job_actions_button),
+        ).toBe(true);
+        expect(
+          words.job_actions_button_unread.startsWith(words.job_actions_button),
+        ).toBe(true);
+      }
+    });
+
+    it('the one sentence for both cases is gone from both languages', () => {
+      expect(Object.keys(en)).not.toContain('job_actions_button_attention');
+      expect(Object.keys(el)).not.toContain('job_actions_button_attention');
     });
   });
 
@@ -324,19 +447,89 @@ describe('JobActionsButton (row 138)', () => {
       expect(view.getByText('Hand back · 47 s')).toBeTruthy();
     });
 
+    // The pressable inside a sheet row: the thing a screen reader lands on.
+    const pressableOf = (view: View, key: string) =>
+      within(view.getByTestId(`job-action-${key}`)).UNSAFE_getByType(
+        TouchableOpacity,
+      );
+
     it('the chat button carries the unread dot only while the chat is unread', () => {
       const unread = draw(job(), { onOpenChat: jest.fn(), chatUnseen: true });
       openSheet(unread);
       expect(unread.getByTestId('job-action-chat-dot')).toBeTruthy();
-      expect(
-        unread.getByLabelText(i18n.t('translations:chat_unread')),
-      ).toBeTruthy();
       unread.unmount();
 
       const read = draw(job(), { onOpenChat: jest.fn(), chatUnseen: false });
       openSheet(read);
       expect(read.getByTestId('job-action-chat')).toBeTruthy();
       expect(read.queryByTestId('job-action-chat-dot')).toBeNull();
+    });
+
+    // Row 138 review: "unread" is part of the chat button's own name, not a separate thing
+    // a screen reader may or may not land on.
+    it('while the chat is unread, a screen reader hears "Chat, New message" on the chat button itself', () => {
+      const onOpenChat = jest.fn();
+      const order = job();
+      const view = draw(order, { onOpenChat, chatUnseen: true });
+      openSheet(view);
+
+      const chat = pressableOf(view, 'chat');
+      expect(chat.props.accessibilityRole).toBe('button');
+      expect(chat.props.accessibilityLabel).toBe('Chat, New message');
+      expect(chat.props.accessibilityLabel).toBe(
+        `${i18n.t('translations:chat')}, ${i18n.t('translations:chat_unread')}`,
+      );
+      // The dot is only a mark: the unread words are said once, by the button.
+      expect(
+        view.getByTestId('job-action-chat-dot').props.accessibilityLabel,
+      ).toBeUndefined();
+      expect(
+        view.queryAllByLabelText(i18n.t('translations:chat_unread')),
+      ).toHaveLength(0);
+
+      // The thing with that name is the thing that opens the chat.
+      fireEvent.press(view.getByLabelText('Chat, New message'));
+      expect(onOpenChat).toHaveBeenCalledTimes(1);
+      expect(onOpenChat).toHaveBeenCalledWith(order);
+    });
+
+    it('with the chat read, the chat button is named by its word alone', () => {
+      const view = draw(job(), { onOpenChat: jest.fn(), chatUnseen: false });
+      openSheet(view);
+
+      const chat = pressableOf(view, 'chat');
+      expect(chat.props.accessibilityRole).toBe('button');
+      expect(chat.props.accessibilityLabel).toBeUndefined();
+      expect(view.queryByLabelText(/New message/)).toBeNull();
+      expect(view.getByRole('button', { name: 'Chat' })).toBeTruthy();
+    });
+
+    it('every choice in the sheet is a button named by its own words, the unread chat included', () => {
+      const view = draw(job({ handBackUntilOnPhone: NOW + 49_000 }), {
+        ...everything(),
+        chatUnseen: true,
+      });
+      openSheet(view);
+
+      const keys = keysInSheet(view);
+      expect(keys).toEqual(['here', 'hand-back', 'dispatch', 'chat', 'report']);
+      for (const key of keys) {
+        const pressable = pressableOf(view, key);
+        expect(pressable.props.accessibilityRole).toBe('button');
+        if (key !== 'chat') {
+          // No other name than the words drawn on it.
+          expect(pressable.props.accessibilityLabel).toBeUndefined();
+        }
+      }
+      for (const name of [
+        "I'm here",
+        'Hand back · 49 s',
+        'Call dispatch',
+        'Chat, New message',
+        'Report Issue',
+      ]) {
+        expect(view.getByRole('button', { name })).toBeTruthy();
+      }
     });
 
     it.each([
@@ -516,6 +709,71 @@ describe('JobActionsButton (row 138)', () => {
 
       openSheet(view);
       expect(keysInSheet(view)).toEqual(first);
+    });
+
+    // Row 138 review: the job can end under an open sheet. If its actions come back for the
+    // same card (the server refused the step), the sheet must wait for a tap.
+    describe('when the actions run out under an open sheet', () => {
+      // The same mounted button, drawn again for the job as it is now.
+      const drawAgain = (
+        view: View,
+        order: Order,
+        handlers: ReturnType<typeof everything>,
+      ) => view.rerender(<JobActionsButton order={order} {...handlers} />);
+
+      it.each([OrderStatus.dropped_off, OrderStatus.canceled])(
+        'it goes with the button (%s), and does not open by itself when the actions return',
+        status => {
+          const handlers = everything();
+          const view = draw(job(), handlers);
+          openSheet(view);
+          expect(view.getByTestId('job-actions-sheet')).toBeTruthy();
+
+          drawAgain(view, job({ status }), handlers);
+          expect(view.queryByTestId('job-actions-button')).toBeNull();
+          expect(view.queryByTestId('job-actions-sheet')).toBeNull();
+
+          drawAgain(view, job({ status: OrderStatus.on_the_way }), handlers);
+          expect(view.getByTestId('job-actions-button')).toBeTruthy();
+          expect(view.queryByTestId('job-actions-sheet')).toBeNull();
+          expect(view.queryByTestId(/^job-action-[a-z-]+$/)).toBeNull();
+
+          // A tap still opens it, with the returned step's actions.
+          openSheet(view);
+          expect(keysInSheet(view)).toEqual([
+            'dispatch',
+            'chat',
+            'request-removal',
+            'report',
+          ]);
+          for (const handler of Object.values(handlers)) {
+            expect(handler).not.toHaveBeenCalled();
+          }
+        },
+      );
+
+      it('a sheet that was closed stays closed through the same round trip', () => {
+        const handlers = everything();
+        const view = draw(job(), handlers);
+
+        drawAgain(view, job({ status: OrderStatus.dropped_off }), handlers);
+        drawAgain(view, job(), handlers);
+
+        expect(view.getByTestId('job-actions-button')).toBeTruthy();
+        expect(view.queryByTestId('job-actions-sheet')).toBeNull();
+      });
+
+      it('a change of step that keeps some actions leaves the open sheet open', () => {
+        const handlers = everything();
+        const view = draw(job(), handlers);
+        openSheet(view);
+
+        drawAgain(view, job({ status: OrderStatus.picked_up }), handlers);
+
+        expect(view.getByTestId('job-actions-sheet')).toBeTruthy();
+        expect(keysInSheet(view)).not.toContain('here');
+        expect(keysInSheet(view)).toContain('report');
+      });
     });
   });
 });

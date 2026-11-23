@@ -900,4 +900,175 @@ describe('useJobActions (row 138: the actions behind the ⋯ button)', () => {
       expect(view.result.current.attention).toBe(false);
     });
   });
+
+  // Row 138 review: the ⋯ button's name says which kind of thing waits.
+  describe('attentionKind: what the ⋯ button tells a screen reader', () => {
+    const TIMED = [
+      [
+        'the hand back',
+        'hand-back',
+        { handBackUntilOnPhone: NOW + 45_000 },
+        { onHandBack: jest.fn() },
+      ],
+      [
+        'leaving a late restaurant',
+        'leave-wait',
+        {
+          status: OrderStatus.courier_arrived_at_pickup_location,
+          leaveFromOnPhone: NOW - 1000,
+        },
+        { onLeaveWait: jest.fn() },
+      ],
+      [
+        'leaving an unsplit order',
+        'leave-split',
+        {
+          status: OrderStatus.courier_arrived_at_pickup_location,
+          splitRequest: { status: 'OPEN' } as SplitRequest,
+          splitLeaveFromOnPhone: NOW - 1000,
+        },
+        { onLeaveSplit: jest.fn() },
+      ],
+    ] as const;
+
+    it.each(TIMED)(
+      'is "timed" while %s is available',
+      (_name, key, overrides, props) => {
+        const view = actionsFor(job(overrides as Partial<Order>), props);
+        expect(keysOf(view)).toContain(key);
+        expect(view.result.current.attentionKind).toBe('timed');
+        expect(view.result.current.attention).toBe(true);
+      },
+    );
+
+    it.each(TIMED)(
+      'stays "timed" while %s is available and the chat is unread too',
+      (_name, key, overrides, props) => {
+        const view = actionsFor(job(overrides as Partial<Order>), {
+          ...props,
+          onOpenChat: jest.fn(),
+          chatUnseen: true,
+        });
+        expect(keysOf(view)).toContain(key);
+        expect(view.result.current.attentionKind).toBe('timed');
+        expect(view.result.current.attention).toBe(true);
+      },
+    );
+
+    it('is "unread" when only the chat has something unread', () => {
+      const view = actionsFor(job(), {
+        onOpenChat: jest.fn(),
+        onHandBack: jest.fn(),
+        onLeaveWait: jest.fn(),
+        onLeaveSplit: jest.fn(),
+        chatUnseen: true,
+      });
+      expect(view.result.current.attentionKind).toBe('unread');
+      expect(view.result.current.attention).toBe(true);
+    });
+
+    it('goes from "timed" to "unread" when the hand back window closes over an unread chat', () => {
+      const view = actionsFor(job({ handBackUntilOnPhone: NOW + 3000 }), {
+        onHandBack: jest.fn(),
+        onOpenChat: jest.fn(),
+        chatUnseen: true,
+      });
+      expect(view.result.current.attentionKind).toBe('timed');
+
+      act(() => {
+        jest.advanceTimersByTime(3000);
+      });
+
+      expect(keysOf(view)).not.toContain('hand-back');
+      expect(view.result.current.attentionKind).toBe('unread');
+    });
+
+    it('is null exactly when attention is off, at every step', () => {
+      for (const status of ALL_STATUSES) {
+        const view = actionsFor(job({ status }), {
+          onReportProduct: jest.fn(),
+          onCallDispatch: jest.fn(),
+          onHandBack: jest.fn(),
+          onLeaveWait: jest.fn(),
+          onRequestRemoval: jest.fn(),
+          onWithdrawRemoval: jest.fn(),
+          onRequestSplit: jest.fn(),
+          onLeaveSplit: jest.fn(),
+          onOpenChat: jest.fn(),
+          chatUnseen: false,
+        });
+        expect(view.result.current.attentionKind).toBeNull();
+        expect(view.result.current.attention).toBe(false);
+      }
+    });
+  });
+
+  // The footer's Leave appeared by itself when its time came, because the card's clock
+  // drew it each second. Behind the ⋯ button the hook keeps that clock itself.
+  describe('the waiting clock: Leave appears by itself, with no new props', () => {
+    it('at a late restaurant, when the leave time arrives', () => {
+      const view = actionsFor(
+        job({
+          status: OrderStatus.courier_arrived_at_pickup_location,
+          arrivedAtOnPhone: NOW - 300_000,
+          leaveFromOnPhone: NOW + 2000,
+        }),
+        { onLeaveWait: jest.fn() },
+      );
+      expect(keysOf(view)).not.toContain('leave-wait');
+      expect(view.result.current.attentionKind).toBeNull();
+
+      act(() => {
+        jest.advanceTimersByTime(1000);
+      });
+      expect(keysOf(view)).not.toContain('leave-wait');
+
+      act(() => {
+        jest.advanceTimersByTime(1000);
+      });
+      expect(keysOf(view)).toContain('leave-wait');
+      expect(view.result.current.attentionKind).toBe('timed');
+    });
+
+    it('on an unsplit order, when its leave time arrives', () => {
+      const view = actionsFor(
+        job({
+          status: OrderStatus.courier_arrived_at_pickup_location,
+          splitRequest: { status: 'OPEN' } as SplitRequest,
+          splitCreatedAtOnPhone: NOW - 60_000,
+          splitLeaveFromOnPhone: NOW + 2000,
+        }),
+        { onLeaveSplit: jest.fn() },
+      );
+      expect(keysOf(view)).not.toContain('leave-split');
+      expect(view.result.current.attentionKind).toBeNull();
+
+      act(() => {
+        jest.advanceTimersByTime(2000);
+      });
+      expect(keysOf(view)).toContain('leave-split');
+      expect(view.result.current.attentionKind).toBe('timed');
+    });
+
+    it('keeps no clock running away from the restaurant, and stops it when the card goes', () => {
+      const onTheWay = actionsFor(job({ status: OrderStatus.on_the_way }), {
+        onLeaveWait: jest.fn(),
+        onLeaveSplit: jest.fn(),
+      });
+      expect(jest.getTimerCount()).toBe(0);
+      onTheWay.unmount();
+
+      const waiting = actionsFor(
+        job({
+          status: OrderStatus.courier_arrived_at_pickup_location,
+          arrivedAtOnPhone: NOW - 300_000,
+          leaveFromOnPhone: NOW + 60_000,
+        }),
+        { onLeaveWait: jest.fn() },
+      );
+      expect(jest.getTimerCount()).toBe(1);
+      waiting.unmount();
+      expect(jest.getTimerCount()).toBe(0);
+    });
+  });
 });

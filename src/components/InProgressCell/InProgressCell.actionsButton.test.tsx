@@ -143,6 +143,47 @@ describe('InProgressCell actions button slot (row 138)', () => {
     }
   });
 
+  // Row 138 review: the ⋯ button takes about 60 px from the line, so a long Greek name and
+  // address that used to fit in two lines gets a third before it is cut.
+  describe('the restaurant line beside the button', () => {
+    const longOrder = {
+      ...baseOrder,
+      pickupBusinessName: 'Παραδοσιακό Ψητοπωλείο Ο Γιώργος και τα Παιδιά του',
+      pickupLocationFormattedAddress:
+        'Ελευθερίου Βενιζέλου 128 & Κωνσταντά, Βόλος 382 21, Ελλάδα',
+    } as unknown as Order;
+    const longLine =
+      'Παραδοσιακό Ψητοπωλείο Ο Γιώργος και τα Παιδιά του · Ελευθερίου Βενιζέλου 128 & Κωνσταντά, Βόλος 382 21, Ελλάδα';
+
+    it.each(PICKUP_STEPS)(
+      'allows three lines for the name and address (%s), and holds all of the words',
+      status => {
+        const view = draw({ ...longOrder, status });
+        const { row } = rowOf(view);
+
+        const line = within(row).getByText(longLine);
+        expect(line.props.numberOfLines).toBe(3);
+      },
+    );
+
+    it('allows the same three lines with no button beside it', () => {
+      const view = draw(longOrder, false);
+      expect(view.getByText(longLine).props.numberOfLines).toBe(3);
+    });
+
+    it.each(CUSTOMER_STEPS)(
+      'at the customer (%s) the address beside the button has no line limit at all',
+      status => {
+        const view = draw({ ...baseOrder, status });
+        const { row } = rowOf(view);
+
+        expect(
+          within(row).getByText('Dimitriadis 45, Volos').props.numberOfLines,
+        ).toBeUndefined();
+      },
+    );
+  });
+
   it('with no button given, the card draws nothing in its place and keeps the address', () => {
     for (const status of [...PICKUP_STEPS, ...CUSTOMER_STEPS]) {
       const view = draw({ ...baseOrder, status }, false);

@@ -1,6 +1,6 @@
 import React from 'react';
 import { StyleSheet, ActivityIndicator, TouchableOpacity } from 'react-native';
-import { render } from '@testing-library/react-native';
+import { fireEvent, render } from '@testing-library/react-native';
 import { Button, ButtonType } from './Button';
 import { color, control } from '@app/styles/theme';
 import { CaretDownIcon } from 'phosphor-react-native/src/icons/CaretDown';
@@ -178,5 +178,93 @@ describe('AC-5, AC-6, AC-7: Button component', () => {
     );
     iconComponent = UNSAFE_getByType(Icon);
     expect(iconComponent.props.style.marginLeft).toBe(10);
+  });
+
+  // Row 138 review: a screen reader says "button" for every Button in the app, and names it
+  // by its title unless the screen gives it a fuller name.
+  describe('for a screen reader (row 138)', () => {
+    it.each([
+      ButtonType.black,
+      ButtonType.green,
+      ButtonType.red,
+      ButtonType.yellow,
+      ButtonType.white,
+    ])('type %s is a button, named by its title', type => {
+      const view = render(
+        <Button title="Send it" type={type} onPress={() => {}} />,
+      );
+      const touchable = view.UNSAFE_getByType(TouchableOpacity);
+      expect(touchable.props.accessibilityRole).toBe('button');
+      // No name of its own: the title is what is read.
+      expect(touchable.props.accessibilityLabel).toBeUndefined();
+      expect(view.getByRole('button', { name: 'Send it' })).toBeTruthy();
+      expect(view.getAllByRole('button')).toHaveLength(1);
+    });
+
+    it('with no type given it is a button too', () => {
+      const view = render(<Button title="Plain" onPress={() => {}} />);
+      expect(
+        view.UNSAFE_getByType(TouchableOpacity).props.accessibilityRole,
+      ).toBe('button');
+    });
+
+    it('stays a button while disabled, while loading and with an icon', () => {
+      const disabled = render(
+        <Button title="Wait" disabled onPress={() => {}} />,
+      );
+      expect(
+        disabled.UNSAFE_getByType(TouchableOpacity).props.accessibilityRole,
+      ).toBe('button');
+      expect(disabled.getByRole('button', { name: 'Wait' })).toBeTruthy();
+      disabled.unmount();
+
+      const loading = render(
+        <Button title="Wait" isLoading onPress={() => {}} />,
+      );
+      expect(
+        loading.UNSAFE_getByType(TouchableOpacity).props.accessibilityRole,
+      ).toBe('button');
+      loading.unmount();
+
+      const withIcon = render(
+        <Button title="Open" icon={CaretDownIcon} onPress={() => {}} />,
+      );
+      expect(withIcon.getByRole('button', { name: 'Open' })).toBeTruthy();
+    });
+
+    it('takes a fuller name, read instead of the title, and still shows the title', () => {
+      const onPress = jest.fn();
+      const view = render(
+        <Button
+          title="Chat"
+          accessibilityLabel="Chat, New message"
+          onPress={onPress}
+        />,
+      );
+      const touchable = view.UNSAFE_getByType(TouchableOpacity);
+      expect(touchable.props.accessibilityRole).toBe('button');
+      expect(touchable.props.accessibilityLabel).toBe('Chat, New message');
+      expect(view.getByText('Chat')).toBeTruthy();
+
+      // The named thing is the pressable itself.
+      fireEvent.press(view.getByLabelText('Chat, New message'));
+      expect(onPress).toHaveBeenCalledTimes(1);
+      expect(
+        view.getByRole('button', { name: 'Chat, New message' }),
+      ).toBeTruthy();
+    });
+
+    it('a loading button with a fuller name keeps it, though its title is not drawn', () => {
+      const view = render(
+        <Button
+          title="Move pin"
+          accessibilityLabel="Moving the pin"
+          isLoading
+          onPress={() => {}}
+        />,
+      );
+      expect(view.queryByText('Move pin')).toBeNull();
+      expect(view.getByLabelText('Moving the pin')).toBeTruthy();
+    });
   });
 });
