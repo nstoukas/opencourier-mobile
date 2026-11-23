@@ -2,7 +2,7 @@ import React from 'react';
 import renderer, { act } from 'react-test-renderer';
 import { Alert } from 'react-native';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { OrderSetting } from '@app/types/enums';
+import { OrderSetting, OrderStatus } from '@app/types/enums';
 import { Order, StackStop, UserStatus } from '@app/types/types';
 import { QueryKeys } from '@app/utilities/queryKeys';
 import { OFFER_HAS_ENDED_CODE } from '@app/services/orderService';
@@ -75,6 +75,11 @@ jest.mock('@app/navigation/navigationRef', () => ({
   isHomeInFront: jest.fn().mockResolvedValue(true),
 }));
 
+const mockAnnounceAutoAccept = jest.fn();
+jest.mock('@app/services/offerPush/autoAccepted', () => ({
+  announceAutoAccept: (...args: any[]) => mockAnnounceAutoAccept(...args),
+}));
+
 import { useHomeOrders } from './useHomeOrders';
 
 function HookHost({
@@ -119,6 +124,7 @@ describe('useHomeOrders.stack (spec 0048, row 80, AC-5, AC-8 as amended by decis
   beforeEach(() => {
     jest.useFakeTimers();
     jest.clearAllMocks();
+    mockAnnounceAutoAccept.mockClear();
     mockAnsweredSet.clear();
     mockGetNewOrders.mockReturnValue(new Promise(() => {}));
     mockAcceptOrder.mockResolvedValue({});
@@ -211,7 +217,260 @@ describe('useHomeOrders.stack (spec 0048, row 80, AC-5, AC-8 as amended by decis
       });
     });
 
-    it('auto-accepts the single order but not a stacked pair in the same fetch (decision 128.6)', async () => {
+    it('calls announceAutoAccept with pair=true and combined restaurant names when stack accept succeeds', async () => {
+      mockDeliverySetting = OrderSetting.auto_accept;
+      const namedOffer1: Order = {
+        ...stackOffer1,
+        pickupBusinessName: 'Souvlaki Palace',
+      };
+      const namedOffer2: Order = {
+        ...stackOffer2,
+        pickupBusinessName: 'Pizza Roma',
+      };
+
+      queryClient.setQueryData(
+        [QueryKeys.newOrders],
+        [namedOffer1, namedOffer2],
+      );
+
+      let tree: renderer.ReactTestRenderer;
+      await act(async () => {
+        tree = renderer.create(
+          <QueryClientProvider client={queryClient}>
+            <HookHost onRender={() => {}} />
+          </QueryClientProvider>,
+        );
+      });
+
+      expect(mockAnnounceAutoAccept).toHaveBeenCalledTimes(1);
+      expect(mockAnnounceAutoAccept).toHaveBeenCalledWith(
+        'stack-1',
+        'Souvlaki Palace · Pizza Roma',
+        true,
+      );
+
+      act(() => {
+        tree.unmount();
+      });
+    });
+
+    it('calls announceAutoAccept with pair=true and deduplicates identical restaurant names', async () => {
+      mockDeliverySetting = OrderSetting.auto_accept;
+      const sameRestaurantOffer1: Order = {
+        ...stackOffer1,
+        pickupBusinessName: 'Souvlaki Palace',
+      };
+      const sameRestaurantOffer2: Order = {
+        ...stackOffer2,
+        pickupBusinessName: 'Souvlaki Palace',
+      };
+
+      queryClient.setQueryData(
+        [QueryKeys.newOrders],
+        [sameRestaurantOffer1, sameRestaurantOffer2],
+      );
+
+      let tree: renderer.ReactTestRenderer;
+      await act(async () => {
+        tree = renderer.create(
+          <QueryClientProvider client={queryClient}>
+            <HookHost onRender={() => {}} />
+          </QueryClientProvider>,
+        );
+      });
+
+      expect(mockAnnounceAutoAccept).toHaveBeenCalledTimes(1);
+      expect(mockAnnounceAutoAccept).toHaveBeenCalledWith(
+        'stack-1',
+        'Souvlaki Palace',
+        true,
+      );
+
+      act(() => {
+        tree.unmount();
+      });
+    });
+
+    it('calls announceAutoAccept with pair=true and empty string when no restaurant name is known', async () => {
+      mockDeliverySetting = OrderSetting.auto_accept;
+      queryClient.setQueryData(
+        [QueryKeys.newOrders],
+        [stackOffer1, stackOffer2],
+      );
+
+      let tree: renderer.ReactTestRenderer;
+      await act(async () => {
+        tree = renderer.create(
+          <QueryClientProvider client={queryClient}>
+            <HookHost onRender={() => {}} />
+          </QueryClientProvider>,
+        );
+      });
+
+      expect(mockAnnounceAutoAccept).toHaveBeenCalledTimes(1);
+      expect(mockAnnounceAutoAccept).toHaveBeenCalledWith(
+        'stack-1',
+        '',
+        true,
+      );
+
+      act(() => {
+        tree.unmount();
+      });
+    });
+
+    it('puts both orders in handAnswerIds when automatic pair accept fails with conflict or network error (decision 128.6)', async () => {
+      mockDeliverySetting = OrderSetting.auto_accept;
+      const genericError = new Error('Network error');
+      mockAcceptOrder.mockRejectedValueOnce(genericError);
+
+      queryClient.setQueryData(
+        [QueryKeys.newOrders],
+        [stackOffer1, stackOffer2],
+      );
+
+      let hookResult: ReturnType<typeof useHomeOrders> | undefined;
+      let tree: renderer.ReactTestRenderer;
+      await act(async () => {
+        tree = renderer.create(
+          <QueryClientProvider client={queryClient}>
+            <HookHost
+              onRender={h => {
+                hookResult = h;
+              }}
+            />
+          </QueryClientProvider>,
+        );
+      });
+
+      expect(mockAcceptOrder).toHaveBeenCalledTimes(1);
+      expect(hookResult?.handAnswerIds).toEqual(['stack-1', 'stack-2']);
+      // Both orders are released back to the rider
+      expect(hookResult?.dataSourceNew.map(o => o.id)).toEqual(['stack-1', 'stack-2']);
+
+      act(() => {
+        tree.unmount();
+      });
+    });
+
+    it('drops both orders and does not put in handAnswerIds when automatic pair accept encounters OFFER_HAS_ENDED', async () => {
+      mockDeliverySetting = OrderSetting.auto_accept;
+      const offerEndedError = new AxiosError('Offer ended');
+      offerEndedError.response = {
+        status: 409,
+        statusText: 'Conflict',
+        headers: {},
+        config: {} as any,
+        data: {
+          error: true,
+          result: [
+            { code: OFFER_HAS_ENDED_CODE, message: 'This offer has ended' },
+          ],
+        },
+      };
+      mockAcceptOrder.mockRejectedValueOnce(offerEndedError);
+
+      queryClient.setQueryData(
+        [QueryKeys.newOrders],
+        [stackOffer1, stackOffer2],
+      );
+
+      let hookResult: ReturnType<typeof useHomeOrders> | undefined;
+      let tree: renderer.ReactTestRenderer;
+      await act(async () => {
+        tree = renderer.create(
+          <QueryClientProvider client={queryClient}>
+            <HookHost
+              onRender={h => {
+                hookResult = h;
+              }}
+            />
+          </QueryClientProvider>,
+        );
+      });
+
+      expect(mockAcceptOrder).toHaveBeenCalledTimes(1);
+      expect(alertSpy).toHaveBeenCalledWith('This offer has ended');
+      expect(hookResult?.handAnswerIds).toEqual([]);
+      expect(hookResult?.dataSourceNew).toEqual([]);
+
+      act(() => {
+        tree.unmount();
+      });
+    });
+
+    it('only half a pair on the phone triggers one refetch of offers and does not repeat (decision 128.6)', async () => {
+      mockDeliverySetting = OrderSetting.auto_accept;
+      mockGetNewOrders.mockClear();
+
+      queryClient.setQueryData([QueryKeys.newOrders], [stackOffer1]);
+
+      let tree: renderer.ReactTestRenderer;
+      await act(async () => {
+        tree = renderer.create(
+          <QueryClientProvider client={queryClient}>
+            <HookHost onRender={() => {}} />
+          </QueryClientProvider>,
+        );
+      });
+
+      // Mount refetch (1) + half a pair partner refetch (1) = 2 calls
+      expect(mockGetNewOrders).toHaveBeenCalledTimes(2);
+      expect(mockAcceptOrder).not.toHaveBeenCalled();
+
+      mockGetNewOrders.mockClear();
+
+      // Subsequent update with the same half pair does NOT call refetchNew again (deduplicated)
+      await act(async () => {
+        queryClient.setQueryData([QueryKeys.newOrders], [{ ...stackOffer1 }]);
+      });
+
+      expect(mockGetNewOrders).not.toHaveBeenCalled();
+      expect(mockAcceptOrder).not.toHaveBeenCalled();
+
+      act(() => {
+        tree.unmount();
+      });
+    });
+
+    it('does not auto-accept a pair when the rider already holds a job and adds the pair to handAnswerIds (decision 128.6)', async () => {
+      mockDeliverySetting = OrderSetting.auto_accept;
+      const heldJob: Order = {
+        id: 'held-job-1',
+        status: OrderStatus.dispatched,
+      } as Order;
+
+      queryClient.setQueryData([QueryKeys.inProgressOrders], [heldJob]);
+      queryClient.setQueryData(
+        [QueryKeys.newOrders],
+        [stackOffer1, stackOffer2],
+      );
+
+      let hookResult: ReturnType<typeof useHomeOrders> | undefined;
+      let tree: renderer.ReactTestRenderer;
+      await act(async () => {
+        tree = renderer.create(
+          <QueryClientProvider client={queryClient}>
+            <HookHost
+              onRender={h => {
+                hookResult = h;
+              }}
+            />
+          </QueryClientProvider>,
+        );
+      });
+
+      // No accept sent for the pair
+      expect(mockAcceptOrder).not.toHaveBeenCalled();
+      // Put in handAnswerIds so Home shows them as a card
+      expect(hookResult?.handAnswerIds).toEqual(['stack-1', 'stack-2']);
+
+      act(() => {
+        tree.unmount();
+      });
+    });
+
+    it('auto-accepts the single order but not a stacked pair in the same fetch and leaves the pair in handAnswerIds (decision 128.6)', async () => {
       mockDeliverySetting = OrderSetting.auto_accept;
       const singleOffer: Order = {
         id: 'single-1',
@@ -224,11 +483,16 @@ describe('useHomeOrders.stack (spec 0048, row 80, AC-5, AC-8 as amended by decis
         [singleOffer, stackOffer1, stackOffer2],
       );
 
+      let hookResult: ReturnType<typeof useHomeOrders> | undefined;
       let tree: renderer.ReactTestRenderer;
       await act(async () => {
         tree = renderer.create(
           <QueryClientProvider client={queryClient}>
-            <HookHost onRender={() => {}} />
+            <HookHost
+              onRender={h => {
+                hookResult = h;
+              }}
+            />
           </QueryClientProvider>,
         );
       });
@@ -239,6 +503,43 @@ describe('useHomeOrders.stack (spec 0048, row 80, AC-5, AC-8 as amended by decis
       expect(mockAcceptOrder).toHaveBeenCalledWith({
         id: 'single-1',
         automatic: true,
+      });
+      // The pair went to handAnswerIds
+      expect(hookResult?.handAnswerIds).toEqual(['stack-1', 'stack-2']);
+
+      act(() => {
+        tree.unmount();
+      });
+    });
+
+    it('does not auto-accept any further orders in the same pass after a pair is accepted (decision 128.6)', async () => {
+      mockDeliverySetting = OrderSetting.auto_accept;
+      const singleOffer: Order = {
+        id: 'single-after-pair',
+        offeredAt: '2026-11-22T10:00:00.000Z',
+        phoneClock: { offeredAt: 100000, expiresAt: 160000 },
+      } as Order;
+
+      queryClient.setQueryData(
+        [QueryKeys.newOrders],
+        [stackOffer1, stackOffer2, singleOffer],
+      );
+
+      let tree: renderer.ReactTestRenderer;
+      await act(async () => {
+        tree = renderer.create(
+          <QueryClientProvider client={queryClient}>
+            <HookHost onRender={() => {}} />
+          </QueryClientProvider>,
+        );
+      });
+
+      // Exactly one accept sent for the pair; the single offer is skipped
+      expect(mockAcceptOrder).toHaveBeenCalledTimes(1);
+      expect(mockAcceptOrder).toHaveBeenCalledWith({
+        id: 'stack-1',
+        automatic: true,
+        partnerId: 'stack-2',
       });
 
       act(() => {

@@ -887,6 +887,20 @@ describe('HomeScreen (spec 0018, AC-5 to AC-15)', () => {
       unmount();
     });
 
+    it('shows a stacked offer card to a rider on auto accept when orders are in handAnswerIds (decision 128.6)', () => {
+      mockUser!.deliverySetting = OrderSetting.auto_accept;
+      mockHomeOrders.dataSourceNew = [stackOfferA, stackOfferB];
+      mockHomeOrders.dataSourceInProgress = [];
+      mockHomeOrders.serverInProgress = [];
+      mockHomeOrders.handAnswerIds = ['offer-stack-1', 'offer-stack-2'];
+
+      const { UNSAFE_getByType, getByTestId, unmount } = renderHome();
+
+      expect(UNSAFE_getByType(StackOfferCell)).toBeTruthy();
+      expect(getByTestId('stack-offer-card')).toBeTruthy();
+      unmount();
+    });
+
     it('renders StackStopList above the active job card when rider holds a stacked job', () => {
       mockHomeOrders.dataSourceNew = [];
       mockHomeOrders.dataSourceInProgress = [stackJobA, stackJobB];

@@ -114,4 +114,30 @@ describe('announceAutoAccept (spec 0020, AC-12)', () => {
       }),
     );
   });
+
+  it('announces a pair with two restaurant names (decision 128.0)', async () => {
+    Platform.OS = 'android';
+    await announceAutoAccept('del-pair-1', 'Souvlaki Bar · Pizza Roma', true);
+
+    expect(notifee.displayNotification).toHaveBeenCalledWith(
+      expect.objectContaining({
+        id: 'auto-accepted-del-pair-1',
+        title: 'Two orders accepted automatically: Souvlaki Bar · Pizza Roma',
+      }),
+    );
+  });
+
+  it('announces a pair with no restaurant names as "Two orders accepted automatically" without "a new order" (decision 128.6)', async () => {
+    Platform.OS = 'android';
+    await announceAutoAccept('del-pair-2', '', true);
+
+    expect(notifee.displayNotification).toHaveBeenCalledWith(
+      expect.objectContaining({
+        id: 'auto-accepted-del-pair-2',
+        title: 'Two orders accepted automatically',
+      }),
+    );
+    const lastCall = (notifee.displayNotification as jest.Mock).mock.calls.slice(-1)[0][0];
+    expect(lastCall.title).not.toContain('a new order');
+  });
 });
