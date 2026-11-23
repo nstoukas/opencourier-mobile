@@ -6,13 +6,14 @@ import {
   Pressable,
   StyleProp,
   StyleSheet,
+  Text,
   Vibration,
   ViewStyle,
 } from 'react-native';
 // `import type`: a TypeScript type only, removed when the app is built.
 import type { Icon as PhosphorIcon } from 'phosphor-react-native';
 import { Icon } from '@app/components/Icon/Icon';
-import { color, radius, withAlpha } from '@app/styles/theme';
+import { color, radius, space, typeScale, withAlpha } from '@app/styles/theme';
 
 // How long the one buzz lasts when a hold completes, in milliseconds.
 const BUZZ_MS = 40;
@@ -24,6 +25,9 @@ type Props = {
   onHeld: () => void;
   // The glyph drawn white in the centre: a tick, an X.
   icon: PhosphorIcon;
+  // A short word under the glyph ("Accept", "Decline"), so a new rider knows
+  // what the button does before pressing it (operator, 23 Nov).
+  label: string;
   // The button's colour, a design system name (spec 0007): success or destructive.
   tone: 'success' | 'destructive';
   // What a screen reader says the button is, and how to use it.
@@ -42,6 +46,7 @@ export const HoldButton = ({
   holdMs,
   onHeld,
   icon,
+  label,
   tone,
   accessibilityLabel,
   accessibilityHint,
@@ -146,7 +151,14 @@ export const HoldButton = ({
           },
         ]}
       />
-      <Icon icon={icon} size={40} weight="bold" tone={foreground} />
+      <Icon icon={icon} size={32} weight="bold" tone={foreground} />
+      <Text
+        style={[styles.label, { color: color[foreground] }]}
+        numberOfLines={1}
+        adjustsFontSizeToFit
+        minimumFontScale={0.7}>
+        {label}
+      </Text>
     </Pressable>
   );
 };
@@ -158,6 +170,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     // Keeps the fill inside the rounded corners.
     overflow: 'hidden',
+  },
+  label: {
+    ...typeScale['button-lg'],
+    marginTop: space['1'],
+    paddingHorizontal: space['2'],
   },
   // The lighter sweep over the button's colour.
   fill: {

@@ -16,7 +16,8 @@ export const DECLINE_HOLD_MS = 1000;
 
 type Props = {
   order: Order;
-  // What a screen reader calls Accept ("Accept", "Accept both"), and its hint.
+  // Accept's word ("Accept", "Accept both"), shown under the tick and read
+  // out by a screen reader, and the screen reader's hint.
   acceptLabel: string;
   acceptHint: string;
   onAccept: (order: Order) => void;
@@ -28,10 +29,10 @@ type Props = {
 };
 
 // The two answers to an offer, side by side (row 135): Decline on the left,
-// red with a white X, held 1 s; Accept on the right, green with a white tick,
-// twice as wide, held 0.2 s. Used inside the three offer cards, and on Home
-// in the card's footer, outside its scrolling part, so both are always on
-// screen without scrolling (row 134).
+// red with a white X and its word, held 1 s; Accept on the right, green with
+// a white tick and its word, twice as wide, held 0.2 s. Used inside the three
+// offer cards, and on Home in the card's footer, outside its scrolling part,
+// so both are always on screen without scrolling (row 134).
 export const OfferAnswers = ({
   order,
   acceptLabel,
@@ -50,6 +51,7 @@ export const OfferAnswers = ({
           holdMs={DECLINE_HOLD_MS}
           onHeld={() => onDecline(order)}
           icon={XIcon}
+          label={t('translations:decline')}
           tone="destructive"
           accessibilityLabel={t('translations:decline')}
           accessibilityHint={t('translations:decline_hold_hint')}
@@ -60,6 +62,7 @@ export const OfferAnswers = ({
           holdMs={ACCEPT_HOLD_MS}
           onHeld={() => onAccept(order)}
           icon={CheckIcon}
+          label={acceptLabel}
           tone="success"
           accessibilityLabel={acceptLabel}
           accessibilityHint={acceptHint}
