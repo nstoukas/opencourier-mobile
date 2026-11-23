@@ -324,6 +324,8 @@ describe('useHomeOrders', () => {
       expect(mockAcceptOrder).toHaveBeenCalledTimes(1);
       // Failed accept released offer back to New list for manual retry
       expect(hookResult?.dataSourceNew.map(o => o.id)).toEqual(['order-123']);
+      // Row 130: order is in handAnswerIds so Home shows it as a card
+      expect(hookResult?.handAnswerIds).toEqual(['order-123']);
 
       // Refetch occurs: auto-accept must NOT try again automatically
       mockGetNewOrders.mockResolvedValueOnce([testOffer]);
@@ -1572,6 +1574,266 @@ describe('useHomeOrders', () => {
       expect(mockGetOrdersHistory).not.toHaveBeenCalled();
       expect((hookResult as any)?.dataSourceHistory).toBeUndefined();
       expect((hookResult as any)?.refechHistory).toBeUndefined();
+
+      act(() => {
+        tree.unmount();
+      });
+    });
+  });
+
+  describe('Row 130: A single order that auto accept could not take (hand answer)', () => {
+    const makeDispatchStoppedError = () => {
+      const err = new AxiosError('Dispatch stopped');
+      err.response = {
+        status: 409,
+        statusText: 'Conflict',
+        headers: {},
+        config: {} as any,
+        data: {
+          error: true,
+          result: [
+            {
+              code: 'DISPATCH_STOPPED',
+              message: 'Dispatch is currently stopped',
+            },
+          ],
+        },
+      };
+      return err;
+    };
+
+    it('puts single order in handAnswerIds and keeps it in dataSourceNew when automatic accept fails with a network error', async () => {
+      mockDeliverySetting = OrderSetting.auto_accept;
+      const testOffer: Order = {
+        id: 'order-fail-net',
+        offeredAt: '2026-11-23T10:00:00.000Z',
+        phoneClock: { offeredAt: 100000, expiresAt: 160000 },
+      } as Order;
+
+      mockAcceptOrder.mockRejectedValueOnce(new Error('Network error'));
+      queryClient.setQueryData([QueryKeys.newOrders], [testOffer]);
+
+      let hookResult: ReturnType<typeof useHomeOrders> | undefined;
+      let tree: renderer.ReactTestRenderer;
+      await act(async () => {
+        tree = renderer.create(
+          <QueryClientProvider client={queryClient}>
+            <HookHost
+              onRender={h => {
+                hookResult = h;
+              }}
+            />
+          </QueryClientProvider>,
+        );
+      });
+
+      expect(mockAcceptOrder).toHaveBeenCalledTimes(1);
+      expect(mockAcceptOrder).toHaveBeenCalledWith({
+        id: 'order-fail-net',
+        automatic: true,
+        partnerId: undefined,
+      });
+      // Concretely: order id is in handAnswerIds so Home renders the card
+      expect(hookResult?.handAnswerIds).toEqual(['order-fail-net']);
+      // Released back onto dataSourceNew for manual answering
+      expect(hookResult?.dataSourceNew.map(o => o.id)).toEqual([
+        'order-fail-net',
+      ]);
+
+      act(() => {
+        tree.unmount();
+      });
+    });
+
+    it('puts single order in handAnswerIds when automatic accept fails with server refusal (409 not offer ended)', async () => {
+      mockDeliverySetting = OrderSetting.auto_accept;
+      const testOffer: Order = {
+        id: 'order-fail-dispatch',
+        offeredAt: '2026-11-23T10:00:00.000Z',
+        phoneClock: { offeredAt: 100000, expiresAt: 160000 },
+      } as Order;
+
+      mockAcceptOrder.mockRejectedValueOnce(makeDispatchStoppedError());
+      queryClient.setQueryData([QueryKeys.newOrders], [testOffer]);
+
+      let hookResult: ReturnType<typeof useHomeOrders> | undefined;
+      let tree: renderer.ReactTestRenderer;
+      await act(async () => {
+        tree = renderer.create(
+          <QueryClientProvider client={queryClient}>
+            <HookHost
+              onRender={h => {
+                hookResult = h;
+              }}
+            />
+          </QueryClientProvider>,
+        );
+      });
+
+      expect(mockAcceptOrder).toHaveBeenCalledTimes(1);
+      expect(hookResult?.handAnswerIds).toEqual(['order-fail-dispatch']);
+      expect(hookResult?.dataSourceNew.map(o => o.id)).toEqual([
+        'order-fail-dispatch',
+      ]);
+
+      act(() => {
+        tree.unmount();
+      });
+    });
+
+    it('tries automatic accept only once: after failure, no second automatic accept is sent on later refetches', async () => {
+      mockDeliverySetting = OrderSetting.auto_accept;
+      const testOffer: Order = {
+        id: 'order-fail-once',
+        offeredAt: '2026-11-23T10:00:00.000Z',
+        phoneClock: { offeredAt: 100000, expiresAt: 160000 },
+      } as Order;
+
+      mockAcceptOrder.mockRejectedValueOnce(new Error('Network error'));
+      queryClient.setQueryData([QueryKeys.newOrders], [testOffer]);
+
+      let hookResult: ReturnType<typeof useHomeOrders> | undefined;
+      let tree: renderer.ReactTestRenderer;
+      await act(async () => {
+        tree = renderer.create(
+          <QueryClientProvider client={queryClient}>
+            <HookHost
+              onRender={h => {
+                hookResult = h;
+              }}
+            />
+          </QueryClientProvider>,
+        );
+      });
+
+      expect(mockAcceptOrder).toHaveBeenCalledTimes(1);
+      expect(mockAcceptOrder).toHaveBeenCalledWith({
+        id: 'order-fail-once',
+        automatic: true,
+        partnerId: undefined,
+      });
+      expect(hookResult?.handAnswerIds).toEqual(['order-fail-once']);
+
+      // Refetch occurs with the same offer: phone must NOT send a second automatic accept
+      mockGetNewOrders.mockResolvedValueOnce([testOffer]);
+      await act(async () => {
+        await hookResult?.refetchNew();
+        jest.runOnlyPendingTimers();
+        await Promise.resolve();
+      });
+
+      expect(mockAcceptOrder).toHaveBeenCalledTimes(1);
+
+      // Advancing timer does not trigger second automatic accept
+      await act(async () => {
+        jest.advanceTimersByTime(5000);
+        await Promise.resolve();
+      });
+
+      expect(mockAcceptOrder).toHaveBeenCalledTimes(1);
+
+      // Rider can manually accept by hand (automatic: false)
+      mockAcceptOrder.mockResolvedValueOnce({});
+      await act(async () => {
+        hookResult?.acceptOrderFn('order-fail-once');
+        await Promise.resolve();
+      });
+
+      expect(mockAcceptOrder).toHaveBeenCalledTimes(2);
+      expect(mockAcceptOrder).toHaveBeenLastCalledWith({
+        id: 'order-fail-once',
+        automatic: false,
+        partnerId: undefined,
+      });
+
+      act(() => {
+        tree.unmount();
+      });
+    });
+
+    it('drops single order and does not put in handAnswerIds when automatic accept encounters OFFER_HAS_ENDED', async () => {
+      mockDeliverySetting = OrderSetting.auto_accept;
+      const testOffer: Order = {
+        id: 'order-ended-single',
+        offeredAt: '2026-11-23T10:00:00.000Z',
+        phoneClock: { offeredAt: 100000, expiresAt: 160000 },
+      } as Order;
+
+      mockAcceptOrder.mockRejectedValueOnce(makeOfferEndedError());
+      queryClient.setQueryData([QueryKeys.newOrders], [testOffer]);
+
+      let hookResult: ReturnType<typeof useHomeOrders> | undefined;
+      let tree: renderer.ReactTestRenderer;
+      await act(async () => {
+        tree = renderer.create(
+          <QueryClientProvider client={queryClient}>
+            <HookHost
+              onRender={h => {
+                hookResult = h;
+              }}
+            />
+          </QueryClientProvider>,
+        );
+      });
+
+      expect(mockAcceptOrder).toHaveBeenCalledTimes(1);
+      expect(alertSpy).toHaveBeenCalledWith('This offer has ended');
+      // Must NOT be in handAnswerIds and NOT in dataSourceNew
+      expect(hookResult?.handAnswerIds).toEqual([]);
+      expect(hookResult?.dataSourceNew).toEqual([]);
+
+      act(() => {
+        tree.unmount();
+      });
+    });
+
+    it('failed manual tap accept does not add order to handAnswerIds and leaves offer on screen for retry', async () => {
+      mockDeliverySetting = OrderSetting.manual;
+      const testOffer: Order = {
+        id: 'order-manual-fail',
+        offeredAt: '2026-11-23T10:00:00.000Z',
+        phoneClock: { offeredAt: 100000, expiresAt: 160000 },
+      } as Order;
+
+      queryClient.setQueryData([QueryKeys.newOrders], [testOffer]);
+
+      let hookResult: ReturnType<typeof useHomeOrders> | undefined;
+      let tree: renderer.ReactTestRenderer;
+      await act(async () => {
+        tree = renderer.create(
+          <QueryClientProvider client={queryClient}>
+            <HookHost
+              onRender={h => {
+                hookResult = h;
+              }}
+            />
+          </QueryClientProvider>,
+        );
+      });
+
+      // Not accepted automatically on arrival in manual mode
+      expect(mockAcceptOrder).not.toHaveBeenCalled();
+
+      // Rider taps accept by hand, which fails with network error
+      mockAcceptOrder.mockRejectedValueOnce(new Error('Network error'));
+      await act(async () => {
+        hookResult?.acceptOrderFn('order-manual-fail');
+        await Promise.resolve();
+      });
+
+      expect(mockAcceptOrder).toHaveBeenCalledTimes(1);
+      expect(mockAcceptOrder).toHaveBeenCalledWith({
+        id: 'order-manual-fail',
+        automatic: false,
+        partnerId: undefined,
+      });
+
+      // Must NOT be added to handAnswerIds (only automatic failures are added)
+      expect(hookResult?.handAnswerIds).toEqual([]);
+      // Remains in dataSourceNew so rider can retry
+      expect(hookResult?.dataSourceNew.map(o => o.id)).toEqual([
+        'order-manual-fail',
+      ]);
 
       act(() => {
         tree.unmount();

@@ -378,6 +378,49 @@ describe('HomeScreen (spec 0018, AC-5 to AC-15)', () => {
       expect(UNSAFE_getByType(InProgressCell)).toBeTruthy();
     });
 
+    it('shows a single offer card to a rider on auto accept when order is in handAnswerIds (row 130)', () => {
+      mockUser!.deliverySetting = OrderSetting.auto_accept;
+      mockHomeOrders.dataSourceNew = [mockOffer];
+      mockHomeOrders.dataSourceInProgress = [];
+      mockHomeOrders.serverInProgress = [];
+      mockHomeOrders.handAnswerIds = [mockOffer.id];
+
+      const { UNSAFE_getByType, UNSAFE_queryByType, unmount } = renderHome();
+
+      // Offer cell is shown because mockOffer is in handAnswerIds
+      const cell = UNSAFE_getByType(NewOrderCell);
+      expect(cell).toBeTruthy();
+      expect(cell.props.order.id).toBe(mockOffer.id);
+      expect(UNSAFE_queryByType(InProgressCell)).toBeNull();
+
+      // Rider can accept or decline by hand
+      act(() => {
+        cell.props.onAccept(mockOffer);
+      });
+      expect(mockHomeOrders.acceptOrderFn).toHaveBeenCalledWith(mockOffer.id);
+
+      act(() => {
+        cell.props.onDecline(mockOffer);
+      });
+      expect(mockHomeOrders.declineOrderFn).toHaveBeenCalledWith(mockOffer.id);
+
+      unmount();
+    });
+
+    it('hides a single offer card from a rider on auto accept when order is not in handAnswerIds (row 130)', () => {
+      mockUser!.deliverySetting = OrderSetting.auto_accept;
+      mockHomeOrders.dataSourceNew = [mockOffer];
+      mockHomeOrders.dataSourceInProgress = [];
+      mockHomeOrders.serverInProgress = [];
+      mockHomeOrders.handAnswerIds = [];
+
+      const { UNSAFE_queryByType, unmount } = renderHome();
+
+      // Offer cell is hidden
+      expect(UNSAFE_queryByType(NewOrderCell)).toBeNull();
+      unmount();
+    });
+
     it('with two items shows "1 of 2", next/previous moves between them, and resets to first on list change', async () => {
       const job2: Order = { ...mockJob, id: 'job-456' };
       mockHomeOrders.dataSourceNew = [];
