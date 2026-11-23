@@ -112,8 +112,8 @@ export const StackOfferCell = ({
       {!answersBelow && (
         <OfferAnswers
           order={order}
-          acceptTitle={t('translations:stack_offer_accept')}
-          acceptSubtitle={t('translations:stack_offer_slide')}
+          acceptLabel={t('translations:stack_offer_accept')}
+          acceptHint={t('translations:stack_offer_hold_hint')}
           onAccept={onAccept}
           onDecline={onDecline}
         />

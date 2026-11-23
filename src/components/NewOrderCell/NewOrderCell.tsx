@@ -140,8 +140,8 @@ export const NewOrderCell = ({
       {!answersBelow && (
         <OfferAnswers
           order={order}
-          acceptTitle={t('translations:accept')}
-          acceptSubtitle={t('translations:slide_to_accept')}
+          acceptLabel={t('translations:accept')}
+          acceptHint={t('translations:accept_hold_hint')}
           onAccept={onAccept}
           onDecline={onDecline}
         />

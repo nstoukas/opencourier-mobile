@@ -541,17 +541,17 @@ export const HomeScreen = ({ navigation }: Props) => {
     // the card above: an add on, a pair, or a single order.
     if (shown?.kind === 'offer') {
       const offer = shown.order;
-      const [title, subtitle] = offer.addOn
-        ? ['add_on_offer_accept', 'add_on_offer_slide']
+      const [label, hint] = offer.addOn
+        ? ['add_on_offer_accept', 'add_on_offer_hold_hint']
         : shown.partner
-        ? ['stack_offer_accept', 'stack_offer_slide']
-        : ['accept', 'slide_to_accept'];
+        ? ['stack_offer_accept', 'stack_offer_hold_hint']
+        : ['accept', 'accept_hold_hint'];
       return (
         <OfferAnswers
           key={`${offer.id}-${offer.offeredAt ?? ''}`}
           order={offer}
-          acceptTitle={t(`translations:${title}`)}
-          acceptSubtitle={t(`translations:${subtitle}`)}
+          acceptLabel={t(`translations:${label}`)}
+          acceptHint={t(`translations:${hint}`)}
           onAccept={answered => acceptOrderFn(answered.id)}
           onDecline={answered => declineOrderFn(answered.id)}
           pinned

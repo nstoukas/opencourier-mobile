@@ -126,8 +126,8 @@ export const AddOnOfferCell = ({
       {!answersBelow && (
         <OfferAnswers
           order={order}
-          acceptTitle={t('translations:add_on_offer_accept')}
-          acceptSubtitle={t('translations:add_on_offer_slide')}
+          acceptLabel={t('translations:add_on_offer_accept')}
+          acceptHint={t('translations:add_on_offer_hold_hint')}
           onAccept={onAccept}
           onDecline={onDecline}
         />
