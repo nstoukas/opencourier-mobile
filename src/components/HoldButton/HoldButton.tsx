@@ -1,7 +1,6 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useState } from 'react';
 import {
   Animated,
-  Easing,
   LayoutChangeEvent,
   Pressable,
   StyleProp,
@@ -13,6 +12,7 @@ import {
 // `import type`: a TypeScript type only, removed when the app is built.
 import type { Icon as PhosphorIcon } from 'phosphor-react-native';
 import { Icon } from '@app/components/Icon/Icon';
+import { useHoldTimer } from '@app/hooks/useHoldTimer';
 import { color, radius, space, typeScale, withAlpha } from '@app/styles/theme';
 
 // How long the one buzz lasts when a hold completes, in milliseconds.
@@ -53,57 +53,17 @@ export const HoldButton = ({
   testID,
   style,
 }: Props) => {
-  // 0 to 1: how far the fill has swept. `useRef` keeps one value across redraws.
-  const progress = useRef(new Animated.Value(0)).current;
-  const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
   // The button's drawn width, so the fill can grow to exactly that.
   const [width, setWidth] = useState(0);
-
-  const cancel = () => {
-    if (timer.current) {
-      clearTimeout(timer.current);
-      timer.current = null;
-    }
-    progress.stopAnimation();
-    Animated.timing(progress, {
-      toValue: 0,
-      duration: 150,
-      useNativeDriver: false,
-    }).start();
-  };
 
   const fire = () => {
     Vibration.vibrate(BUZZ_MS);
     onHeld();
   };
-
-  const begin = () => {
-    cancel();
-    progress.setValue(0);
-    Animated.timing(progress, {
-      toValue: 1,
-      duration: holdMs,
-      easing: Easing.linear,
-      useNativeDriver: false,
-    }).start();
-    timer.current = setTimeout(() => {
-      timer.current = null;
-      // Empty again at once, so an answer the server refuses leaves the
-      // button ready for another try.
-      progress.setValue(0);
-      fire();
-    }, holdMs);
-  };
-
-  // Never fire after the button is gone (the offer left the screen mid hold).
-  useEffect(
-    () => () => {
-      if (timer.current) {
-        clearTimeout(timer.current);
-      }
-    },
-    [],
-  );
+  // The hold itself (row 136): the timer decides, `progress` drives the fill, a release before the
+  // time does nothing, and leaving the screen mid hold never fires. After a hold the fill is empty
+  // again, so an answer the server refuses leaves the button ready for another try.
+  const { progress, begin, release } = useHoldTimer(holdMs, fire);
 
   // White (the tone's own foreground), so the tick and X stay white too.
   const foreground =
@@ -117,12 +77,8 @@ export const HoldButton = ({
   return (
     <Pressable
       onPressIn={begin}
-      onPressOut={() => {
-        // Released before the hold time: nothing happens.
-        if (timer.current) {
-          cancel();
-        }
-      }}
+      // Released before the hold time: nothing happens.
+      onPressOut={release}
       onLayout={(event: LayoutChangeEvent) =>
         setWidth(event.nativeEvent.layout.width)
       }

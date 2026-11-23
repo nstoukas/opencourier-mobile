@@ -1,9 +1,10 @@
-import React, { useEffect, useRef } from 'react';
-import { Animated, Easing, Pressable, StyleSheet, View } from 'react-native';
+import React from 'react';
+import { Animated, Pressable, StyleSheet, View } from 'react-native';
 import Svg, { Rect } from 'react-native-svg';
 import { useTranslation } from 'react-i18next';
 import { SirenIcon } from 'phosphor-react-native/src/icons/Siren';
 import { Icon } from '@app/components/Icon/Icon';
+import { useHoldTimer } from '@app/hooks/useHoldTimer';
 import { color, control, radius, shadow } from '@app/styles/theme';
 
 // How long the rider holds before the SOS starts (spec 0022, AC-2): long
@@ -36,49 +37,10 @@ type Props = {
 // does nothing at all (no call, no request, no record) and the ring empties.
 export const SosHoldButton = ({ onHeld }: Props) => {
   const { t } = useTranslation();
-  // 0 to 1: how full the ring is. `useRef` keeps one value across redraws.
-  const progress = useRef(new Animated.Value(0)).current;
-  const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  const cancel = () => {
-    if (timer.current) {
-      clearTimeout(timer.current);
-      timer.current = null;
-    }
-    progress.stopAnimation();
-    Animated.timing(progress, {
-      toValue: 0,
-      duration: 150,
-      useNativeDriver: false,
-    }).start();
-  };
-
-  const begin = () => {
-    cancel();
-    progress.setValue(0);
-    Animated.timing(progress, {
-      toValue: 1,
-      duration: SOS_HOLD_MS,
-      easing: Easing.linear,
-      useNativeDriver: false,
-    }).start();
-    // The timer, not the animation, decides: it is what the 3 s rule means.
-    timer.current = setTimeout(() => {
-      timer.current = null;
-      progress.setValue(0);
-      onHeld();
-    }, SOS_HOLD_MS);
-  };
-
-  // Never fire after the button is gone (Home redrawn without it).
-  useEffect(
-    () => () => {
-      if (timer.current) {
-        clearTimeout(timer.current);
-      }
-    },
-    [],
-  );
+  // The hold itself (row 136, shared with the offer buttons): the timer, not the animation,
+  // decides (it is what the 3 s rule means), `progress` fills the ring, a release before 3 s does
+  // nothing at all, and leaving Home mid hold never starts an SOS.
+  const { progress, begin, release } = useHoldTimer(SOS_HOLD_MS, onHeld);
 
   const dashOffset = progress.interpolate({
     inputRange: [0, 1],
@@ -88,12 +50,8 @@ export const SosHoldButton = ({ onHeld }: Props) => {
   return (
     <Pressable
       onPressIn={begin}
-      onPressOut={() => {
-        // Released before 3 s: nothing happens.
-        if (timer.current) {
-          cancel();
-        }
-      }}
+      // Released before 3 s: nothing happens.
+      onPressOut={release}
       accessibilityRole="button"
       accessibilityLabel={t('translations:sos_button')}
       accessibilityHint={t('translations:sos_button_hint')}
