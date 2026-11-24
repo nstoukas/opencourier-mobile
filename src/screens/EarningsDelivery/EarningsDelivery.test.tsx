@@ -370,6 +370,101 @@ describe('EarningsDelivery (spec 0042, AC-10, AC-11, AC-13)', () => {
       expect(screen.queryByText('Update')).toBeNull();
     });
 
+    it('words an ADD_ON_JOINED line as "Another order added · System" (en) and never Update (row 146)', () => {
+      const deliveryWithAddOnJoined: EarningsDeliveryDetail = {
+        ...sampleDelivery,
+        timeline: [
+          {
+            type: 'ADD_ON_JOINED',
+            at: '2026-11-20T12:05:00.000Z',
+            who: 'SYSTEM',
+            anotherRider: false,
+          },
+          {
+            type: 'ADD_ON_JOINED',
+            at: '2026-11-20T12:06:00.000Z',
+            who: null,
+            anotherRider: false,
+          },
+        ],
+      };
+
+      (useEarningsDelivery as jest.Mock).mockReturnValue({
+        data: deliveryWithAddOnJoined,
+        isLoading: false,
+        isError: false,
+        isRefetching: false,
+        refetch: jest.fn(),
+      });
+
+      render(<EarningsDelivery {...defaultProps} />);
+
+      // Words "Another order added · System" when actor is SYSTEM
+      expect(screen.getByText('Another order added · System')).toBeTruthy();
+
+      // Words "Another order added" when actor is null
+      expect(screen.getByText('Another order added')).toBeTruthy();
+
+      // Never shows the fallback "Update · System" or "Update"
+      expect(screen.queryByText('Update · System')).toBeNull();
+      expect(screen.queryByText('Update')).toBeNull();
+    });
+
+    it('words an ADD_ON_JOINED line as "Προστέθηκε παραγγελία · Σύστημα" (el) and never Ενημέρωση (row 146)', async () => {
+      const deliveryWithAddOnJoined: EarningsDeliveryDetail = {
+        ...sampleDelivery,
+        timeline: [
+          {
+            type: 'ADD_ON_JOINED',
+            at: '2026-11-20T12:05:00.000Z',
+            who: 'SYSTEM',
+            anotherRider: false,
+          },
+          {
+            type: 'ADD_ON_JOINED',
+            at: '2026-11-20T12:06:00.000Z',
+            who: null,
+            anotherRider: false,
+          },
+        ],
+      };
+
+      (useEarningsDelivery as jest.Mock).mockReturnValue({
+        data: deliveryWithAddOnJoined,
+        isLoading: false,
+        isError: false,
+        isRefetching: false,
+        refetch: jest.fn(),
+      });
+
+      await act(async () => {
+        await i18n.changeLanguage('el');
+      });
+      try {
+        const { unmount } = render(<EarningsDelivery {...defaultProps} />);
+
+        // Words "Προστέθηκε παραγγελία · Σύστημα" when actor is SYSTEM
+        expect(
+          screen.getByText('Προστέθηκε παραγγελία · Σύστημα'),
+        ).toBeTruthy();
+
+        // Words "Προστέθηκε παραγγελία" when actor is null
+        expect(screen.getByText('Προστέθηκε παραγγελία')).toBeTruthy();
+
+        // Never shows fallback "Ενημέρωση · Σύστημα" or "Ενημέρωση"
+        expect(screen.queryByText('Ενημέρωση · Σύστημα')).toBeNull();
+        expect(screen.queryByText('Ενημέρωση')).toBeNull();
+        expect(screen.queryByText('Update · System')).toBeNull();
+        expect(screen.queryByText('Update')).toBeNull();
+
+        unmount();
+      } finally {
+        await act(async () => {
+          await i18n.changeLanguage('en');
+        });
+      }
+    });
+
     it('shows "D MMM, HH:mm" on another Athens day than line before, clock only on same day, and first line shows day when differing from first job accept day (AC-11)', () => {
       // First job accepted on 2026-11-20T12:00:00Z (Athens day: 20 Nov)
       const deliveryWithMultiDayTimeline: EarningsDeliveryDetail = {

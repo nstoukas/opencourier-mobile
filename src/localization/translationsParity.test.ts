@@ -1,3 +1,5 @@
+import fs from 'fs';
+import path from 'path';
 import en from './en/translations';
 import el from './el/translations';
 import { serverEn } from './server/en';
@@ -99,7 +101,7 @@ describe('Translation Parity and Completeness Guard (spec 0054, AC-8)', () => {
 
     it('every EVENT_MESSAGE_CODE has a non-empty template in both server/en and server/el', () => {
       const codeNames = Object.keys(EVENT_MESSAGE_CODES);
-      expect(codeNames.length).toBe(80); // 80 since ACCEPTED_TOGETHER_AUTOMATICALLY (decision 128.0)
+      expect(codeNames.length).toBe(81); // 81 since ADD_ON_JOINED (row 146)
 
       for (const code of codeNames) {
         expect(serverEnEvents[code]).toBeDefined();
@@ -108,6 +110,19 @@ describe('Translation Parity and Completeness Guard (spec 0054, AC-8)', () => {
         expect(serverElEvents[code]).toBeDefined();
         expect(serverElEvents[code].trim().length).toBeGreaterThan(0);
       }
+    });
+
+    it('ADD_ON_JOINED event code has expected parameters and matching templates in server/en and server/el (row 146)', () => {
+      expect((EVENT_MESSAGE_CODES as any).ADD_ON_JOINED).toEqual([
+        'courierId',
+        'addOnId',
+      ]);
+      expect(serverEnEvents.ADD_ON_JOINED).toBe(
+        'Delivery {{addOnId}} was added to this job as one more order on the way; courier {{courierId}} has taken both',
+      );
+      expect(serverElEvents.ADD_ON_JOINED).toBe(
+        'Η παραγγελία {{addOnId}} προστέθηκε σε αυτή τη δουλειά ως μία ακόμα παραγγελία στον δρόμο· ο διανομέας {{courierId}} έχει αναλάβει και τις δύο',
+      );
     });
 
     it('every EVENT_PART_CODE has a non-empty template in both server/en and server/el', () => {
@@ -135,5 +150,84 @@ describe('Translation Parity and Completeness Guard (spec 0054, AC-8)', () => {
         expect(serverElErrors[code].trim().length).toBeGreaterThan(0);
       }
     });
+  });
+
+  describe('row 146 ADD_ON_JOINED event and backend parity', () => {
+    const serverEnEvents = serverEn.server.event as Record<string, string>;
+    const serverElEvents = serverEl.server.event as Record<string, string>;
+
+    it('both languages define earnings_event_ADD_ON_JOINED label for rider Earnings timeline (row 146)', () => {
+      expect((en as any).earnings_event_ADD_ON_JOINED).toBe(
+        'Another order added',
+      );
+      expect((el as any).earnings_event_ADD_ON_JOINED).toBe(
+        'Προστέθηκε παραγγελία',
+      );
+    });
+
+    const backendDir = path.resolve(__dirname, '../../../opencourier-backend');
+    const backendEnPath = path.join(backendDir, 'src/localization/en.ts');
+    const backendElPath = path.join(backendDir, 'src/localization/el.ts');
+    const backendMessagesPath = path.join(
+      backendDir,
+      'src/shared-types/event-messages.ts',
+    );
+
+    const backendPresent =
+      fs.existsSync(backendEnPath) &&
+      fs.existsSync(backendElPath) &&
+      fs.existsSync(backendMessagesPath);
+
+    if (!backendPresent) {
+      console.warn(
+        '\n=================================================================================\n' +
+          `WARNING: Backend localization files not found under ${backendDir}.\n` +
+          'Skipping ADD_ON_JOINED backend copy consistency check because backend repo is absent.\n' +
+          '=================================================================================\n',
+      );
+    }
+
+    const itBackendCopy = backendPresent ? it : it.skip;
+
+    itBackendCopy(
+      'verifies ADD_ON_JOINED params and sentences match opencourier-backend copies when present (row 146)',
+      () => {
+        const backendEnContent = fs.readFileSync(backendEnPath, 'utf-8');
+        const backendElContent = fs.readFileSync(backendElPath, 'utf-8');
+        const backendMessagesContent = fs.readFileSync(
+          backendMessagesPath,
+          'utf-8',
+        );
+
+        // Extract backend message code params: ADD_ON_JOINED: ['courierId', 'addOnId'],
+        const backendCodeMatch = backendMessagesContent.match(
+          /ADD_ON_JOINED:\s*\[([^\]]+)\]/,
+        );
+        expect(backendCodeMatch).not.toBeNull();
+        const backendParams = (backendCodeMatch?.[1] ?? '')
+          .split(',')
+          .map(s => s.trim().replace(/['"]/g, ''));
+        expect((EVENT_MESSAGE_CODES as any).ADD_ON_JOINED).toEqual(
+          backendParams,
+        );
+
+        // Extract backend sentences
+        const backendEnSentenceMatch = backendEnContent.match(
+          /ADD_ON_JOINED:\s*'([^']+)'/,
+        );
+        expect(backendEnSentenceMatch).not.toBeNull();
+        expect(serverEnEvents.ADD_ON_JOINED).toBe(
+          backendEnSentenceMatch?.[1] ?? '',
+        );
+
+        const backendElSentenceMatch = backendElContent.match(
+          /ADD_ON_JOINED:\s*\n?\s*'([^']+)'/,
+        );
+        expect(backendElSentenceMatch).not.toBeNull();
+        expect(serverElEvents.ADD_ON_JOINED).toBe(
+          backendElSentenceMatch?.[1] ?? '',
+        );
+      },
+    );
   });
 });
