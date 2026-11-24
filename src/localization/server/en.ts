@@ -163,6 +163,8 @@ export const serverEn = {
       PRODUCT_REPORT_RESOLVED: 'Report resolved ({{kind}})',
       ADD_ON_JOINED:
         'Delivery {{addOnId}} was added to this job as one more order on the way; courier {{courierId}} has taken both',
+      ADD_ON_LEFT:
+        'Delivery {{addOnId}} was taken off this job; courier {{courierId}} no longer has it',
 
       SEEDED_COMPLETED: 'Seeded completed delivery',
       SEEDED_REASSIGNMENT: 'Seeded reassignment fixture',

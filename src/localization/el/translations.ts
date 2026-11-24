@@ -1303,6 +1303,7 @@ const translations: typeof en = {
   earnings_event_PRODUCT_REPORTED: 'Αναφορά προϊόντος',
   earnings_event_PRODUCT_REPORT_RESOLVED: 'Απάντηση σε αναφορά προϊόντος',
   earnings_event_ADD_ON_JOINED: 'Προστέθηκε παραγγελία',
+  earnings_event_ADD_ON_LEFT: 'Αφαιρέθηκε παραγγελία',
   earnings_event_WAIT_UNDISPATCHED: 'Αποχώρηση μετά από πολλή αναμονή',
   earnings_event_COURIER_PAID_FOR_WAIT: 'Αμοιβή αναμονής',
   earnings_event_REMOVAL_REQUESTED: 'Αίτημα αποδέσμευσης',
