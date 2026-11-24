@@ -1,6 +1,11 @@
 import React from 'react';
 import { Linking, Platform } from 'react-native';
-import { render, fireEvent, waitFor, cleanup } from '@testing-library/react-native';
+import {
+  render,
+  fireEvent,
+  waitFor,
+  cleanup,
+} from '@testing-library/react-native';
 import '@app/localization/i18n';
 import { UserStatus } from '@app/types/types';
 import { setLocationOff } from '@app/services/locationOff';

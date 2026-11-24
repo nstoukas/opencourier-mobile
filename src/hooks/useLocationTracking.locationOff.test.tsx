@@ -368,14 +368,17 @@ describe('useLocationTracking locationOff warning & retry (Row 156, Clauses 1, 2
       // App is in background
       triggerAppState('background');
 
-      const callsBefore = (Geolocation.watchPosition as jest.Mock).mock.calls.length;
+      const callsBefore = (Geolocation.watchPosition as jest.Mock).mock.calls
+        .length;
 
       act(() => {
         jest.advanceTimersByTime(LOCATION_OFF_RETRY_MS);
       });
 
       // No new watchPosition call while backgrounded
-      expect((Geolocation.watchPosition as jest.Mock).mock.calls.length).toBe(callsBefore);
+      expect((Geolocation.watchPosition as jest.Mock).mock.calls.length).toBe(
+        callsBefore,
+      );
     });
   });
 });

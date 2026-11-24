@@ -91,8 +91,11 @@ describe('geo track (Row 67, Clause 2 & Row 156)', () => {
     const onUpdate = jest.fn();
     track(onUpdate, testOptions);
 
-    const getCurrentPositionOptions = (Geolocation.getCurrentPosition as jest.Mock).mock.calls[0][2];
-    const watchPositionOptions = (Geolocation.watchPosition as jest.Mock).mock.calls[0][2];
+    const getCurrentPositionOptions = (
+      Geolocation.getCurrentPosition as jest.Mock
+    ).mock.calls[0][2];
+    const watchPositionOptions = (Geolocation.watchPosition as jest.Mock).mock
+      .calls[0][2];
 
     expect(getCurrentPositionOptions.showLocationDialog).toBe(false);
     expect(watchPositionOptions.showLocationDialog).toBe(false);
@@ -168,7 +171,10 @@ describe('geo track (Row 67, Clause 2 & Row 156)', () => {
     expect(() => {
       watchErrorCb!({ code: 3, message: 'Timeout' });
     }).not.toThrow();
-    expect(errorSpy).toHaveBeenCalledWith('Location error: ', { code: 3, message: 'Timeout' });
+    expect(errorSpy).toHaveBeenCalledWith('Location error: ', {
+      code: 3,
+      message: 'Timeout',
+    });
   });
 
   it('converts watchPosition coords [latitude, longitude] to geojson Point [longitude, latitude] and passes fix info', () => {

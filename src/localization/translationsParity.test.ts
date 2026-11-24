@@ -71,7 +71,9 @@ describe('Translation Parity and Completeness Guard (spec 0054, AC-8)', () => {
       expect(enMap.location_off_turn_on).toBe('Turn on');
       expect(elMap.location_off_turn_on).toBe('Άνοιγμα');
 
-      expect(enMap.location_off_hint).toBe("Opens the phone's location settings");
+      expect(enMap.location_off_hint).toBe(
+        "Opens the phone's location settings",
+      );
       expect(elMap.location_off_hint).toBe(
         'Ανοίγει τις ρυθμίσεις τοποθεσίας του τηλεφώνου',
       );
