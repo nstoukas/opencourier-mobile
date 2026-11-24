@@ -11,9 +11,12 @@ export type FixInfo = { accuracyMetres: number | null; at: number };
 // Starts one location watch with these options and returns its id (stop it
 // with Geolocation.clearWatch). The first fix is asked for at once, so the
 // server has a position before the phone has moved.
+// `onError` (row 156) hears the library's error code, so the caller can tell location switched off
+// from a fix that only took too long; every error is still written to the console as before.
 export function track(
   onUpdate: (point: Point, info: FixInfo) => void,
   options: WatchOptions,
+  onError?: (code: number) => void,
 ): number {
   const toPoint = (latitude: number, longitude: number): Point => ({
     type: 'Point',
@@ -28,24 +31,25 @@ export function track(
           : null,
       at: Date.now(),
     });
+  // `Geolocation.GeoError` is the library's type for a failed read.
+  const handleError = (error: Geolocation.GeoError) => {
+    console.error('Location error: ', error);
+    onError?.(error.code);
+  };
   Geolocation.getCurrentPosition(
     handle,
-    error => console.error('Location error: ', error),
+    handleError,
     // See https://developer.mozilla.org/en-US/docs/Web/API/Geolocation/getCurrentPosition for
     // details on options. The first read is always high accuracy, on purpose:
     // the server should start from a good position.
     { enableHighAccuracy: true, timeout: 15000, maximumAge: 10000 },
   );
-  return Geolocation.watchPosition(
-    handle,
-    error => console.error('Location error: ', error),
-    {
-      ...options,
-      // iOS shows its blue location bar while the app tracks in the
-      // background (row 68); Android shows the "online" notification instead.
-      showsBackgroundLocationIndicator: true,
-    },
-  );
+  return Geolocation.watchPosition(handle, handleError, {
+    ...options,
+    // iOS shows its blue location bar while the app tracks in the
+    // background (row 68); Android shows the "online" notification instead.
+    showsBackgroundLocationIndicator: true,
+  });
 }
 
 // Metres as "1,2 km" in Greek, "1.2 km" in English (one decimal, through kmNumber).

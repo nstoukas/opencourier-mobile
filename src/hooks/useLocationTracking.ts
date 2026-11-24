@@ -9,6 +9,11 @@ import { track } from '@app/utilities/geo';
 import { setOwnPosition } from '@app/services/ownPosition';
 import { setLatestFix } from '@app/services/latestFix';
 import {
+  LOCATION_OFF_ERROR_CODES,
+  getLocationOff,
+  setLocationOff,
+} from '@app/services/locationOff';
+import {
   ForwardedFix,
   TrackingMode,
   WATCH_OPTIONS,
@@ -70,8 +75,23 @@ export const useLocationTracking = (
   const courierIdNow = useRef(user?.id);
   courierIdNow.current = user?.id;
 
+  // True while the app is in front (used below for the online service too).
+  const appActive = useAppActive();
+  // Row 156: a watch started while the phone's location was off never starts reading, so it would
+  // stay silent after the rider switches location back on. Coming back to the app with the warning
+  // up (the rider went to the phone's settings) starts the watch again: this counter is in the
+  // watch's dependencies, and bumping it replaces the watch.
+  const [watchRestarts, setWatchRestarts] = useState(0);
+  useEffect(() => {
+    if (appActive && getLocationOff()) {
+      setWatchRestarts(count => count + 1);
+    }
+  }, [appActive]);
+
   useEffect(() => {
     if (mode === TrackingMode.Off) {
+      // No watch, so nothing to warn about (an Offline rider never sees the banner).
+      setLocationOff(false);
       return;
     }
     // False once this watch is stopped, so a first fix that arrives late
@@ -83,88 +103,100 @@ export const useLocationTracking = (
     // should never happen (the app stops tracking when it goes Offline), but if the two disagree the
     // app must not send fix after fix in a loop: this watch sends no more ordinary positions.
     let refusedByServer = false;
-    const watchId = track((point, info) => {
-      if (!active) {
-        return;
-      }
-      const latitude = point.coordinates[1];
-      const longitude = point.coordinates[0];
-      // The map draws the rider from the phone's own newest fix (spec 0018).
-      setOwnPosition({ latitude, longitude });
-      // The arrival check reads it with its accuracy and time (spec 0021).
-      // Memory only: nothing more about the position is sent than before.
-      setLatestFix({ latitude, longitude, ...info });
-      if (mode === TrackingMode.Sos) {
-        const courierId = courierIdNow.current;
-        // Kept on the phone and sent by the SOS sender, to the SOS only
-        // (spec 0022, AC-5, AC-13).
-        if (courierId) {
-          addSosPoint(courierId, {
-            latitude,
-            longitude,
-            ...(info.accuracyMetres !== null
-              ? { accuracyMetres: info.accuracyMetres }
-              : {}),
-            takenAt: info.at,
-          }).catch(error => console.log('Could not keep an SOS point', error));
-        }
-        // The ordinary location, no more often than without the SOS.
-        const now = Date.now();
-        if (
-          !shouldForwardOrdinaryFix(
-            ordinaryModeNow.current,
-            lastForwarded,
-            { latitude, longitude },
-            now,
-          )
-        ) {
+    const watchId = track(
+      (point, info) => {
+        if (!active) {
           return;
         }
-        lastForwarded = { latitude, longitude, at: now };
-      }
-      if (refusedByServer) {
-        return;
-      }
-      services.userService
-        .setUserLocation({ latitude, longitude })
-        .catch(error => {
-          if (isOfflineRefusal(error)) {
-            refusedByServer = true;
-            // Outside an SOS nothing else needs this watch, so it stops quietly; during an SOS it
-            // keeps running for the SOS points, which go to their own route (spec 0022).
-            if (mode !== TrackingMode.Sos) {
-              active = false;
-              Geolocation.clearWatch(watchId);
-            }
-            // The server says this rider is Offline: load the rider again, so the screen stops
-            // showing Online without a watch behind it.
-            queryClient.invalidateQueries({ queryKey: [QueryKeys.user] });
+        const latitude = point.coordinates[1];
+        const longitude = point.coordinates[0];
+        // A fix came, so location is on (row 156).
+        setLocationOff(false);
+        // The map draws the rider from the phone's own newest fix (spec 0018).
+        setOwnPosition({ latitude, longitude });
+        // The arrival check reads it with its accuracy and time (spec 0021).
+        // Memory only: nothing more about the position is sent than before.
+        setLatestFix({ latitude, longitude, ...info });
+        if (mode === TrackingMode.Sos) {
+          const courierId = courierIdNow.current;
+          // Kept on the phone and sent by the SOS sender, to the SOS only
+          // (spec 0022, AC-5, AC-13).
+          if (courierId) {
+            addSosPoint(courierId, {
+              latitude,
+              longitude,
+              ...(info.accuracyMetres !== null
+                ? { accuracyMetres: info.accuracyMetres }
+                : {}),
+              takenAt: info.at,
+            }).catch(error =>
+              console.log('Could not keep an SOS point', error),
+            );
+          }
+          // The ordinary location, no more often than without the SOS.
+          const now = Date.now();
+          if (
+            !shouldForwardOrdinaryFix(
+              ordinaryModeNow.current,
+              lastForwarded,
+              { latitude, longitude },
+              now,
+            )
+          ) {
             return;
           }
-          // A lost fix is fine: the next one follows shortly.
-          console.log('Could not send location', error);
-        });
-      // The distance and the map read the rider's position from the cached
-      // user. `setQueryData` writes the new position into that cache directly:
-      // the screens update and nothing is fetched again.
-      queryClient.setQueryData<User>([QueryKeys.user], cached =>
-        cached
-          ? { ...cached, currentLocation: { latitude, longitude } }
-          : cached,
-      );
-    }, WATCH_OPTIONS[mode]);
+          lastForwarded = { latitude, longitude, at: now };
+        }
+        if (refusedByServer) {
+          return;
+        }
+        services.userService
+          .setUserLocation({ latitude, longitude })
+          .catch(error => {
+            if (isOfflineRefusal(error)) {
+              refusedByServer = true;
+              // Outside an SOS nothing else needs this watch, so it stops quietly; during an SOS it
+              // keeps running for the SOS points, which go to their own route (spec 0022).
+              if (mode !== TrackingMode.Sos) {
+                active = false;
+                Geolocation.clearWatch(watchId);
+              }
+              // The server says this rider is Offline: load the rider again, so the screen stops
+              // showing Online without a watch behind it.
+              queryClient.invalidateQueries({ queryKey: [QueryKeys.user] });
+              return;
+            }
+            // A lost fix is fine: the next one follows shortly.
+            console.log('Could not send location', error);
+          });
+        // The distance and the map read the rider's position from the cached
+        // user. `setQueryData` writes the new position into that cache directly:
+        // the screens update and nothing is fetched again.
+        queryClient.setQueryData<User>([QueryKeys.user], cached =>
+          cached
+            ? { ...cached, currentLocation: { latitude, longitude } }
+            : cached,
+        );
+      },
+      WATCH_OPTIONS[mode],
+      code => {
+        // Row 156: location switched off on the phone. Other errors (a slow fix) never warn.
+        if (active && LOCATION_OFF_ERROR_CODES.includes(code)) {
+          setLocationOff(true);
+        }
+      },
+    );
     // React runs this when the mode changes or the app logs out, so the old
     // watch always stops before a new one starts: one watch at a time.
     return () => {
       active = false;
       Geolocation.clearWatch(watchId);
     };
-  }, [mode, queryClient]);
+  }, [mode, queryClient, watchRestarts]);
 
   // The foreground service that keeps this watch alive in the background, with
   // its "online" sign (row 68, spec 0008). Android starts it only while the app
-  // is in front, so "in front" is part of when to try.
-  const appActive = useAppActive();
+  // is in front, so "in front" is part of when to try (`appActive`, above).
   const tracking = mode !== TrackingMode.Off;
   // `useRef` holds a value across renders without causing one: whether the
   // service runs, and the latest mode and tracking state for async callbacks.

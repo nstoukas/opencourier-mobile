@@ -67,6 +67,7 @@ import { useLocationPermission } from '@app/hooks/useLocationPermission';
 import { OfferAnswers } from '@app/components/OfferAnswers/OfferAnswers';
 import { SosHoldButton } from '@app/components/SosHoldButton/SosHoldButton';
 import { SosActiveBanner } from '@app/components/SosActiveBanner/SosActiveBanner';
+import { LocationOffBanner } from '@app/components/LocationOffBanner/LocationOffBanner';
 import { beginSos, openSosScreen, useSosRecord } from '@app/hooks/useSos';
 import { isSharing } from '@app/services/sosStore';
 import { setOwnPosition, useOwnPosition } from '@app/services/ownPosition';
@@ -659,6 +660,8 @@ export const HomeScreen = ({ navigation }: Props) => {
         middle={<TimeWorkedCounter inFront={isFocused} />}>
         {/* The rider's own SOS is active (spec 0022, AC-3). */}
         {sosActive && <SosActiveBanner onPress={() => openSosScreen()} />}
+        {/* Row 156: Online with the phone's location switched off. */}
+        <LocationOffBanner userStatus={userStatus} />
         {/* On shift or free, while the co-op runs shifts (spec 0027). */}
         <ShiftBanner inFront={isFocused} />
         {/* Dispatch stopped for heat or a storm, or about to be (spec 0014). */}

@@ -225,6 +225,11 @@ export default {
   sos_button: 'SOS',
   sos_button_hint: 'Hold for 3 seconds to call 112 and alert the co-op',
   sos_active_banner: 'SOS active',
+  // Row 156: Home's banner while Online with the phone's location switched off. Shortest wording
+  // (operator, 23 Nov); the button opens the phone's location settings.
+  location_off_banner: 'Location is off',
+  location_off_turn_on: 'Turn on',
+  location_off_hint: "Opens the phone's location settings",
   sos_active_banner_hint: 'Tap to open',
   sos_title: 'SOS',
   sos_alerted: 'The co-op has been alerted',
