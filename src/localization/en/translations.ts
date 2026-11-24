@@ -1233,6 +1233,8 @@ export default {
   earnings_event_FOOD_READY: 'Restaurant marked the food ready',
   earnings_event_PRODUCT_REPORTED: 'Product reported',
   earnings_event_PRODUCT_REPORT_RESOLVED: 'Product report answered',
+  // Row 146: another order was added to this job on the way.
+  earnings_event_ADD_ON_JOINED: 'Another order added',
   earnings_event_WAIT_UNDISPATCHED: 'Left after waiting too long',
   earnings_event_COURIER_PAID_FOR_WAIT: 'Paid for waiting',
   earnings_event_REMOVAL_REQUESTED: 'Asked to come off the job',
