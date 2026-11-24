@@ -169,4 +169,8 @@ the error count is above `typecheck-baseline.json`, and lowers the file when the
   channel (`split-decided`), cleared in both clear places. A sent request's times go on the phone's clock at once
   (`splitTimesOnPhone`); while a request is open the split line is the only clock on the card.
 
+- The rider's Earnings timeline labels a line `earnings_event_<type>` and falls back to "Update": a new event type the backend
+  writes with the rider's id needs that label in both languages (row 146). `src/types/event-messages.ts` and
+  `src/localization/server/*` are word for word copies of the backend's; the parity test counts the codes.
+
 _Drafted by /audit from the repo, worth a quick human pass. Edit freely: once a line stops matching this draft, later runs treat it as curated and will flag rather than overwrite it._
