@@ -211,6 +211,69 @@ describe('ReportProduct screen (spec 0032, AC-1, AC-2, AC-9)', () => {
       });
       expect(screen.queryByText('Pork Gyros Pita')).toBeNull();
       expect(getSendButton().props.disabled).toBe(true);
+      expect(screen.queryByText(/NaN/)).toBeNull();
+      expect(screen.queryByText(/02/)).toBeNull();
+    });
+
+    it('draws without crashing when orderItems is an empty object {} (row 159)', () => {
+      const orderWithObjectItems = {
+        id: 'del-object-items',
+        orderItems: {},
+      } as unknown as Order;
+
+      render(<ReportProduct {...buildProps(orderWithObjectItems)} />);
+
+      const somethingElseChip = screen.getByRole('button', {
+        name: i18n.t('translations:report_product_something_else'),
+      });
+      expect(somethingElseChip.props.accessibilityState).toEqual({
+        selected: true,
+      });
+      expect(getSendButton().props.disabled).toBe(true);
+      expect(screen.queryByText(/NaN/)).toBeNull();
+      expect(screen.queryByText(/02/)).toBeNull();
+    });
+
+    it('draws without crashing with a mixed list of orderItems (no crash, no NaN, no 02) (row 159)', () => {
+      const mixedItems = [
+        null,
+        123,
+        'junk-string',
+        { price: 15 },
+        { name: '' },
+        { name: '   ' },
+        { name: 'Pork Gyros', quantity: '2', size: 'Large' },
+        { name: 'Cola Zero', quantity: '2', kind: 'DRINK', size: 5 },
+        { name: 'French Fries', quantity: 'x', kind: 'SIDE' },
+        { name: 'Salad', quantity: -1, kind: 'FOOD' },
+      ];
+
+      const orderWithMixedItems = {
+        id: 'del-mixed-items',
+        orderItems: mixedItems,
+      } as unknown as Order;
+
+      render(<ReportProduct {...buildProps(orderWithMixedItems)} />);
+
+      // Only items with valid names should appear as chips
+      expect(screen.getByText('Pork Gyros')).toBeTruthy();
+      expect(screen.getByText('Cola Zero')).toBeTruthy();
+      expect(screen.getByText('French Fries')).toBeTruthy();
+      expect(screen.getByText('Salad')).toBeTruthy();
+
+      // First valid item is selected by default
+      const firstItemChip = screen.getByRole('button', { name: 'Pork Gyros' });
+      expect(firstItemChip.props.accessibilityState).toEqual({
+        selected: true,
+      });
+
+      // Invalid entries did not create chips
+      expect(screen.queryByText('junk-string')).toBeNull();
+      expect(screen.queryByRole('button', { name: '' })).toBeNull();
+
+      // No NaN and no 02
+      expect(screen.queryByText(/NaN/)).toBeNull();
+      expect(screen.queryByText(/02/)).toBeNull();
     });
   });
 
@@ -268,7 +331,9 @@ describe('ReportProduct screen (spec 0032, AC-1, AC-2, AC-9)', () => {
       await act(async () => {
         fireEvent.press(somethingElse);
       });
-      expect(somethingElse.props.accessibilityState).toEqual({ selected: true });
+      expect(somethingElse.props.accessibilityState).toEqual({
+        selected: true,
+      });
       expect(secondItem.props.accessibilityState).toEqual({ selected: false });
     });
   });
@@ -298,7 +363,10 @@ describe('ReportProduct screen (spec 0032, AC-1, AC-2, AC-9)', () => {
 
       // Real text: enabled
       await act(async () => {
-        fireEvent.changeText(noteInput, 'Customer received wrong brand of drink');
+        fireEvent.changeText(
+          noteInput,
+          'Customer received wrong brand of drink',
+        );
       });
       expect(getSendButton().props.disabled).toBe(false);
 
@@ -336,9 +404,7 @@ describe('ReportProduct screen (spec 0032, AC-1, AC-2, AC-9)', () => {
       render(<ReportProduct {...buildProps()} />);
 
       await act(async () => {
-        fireEvent.press(
-          screen.getByText(i18n.t('translations:report_send')),
-        );
+        fireEvent.press(screen.getByText(i18n.t('translations:report_send')));
       });
 
       expect(services.orderService.reportProduct).toHaveBeenCalledTimes(1);
@@ -397,9 +463,7 @@ describe('ReportProduct screen (spec 0032, AC-1, AC-2, AC-9)', () => {
       });
 
       await act(async () => {
-        fireEvent.press(
-          screen.getByText(i18n.t('translations:report_send')),
-        );
+        fireEvent.press(screen.getByText(i18n.t('translations:report_send')));
       });
 
       expect(services.orderService.reportProduct).toHaveBeenCalledWith({
@@ -440,9 +504,7 @@ describe('ReportProduct screen (spec 0032, AC-1, AC-2, AC-9)', () => {
       });
 
       await act(async () => {
-        fireEvent.press(
-          screen.getByText(i18n.t('translations:report_send')),
-        );
+        fireEvent.press(screen.getByText(i18n.t('translations:report_send')));
       });
 
       expect(services.orderService.reportProduct).toHaveBeenCalledWith({
@@ -470,9 +532,7 @@ describe('ReportProduct screen (spec 0032, AC-1, AC-2, AC-9)', () => {
 
       // First tap
       await act(async () => {
-        fireEvent.press(
-          screen.getByText(i18n.t('translations:report_send')),
-        );
+        fireEvent.press(screen.getByText(i18n.t('translations:report_send')));
       });
 
       expect(services.orderService.reportProduct).toHaveBeenCalledTimes(1);
@@ -512,9 +572,7 @@ describe('ReportProduct screen (spec 0032, AC-1, AC-2, AC-9)', () => {
       render(<ReportProduct {...buildProps()} />);
 
       await act(async () => {
-        fireEvent.press(
-          screen.getByText(i18n.t('translations:report_send')),
-        );
+        fireEvent.press(screen.getByText(i18n.t('translations:report_send')));
       });
 
       expect(alertSpy).toHaveBeenCalledWith(
@@ -538,9 +596,7 @@ describe('ReportProduct screen (spec 0032, AC-1, AC-2, AC-9)', () => {
       render(<ReportProduct {...buildProps()} />);
 
       await act(async () => {
-        fireEvent.press(
-          screen.getByText(i18n.t('translations:report_send')),
-        );
+        fireEvent.press(screen.getByText(i18n.t('translations:report_send')));
       });
 
       expect(alertSpy).toHaveBeenCalledWith(
@@ -559,9 +615,7 @@ describe('ReportProduct screen (spec 0032, AC-1, AC-2, AC-9)', () => {
       render(<ReportProduct {...buildProps()} />);
 
       await act(async () => {
-        fireEvent.press(
-          screen.getByText(i18n.t('translations:report_send')),
-        );
+        fireEvent.press(screen.getByText(i18n.t('translations:report_send')));
       });
 
       expect(alertSpy).toHaveBeenCalledWith(
