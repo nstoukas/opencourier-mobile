@@ -173,4 +173,14 @@ the error count is above `typecheck-baseline.json`, and lowers the file when the
   writes with the rider's id needs that label in both languages (row 146). `src/types/event-messages.ts` and
   `src/localization/server/*` are word for word copies of the backend's; the parity test counts the codes.
 
+- `OFFER_ENDED` (push and live connection) carries the ended offer's `offeredAt`, and the reason `ANSWERED` when the rider answered on
+  one of their phones (rows 154, 155). An end drops only the offer it names (`isTheEndedOffer`, `cancelEndedOfferAlert`), and the ended
+  offer's key joins the answered offers list (`markOfferEnded`), so a late push of that very offer never rings.
+- "Location off" (row 156): `src/services/locationOff.ts` is a memory only flag set by the watch's error codes 2 and 5 and cleared by
+  any fix; nothing about it leaves the phone (value 5). The watch passes `showLocationDialog: false`, so Google's dialog never opens by
+  itself; Home's banner is the only prompt.
+- An order's items are free JSON on the server: read them only through `orderItemsOf` (`src/utilities/orderItems.ts`, row 159).
+- Tests (row 158): a test's `QueryClient` sets `gcTime: Infinity`, and an `afterEach` unmounts (`cleanup()`) before it clears a module
+  store a mounted hook listens to; otherwise a real timer keeps a Jest worker alive ("failed to exit gracefully").
+
 _Drafted by /audit from the repo, worth a quick human pass. Edit freely: once a line stops matching this draft, later runs treat it as curated and will flag rather than overwrite it._
