@@ -21,6 +21,7 @@ import React, {
 import { AppState } from 'react-native';
 import { Order } from '@app/types/types';
 import { cancelOfferAlert } from './offerPush/offerAlert';
+import { markOfferEnded } from './offerPush/answeredOffers';
 import { isFromDispatch } from './chat/chatService';
 import { noticeChatMessage } from './chat/chatNotice';
 import {
@@ -99,8 +100,12 @@ const SocketProvider = ({ children }: Props) => {
       // The server ended an offer (spec 0002): take it off the screen at
       // once, then fetch the list again so the server has the last word.
       // Nothing is shown to the rider about it, and nothing is counted.
-      onOfferEnded: deliveryId => {
+      onOfferEnded: (deliveryId, offeredAt) => {
         if (deliveryId !== null) {
+          // Row 155: a push of this very offer arriving later will not ring.
+          markOfferEnded(deliveryId, offeredAt).catch(error =>
+            console.log('Could not keep the ended offer', error),
+          );
           // Its alert stops ringing too, if one is up (row 58, AC-6).
           cancelOfferAlert(deliveryId);
           // `setQueryData` edits the cached offer list in place; the Home

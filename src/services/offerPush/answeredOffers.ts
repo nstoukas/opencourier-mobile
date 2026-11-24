@@ -88,6 +88,23 @@ export const markOfferAnswered = (key: string): boolean => {
   return true;
 };
 
+// Row 155: an offer the server ended can no longer be answered, so it joins the
+// same list. A NEW_DELIVERY_OFFER push for it that arrives after its end (FCM
+// does not keep order) is then dropped silently, like an answered one, while a
+// new offer of the same delivery has a later `offeredAt` and still rings.
+// Without an `offeredAt` (an older server) nothing is kept: the delivery id
+// alone would also silence a real new offer.
+export const markOfferEnded = async (
+  deliveryId: string,
+  offeredAt: string | null,
+): Promise<void> => {
+  if (!offeredAt) {
+    return;
+  }
+  await loadAnsweredOffers();
+  markOfferAnswered(offerKeyOf(deliveryId, offeredAt));
+};
+
 // A send failed for a reason other than "the offer has ended" (no network):
 // let the rider try again.
 export const unmarkOfferAnswered = (key: string) => {

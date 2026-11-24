@@ -45,7 +45,13 @@ export type OfferAlertData = {
 
 export type OfferMessage =
   | { kind: 'offer'; offer: OfferAlertData }
-  | { kind: 'ended'; deliveryId: string; reason: string };
+  // Row 155: `offeredAt` names the offer that ended (null from an older server).
+  | {
+      kind: 'ended';
+      deliveryId: string;
+      reason: string;
+      offeredAt: string | null;
+    };
 
 // `Record<string, ...>`: an object with any string keys, which is what FCM
 // hands over as `message.data` (its values can also be objects on iOS).
@@ -95,7 +101,12 @@ export const parseOfferMessage = (data: RawData): OfferMessage | null => {
   }
 
   if (type === 'OFFER_ENDED') {
-    return { kind: 'ended', deliveryId, reason: text(data, 'reason') };
+    return {
+      kind: 'ended',
+      deliveryId,
+      reason: text(data, 'reason'),
+      offeredAt: text(data, 'offeredAt') || null,
+    };
   }
   if (type !== 'NEW_DELIVERY_OFFER') {
     return null;

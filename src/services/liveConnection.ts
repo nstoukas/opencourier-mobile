@@ -35,8 +35,18 @@ export const CHAT_READ_BY_DISPATCH_EVENT = 'CHAT_READ_BY_DISPATCH';
 // What the backend sends with OFFER_ENDED (backend `OfferEndedMessage`).
 export type OfferEndedMessage = {
   deliveryId: string;
-  // STOPPED: dispatch was stopped for heat or a storm (spec 0014).
-  reason: 'EXPIRED' | 'OFFLINE' | 'MOVED' | 'STOPPED';
+  // STOPPED: dispatch was stopped for heat or a storm (spec 0014). ANSWERED
+  // (row 154): the rider answered it, maybe on another of their phones.
+  reason: 'EXPIRED' | 'OFFLINE' | 'MOVED' | 'STOPPED' | 'ANSWERED';
+  // Row 155: when the ended offer was made (ISO text); null or missing from
+  // an older server.
+  offeredAt?: string | null;
+};
+
+// Row 155: the `offeredAt` of an OFFER_ENDED message, or null.
+export const endedOfferedAt = (message: unknown): string | null => {
+  const offeredAt = (message as Partial<OfferEndedMessage> | null)?.offeredAt;
+  return typeof offeredAt === 'string' && offeredAt !== '' ? offeredAt : null;
 };
 
 // The delivery id from an OFFER_ENDED message, or null if it is missing.
@@ -100,7 +110,7 @@ export type LiveConnectionHandlers = {
   onDeliveryStatusUpdated: () => void;
   // An offer ended on the server; null when the message named no delivery.
   // Optional (the `?`) so a caller that shows no offers can leave it out.
-  onOfferEnded?: (deliveryId: string | null) => void;
+  onOfferEnded?: (deliveryId: string | null, offeredAt: string | null) => void;
   // A held job's ready time changed (spec 0023); the raw message, read by `parseJobReadyUpdate`.
   onJobReadyUpdated?: (message: unknown) => void;
   // Dispatch answered a removal request (spec 0035); the raw message, read by `parseRemovalDecision`.
@@ -171,7 +181,10 @@ export class LiveConnection {
       this.handlers.onDeliveryStatusUpdated(),
     );
     socket.on(OFFER_ENDED_EVENT, (message: unknown) =>
-      this.handlers.onOfferEnded?.(endedDeliveryId(message)),
+      this.handlers.onOfferEnded?.(
+        endedDeliveryId(message),
+        endedOfferedAt(message),
+      ),
     );
     socket.on(JOB_READY_UPDATED_EVENT, (message: unknown) =>
       this.handlers.onJobReadyUpdated?.(message),

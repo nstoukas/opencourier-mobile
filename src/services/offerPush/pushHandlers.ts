@@ -30,6 +30,7 @@ import {
 import {
   isOfferAnswered,
   loadAnsweredOffers,
+  markOfferEnded,
   offerKeyOf,
 } from './answeredOffers';
 import { answerOffer } from './answerOffer';
@@ -145,6 +146,10 @@ export const onRemoteMessage = async (
   if (parsed.kind === 'ended') {
     // AC-6: the offer ended on the server. The alert and its ring stop on
     // every phone of this rider; the open app drops the offer at once.
+    // Row 155: a late push of this very offer will not ring either.
+    await markOfferEnded(parsed.deliveryId, parsed.offeredAt).catch(error =>
+      console.log('Could not keep the ended offer', error),
+    );
     await cancelOfferAlert(parsed.deliveryId);
     queryClient.setQueryData<Order[]>([QueryKeys.newOrders], offers =>
       offers?.filter(offer => offer.id !== parsed.deliveryId),
