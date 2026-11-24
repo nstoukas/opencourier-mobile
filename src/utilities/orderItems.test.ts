@@ -1,5 +1,5 @@
 import { orderItemsOf } from './orderItems';
-import { Order, OrderItem } from '@app/types/types';
+import { Order } from '@app/types/types';
 
 describe('orderItemsOf (row 159)', () => {
   describe('non-list values', () => {
