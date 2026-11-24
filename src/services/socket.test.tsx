@@ -148,17 +148,20 @@ describe('SocketProvider and useConnectionStatus', () => {
     createdSockets = [];
     mockUser = { id: 'courier-1', status: UserStatus.Online };
     mockInProgressOrdersData = [];
+    appStateListener = undefined;
+    await AsyncStorage.clear();
     await AsyncStorage.setItem('token', 'courier-jwt-token');
 
     queryClient = new QueryClient({
       defaultOptions: {
-        queries: { retry: false, gcTime: 0, staleTime: Infinity },
+        queries: { retry: false, gcTime: Infinity, staleTime: Infinity },
       },
     });
     invalidateQueriesSpy = jest.spyOn(queryClient, 'invalidateQueries');
   });
 
-  afterEach(() => {
+  afterEach(async () => {
+    queryClient.cancelQueries();
     queryClient.clear();
   });
 
@@ -741,12 +744,20 @@ describe('SocketProvider and useConnectionStatus', () => {
         resolveToken = resolve;
       });
 
-      jest.spyOn(AsyncStorage, 'getItem').mockImplementation((key: string) => {
-        if (key === 'token') {
-          return tokenPromise;
-        }
-        return Promise.resolve(null);
-      });
+      const origGetItem = (
+        AsyncStorage.getItem as jest.Mock
+      ).getMockImplementation();
+
+      (AsyncStorage.getItem as jest.Mock).mockImplementation(
+        (key: string, callback?: any) => {
+          if (key === 'token') {
+            return tokenPromise;
+          }
+          return origGetItem
+            ? origGetItem(key, callback)
+            : Promise.resolve(null);
+        },
+      );
 
       mockUser = { id: 'courier-1', status: UserStatus.Online };
 
@@ -775,6 +786,7 @@ describe('SocketProvider and useConnectionStatus', () => {
       act(() => {
         tree.unmount();
       });
+      (AsyncStorage.getItem as jest.Mock).mockImplementation(origGetItem);
     });
 
     it('closes connection when SocketProvider unmounts', async () => {
