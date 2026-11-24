@@ -122,7 +122,7 @@ describe('Translation Parity and Completeness Guard (spec 0054, AC-8)', () => {
 
     it('every EVENT_MESSAGE_CODE has a non-empty template in both server/en and server/el', () => {
       const codeNames = Object.keys(EVENT_MESSAGE_CODES);
-      expect(codeNames.length).toBe(82); // 82 since ADD_ON_LEFT (row 149)
+      expect(codeNames.length).toBe(83); // 83 since TIP_CHANGED_BY_RESTAURANT (row 160)
 
       for (const code of codeNames) {
         expect(serverEnEvents[code]).toBeDefined();
