@@ -38,6 +38,7 @@ import {
 } from '@app/utilities/jobCard';
 import { color, control, radius, space, typeScale } from '@app/styles/theme';
 import { coopClock } from '@app/utilities/timeWorked';
+import { orderItemsOf } from '@app/utilities/orderItems';
 
 type Props = {
   style?: StyleProp<ViewStyle>;
@@ -238,7 +239,10 @@ export const InProgressCell = ({
               />
             ) : null}
           </View>
-          <JobItemsLine deliveryId={order.id} items={order.orderItems} />
+          <JobItemsLine
+            deliveryId={order.id}
+            items={orderItemsOf(order.orderItems)}
+          />
           <JobNotesLine
             notes={notesFor(order, 'pickup')}
             addressNotes={addressNotesOf('PICKUP')}

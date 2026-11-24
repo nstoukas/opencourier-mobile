@@ -17,6 +17,7 @@ import { BackNavButton } from '@app/components/BackNavButton/BackNavButton';
 import { ScreenSafeArea } from '@app/components/ScreenSafeArea/ScreenSafeArea';
 import { MainScreenProp, MainScreens } from '@app/navigation/main/types';
 import { services } from '@app/services/service';
+import { orderItemsOf } from '@app/utilities/orderItems';
 import { styles } from './ReportProduct.styles';
 
 type Props = MainScreenProp<MainScreens.ReportProduct>;
@@ -31,7 +32,7 @@ export const ReportProduct = ({ navigation, route }: Props) => {
   const { t } = useTranslation();
   const { bottom } = useSafeAreaInsets();
   const { order } = route.params;
-  const names = (order.orderItems ?? []).map(item => item.name);
+  const names = orderItemsOf(order.orderItems).map(item => item.name);
   const [kind, setKind] = useState<Kind>('WRONG_ITEM');
   const [item, setItem] = useState<string>(names[0] ?? SOMETHING_ELSE);
   const [note, setNote] = useState('');

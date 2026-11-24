@@ -194,11 +194,13 @@ export type Order = {
   pickupName: string;
   pickupPhoneNumber: string;
   pickupBusinessName: string;
-  pickupNotes: string;
-  pickupVerification: Verification;
+  // Row 159: these follow the server's columns, which may be null (the restaurant gave no note, no
+  // verification, no times).
+  pickupNotes: string | null;
+  pickupVerification: Verification | null;
   pickupLocationId: string;
-  pickupReadyAt: string;
-  pickupDeadlineAt: string;
+  pickupReadyAt: string | null;
+  pickupDeadlineAt: string | null;
   // Row 142: the server sends the customer's name, the business name (row 140), the seller's note, the
   // items and the customer's notes only once this rider has accepted, and the composed floor and doorbell
   // note only while the rider holds the delivery, the free hand back window excluded (row 101). In an
@@ -215,20 +217,23 @@ export type Order = {
   dropoffDoorbell?: string | null;
   // Spec 0016: set once the rider moved the drop off pin (at most once per delivery).
   dropoffPointCorrectedAt?: string | null;
-  dropoffVerification: Verification;
-  dropoffReadyAt: string;
-  dropoffEta: string;
-  dropoffDeadlineAt: string;
+  dropoffVerification: Verification | null;
+  dropoffReadyAt: string | null;
+  dropoffEta: string | null;
+  dropoffDeadlineAt: string | null;
   deliverableAction: string;
-  undeliverableAction: string;
-  undeliverableReason?: string;
+  undeliverableAction: string | null;
+  undeliverableReason?: string | null;
   dropoffLocationId: string;
   deliveryTypes: string[];
-  requiresDropoffSignature: string;
+  // A yes or no on the server (a Boolean column), never text.
+  requiresDropoffSignature: boolean;
   requiresId: boolean;
-  orderReference: string;
-  orderTotalValue: number;
-  orderItems?: OrderItem[] | null;
+  orderReference: string | null;
+  orderTotalValue: number | null;
+  // Row 159: free JSON on the server, so nothing promises an OrderItem[] here. Read it only through
+  // `orderItemsOf` (utilities/orderItems.ts), which keeps the items that have the shape the screens need.
+  orderItems?: unknown;
   status: string;
   // Set by the app, never by the server: a step of this delivery waits in the
   // outbox for signal, and `status` above already shows it (spec 0009).
@@ -244,13 +249,13 @@ export type Order = {
   imageType?: any;
   imageName?: any;
   imageDate?: any;
-  idempotencyKey: string;
-  externalStoreId: string;
-  returnVerification: Verification;
+  idempotencyKey: string | null;
+  externalStoreId: string | null;
+  returnVerification: Verification | null;
   externalUserInfo?: any;
-  externalId: string;
-  courierId: string;
-  partnerId: string;
+  externalId: string | null;
+  courierId: string | null;
+  partnerId: string | null;
   deliveryQuoteId: string;
   createdAt: string;
   pickupLocationNotes: Note[];
