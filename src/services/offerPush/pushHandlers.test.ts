@@ -7,7 +7,6 @@ import { isHomeInFront } from '@app/navigation/navigationRef';
 import {
   ACCEPT_ACTION,
   cancelEndedOfferAlert,
-  cancelOfferAlert,
   DECLINE_ACTION,
   showOfferAlert,
 } from './offerAlert';
