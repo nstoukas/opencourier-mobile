@@ -10,8 +10,10 @@ import { setOwnPosition } from '@app/services/ownPosition';
 import { setLatestFix } from '@app/services/latestFix';
 import {
   LOCATION_OFF_ERROR_CODES,
+  LOCATION_OFF_RETRY_MS,
   getLocationOff,
   setLocationOff,
+  useLocationOff,
 } from '@app/services/locationOff';
 import {
   ForwardedFix,
@@ -82,11 +84,25 @@ export const useLocationTracking = (
   // up (the rider went to the phone's settings) starts the watch again: this counter is in the
   // watch's dependencies, and bumping it replaces the watch.
   const [watchRestarts, setWatchRestarts] = useState(0);
+  const locationOff = useLocationOff();
   useEffect(() => {
     if (appActive && getLocationOff()) {
       setWatchRestarts(count => count + 1);
     }
   }, [appActive]);
+  // Row 156 review: location switched back on from the quick settings shade does not leave the app, so the
+  // return above never fires. While the warning is up and the app is in front, the watch starts again every
+  // 30 s; the first fix clears the warning and ends this.
+  useEffect(() => {
+    if (!locationOff || !appActive || mode === TrackingMode.Off) {
+      return;
+    }
+    const timer = setInterval(
+      () => setWatchRestarts(count => count + 1),
+      LOCATION_OFF_RETRY_MS,
+    );
+    return () => clearInterval(timer);
+  }, [locationOff, appActive, mode]);
 
   useEffect(() => {
     if (mode === TrackingMode.Off) {

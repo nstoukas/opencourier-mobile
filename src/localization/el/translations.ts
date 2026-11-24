@@ -243,7 +243,7 @@ const translations: typeof en = {
   sos_button_hint:
     'Κρατήστε πατημένο 3 δευτερόλεπτα για να καλέσετε το 112 και να ειδοποιήσετε τον συνεταιρισμό',
   sos_active_banner: 'SOS ενεργό',
-  location_off_banner: 'Η τοποθεσία είναι κλειστή',
+  location_off_banner: 'Τοποθεσία κλειστή',
   location_off_turn_on: 'Άνοιγμα',
   location_off_hint: 'Ανοίγει τις ρυθμίσεις τοποθεσίας του τηλεφώνου',
   sos_active_banner_hint: 'Πατήστε για άνοιγμα',

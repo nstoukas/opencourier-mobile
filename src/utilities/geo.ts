@@ -42,10 +42,20 @@ export function track(
     // See https://developer.mozilla.org/en-US/docs/Web/API/Geolocation/getCurrentPosition for
     // details on options. The first read is always high accuracy, on purpose:
     // the server should start from a good position.
-    { enableHighAccuracy: true, timeout: 15000, maximumAge: 10000 },
+    // Row 156 review: `showLocationDialog: false`, so Google's "turn on location" dialog never opens by
+    // itself (it would open again on every return to the app while the rider says no). Home's banner is
+    // the one prompt, and its button opens the phone's settings.
+    {
+      enableHighAccuracy: true,
+      timeout: 15000,
+      maximumAge: 10000,
+      showLocationDialog: false,
+    },
   );
   return Geolocation.watchPosition(handle, handleError, {
     ...options,
+    // Row 156 review: never the system dialog (see above).
+    showLocationDialog: false,
     // iOS shows its blue location bar while the app tracks in the
     // background (row 68); Android shows the "online" notification instead.
     showsBackgroundLocationIndicator: true,

@@ -33,3 +33,6 @@ export const useLocationOff = (): boolean =>
 // phone's location is disabled), and 5, location on but in a mode that cannot satisfy the watch
 // (SETTINGS_NOT_SATISFIED). A timeout (3) is weak signal, not a setting, so it never warns.
 export const LOCATION_OFF_ERROR_CODES: readonly number[] = [2, 5];
+
+// Row 156 review: how often the watch starts again while the warning is up and the app is in front.
+export const LOCATION_OFF_RETRY_MS = 30_000;
