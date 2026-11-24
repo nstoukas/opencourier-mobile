@@ -93,6 +93,39 @@ describe('offerMessage (spec 0003, AC-4, AC-10)', () => {
       kind: 'ended',
       deliveryId: 'del-ended-1',
       reason: 'EXPIRED',
+      offeredAt: null,
+    });
+  });
+
+  it('Row 154 & 155: parses OFFER_ENDED with offeredAt and reason ANSWERED', () => {
+    const parsed = parseOfferMessage({
+      type: 'OFFER_ENDED',
+      deliveryId: 'del-ended-2',
+      reason: 'ANSWERED',
+      offeredAt: '2026-11-24T18:00:00.000Z',
+    });
+
+    expect(parsed).toEqual({
+      kind: 'ended',
+      deliveryId: 'del-ended-2',
+      reason: 'ANSWERED',
+      offeredAt: '2026-11-24T18:00:00.000Z',
+    });
+  });
+
+  it('Row 155: treats empty string offeredAt as null on OFFER_ENDED', () => {
+    const parsed = parseOfferMessage({
+      type: 'OFFER_ENDED',
+      deliveryId: 'del-ended-3',
+      reason: 'EXPIRED',
+      offeredAt: '',
+    });
+
+    expect(parsed).toEqual({
+      kind: 'ended',
+      deliveryId: 'del-ended-3',
+      reason: 'EXPIRED',
+      offeredAt: null,
     });
   });
 

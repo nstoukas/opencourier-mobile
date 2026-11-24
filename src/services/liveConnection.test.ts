@@ -11,6 +11,7 @@ import {
   courierSocketUrl,
   createCourierSocket,
   endedDeliveryId,
+  endedOfferedAt,
   shouldBeConnected,
 } from './liveConnection';
 
@@ -487,8 +488,64 @@ describe('liveConnection', () => {
     });
   });
 
+  describe('endedOfferedAt (Row 155)', () => {
+    it('extracts offeredAt ISO text from valid OFFER_ENDED message payload', () => {
+      expect(
+        endedOfferedAt({
+          deliveryId: 'order-123',
+          reason: 'EXPIRED',
+          offeredAt: '2026-11-24T18:00:00.000Z',
+        }),
+      ).toBe('2026-11-24T18:00:00.000Z');
+      expect(
+        endedOfferedAt({
+          deliveryId: 'order-456',
+          reason: 'ANSWERED',
+          offeredAt: '2026-11-24T18:05:00.000Z',
+        }),
+      ).toBe('2026-11-24T18:05:00.000Z');
+    });
+
+    it('returns null if offeredAt is missing, empty string, or non-string', () => {
+      expect(
+        endedOfferedAt({
+          deliveryId: 'order-123',
+          reason: 'EXPIRED',
+          offeredAt: '',
+        }),
+      ).toBeNull();
+      expect(
+        endedOfferedAt({
+          deliveryId: 'order-123',
+          reason: 'EXPIRED',
+        }),
+      ).toBeNull();
+      expect(
+        endedOfferedAt({
+          deliveryId: 'order-123',
+          reason: 'EXPIRED',
+          offeredAt: 12345,
+        }),
+      ).toBeNull();
+      expect(
+        endedOfferedAt({
+          deliveryId: 'order-123',
+          reason: 'EXPIRED',
+          offeredAt: null,
+        }),
+      ).toBeNull();
+    });
+
+    it('returns null for null, undefined, or primitive payloads', () => {
+      expect(endedOfferedAt(null)).toBeNull();
+      expect(endedOfferedAt(undefined)).toBeNull();
+      expect(endedOfferedAt('not-an-object')).toBeNull();
+      expect(endedOfferedAt(42)).toBeNull();
+    });
+  });
+
   describe('LiveConnection - OFFER_ENDED handler', () => {
-    it('triggers onOfferEnded with deliveryId when OFFER_ENDED event arrives', () => {
+    it('triggers onOfferEnded with deliveryId and offeredAt when OFFER_ENDED event arrives', () => {
       const fakeSocket = new FakeSocket();
       const onOfferEndedMock = jest.fn();
       const handlers: LiveConnectionHandlers = {
@@ -510,7 +567,7 @@ describe('liveConnection', () => {
       });
 
       expect(onOfferEndedMock).toHaveBeenCalledTimes(1);
-      expect(onOfferEndedMock).toHaveBeenCalledWith('order-789');
+      expect(onOfferEndedMock).toHaveBeenCalledWith('order-789', null);
 
       // Dispatch stopped for heat or storm (spec 0014, AC-5)
       fakeSocket.emit(OFFER_ENDED_EVENT, {
@@ -519,7 +576,20 @@ describe('liveConnection', () => {
       });
 
       expect(onOfferEndedMock).toHaveBeenCalledTimes(2);
-      expect(onOfferEndedMock).toHaveBeenLastCalledWith('order-999');
+      expect(onOfferEndedMock).toHaveBeenLastCalledWith('order-999', null);
+
+      // Row 154 & 155: ANSWERED with offeredAt
+      fakeSocket.emit(OFFER_ENDED_EVENT, {
+        deliveryId: 'order-ans',
+        reason: 'ANSWERED',
+        offeredAt: '2026-11-24T18:00:00.000Z',
+      });
+
+      expect(onOfferEndedMock).toHaveBeenCalledTimes(3);
+      expect(onOfferEndedMock).toHaveBeenLastCalledWith(
+        'order-ans',
+        '2026-11-24T18:00:00.000Z',
+      );
     });
 
     it('does not throw when OFFER_ENDED arrives and onOfferEnded handler is omitted', () => {

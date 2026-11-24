@@ -8,6 +8,7 @@ import '@app/localization/i18n';
 import {
   ALERT_GRACE_AFTER_DEADLINE_MS,
   cancelAllOfferAlerts,
+  cancelEndedOfferAlert,
   cancelOfferAlert,
   displayedOfferAlerts,
   ensureOfferChannels,
@@ -239,6 +240,79 @@ describe('offerAlert (spec 0003, AC-3, AC-6, AC-7, Decisions 58.13, 58.15)', () 
   it('cancelOfferAlert calls notifee.cancelNotification', async () => {
     await cancelOfferAlert('del-to-cancel');
     expect(notifee.cancelNotification).toHaveBeenCalledWith('del-to-cancel');
+  });
+
+  describe('cancelEndedOfferAlert (Rows 154 and 155 review)', () => {
+    it('cancels the alert unconditionally when offeredAt is null (older server)', async () => {
+      await cancelEndedOfferAlert('del-legacy', null);
+      expect(notifee.cancelNotification).toHaveBeenCalledWith('del-legacy');
+    });
+
+    it('cancels the alert when displayed alert has matching offeredAt', async () => {
+      (notifee.getDisplayedNotifications as jest.Mock).mockResolvedValue([
+        {
+          id: 'del-match',
+          notification: {
+            id: 'del-match',
+            android: { channelId: OFFERS_CHANNEL_ID },
+            data: {
+              kind: 'offer-alert',
+              deliveryId: 'del-match',
+              offeredAt: '2026-11-24T18:00:00.000Z',
+            },
+          },
+        },
+      ]);
+
+      await cancelEndedOfferAlert('del-match', '2026-11-24T18:00:00.000Z');
+      expect(notifee.cancelNotification).toHaveBeenCalledWith('del-match');
+    });
+
+    it('keeps (does NOT cancel) the alert when displayed alert has a DIFFERENT offeredAt', async () => {
+      (notifee.getDisplayedNotifications as jest.Mock).mockResolvedValue([
+        {
+          id: 'del-diff',
+          notification: {
+            id: 'del-diff',
+            android: { channelId: OFFERS_CHANNEL_ID },
+            data: {
+              kind: 'offer-alert',
+              deliveryId: 'del-diff',
+              offeredAt: '2026-11-24T18:05:00.000Z', // newer offer
+            },
+          },
+        },
+      ]);
+
+      await cancelEndedOfferAlert('del-diff', '2026-11-24T18:00:00.000Z'); // older offer ended
+      expect(notifee.cancelNotification).not.toHaveBeenCalledWith('del-diff');
+    });
+
+    it('cancels the alert when displayed alert has no offeredAt stored in data', async () => {
+      (notifee.getDisplayedNotifications as jest.Mock).mockResolvedValue([
+        {
+          id: 'del-no-time',
+          notification: {
+            id: 'del-no-time',
+            android: { channelId: OFFERS_CHANNEL_ID },
+            data: {
+              kind: 'offer-alert',
+              deliveryId: 'del-no-time',
+            },
+          },
+        },
+      ]);
+
+      await cancelEndedOfferAlert('del-no-time', '2026-11-24T18:00:00.000Z');
+      expect(notifee.cancelNotification).toHaveBeenCalledWith('del-no-time');
+    });
+
+    it('cancels the alert when no displayed alert is found for the delivery', async () => {
+      (notifee.getDisplayedNotifications as jest.Mock).mockResolvedValue([]);
+
+      await cancelEndedOfferAlert('del-not-found', '2026-11-24T18:00:00.000Z');
+      expect(notifee.cancelNotification).toHaveBeenCalledWith('del-not-found');
+    });
   });
 
   it('displayedOfferAlerts filters for notifications on all offer channels (including calm channel) and cancelAllOfferAlerts cancels each', async () => {

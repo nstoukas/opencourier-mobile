@@ -6,6 +6,7 @@ import {
   loadAnsweredOffers,
   markDeclineFailed,
   markOfferAnswered,
+  markOfferEnded,
   offerKeyOf,
   unmarkOfferAnswered,
 } from './answeredOffers';
@@ -66,6 +67,37 @@ describe('answeredOffers (spec 0003, AC-5, Decision 58.16)', () => {
     expect(isOfferAnswered(keyA)).toBe(true);
     expect(isOfferAnswered(keyB)).toBe(true);
     expect(isOfferAnswered('del-unknown@')).toBe(false);
+  });
+
+  describe('markOfferEnded (Row 155)', () => {
+    it('marks the offer as answered when offeredAt is provided and persists to storage', async () => {
+      const deliveryId = 'del-ended-1';
+      const offeredAt = '2026-11-24T18:00:00.000Z';
+      const key = offerKeyOf(deliveryId, offeredAt);
+
+      expect(isOfferAnswered(key)).toBe(false);
+
+      await markOfferEnded(deliveryId, offeredAt);
+
+      expect(isOfferAnswered(key)).toBe(true);
+
+      // Check persisted to storage
+      const stored = await AsyncStorage.getItem('answered_offer_ids');
+      expect(stored).not.toBeNull();
+      expect(JSON.parse(stored!)).toContain(key);
+
+      // A different offeredAt for the same delivery is NOT marked
+      const differentKey = offerKeyOf(deliveryId, '2026-11-24T18:05:00.000Z');
+      expect(isOfferAnswered(differentKey)).toBe(false);
+    });
+
+    it('does nothing when offeredAt is null (older server)', async () => {
+      const deliveryId = 'del-ended-no-time';
+      await markOfferEnded(deliveryId, null);
+
+      expect(isOfferAnswered(offerKeyOf(deliveryId, null))).toBe(false);
+      expect(await AsyncStorage.getItem('answered_offer_ids')).toBeNull();
+    });
   });
 
   describe('decline_failed_offer_ids (Row 131)', () => {

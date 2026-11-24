@@ -330,6 +330,82 @@ describe('SocketProvider and useConnectionStatus', () => {
         tree.unmount();
       });
     });
+
+    it('Row 154 & 155: stops alert, drops matching offer from cache, and keeps ended offer on OFFER_ENDED with ANSWERED', async () => {
+      let tree!: renderer.ReactTestRenderer;
+      await act(async () => {
+        tree = renderer.create(renderTree(queryClient));
+      });
+
+      expect(latestSocket).not.toBeNull();
+      const offeredAt = '2026-11-24T18:00:00.000Z';
+
+      queryClient.setQueryData<Order[]>(
+        [QueryKeys.newOrders],
+        [
+          { id: 'order-ans', offeredAt } as Order,
+          { id: 'order-other', offeredAt: '2026-11-24T18:01:00.000Z' } as Order,
+        ],
+      );
+
+      // Emit OFFER_ENDED with reason ANSWERED and offeredAt
+      await act(async () => {
+        latestSocket!.emit(OFFER_ENDED_EVENT, {
+          deliveryId: 'order-ans',
+          reason: 'ANSWERED',
+          offeredAt,
+        });
+      });
+
+      // Matching offer is removed from query cache
+      const cached = queryClient.getQueryData<Order[]>([QueryKeys.newOrders]);
+      expect(cached?.map(o => o.id)).toEqual(['order-other']);
+
+      // Alert cancelled
+      expect(notifee.cancelNotification).toHaveBeenCalledWith('order-ans');
+
+      // Row 155: kept in answered_offer_ids
+      const stored = await AsyncStorage.getItem('answered_offer_ids');
+      expect(stored).not.toBeNull();
+      expect(JSON.parse(stored!)).toContain(`order-ans@${offeredAt}`);
+
+      act(() => {
+        tree.unmount();
+      });
+    });
+
+    it('Review fix: OFFER_ENDED keeps a cached offer of the same delivery if offeredAt differs', async () => {
+      let tree!: renderer.ReactTestRenderer;
+      await act(async () => {
+        tree = renderer.create(renderTree(queryClient));
+      });
+
+      expect(latestSocket).not.toBeNull();
+      const olderOfferedAt = '2026-11-24T18:00:00.000Z';
+      const newerOfferedAt = '2026-11-24T18:05:00.000Z';
+
+      queryClient.setQueryData<Order[]>(
+        [QueryKeys.newOrders],
+        [{ id: 'order-1', offeredAt: newerOfferedAt } as Order],
+      );
+
+      // Older offer ended arrives
+      await act(async () => {
+        latestSocket!.emit(OFFER_ENDED_EVENT, {
+          deliveryId: 'order-1',
+          reason: 'EXPIRED',
+          offeredAt: olderOfferedAt,
+        });
+      });
+
+      // Newer offer is preserved in cache
+      const cached = queryClient.getQueryData<Order[]>([QueryKeys.newOrders]);
+      expect(cached).toEqual([{ id: 'order-1', offeredAt: newerOfferedAt }]);
+
+      act(() => {
+        tree.unmount();
+      });
+    });
   });
 
   describe('Clause 1: ConnectionStatus context and useConnectionStatus via real socket events', () => {

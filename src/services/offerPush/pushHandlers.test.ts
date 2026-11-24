@@ -6,6 +6,7 @@ import { QueryKeys } from '@app/utilities/queryKeys';
 import { isHomeInFront } from '@app/navigation/navigationRef';
 import {
   ACCEPT_ACTION,
+  cancelEndedOfferAlert,
   cancelOfferAlert,
   DECLINE_ACTION,
   showOfferAlert,
@@ -40,6 +41,7 @@ jest.mock('@app/services/onlineService', () => ({
 }));
 
 jest.mock('./offerAlert', () => ({
+  cancelEndedOfferAlert: jest.fn(),
   cancelOfferAlert: jest.fn(),
   showOfferAlert: jest.fn(),
   ACCEPT_ACTION: 'accept',
@@ -101,8 +103,8 @@ describe('pushHandlers (spec 0003, AC-6, AC-12)', () => {
         'background',
       );
 
-      // Cancels the alert with id = deliveryId
-      expect(cancelOfferAlert).toHaveBeenCalledWith('del-ended-1');
+      // Cancels the alert with id = deliveryId and offeredAt = null
+      expect(cancelEndedOfferAlert).toHaveBeenCalledWith('del-ended-1', null);
 
       // Query cache is updated in place
       const cached = queryClient.getQueryData<any[]>([QueryKeys.newOrders]);
@@ -112,6 +114,193 @@ describe('pushHandlers (spec 0003, AC-6, AC-12)', () => {
       expect(invalidateSpy).toHaveBeenCalledWith({
         queryKey: [QueryKeys.newOrders],
       });
+    });
+
+    it('Row 154: OFFER_ENDED with reason ANSWERED stops the alert and drops the offer card', async () => {
+      const offeredAt = '2026-11-24T18:00:00.000Z';
+      queryClient.setQueryData(
+        [QueryKeys.newOrders],
+        [
+          { id: 'del-ans', offeredAt },
+          { id: 'del-other', offeredAt: '2026-11-24T18:01:00.000Z' },
+        ],
+      );
+
+      await onRemoteMessage(
+        {
+          data: {
+            type: 'OFFER_ENDED',
+            deliveryId: 'del-ans',
+            reason: 'ANSWERED',
+            offeredAt,
+          },
+        } as any,
+        'background',
+      );
+
+      expect(cancelEndedOfferAlert).toHaveBeenCalledWith('del-ans', offeredAt);
+      const cached = queryClient.getQueryData<any[]>([QueryKeys.newOrders]);
+      expect(cached?.map(o => o.id)).toEqual(['del-other']);
+    });
+
+    it('Row 154: the phone that already answered is unaffected when OFFER_ENDED arrives', async () => {
+      // On the phone that answered, the offer has already been cleared from the cache
+      queryClient.setQueryData([QueryKeys.newOrders], []);
+
+      await expect(
+        onRemoteMessage(
+          {
+            data: {
+              type: 'OFFER_ENDED',
+              deliveryId: 'del-answered-already',
+              reason: 'ANSWERED',
+              offeredAt: '2026-11-24T18:00:00.000Z',
+            },
+          } as any,
+          'background',
+        ),
+      ).resolves.not.toThrow();
+
+      expect(cancelEndedOfferAlert).toHaveBeenCalledWith(
+        'del-answered-already',
+        '2026-11-24T18:00:00.000Z',
+      );
+      expect(queryClient.getQueryData([QueryKeys.newOrders])).toEqual([]);
+    });
+
+    it('Row 155: a late NEW_DELIVERY_OFFER push for an offer whose OFFER_ENDED already arrived is dropped silently', async () => {
+      const offeredAt = '2026-11-24T18:00:00.000Z';
+
+      // 1. OFFER_ENDED arrives first
+      await onRemoteMessage(
+        {
+          data: {
+            type: 'OFFER_ENDED',
+            deliveryId: 'del-push-1',
+            reason: 'EXPIRED',
+            offeredAt,
+          },
+        } as any,
+        'background',
+      );
+
+      // 2. Late NEW_DELIVERY_OFFER for the same delivery and offeredAt arrives
+      await onRemoteMessage(
+        {
+          data: {
+            ...newOfferData,
+            deliveryId: 'del-push-1',
+            offeredAt,
+          },
+        } as any,
+        'background',
+      );
+
+      // It must be dropped silently: no alert posted
+      expect(showOfferAlert).not.toHaveBeenCalled();
+    });
+
+    it('Row 155: a new offer of the same delivery with a later offeredAt still rings after an earlier OFFER_ENDED', async () => {
+      const earlierOfferedAt = '2026-11-24T18:00:00.000Z';
+      const laterOfferedAt = '2026-11-24T18:10:00.000Z';
+
+      // 1. Earlier offer ended
+      await onRemoteMessage(
+        {
+          data: {
+            type: 'OFFER_ENDED',
+            deliveryId: 'del-push-1',
+            reason: 'EXPIRED',
+            offeredAt: earlierOfferedAt,
+          },
+        } as any,
+        'background',
+      );
+
+      // 2. New offer of the same delivery with later offeredAt arrives
+      await onRemoteMessage(
+        {
+          data: {
+            ...newOfferData,
+            deliveryId: 'del-push-1',
+            offeredAt: laterOfferedAt,
+          },
+        } as any,
+        'background',
+      );
+
+      // Rings (alert is shown)
+      expect(showOfferAlert).toHaveBeenCalledTimes(1);
+      expect(showOfferAlert).toHaveBeenCalledWith(
+        expect.objectContaining({
+          deliveryId: 'del-push-1',
+          offeredAt: laterOfferedAt,
+        }),
+        expect.any(Number),
+        'full-screen',
+      );
+    });
+
+    it('Row 155: without offeredAt on the ended message, nothing is remembered to silence future offers', async () => {
+      // 1. OFFER_ENDED with no offeredAt arrives (older server)
+      await onRemoteMessage(
+        {
+          data: {
+            type: 'OFFER_ENDED',
+            deliveryId: 'del-push-1',
+            reason: 'EXPIRED',
+          },
+        } as any,
+        'background',
+      );
+
+      // 2. A new offer of the same delivery arrives
+      await onRemoteMessage(
+        {
+          data: {
+            ...newOfferData,
+            deliveryId: 'del-push-1',
+            offeredAt: '2026-11-24T18:05:00.000Z',
+          },
+        } as any,
+        'background',
+      );
+
+      // Nothing was stored in answered_offer_ids, so the new offer is NOT dropped
+      expect(showOfferAlert).toHaveBeenCalledTimes(1);
+    });
+
+    it('Review fix: OFFER_ENDED keeps a cached offer of the same delivery if offeredAt differs', async () => {
+      const olderOfferedAt = '2026-11-24T18:00:00.000Z';
+      const newerOfferedAt = '2026-11-24T18:05:00.000Z';
+
+      queryClient.setQueryData(
+        [QueryKeys.newOrders],
+        [
+          { id: 'del-1', offeredAt: newerOfferedAt },
+          { id: 'del-2', offeredAt: olderOfferedAt },
+        ],
+      );
+
+      // Older offer ended arrives
+      await onRemoteMessage(
+        {
+          data: {
+            type: 'OFFER_ENDED',
+            deliveryId: 'del-1',
+            reason: 'EXPIRED',
+            offeredAt: olderOfferedAt,
+          },
+        } as any,
+        'background',
+      );
+
+      // del-1 with newerOfferedAt is kept in cache
+      const cached = queryClient.getQueryData<any[]>([QueryKeys.newOrders]);
+      expect(cached).toEqual([
+        { id: 'del-1', offeredAt: newerOfferedAt },
+        { id: 'del-2', offeredAt: olderOfferedAt },
+      ]);
     });
   });
 
