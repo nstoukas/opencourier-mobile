@@ -6,6 +6,7 @@
 // `OFFER_ENDED` or an answer cancels it by the same id. Cancelling the
 // notification also stops its sound.
 
+import { isTheEndedOffer } from '@app/utilities/endedOffer';
 import notifee, {
   AndroidImportance,
   AndroidStyle,
@@ -287,6 +288,30 @@ export const cancelOfferAlert = async (deliveryId: string): Promise<void> => {
   } catch (error) {
     console.log('Offer alert could not be cancelled', String(error));
   }
+};
+
+// Rows 154 and 155 review: cancels this delivery's alert only when it is the offer that ended (the same
+// `offeredAt`, see utilities/endedOffer.ts), so a late end never silences a newer offer of the delivery.
+export const cancelEndedOfferAlert = async (
+  deliveryId: string,
+  offeredAt: string | null,
+): Promise<void> => {
+  if (offeredAt !== null) {
+    const shown = (await displayedOfferAlerts()).find(
+      alert => alert.notificationId === deliveryId,
+    );
+    const shownOfferedAt = shown?.data?.offeredAt;
+    if (
+      shown &&
+      !isTheEndedOffer(
+        typeof shownOfferedAt === 'string' ? shownOfferedAt : null,
+        offeredAt,
+      )
+    ) {
+      return;
+    }
+  }
+  await cancelOfferAlert(deliveryId);
 };
 
 // Every channel an offer alert is posted on. Review fix (row 81): the calm

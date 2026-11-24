@@ -20,7 +20,8 @@ import React, {
 } from 'react';
 import { AppState } from 'react-native';
 import { Order } from '@app/types/types';
-import { cancelOfferAlert } from './offerPush/offerAlert';
+import { cancelEndedOfferAlert } from './offerPush/offerAlert';
+import { isTheEndedOffer } from '@app/utilities/endedOffer';
 import { markOfferEnded } from './offerPush/answeredOffers';
 import { isFromDispatch } from './chat/chatService';
 import { noticeChatMessage } from './chat/chatNotice';
@@ -107,11 +108,16 @@ const SocketProvider = ({ children }: Props) => {
             console.log('Could not keep the ended offer', error),
           );
           // Its alert stops ringing too, if one is up (row 58, AC-6).
-          cancelOfferAlert(deliveryId);
+          // Only the offer that ended (rows 154 and 155 review).
+          cancelEndedOfferAlert(deliveryId, offeredAt);
           // `setQueryData` edits the cached offer list in place; the Home
           // screen redraws from it straight away.
           queryClient.setQueryData<Order[]>([QueryKeys.newOrders], offers =>
-            offers?.filter(offer => offer.id !== deliveryId),
+            offers?.filter(
+              offer =>
+                offer.id !== deliveryId ||
+                !isTheEndedOffer(offer.offeredAt, offeredAt),
+            ),
           );
         }
         refetch([QueryKeys.newOrders]);

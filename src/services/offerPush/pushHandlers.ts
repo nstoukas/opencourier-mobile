@@ -21,9 +21,10 @@ import { QueryKeys } from '@app/utilities/queryKeys';
 import { Order } from '@app/types/types';
 import { isHomeInFront } from '@app/navigation/navigationRef';
 import { fromNotificationData, parseOfferMessage } from './offerMessage';
+import { isTheEndedOffer } from '@app/utilities/endedOffer';
 import {
   ACCEPT_ACTION,
-  cancelOfferAlert,
+  cancelEndedOfferAlert,
   DECLINE_ACTION,
   showOfferAlert,
 } from './offerAlert';
@@ -150,9 +151,14 @@ export const onRemoteMessage = async (
     await markOfferEnded(parsed.deliveryId, parsed.offeredAt).catch(error =>
       console.log('Could not keep the ended offer', error),
     );
-    await cancelOfferAlert(parsed.deliveryId);
+    // Only the offer that ended: a late end leaves a newer offer of the same delivery alone (review).
+    await cancelEndedOfferAlert(parsed.deliveryId, parsed.offeredAt);
     queryClient.setQueryData<Order[]>([QueryKeys.newOrders], offers =>
-      offers?.filter(offer => offer.id !== parsed.deliveryId),
+      offers?.filter(
+        offer =>
+          offer.id !== parsed.deliveryId ||
+          !isTheEndedOffer(offer.offeredAt, parsed.offeredAt),
+      ),
     );
     queryClient.invalidateQueries({ queryKey: [QueryKeys.newOrders] });
     return;
