@@ -18,5 +18,18 @@ export function orderItemsOf(value: unknown): OrderItem[] {
   if (!Array.isArray(value)) {
     return [];
   }
-  return value.filter(isItem);
+  return value.filter(isItem).map(normalised);
+}
+
+// Row 159 review: the fields the screens read are made safe too. A quantity sent as text ("2") or missing
+// becomes a number (1 when unreadable), so the drinks line never reads "02"; a size that is not text becomes
+// '' (no size word); a kind other than the two known ones is dropped (neither).
+function normalised(item: OrderItem): OrderItem {
+  const quantity = Number(item.quantity);
+  return {
+    ...item,
+    quantity: Number.isFinite(quantity) && quantity > 0 ? quantity : 1,
+    size: typeof item.size === 'string' ? item.size : '',
+    kind: item.kind === 'DRINK' || item.kind === 'SIDE' ? item.kind : undefined,
+  };
 }

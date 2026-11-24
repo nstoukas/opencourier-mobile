@@ -240,11 +240,12 @@ export type Order = {
   waitingToSend?: boolean;
   customerNotes?: string[];
   currencyCode: string;
-  totalCost: number;
-  fee: number;
-  pay?: any;
+  // Row 159 review: the three pay figures are null on the server until the delivery has a price.
+  totalCost: number | null;
+  fee: number | null;
+  pay?: number | null;
   tips?: number;
-  totalCompensation: number;
+  totalCompensation: number | null;
   pickupTypes: string[];
   imageType?: any;
   imageName?: any;
