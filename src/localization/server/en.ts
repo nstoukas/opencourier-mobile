@@ -165,6 +165,8 @@ export const serverEn = {
         'Delivery {{addOnId}} was added to this job as one more order on the way; courier {{courierId}} has taken both',
       ADD_ON_LEFT:
         'Delivery {{addOnId}} was taken off this job; courier {{courierId}} no longer has it',
+      TIP_CHANGED_BY_RESTAURANT:
+        'Tip changed by the restaurant from {{oldTip}} to {{newTip}} {{currency}} (cents)',
 
       SEEDED_COMPLETED: 'Seeded completed delivery',
       SEEDED_REASSIGNMENT: 'Seeded reassignment fixture',
