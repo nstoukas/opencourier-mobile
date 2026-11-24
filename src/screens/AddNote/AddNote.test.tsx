@@ -55,10 +55,11 @@ describe('AddNote screen (spec 0053, AC-2, AC-4, AC-8)', () => {
   };
 
   const createWrapper = () => {
+    // Row 158: gcTime Infinity, so no garbage collection timer outlives the test and the Jest worker can exit.
     queryClient = new QueryClient({
       defaultOptions: {
-        queries: { retry: false },
-        mutations: { retry: false },
+        queries: { retry: false, gcTime: Infinity },
+        mutations: { retry: false, gcTime: Infinity },
       },
     });
     invalidateSpy = jest.spyOn(queryClient, 'invalidateQueries');

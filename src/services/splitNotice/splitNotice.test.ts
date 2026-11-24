@@ -44,7 +44,9 @@ describe('splitNotice (spec 0047, cross check 12, row 11 review)', () => {
     boxSize: 'MEDIUM',
   };
 
-  const confirmed = (overrides: Partial<SplitDecision> = {}): SplitDecision => ({
+  const confirmed = (
+    overrides: Partial<SplitDecision> = {},
+  ): SplitDecision => ({
     deliveryId: 'del-1',
     outcome: 'CONFIRMED',
     adminNote: null,
@@ -69,7 +71,13 @@ describe('splitNotice (spec 0047, cross check 12, row 11 review)', () => {
     jest.clearAllMocks();
     clearSplitNotices();
     (notifee.getDisplayedNotifications as jest.Mock).mockClear();
-    queryClient = new QueryClient();
+    // Row 158: gcTime Infinity, so no garbage collection timer outlives the test and the Jest worker can exit.
+    queryClient = new QueryClient({
+      defaultOptions: {
+        queries: { gcTime: Infinity },
+        mutations: { gcTime: Infinity },
+      },
+    });
     invalidateSpy = jest
       .spyOn(queryClient, 'invalidateQueries')
       .mockImplementation(() => Promise.resolve());
@@ -138,9 +146,9 @@ describe('splitNotice (spec 0047, cross check 12, row 11 review)', () => {
     });
 
     it.each(['SMALL', 'MEDIUM', 'LARGE'])('keeps the size %s', boxSize => {
-      expect(
-        parseSplitDecision({ ...pushConfirmed, boxSize })?.boxSize,
-      ).toBe(boxSize);
+      expect(parseSplitDecision({ ...pushConfirmed, boxSize })?.boxSize).toBe(
+        boxSize,
+      );
     });
 
     it('a size the app does not know is no size, not a made up one', () => {
@@ -156,8 +164,14 @@ describe('splitNotice (spec 0047, cross check 12, row 11 review)', () => {
       ['an empty delivery id', { deliveryId: '', outcome: 'REFUSED' }],
       ['a delivery id that is not text', { deliveryId: 7, outcome: 'REFUSED' }],
       ['no outcome', { deliveryId: 'del-1' }],
-      ['an outcome that is no answer', { deliveryId: 'del-1', outcome: 'LEFT' }],
-      ['an outcome in small letters', { deliveryId: 'del-1', outcome: 'refused' }],
+      [
+        'an outcome that is no answer',
+        { deliveryId: 'del-1', outcome: 'LEFT' },
+      ],
+      [
+        'an outcome in small letters',
+        { deliveryId: 'del-1', outcome: 'refused' },
+      ],
     ])('answers null for %s', (_name, message) => {
       expect(parseSplitDecision(message)).toBeNull();
     });
@@ -359,7 +373,7 @@ describe('splitNotice (spec 0047, cross check 12, row 11 review)', () => {
   });
 
   describe('clearSplitNotices: the next rider on this phone sees none of it', () => {
-    it("takes down the split notifications and leaves every other kind", async () => {
+    it('takes down the split notifications and leaves every other kind', async () => {
       (notifee.getDisplayedNotifications as jest.Mock).mockResolvedValueOnce([
         { id: 'split-del-1', notification: {} },
         { id: 'removal-del-1', notification: {} },

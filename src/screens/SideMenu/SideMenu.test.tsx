@@ -86,9 +86,11 @@ describe('SideMenu logout (spec 0002, AC-6; spec 0009, AC-8, AC-11)', () => {
     mockSetUserStatus.mockResolvedValue({});
     mockLogout.mockReturnValue(undefined);
 
+    // Row 158: gcTime Infinity, so no garbage collection timer outlives the test and the Jest worker can exit.
+
     queryClient = new QueryClient({
       defaultOptions: {
-        queries: { retry: false },
+        queries: { retry: false, gcTime: Infinity },
       },
     });
 

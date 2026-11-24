@@ -25,8 +25,10 @@ describe('useJobStepOutbox hook (spec 0009, AC-3)', () => {
       jobStepOutbox.getOutboxItems();
     });
 
+    // Row 158: gcTime Infinity, so no garbage collection timer outlives the test and the Jest worker can exit.
+
     queryClient = new QueryClient({
-      defaultOptions: { queries: { retry: false } },
+      defaultOptions: { queries: { retry: false, gcTime: Infinity } },
     });
 
     invalidateQueriesSpy = jest.spyOn(queryClient, 'invalidateQueries');

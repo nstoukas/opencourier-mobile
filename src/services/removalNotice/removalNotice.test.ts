@@ -25,7 +25,13 @@ describe('removalNotice service (spec 0035, AC-11, decision 24.22, decision 24.2
     act(() => {
       clearRemovalNotices();
     });
-    queryClient = new QueryClient();
+    // Row 158: gcTime Infinity, so no garbage collection timer outlives the test and the Jest worker can exit.
+    queryClient = new QueryClient({
+      defaultOptions: {
+        queries: { gcTime: Infinity },
+        mutations: { gcTime: Infinity },
+      },
+    });
     invalidateSpy = jest.spyOn(queryClient, 'invalidateQueries');
   });
 

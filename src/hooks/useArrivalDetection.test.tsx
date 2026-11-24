@@ -1,5 +1,10 @@
 import React from 'react';
-import { renderHook, act, waitFor } from '@testing-library/react-native';
+import {
+  renderHook,
+  act,
+  waitFor,
+  cleanup,
+} from '@testing-library/react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { OrderStatus } from '@app/types/enums';
@@ -65,20 +70,27 @@ describe('useArrivalDetection (spec 0021, AC-1, AC-2, AC-12, AC-13)', () => {
         arrivalRadiusMetres: 50,
       });
 
+    // Row 158: gcTime Infinity, so no garbage collection timer outlives the test and the Jest worker can exit.
+
     queryClient = new QueryClient({
       defaultOptions: {
-        queries: { retry: false },
+        queries: { retry: false, gcTime: Infinity },
       },
     });
   });
 
   afterEach(async () => {
+    // Row 158: unmount first, then clear the fix while timers are still fake. This describe's afterEach runs
+    // before the testing library's own cleanup, so clearing the fix woke the still mounted hook: React and its
+    // query then set real timers (a 5 minute cache timer among them) that kept a Jest worker from exiting
+    // ("A worker process has failed to exit gracefully").
+    cleanup();
+    setLatestFix(null);
+    resetHeldArrivalsForTests();
     queryClient.cancelQueries();
     queryClient.clear();
     jest.clearAllTimers();
     jest.useRealTimers();
-    setLatestFix(null);
-    resetHeldArrivalsForTests();
     await AsyncStorage.clear();
   });
 

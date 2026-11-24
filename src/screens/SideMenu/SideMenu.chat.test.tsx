@@ -46,8 +46,9 @@ describe('SideMenu Chat entry point (spec 0034, AC-12)', () => {
     jest.clearAllMocks();
     mockShiftsEnabled = false;
     mockChatUnseen.mockReturnValue(false);
+    // Row 158: gcTime Infinity, so no garbage collection timer outlives the test and the Jest worker can exit.
     queryClient = new QueryClient({
-      defaultOptions: { queries: { retry: false } },
+      defaultOptions: { queries: { retry: false, gcTime: Infinity } },
     });
   });
 

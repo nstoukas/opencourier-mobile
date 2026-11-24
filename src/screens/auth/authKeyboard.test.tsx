@@ -17,10 +17,11 @@ describe('Auth screens keyboard padding (row 114, spec 0039, AC-17)', () => {
   };
 
   beforeEach(() => {
+    // Row 158: gcTime Infinity, so no garbage collection timer outlives the test and the Jest worker can exit.
     queryClient = new QueryClient({
       defaultOptions: {
-        queries: { retry: false },
-        mutations: { retry: false },
+        queries: { retry: false, gcTime: Infinity },
+        mutations: { retry: false, gcTime: Infinity },
       },
     });
   });

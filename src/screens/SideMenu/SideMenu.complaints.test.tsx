@@ -42,7 +42,12 @@ describe('SideMenu Complaints item (spec 0052, cross check 11, AC-8)', () => {
     jest.clearAllMocks();
     mockShiftsEnabled = false;
     queryClient = new QueryClient({
-      defaultOptions: { queries: { retry: false } },
+      // Row 158: gcTime Infinity, as in the other SideMenu tests: no garbage collection timer is scheduled when
+      // an observer unmounts, so the Jest worker can exit (it was force exited before).
+      defaultOptions: {
+        queries: { retry: false, gcTime: Infinity },
+        mutations: { retry: false, gcTime: Infinity },
+      },
     });
   });
 
