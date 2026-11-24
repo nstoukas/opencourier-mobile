@@ -202,6 +202,7 @@ describe('useLocationTracking (Row 67, Clauses 1, 2, 3, 4)', () => {
         expect.any(Function),
         {
           ...WATCH_OPTIONS[TrackingMode.Waiting],
+          showLocationDialog: false,
           showsBackgroundLocationIndicator: true,
         },
       );
@@ -222,6 +223,7 @@ describe('useLocationTracking (Row 67, Clauses 1, 2, 3, 4)', () => {
         expect.any(Function),
         {
           ...WATCH_OPTIONS[TrackingMode.Job],
+          showLocationDialog: false,
           showsBackgroundLocationIndicator: true,
         },
       );
@@ -867,6 +869,7 @@ describe('useLocationTracking (Row 67, Clauses 1, 2, 3, 4)', () => {
         expect.any(Function),
         {
           ...WATCH_OPTIONS[TrackingMode.Sos],
+          showLocationDialog: false,
           showsBackgroundLocationIndicator: true,
         },
       );

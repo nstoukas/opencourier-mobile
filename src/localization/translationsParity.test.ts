@@ -59,6 +59,25 @@ describe('Translation Parity and Completeness Guard (spec 0054, AC-8)', () => {
     });
   });
 
+  // Row 156: Location off warning banner and button translations (Done when Clause 1).
+  describe('row 156 keys', () => {
+    const enMap = en as Record<string, string>;
+    const elMap = el as Record<string, string>;
+
+    it('both languages define location_off_banner, location_off_turn_on, and location_off_hint', () => {
+      expect(enMap.location_off_banner).toBe('Location off');
+      expect(elMap.location_off_banner).toBe('Τοποθεσία κλειστή');
+
+      expect(enMap.location_off_turn_on).toBe('Turn on');
+      expect(elMap.location_off_turn_on).toBe('Άνοιγμα');
+
+      expect(enMap.location_off_hint).toBe("Opens the phone's location settings");
+      expect(elMap.location_off_hint).toBe(
+        'Ανοίγει τις ρυθμίσεις τοποθεσίας του τηλεφώνου',
+      );
+    });
+  });
+
   it('contains no empty or whitespace-only translation strings in English', () => {
     for (const [_key, value] of Object.entries(en)) {
       expect(typeof value).toBe('string');
