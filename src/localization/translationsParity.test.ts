@@ -1,5 +1,6 @@
 import fs from 'fs';
 import path from 'path';
+import os from 'os';
 import vm from 'vm';
 import ts from 'typescript';
 import en from './en/translations';
@@ -18,6 +19,7 @@ const extractPlaceholders = (text: string): string[] => {
 };
 
 // Every leaf of a nested translation object as `a.b.c` -> string.
+// Note: leaves() keeps string values only; the per-group toEqual assertions catch any other value types.
 function leaves(node: unknown, prefix = ''): Map<string, string> {
   const found = new Map<string, string>();
   if (typeof node === 'object' && node !== null) {
@@ -125,7 +127,6 @@ function getBackendPaths(options?: BackendPathsOptions) {
   const env = options?.env ?? process.env;
   const defaultDir =
     options?.defaultDir ??
-    env.OPENCOURIER_BACKEND_DEFAULT_DIR ??
     path.resolve(__dirname, '../../../opencourier-backend');
 
   const hasOverride = Boolean(
@@ -133,6 +134,10 @@ function getBackendPaths(options?: BackendPathsOptions) {
       env.BACKEND_EN_PATH ||
       env.BACKEND_EL_PATH ||
       env.BACKEND_MESSAGES_PATH,
+  );
+
+  const allFilesOverridden = Boolean(
+    env.BACKEND_EN_PATH && env.BACKEND_EL_PATH && env.BACKEND_MESSAGES_PATH,
   );
 
   const backendDir = env.OPENCOURIER_BACKEND_DIR || defaultDir;
@@ -158,10 +163,36 @@ function getBackendPaths(options?: BackendPathsOptions) {
     backendElPath,
     backendMessagesPath,
     hasOverride,
+    allFilesOverridden,
     dirExists,
     requireBackend,
     shouldSkip,
   };
+}
+
+// Verifies required backend files exist; only checks directory existence when paths are derived from it.
+function assertBackendFilesExist(paths: ReturnType<typeof getBackendPaths>) {
+  if (paths.requireBackend && !paths.dirExists && !paths.allFilesOverridden) {
+    throw new Error(
+      `REQUIRE_BACKEND=1 is set, but backend directory was not found under ${paths.backendDir}`,
+    );
+  }
+  if (!paths.dirExists && !paths.allFilesOverridden) {
+    throw new Error(
+      `Backend directory was not found under ${paths.backendDir}`,
+    );
+  }
+  for (const [name, filePath] of [
+    ['en.ts', paths.backendEnPath],
+    ['el.ts', paths.backendElPath],
+    ['event-messages.ts', paths.backendMessagesPath],
+  ] as const) {
+    if (!fs.existsSync(filePath)) {
+      throw new Error(
+        `Backend localization file missing: ${name} (checked ${filePath})`,
+      );
+    }
+  }
 }
 
 let loggedSkipWarning = false;
@@ -404,7 +435,7 @@ describe('Translation Parity and Completeness Guard (spec 0054, AC-8)', () => {
   });
 });
 
-describe('Backend path resolution and skip guard (Fable review rulings 1 & 2)', () => {
+describe('Backend path resolution and skip guard', () => {
   it('skips when default backend dir is absent and no override is set', () => {
     const paths = getBackendPaths({
       defaultDir: path.resolve(
@@ -440,22 +471,57 @@ describe('Backend path resolution and skip guard (Fable review rulings 1 & 2)', 
   });
 
   it('detects missing required file in present directory', () => {
-    const scratchDir = path.resolve(
-      __dirname,
-      './.test-scratch-backend-missing',
+    const tempDir = fs.mkdtempSync(
+      path.join(os.tmpdir(), 'oc-scratch-backend-'),
     );
-    fs.mkdirSync(scratchDir, { recursive: true });
     try {
       const paths = getBackendPaths({
-        env: { OPENCOURIER_BACKEND_DIR: scratchDir },
+        env: { OPENCOURIER_BACKEND_DIR: tempDir },
       });
       expect(paths.shouldSkip).toBe(false);
       expect(paths.dirExists).toBe(true);
       expect(fs.existsSync(paths.backendEnPath)).toBe(false);
     } finally {
-      if (fs.existsSync(scratchDir)) {
-        fs.rmdirSync(scratchDir);
-      }
+      fs.rmSync(tempDir, { recursive: true, force: true });
+    }
+  });
+
+  it('does not fail existence check when all three per file overrides exist even if default dir is absent', () => {
+    const tempDir = fs.mkdtempSync(
+      path.join(os.tmpdir(), 'oc-scratch-overrides-'),
+    );
+    try {
+      const enPath = path.join(tempDir, 'en.ts');
+      const elPath = path.join(tempDir, 'el.ts');
+      const msgPath = path.join(tempDir, 'event-messages.ts');
+      fs.writeFileSync(enPath, 'export const en = {};');
+      fs.writeFileSync(elPath, 'export const el = {};');
+      fs.writeFileSync(
+        msgPath,
+        'export const EVENT_MESSAGE_CODES = {}; export const EVENT_PART_CODES = {};',
+      );
+
+      const paths = getBackendPaths({
+        defaultDir: path.resolve(
+          __dirname,
+          '../../../nonexistent-backend-for-test',
+        ),
+        env: {
+          BACKEND_EN_PATH: enPath,
+          BACKEND_EL_PATH: elPath,
+          BACKEND_MESSAGES_PATH: msgPath,
+        },
+      });
+      expect(paths.shouldSkip).toBe(false);
+      expect(paths.allFilesOverridden).toBe(true);
+      expect(paths.dirExists).toBe(false);
+      expect(fs.existsSync(paths.backendEnPath)).toBe(true);
+      expect(fs.existsSync(paths.backendElPath)).toBe(true);
+      expect(fs.existsSync(paths.backendMessagesPath)).toBe(true);
+
+      expect(() => assertBackendFilesExist(paths)).not.toThrow();
+    } finally {
+      fs.rmSync(tempDir, { recursive: true, force: true });
     }
   });
 });
@@ -470,51 +536,26 @@ describe('Row 163: Every copied server sentence is checked against the backend',
   const itRow163 = backendPaths.shouldSkip ? it.skip : it;
 
   itRow163('ensures backend directory and localization files exist', () => {
-    if (backendPaths.requireBackend && !backendPaths.dirExists) {
-      throw new Error(
-        `REQUIRE_BACKEND=1 is set, but backend directory was not found under ${backendPaths.backendDir}`,
-      );
-    }
-    if (!backendPaths.dirExists) {
-      throw new Error(
-        `Backend directory was not found under ${backendPaths.backendDir}`,
-      );
-    }
-    for (const [name, filePath] of [
-      ['en.ts', backendPaths.backendEnPath],
-      ['el.ts', backendPaths.backendElPath],
-      ['event-messages.ts', backendPaths.backendMessagesPath],
-    ]) {
-      if (!fs.existsSync(filePath)) {
-        throw new Error(
-          `Backend localization file missing: ${name} (checked ${filePath})`,
-        );
-      }
-    }
+    assertBackendFilesExist(backendPaths);
   });
 
-  itRow163(
-    'fails with a clear message naming the file if an evaluated file calls require',
-    () => {
-      const scratchRequireFile = path.resolve(
-        __dirname,
-        './.test-scratch-require.ts',
+  it('fails with a clear message naming the file if an evaluated file calls require', () => {
+    const tempDir = fs.mkdtempSync(
+      path.join(os.tmpdir(), 'oc-scratch-require-'),
+    );
+    const scratchRequireFile = path.join(tempDir, 'scratch-require.ts');
+    fs.writeFileSync(
+      scratchRequireFile,
+      'const crypto = require("crypto"); export const data = { crypto };',
+    );
+    try {
+      expect(() => loadTypeScriptFile(scratchRequireFile)).toThrow(
+        /attempted to call require\('crypto'\)/,
       );
-      fs.writeFileSync(
-        scratchRequireFile,
-        'const crypto = require("crypto"); export const data = { crypto };',
-      );
-      try {
-        expect(() => loadTypeScriptFile(scratchRequireFile)).toThrow(
-          /attempted to call require\('crypto'\)/,
-        );
-      } finally {
-        if (fs.existsSync(scratchRequireFile)) {
-          fs.unlinkSync(scratchRequireFile);
-        }
-      }
-    },
-  );
+    } finally {
+      fs.rmSync(tempDir, { recursive: true, force: true });
+    }
+  });
 
   let cachedBackendEn: { en: { server: Record<string, unknown> } } | null =
     null;
