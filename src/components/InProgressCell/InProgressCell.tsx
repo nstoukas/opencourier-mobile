@@ -21,6 +21,7 @@ import { JobItemsLine } from '@app/components/JobItemsLine/JobItemsLine';
 import { boxSizeLine } from '@app/utilities/boxSize';
 import { legLine } from '@app/utilities/legs';
 import { ReadyLine } from '@app/components/ReadyLine/ReadyLine';
+import { JobEditedLine } from '@app/components/JobEditedLine/JobEditedLine';
 import { PhoneIcon } from 'phosphor-react-native/src/icons/Phone';
 import { ChatTextIcon } from 'phosphor-react-native/src/icons/ChatText';
 import { NavigationArrowIcon } from 'phosphor-react-native/src/icons/NavigationArrow';
@@ -247,6 +248,7 @@ export const InProgressCell = ({
             notes={notesFor(order, 'pickup')}
             addressNotes={addressNotesOf('PICKUP')}
           />
+          <JobEditedLine deliveryId={order.id} />
         </View>
       ) : (
         <View style={styles.hero}>
@@ -300,6 +302,7 @@ export const InProgressCell = ({
             notes={notesFor(order, 'dropoff')}
             addressNotes={addressNotesOf('DROPOFF')}
           />
+          <JobEditedLine deliveryId={order.id} />
           {onMovePin && canMoveDropoffPin(order) ? (
             <Button
               style={styles.movePin}

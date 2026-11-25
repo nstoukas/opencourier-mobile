@@ -260,6 +260,12 @@ export default {
   ready_notice_delay:
     '{{restaurant}}: +{{delay}} min, ready in ~{{minutes}} min',
   ready_notice_changed: '{{restaurant}}: the ready time changed',
+  // Row 164: the restaurant changed a held job's notes or times.
+  job_edited_title: 'Job changed',
+  job_edited_notice: '{{restaurant}}: {{what}}',
+  job_edited_line: 'Restaurant changed: {{what}}',
+  job_edited_notes: 'notes',
+  job_edited_times: 'times',
   sos_no_accept: "You can't take a job during an SOS. Tap I'm safe first.",
   sos_dialer_failed: 'Could not open the dialer. Call 112 from your phone.',
   sos_logout_title: 'Your SOS is active',

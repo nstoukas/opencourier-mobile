@@ -5,6 +5,7 @@ import notifee, {
 import { Platform } from 'react-native';
 import i18next from 'i18next';
 import { JobReadyUpdate, readyNoticeText } from '@app/utilities/readySignals';
+import { JobEdited, jobEditedNoticeText } from '@app/utilities/jobEdits';
 import { escapeHtml } from '@app/utilities/escapeHtml';
 
 // Spec 0023 (AC-6): one notice per job when its restaurant moves the ready time or marks the food
@@ -70,4 +71,43 @@ export const showReadyNotice = async (
 // For tests only: forget which changes were shown.
 export const resetReadyNoticeForTests = (): void => {
   lastShown.clear();
+};
+
+// Row 164: the restaurant changed the notes or the times of a held job. On the ready channel, since both are the
+// restaurant changing a job the rider holds; its own id per job, so a second edit replaces the first. The live copy
+// and the push of one edit share `editedAt`, so it is shown once.
+const lastEdited = new Map<string, string>();
+
+export const showJobEditedNotice = async (update: JobEdited): Promise<void> => {
+  const key = `${update.editedAt}|${update.changed.join(',')}`;
+  if (lastEdited.get(update.deliveryId) === key) {
+    return;
+  }
+  // Marked before the first await, as in showReadyNotice; given back if the notice cannot be posted.
+  lastEdited.set(update.deliveryId, key);
+  try {
+    await ensureReadyChannel();
+    const text = jobEditedNoticeText(update, i18next.t.bind(i18next));
+    await notifee.displayNotification({
+      id: `edited-${update.deliveryId}`,
+      title: i18next.t('translations:job_edited_title'),
+      body: Platform.OS === 'android' ? escapeHtml(text) : text,
+      android: {
+        channelId: READY_CHANNEL_ID,
+        importance: AndroidImportance.HIGH,
+        pressAction: { id: 'default' },
+      },
+      ios: { sound: 'default' },
+    });
+  } catch (error) {
+    if (lastEdited.get(update.deliveryId) === key) {
+      lastEdited.delete(update.deliveryId);
+    }
+    throw error;
+  }
+};
+
+// For tests only: forget which edits were shown.
+export const resetJobEditedNoticeForTests = (): void => {
+  lastEdited.clear();
 };

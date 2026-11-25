@@ -24,6 +24,8 @@ export const DELIVERY_STATUS_UPDATED_EVENT = 'DELIVERY_STATUS_UPDATED';
 export const OFFER_ENDED_EVENT = 'OFFER_ENDED';
 // The restaurant moved a held job's ready time or marked the food ready (spec 0023).
 export const JOB_READY_UPDATED_EVENT = 'JOB_READY_UPDATED';
+// The restaurant changed a held job's notes or times (row 164).
+export const JOB_EDITED_EVENT = 'JOB_EDITED';
 // Dispatch answered this rider's removal request (spec 0035).
 export const REMOVAL_REQUEST_DECIDED_EVENT = 'REMOVAL_REQUEST_DECIDED';
 // Dispatch answered this rider's split request (spec 0047).
@@ -113,6 +115,8 @@ export type LiveConnectionHandlers = {
   onOfferEnded?: (deliveryId: string | null, offeredAt: string | null) => void;
   // A held job's ready time changed (spec 0023); the raw message, read by `parseJobReadyUpdate`.
   onJobReadyUpdated?: (message: unknown) => void;
+  // A held job's notes or times changed (row 164); the raw message, read by `parseJobEdited`.
+  onJobEdited?: (message: unknown) => void;
   // Dispatch answered a removal request (spec 0035); the raw message, read by `parseRemovalDecision`.
   onRemovalRequestDecided?: (message: unknown) => void;
   onSplitRequestDecided?: (message: unknown) => void;
@@ -188,6 +192,9 @@ export class LiveConnection {
     );
     socket.on(JOB_READY_UPDATED_EVENT, (message: unknown) =>
       this.handlers.onJobReadyUpdated?.(message),
+    );
+    socket.on(JOB_EDITED_EVENT, (message: unknown) =>
+      this.handlers.onJobEdited?.(message),
     );
     socket.on(REMOVAL_REQUEST_DECIDED_EVENT, (message: unknown) =>
       this.handlers.onRemovalRequestDecided?.(message),

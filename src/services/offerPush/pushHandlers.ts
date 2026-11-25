@@ -7,7 +7,12 @@
 // about an offer the server has already made, ended or recorded.
 
 import { parseJobReadyUpdate } from '@app/utilities/readySignals';
-import { showReadyNotice } from '@app/services/readyNotice/readyNotice';
+import {
+  showJobEditedNotice,
+  showReadyNotice,
+} from '@app/services/readyNotice/readyNotice';
+import { parseJobEdited } from '@app/utilities/jobEdits';
+import { markJobEdited } from '@app/services/jobEdits/jobEditMarks';
 import { receiveRemovalDecision } from '@app/services/removalNotice/removalNotice';
 import { receiveSplitDecision } from '@app/services/splitNotice/splitNotice';
 import { AppState } from 'react-native';
@@ -85,6 +90,20 @@ export const onRemoteMessage = async (
       // A notice that cannot be posted (no permission) must not stop the refetch.
       await showReadyNotice(update).catch(error =>
         console.log('Could not show the ready notice', error),
+      );
+      queryClient.invalidateQueries({ queryKey: [QueryKeys.inProgressOrders] });
+    }
+    return;
+  }
+  // Row 164: the restaurant changed a held job's notes or times. The push
+  // carries the same fields as the live message; the card's mark lasts while
+  // the app runs.
+  if (message.data?.type === 'JOB_EDITED') {
+    const update = parseJobEdited(message.data);
+    if (update && (await AsyncStorage.getItem('token'))) {
+      markJobEdited(update);
+      await showJobEditedNotice(update).catch(error =>
+        console.log('Could not show the job edited notice', error),
       );
       queryClient.invalidateQueries({ queryKey: [QueryKeys.inProgressOrders] });
     }

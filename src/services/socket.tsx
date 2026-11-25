@@ -1,5 +1,10 @@
 import { parseJobReadyUpdate } from '@app/utilities/readySignals';
-import { showReadyNotice } from '@app/services/readyNotice/readyNotice';
+import {
+  showJobEditedNotice,
+  showReadyNotice,
+} from '@app/services/readyNotice/readyNotice';
+import { parseJobEdited } from '@app/utilities/jobEdits';
+import { markJobEdited } from '@app/services/jobEdits/jobEditMarks';
 import { receiveRemovalDecision } from '@app/services/removalNotice/removalNotice';
 import { receiveSplitDecision } from '@app/services/splitNotice/splitNotice';
 import useUser from '@app/hooks/useUser';
@@ -153,6 +158,21 @@ const SocketProvider = ({ children }: Props) => {
         }
         showReadyNotice(update).catch(error =>
           console.log('Could not show the ready notice', error),
+        );
+        queryClient.invalidateQueries({
+          queryKey: [QueryKeys.inProgressOrders],
+        });
+      },
+      // Row 164: the restaurant changed a held job's notes or times. The card is
+      // marked, a notice says what changed, then the held jobs are read again.
+      onJobEdited: (message: unknown) => {
+        const update = parseJobEdited(message);
+        if (!update) {
+          return;
+        }
+        markJobEdited(update);
+        showJobEditedNotice(update).catch(error =>
+          console.log('Could not show the job edited notice', error),
         );
         queryClient.invalidateQueries({
           queryKey: [QueryKeys.inProgressOrders],

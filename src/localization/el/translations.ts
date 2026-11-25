@@ -277,6 +277,11 @@ const translations: typeof en = {
   ready_notice_delay:
     '{{restaurant}}: +{{delay}} λεπτά, έτοιμο σε ~{{minutes}} λεπτά',
   ready_notice_changed: '{{restaurant}}: η ώρα ετοιμότητας άλλαξε',
+  job_edited_title: 'Αλλαγή στη δουλειά',
+  job_edited_notice: '{{restaurant}}: {{what}}',
+  job_edited_line: 'Αλλαγή από το κατάστημα: {{what}}',
+  job_edited_notes: 'σημειώσεις',
+  job_edited_times: 'ώρες',
   sos_no_accept:
     'Δεν μπορείτε να αναλάβετε παραγγελία κατά τη διάρκεια SOS. Πατήστε πρώτα «Είμαι ασφαλής».',
   sos_dialer_failed:
