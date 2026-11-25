@@ -6,6 +6,8 @@
 //
 // This file is copied to the apps the way the other shared types are. Each app's completeness test walks
 // these lists and fails when a code has no text in either language.
+// In this app, src/localization/translationsParity.test.ts compares both lists with the backend's file, word for
+// word, when the backend is beside this repo (row 163).
 //
 // Rules (cross check 6):
 // - A code's params never change shape once used. A new shape is a new code.

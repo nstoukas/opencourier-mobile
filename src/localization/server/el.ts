@@ -1,5 +1,6 @@
 // COPIED from opencourier-backend/src/localization/el.ts (spec 0054, row 47); see en.ts.
-// src/localization/translationsParity.test.ts checks every key against the backend, word for word (row 163).
+// src/localization/translationsParity.test.ts checks every key against the backend, word for word, when the
+// backend is beside this repo (row 163).
 //
 // Spec 0054 (row 47): the Greek of every sentence in en.ts, key for key. Drafted by Claude during the
 // build; a Greek speaking member checks it (docs/translations/greek-review.md) before go live.

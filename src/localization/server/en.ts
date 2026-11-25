@@ -2,7 +2,8 @@
 // the app shows a refusal's code in the rider's language. Keep it a plain copy: when the backend's file
 // changes, copy it again (only the export names below differ: `serverEn`, `ServerTranslations`), then run
 // the app's prettier on it.
-// src/localization/translationsParity.test.ts checks every key against the backend, word for word (row 163).
+// src/localization/translationsParity.test.ts checks every key against the backend, word for word, when the
+// backend is beside this repo (row 163).
 // The app's i18n registers `serverEn.server` as its own namespace, "server" (src/localization/i18n.ts).
 //
 // Spec 0054 (row 47): every sentence the server writes for people, in English. The Greek file (el.ts) has
