@@ -1,5 +1,7 @@
 import fs from 'fs';
 import path from 'path';
+import vm from 'vm';
+import ts from 'typescript';
 import en from './en/translations';
 import el from './el/translations';
 import { serverEn } from './server/en';
@@ -14,6 +16,166 @@ const extractPlaceholders = (text: string): string[] => {
   const matches = text.match(/\{\{([^}]+)\}\}/g) || [];
   return matches.map(m => m.slice(2, -2).trim().split(',')[0].trim()).sort();
 };
+
+// Every leaf of a nested translation object as `a.b.c` -> string.
+function leaves(node: unknown, prefix = ''): Map<string, string> {
+  const found = new Map<string, string>();
+  if (typeof node === 'object' && node !== null) {
+    for (const [key, value] of Object.entries(node)) {
+      const name = prefix ? `${prefix}.${key}` : key;
+      if (typeof value === 'object' && value !== null) {
+        // Collect leaf nodes from sub-objects using forEach to avoid downlevelIteration issues
+        leaves(value, name).forEach((subVal, subKey) => {
+          found.set(subKey, subVal);
+        });
+      } else if (typeof value === 'string') {
+        found.set(name, value);
+      }
+    }
+  }
+  return found;
+}
+
+interface DifferenceReport {
+  missingInApp: string[];
+  extraInApp: string[];
+  mismatches: Array<{ code: string; backend: string; app: string }>;
+}
+
+// Compares flattened key-value leaves between backend and mobile translations
+function compareLeaves(
+  backendLeaves: Map<string, string>,
+  appLeaves: Map<string, string>,
+): DifferenceReport {
+  const backendKeys = Array.from(backendLeaves.keys()).sort();
+  const appKeys = Array.from(appLeaves.keys()).sort();
+
+  const missingInApp = backendKeys.filter(k => !appLeaves.has(k));
+  const extraInApp = appKeys.filter(k => !backendLeaves.has(k));
+  const mismatches: Array<{ code: string; backend: string; app: string }> = [];
+
+  for (const key of backendKeys) {
+    if (appLeaves.has(key)) {
+      const bVal = backendLeaves.get(key);
+      const aVal = appLeaves.get(key);
+      if (bVal !== aVal) {
+        mismatches.push({
+          code: key,
+          backend: bVal ?? '',
+          app: aVal ?? '',
+        });
+      }
+    }
+  }
+
+  return { missingInApp, extraInApp, mismatches };
+}
+
+// Runs the transpiled file in a bare context (no require): this executes the co-op's own backend file
+// and is not a security boundary. It is fine while the backend's files are plain data; if the evaluated
+// file calls require (a value import), the test fails with a clear message naming the file, not a bare
+// ReferenceError.
+function loadTypeScriptFile<T = Record<string, unknown>>(filePath: string): T {
+  const code = fs.readFileSync(filePath, 'utf-8');
+  // Transpile TypeScript source down to CommonJS JavaScript
+  const js = ts.transpileModule(code, {
+    compilerOptions: {
+      module: ts.ModuleKind.CommonJS,
+      target: ts.ScriptTarget.ES2020,
+    },
+  }).outputText;
+  const exportsObj: Record<string, unknown> = {};
+  const moduleObj = { exports: exportsObj };
+  const customRequire = (id: string) => {
+    throw new Error(
+      `Evaluating ${filePath} attempted to call require('${id}'). ` +
+        'This loader runs the co-op plain data files and does not support value imports.',
+    );
+  };
+  const context = vm.createContext({
+    exports: exportsObj,
+    module: moduleObj,
+    require: customRequire,
+  });
+  try {
+    vm.runInContext(js, context);
+  } catch (err: any) {
+    if (
+      err &&
+      err.message &&
+      err.message.includes('attempted to call require')
+    ) {
+      throw err;
+    }
+    throw new Error(
+      `Failed to evaluate ${filePath}: ${err ? err.message : String(err)}`,
+    );
+  }
+  // Type assertion: trust the exported module shape for test comparison
+  return moduleObj.exports as T;
+}
+
+interface BackendPathsOptions {
+  defaultDir?: string;
+  env?: Record<string, string | undefined>;
+}
+
+// Resolves backend file locations with support for overrides (e.g. scratch copies in tests).
+function getBackendPaths(options?: BackendPathsOptions) {
+  const env = options?.env ?? process.env;
+  const defaultDir =
+    options?.defaultDir ??
+    env.OPENCOURIER_BACKEND_DEFAULT_DIR ??
+    path.resolve(__dirname, '../../../opencourier-backend');
+
+  const hasOverride = Boolean(
+    env.OPENCOURIER_BACKEND_DIR ||
+      env.BACKEND_EN_PATH ||
+      env.BACKEND_EL_PATH ||
+      env.BACKEND_MESSAGES_PATH,
+  );
+
+  const backendDir = env.OPENCOURIER_BACKEND_DIR || defaultDir;
+
+  const backendEnPath =
+    env.BACKEND_EN_PATH || path.join(backendDir, 'src/localization/en.ts');
+  const backendElPath =
+    env.BACKEND_EL_PATH || path.join(backendDir, 'src/localization/el.ts');
+  const backendMessagesPath =
+    env.BACKEND_MESSAGES_PATH ||
+    path.join(backendDir, 'src/shared-types/event-messages.ts');
+
+  const dirExists = fs.existsSync(backendDir);
+  const requireBackend = env.REQUIRE_BACKEND === '1';
+
+  // Skip only when the backend folder itself is absent and no override is set.
+  // When REQUIRE_BACKEND=1, never skip (it turns the absence into a failure).
+  const shouldSkip = !hasOverride && !dirExists && !requireBackend;
+
+  return {
+    backendDir,
+    backendEnPath,
+    backendElPath,
+    backendMessagesPath,
+    hasOverride,
+    dirExists,
+    requireBackend,
+    shouldSkip,
+  };
+}
+
+let loggedSkipWarning = false;
+function warnBackendAbsentOnce(backendDir: string) {
+  if (!loggedSkipWarning) {
+    loggedSkipWarning = true;
+    console.warn(
+      '\n=================================================================================\n' +
+        `WARNING: Backend localization files not found under ${backendDir}.\n` +
+        'Skipping server copy checks because backend repo is absent.\n' +
+        '=================================================================================\n',
+    );
+  }
+}
 
 describe('Translation Parity and Completeness Guard (spec 0054, AC-8)', () => {
   const enKeys = Object.keys(en);
@@ -186,37 +348,26 @@ describe('Translation Parity and Completeness Guard (spec 0054, AC-8)', () => {
       );
     });
 
-    const backendDir = path.resolve(__dirname, '../../../opencourier-backend');
-    const backendEnPath = path.join(backendDir, 'src/localization/en.ts');
-    const backendElPath = path.join(backendDir, 'src/localization/el.ts');
-    const backendMessagesPath = path.join(
-      backendDir,
-      'src/shared-types/event-messages.ts',
-    );
-
-    const backendPresent =
-      fs.existsSync(backendEnPath) &&
-      fs.existsSync(backendElPath) &&
-      fs.existsSync(backendMessagesPath);
-
-    if (!backendPresent) {
-      console.warn(
-        '\n=================================================================================\n' +
-          `WARNING: Backend localization files not found under ${backendDir}.\n` +
-          'Skipping ADD_ON_JOINED backend copy consistency check because backend repo is absent.\n' +
-          '=================================================================================\n',
-      );
+    const backendPaths = getBackendPaths();
+    if (backendPaths.shouldSkip) {
+      warnBackendAbsentOnce(backendPaths.backendDir);
     }
 
-    const itBackendCopy = backendPresent ? it : it.skip;
+    const itBackendCopy = backendPaths.shouldSkip ? it.skip : it;
 
     itBackendCopy(
       'verifies ADD_ON_JOINED params and sentences match opencourier-backend copies when present (row 146)',
       () => {
-        const backendEnContent = fs.readFileSync(backendEnPath, 'utf-8');
-        const backendElContent = fs.readFileSync(backendElPath, 'utf-8');
+        const backendEnContent = fs.readFileSync(
+          backendPaths.backendEnPath,
+          'utf-8',
+        );
+        const backendElContent = fs.readFileSync(
+          backendPaths.backendElPath,
+          'utf-8',
+        );
         const backendMessagesContent = fs.readFileSync(
-          backendMessagesPath,
+          backendPaths.backendMessagesPath,
           'utf-8',
         );
 
@@ -251,4 +402,318 @@ describe('Translation Parity and Completeness Guard (spec 0054, AC-8)', () => {
       },
     );
   });
+});
+
+describe('Backend path resolution and skip guard (Fable review rulings 1 & 2)', () => {
+  it('skips when default backend dir is absent and no override is set', () => {
+    const paths = getBackendPaths({
+      defaultDir: path.resolve(
+        __dirname,
+        '../../../nonexistent-backend-for-test',
+      ),
+      env: {},
+    });
+    expect(paths.shouldSkip).toBe(true);
+    expect(paths.dirExists).toBe(false);
+  });
+
+  it('turns skip into failure when REQUIRE_BACKEND=1 even if backend dir is absent', () => {
+    const paths = getBackendPaths({
+      defaultDir: path.resolve(
+        __dirname,
+        '../../../nonexistent-backend-for-test',
+      ),
+      env: { REQUIRE_BACKEND: '1' },
+    });
+    expect(paths.shouldSkip).toBe(false);
+    expect(paths.requireBackend).toBe(true);
+    expect(paths.dirExists).toBe(false);
+  });
+
+  it('does not skip when an override path is set, even if the directory does not exist', () => {
+    const paths = getBackendPaths({
+      env: { OPENCOURIER_BACKEND_DIR: '/nonexistent/override/dir' },
+    });
+    expect(paths.shouldSkip).toBe(false);
+    expect(paths.hasOverride).toBe(true);
+    expect(paths.dirExists).toBe(false);
+  });
+
+  it('detects missing required file in present directory', () => {
+    const scratchDir = path.resolve(
+      __dirname,
+      './.test-scratch-backend-missing',
+    );
+    fs.mkdirSync(scratchDir, { recursive: true });
+    try {
+      const paths = getBackendPaths({
+        env: { OPENCOURIER_BACKEND_DIR: scratchDir },
+      });
+      expect(paths.shouldSkip).toBe(false);
+      expect(paths.dirExists).toBe(true);
+      expect(fs.existsSync(paths.backendEnPath)).toBe(false);
+    } finally {
+      if (fs.existsSync(scratchDir)) {
+        fs.rmdirSync(scratchDir);
+      }
+    }
+  });
+});
+
+describe('Row 163: Every copied server sentence is checked against the backend', () => {
+  const backendPaths = getBackendPaths();
+
+  if (backendPaths.shouldSkip) {
+    warnBackendAbsentOnce(backendPaths.backendDir);
+  }
+
+  const itRow163 = backendPaths.shouldSkip ? it.skip : it;
+
+  itRow163('ensures backend directory and localization files exist', () => {
+    if (backendPaths.requireBackend && !backendPaths.dirExists) {
+      throw new Error(
+        `REQUIRE_BACKEND=1 is set, but backend directory was not found under ${backendPaths.backendDir}`,
+      );
+    }
+    if (!backendPaths.dirExists) {
+      throw new Error(
+        `Backend directory was not found under ${backendPaths.backendDir}`,
+      );
+    }
+    for (const [name, filePath] of [
+      ['en.ts', backendPaths.backendEnPath],
+      ['el.ts', backendPaths.backendElPath],
+      ['event-messages.ts', backendPaths.backendMessagesPath],
+    ]) {
+      if (!fs.existsSync(filePath)) {
+        throw new Error(
+          `Backend localization file missing: ${name} (checked ${filePath})`,
+        );
+      }
+    }
+  });
+
+  itRow163(
+    'fails with a clear message naming the file if an evaluated file calls require',
+    () => {
+      const scratchRequireFile = path.resolve(
+        __dirname,
+        './.test-scratch-require.ts',
+      );
+      fs.writeFileSync(
+        scratchRequireFile,
+        'const crypto = require("crypto"); export const data = { crypto };',
+      );
+      try {
+        expect(() => loadTypeScriptFile(scratchRequireFile)).toThrow(
+          /attempted to call require\('crypto'\)/,
+        );
+      } finally {
+        if (fs.existsSync(scratchRequireFile)) {
+          fs.unlinkSync(scratchRequireFile);
+        }
+      }
+    },
+  );
+
+  let cachedBackendEn: { en: { server: Record<string, unknown> } } | null =
+    null;
+  let cachedBackendEl: { el: { server: Record<string, unknown> } } | null =
+    null;
+  let cachedBackendMessages: {
+    EVENT_MESSAGE_CODES: Record<string, readonly string[]>;
+    EVENT_PART_CODES: Record<string, readonly string[]>;
+  } | null = null;
+
+  function getBackendEn() {
+    if (!cachedBackendEn) {
+      if (!fs.existsSync(backendPaths.backendEnPath)) {
+        throw new Error(
+          `Backend localization file missing: en.ts (checked ${backendPaths.backendEnPath})`,
+        );
+      }
+      cachedBackendEn = loadTypeScriptFile<{
+        en: { server: Record<string, unknown> };
+      }>(backendPaths.backendEnPath);
+    }
+    return cachedBackendEn;
+  }
+
+  function getBackendEl() {
+    if (!cachedBackendEl) {
+      if (!fs.existsSync(backendPaths.backendElPath)) {
+        throw new Error(
+          `Backend localization file missing: el.ts (checked ${backendPaths.backendElPath})`,
+        );
+      }
+      cachedBackendEl = loadTypeScriptFile<{
+        el: { server: Record<string, unknown> };
+      }>(backendPaths.backendElPath);
+    }
+    return cachedBackendEl;
+  }
+
+  function getBackendMessages() {
+    if (!cachedBackendMessages) {
+      if (!fs.existsSync(backendPaths.backendMessagesPath)) {
+        throw new Error(
+          `Backend localization file missing: event-messages.ts (checked ${backendPaths.backendMessagesPath})`,
+        );
+      }
+      cachedBackendMessages = loadTypeScriptFile<{
+        EVENT_MESSAGE_CODES: Record<string, readonly string[]>;
+        EVENT_PART_CODES: Record<string, readonly string[]>;
+      }>(backendPaths.backendMessagesPath);
+    }
+    return cachedBackendMessages;
+  }
+
+  itRow163(
+    'ensures backend and app define the exact same set of server groups',
+    () => {
+      const backendEnModule = getBackendEn();
+      const backendElModule = getBackendEl();
+
+      const expectedEnGroups = Object.keys(backendEnModule.en.server).sort();
+      const expectedElGroups = Object.keys(backendElModule.el.server).sort();
+
+      expect(Object.keys(serverEn.server).sort()).toEqual(expectedEnGroups);
+      expect(Object.keys(serverEl.server).sort()).toEqual(expectedElGroups);
+    },
+  );
+
+  itRow163(
+    'compares every copied English server sentence with the backend word for word',
+    () => {
+      const backendEnModule = getBackendEn();
+      const backendLeaves = leaves(backendEnModule.en.server);
+      const appLeaves = leaves(serverEn.server);
+
+      const { missingInApp, extraInApp, mismatches } = compareLeaves(
+        backendLeaves,
+        appLeaves,
+      );
+
+      expect(missingInApp).toEqual([]);
+      expect(extraInApp).toEqual([]);
+      expect(mismatches).toEqual([]);
+    },
+  );
+
+  itRow163(
+    'compares every copied Greek server sentence with the backend word for word',
+    () => {
+      const backendElModule = getBackendEl();
+      const backendLeaves = leaves(backendElModule.el.server);
+      const appLeaves = leaves(serverEl.server);
+
+      const { missingInApp, extraInApp, mismatches } = compareLeaves(
+        backendLeaves,
+        appLeaves,
+      );
+
+      expect(missingInApp).toEqual([]);
+      expect(extraInApp).toEqual([]);
+      expect(mismatches).toEqual([]);
+    },
+  );
+
+  // Check each server group individually so test failure output pinpoints the exact group
+  // 'as const' tells TypeScript the array items are literal string values, not generic strings
+  const copiedGroups = [
+    'event',
+    'eventPart',
+    'enum',
+    'error',
+    'notice',
+    'board',
+    'mail',
+  ] as const;
+
+  for (const group of copiedGroups) {
+    itRow163(
+      `matches English server.${group} sentences word for word with backend`,
+      () => {
+        const backendEnModule = getBackendEn();
+        const backendGroup = backendEnModule.en.server[group];
+        const appGroup = (serverEn.server as Record<string, unknown>)[group];
+
+        const backendLeaves = leaves(backendGroup);
+        const appLeaves = leaves(appGroup || {});
+
+        const { missingInApp, extraInApp, mismatches } = compareLeaves(
+          backendLeaves,
+          appLeaves,
+        );
+
+        expect(missingInApp).toEqual([]);
+        expect(extraInApp).toEqual([]);
+        expect(mismatches).toEqual([]);
+        expect(appGroup).toEqual(backendGroup);
+      },
+    );
+
+    itRow163(
+      `matches Greek server.${group} sentences word for word with backend`,
+      () => {
+        const backendElModule = getBackendEl();
+        const backendGroup = backendElModule.el.server[group];
+        const appGroup = (serverEl.server as Record<string, unknown>)[group];
+
+        const backendLeaves = leaves(backendGroup);
+        const appLeaves = leaves(appGroup || {});
+
+        const { missingInApp, extraInApp, mismatches } = compareLeaves(
+          backendLeaves,
+          appLeaves,
+        );
+
+        expect(missingInApp).toEqual([]);
+        expect(extraInApp).toEqual([]);
+        expect(mismatches).toEqual([]);
+        expect(appGroup).toEqual(backendGroup);
+      },
+    );
+  }
+
+  itRow163(
+    'ensures EVENT_MESSAGE_CODES and EVENT_PART_CODES match the backend exactly',
+    () => {
+      const backendMsgModule = getBackendMessages();
+
+      // EVENT_MESSAGE_CODES comparison
+      const backendMsgCodes = Object.keys(
+        backendMsgModule.EVENT_MESSAGE_CODES,
+      ).sort();
+      const appMsgCodes = Object.keys(EVENT_MESSAGE_CODES).sort();
+
+      const missingMsgCodes = backendMsgCodes.filter(
+        c => !(c in EVENT_MESSAGE_CODES),
+      );
+      const extraMsgCodes = appMsgCodes.filter(
+        c => !(c in backendMsgModule.EVENT_MESSAGE_CODES),
+      );
+
+      expect(missingMsgCodes).toEqual([]);
+      expect(extraMsgCodes).toEqual([]);
+      expect(EVENT_MESSAGE_CODES).toEqual(backendMsgModule.EVENT_MESSAGE_CODES);
+
+      // EVENT_PART_CODES comparison
+      const backendPartCodes = Object.keys(
+        backendMsgModule.EVENT_PART_CODES,
+      ).sort();
+      const appPartCodes = Object.keys(EVENT_PART_CODES).sort();
+
+      const missingPartCodes = backendPartCodes.filter(
+        c => !(c in EVENT_PART_CODES),
+      );
+      const extraPartCodes = appPartCodes.filter(
+        c => !(c in backendMsgModule.EVENT_PART_CODES),
+      );
+
+      expect(missingPartCodes).toEqual([]);
+      expect(extraPartCodes).toEqual([]);
+      expect(EVENT_PART_CODES).toEqual(backendMsgModule.EVENT_PART_CODES);
+    },
+  );
 });
