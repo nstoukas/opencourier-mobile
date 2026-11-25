@@ -62,7 +62,10 @@ export const serverEn = {
         'Courier {{courierId}} accepted delivery {{deliveryId}}, offered together with delivery {{otherDeliveryId}} (accepted automatically)',
       ACCEPTED_BY_SWEEP:
         'Courier {{courierId}} accepted delivery {{deliveryId}} as part of two orders offered together; completed by the minute sweep',
-      ACCEPTED_ALONE_BY_SWEEP: 'Courier {{courierId}} accepted delivery {{deliveryId}}; completed by the minute sweep',
+      ACCEPTED_ALONE_BY_SWEEP:
+        'Courier {{courierId}} accepted delivery {{deliveryId}}; completed by the minute sweep',
+      ACCEPT_GIVEN_BACK:
+        'Courier {{courierId}} accepted, but the accept was not completed ($t(server.enum.acceptGivenBackReason.{{reason}})); the order waits for a rider again',
       REJECTED: 'Courier {{courierId}} rejected delivery {{deliveryId}}',
       REJECTED_TOGETHER:
         'Courier {{courierId}} rejected delivery {{deliveryId}}, offered together with delivery {{otherDeliveryId}}',
@@ -213,6 +216,12 @@ export const serverEn = {
         STORM: 'storm',
         OTHER: 'other reasons',
       },
+      acceptGivenBackReason: {
+        STOPPED: 'dispatch stopped',
+        FAILING: 'it kept failing',
+        SOS: 'the rider is in SOS',
+        DEACTIVATED: 'the rider was deactivated',
+      },
       arrivalHow: {
         DETECTED: ' (detected by the app)',
         TAPPED: ' (tapped by the rider)',
@@ -299,10 +308,12 @@ export const serverEn = {
         'One more order on the way is never accepted automatically. Open it and choose.',
       LEG_LABELS_LOCKED:
         'This delivery is one leg of an order: its order reference and leg numbers cannot change.',
-      PARTNER_EDIT_ORDER_ENDED: 'This order has ended, so it can no longer be changed.',
+      PARTNER_EDIT_ORDER_ENDED:
+        'This order has ended, so it can no longer be changed.',
       PARTNER_EDIT_POINT_HELD:
         "A rider is already on this order, so its drop off point can't move. Message dispatch to change it.",
-      PARTNER_EDIT_CHANGED: 'This order just changed. Look again before you save.',
+      PARTNER_EDIT_CHANGED:
+        'This order just changed. Look again before you save.',
       LEG_REFERENCE_REQUIRED:
         'A leg needs an orderReference: it is what ties the legs of an order together.',
       SIBLING_LEG_HELD:

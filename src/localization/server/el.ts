@@ -60,6 +60,8 @@ export const serverEl: ServerTranslations = {
         'Ο διανομέας {{courierId}} αποδέχτηκε την παραγγελία {{deliveryId}} ως μία από δύο παραγγελίες που προτάθηκαν μαζί· ολοκληρώθηκε από τον έλεγχο του λεπτού',
       ACCEPTED_ALONE_BY_SWEEP:
         'Ο διανομέας {{courierId}} αποδέχτηκε την παραγγελία {{deliveryId}}· ολοκληρώθηκε από τον έλεγχο του λεπτού',
+      ACCEPT_GIVEN_BACK:
+        'Ο διανομέας {{courierId}} αποδέχτηκε, αλλά η αποδοχή δεν ολοκληρώθηκε ($t(server.enum.acceptGivenBackReason.{{reason}}))· η παραγγελία περιμένει ξανά διανομέα',
       REJECTED:
         'Ο διανομέας {{courierId}} απέρριψε την παραγγελία {{deliveryId}}',
       REJECTED_TOGETHER:
@@ -216,6 +218,12 @@ export const serverEl: ServerTranslations = {
         STORM: 'καταιγίδα',
         OTHER: 'άλλοι λόγοι',
       },
+      acceptGivenBackReason: {
+        STOPPED: 'παύση διανομών',
+        FAILING: 'απέτυχε επανειλημμένα',
+        SOS: 'ο διανομέας είναι σε SOS',
+        DEACTIVATED: 'ο διανομέας απενεργοποιήθηκε',
+      },
       arrivalHow: {
         DETECTED: ' (εντοπίστηκε από την εφαρμογή)',
         TAPPED: ' (πατήθηκε από τον διανομέα)',
@@ -311,10 +319,12 @@ export const serverEl: ServerTranslations = {
         'Μια επιπλέον παραγγελία στον δρόμο δεν γίνεται ποτέ αποδεκτή αυτόματα. Ανοίξτε την και επιλέξτε.',
       LEG_LABELS_LOCKED:
         'Αυτή η παραγγελία είναι σκέλος μιας μεγαλύτερης: ο κωδικός παραγγελίας και οι αριθμοί σκελών δεν αλλάζουν.',
-      PARTNER_EDIT_ORDER_ENDED: 'Αυτή η παραγγελία έχει ολοκληρωθεί, οπότε δεν αλλάζει πια.',
+      PARTNER_EDIT_ORDER_ENDED:
+        'Αυτή η παραγγελία έχει ολοκληρωθεί, οπότε δεν αλλάζει πια.',
       PARTNER_EDIT_POINT_HELD:
         'Ένας διανομέας έχει ήδη αναλάβει αυτή την παραγγελία, οπότε το σημείο παράδοσης δεν μετακινείται. Στείλτε μήνυμα στη διανομή για να το αλλάξετε.',
-      PARTNER_EDIT_CHANGED: 'Η παραγγελία μόλις άλλαξε. Δείτε την ξανά πριν αποθηκεύσετε.',
+      PARTNER_EDIT_CHANGED:
+        'Η παραγγελία μόλις άλλαξε. Δείτε την ξανά πριν αποθηκεύσετε.',
       LEG_REFERENCE_REQUIRED:
         'Ένα σκέλος χρειάζεται orderReference: αυτό συνδέει τα σκέλη μιας παραγγελίας.',
       SIBLING_LEG_HELD:
