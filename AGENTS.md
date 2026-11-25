@@ -49,6 +49,7 @@ the error count is above `typecheck-baseline.json`, and lowers the file when the
 - One server per build (spec 0039): no source file outside `upgradeGate.ts` may read or write `BASE_URL` or `SOCKET_BASE_URL`, or
   import a deleted instance screen (`coopInstanceGuard.test.ts` fails). A new AsyncStorage key that holds per rider data must be
   cleared by `clearRiderDataOnPhone` and, if an older build could have written it, by the gate's `OTHER_SERVER_KEYS`.
+  The same holds for an in memory notice store: `clearRiderDataOnPhone` and `Services`' logout both clear it (row 164's job edit marks).
 - Location means precise (decision 17.22): ask with `requestAndroidLocation` (fine and coarse together); "Approximate" alone is
   its own answer, never "blocked". Every Android permission request goes through `askWithBlockedDetection`: no dialog within
   1.5 s counts as "don't ask again", because React Native otherwise answers only when the app next comes to the front.
@@ -173,6 +174,10 @@ the error count is above `typecheck-baseline.json`, and lowers the file when the
   writes with the rider's id needs that label in both languages (row 146). `src/types/event-messages.ts` and
   `src/localization/server/*` are word for word copies of the backend's; the parity test pins the number of event message
   codes (not error codes), so each new one moves that count by hand (`translationsParity.test.ts`; rows 146, 149, 160).
+
+- `JOB_EDITED` (row 164; live connection and push, the `JOB_READY_UPDATED` pattern) marks a held job's card "Restaurant changed:
+  notes, times". The marks live in memory only (`jobEditMarks.ts`) and nothing reports back whether the rider saw them (value 5); the
+  notice dedupes the live copy and the push of one edit by `editedAt`.
 
 - `OFFER_ENDED` (push and live connection) carries the ended offer's `offeredAt`, and the reason `ANSWERED` when the rider answered on
   one of their phones (rows 154, 155). An end drops only the offer it names (`isTheEndedOffer`, `cancelEndedOfferAlert`), and the ended
