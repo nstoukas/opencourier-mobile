@@ -220,7 +220,7 @@ export const serverEl: ServerTranslations = {
       },
       acceptGivenBackReason: {
         STOPPED: 'παύση διανομών',
-        FAILING: 'απέτυχε επανειλημμένα',
+        FAILING: 'δεν ολοκληρώθηκε μέσα σε δέκα λεπτά',
         SOS: 'ο διανομέας είναι σε SOS',
         DEACTIVATED: 'ο διανομέας απενεργοποιήθηκε',
       },
