@@ -1,7 +1,5 @@
 import { Platform } from 'react-native';
-import notifee, {
-  AndroidImportance,
-} from '@notifee/react-native';
+import notifee, { AndroidImportance } from '@notifee/react-native';
 import i18n from '@app/localization/i18n';
 import { JobEdited, parseJobEdited } from '@app/utilities/jobEdits';
 import {
@@ -149,6 +147,32 @@ describe('showJobEditedNotice (row 164, AC-3)', () => {
           body: 'R73 Kitchen: times',
         }),
       );
+    });
+
+    it('a later edit for the same delivery with the same kinds but newer editedAt posts again', async () => {
+      await showJobEditedNotice(baseUpdate);
+
+      // A later edit of the same job with identical changed kinds but a new editedAt
+      const laterSameKindsUpdate: JobEdited = {
+        ...baseUpdate,
+        editedAt: '2026-11-25T14:35:00.000Z',
+      };
+      await showJobEditedNotice(laterSameKindsUpdate);
+
+      expect(postedCount()).toBe(2);
+      const callIds = (notifee.displayNotification as jest.Mock).mock.calls.map(
+        ([n]) => n.id,
+      );
+      expect(callIds).toEqual(['edited-del-notice-1', 'edited-del-notice-1']);
+      expect(notifee.displayNotification).toHaveBeenLastCalledWith(
+        expect.objectContaining({
+          body: 'R73 Kitchen: notes, times',
+        }),
+      );
+
+      // Duplicate arrival of that second edit (e.g. push arriving after socket) still dedupes
+      await showJobEditedNotice(laterSameKindsUpdate);
+      expect(postedCount()).toBe(2);
     });
 
     it('a different delivery is independent and posts its own notification', async () => {
