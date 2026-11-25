@@ -277,7 +277,7 @@ const translations: typeof en = {
   ready_notice_delay:
     '{{restaurant}}: +{{delay}} λεπτά, έτοιμο σε ~{{minutes}} λεπτά',
   ready_notice_changed: '{{restaurant}}: η ώρα ετοιμότητας άλλαξε',
-  job_edited_title: 'Αλλαγή στη δουλειά',
+  job_edited_title: 'Αλλαγή στην παραγγελία',
   job_edited_notice: '{{restaurant}}: {{what}}',
   job_edited_line: 'Αλλαγή από το κατάστημα: {{what}}',
   job_edited_notes: 'σημειώσεις',

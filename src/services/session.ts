@@ -2,6 +2,8 @@ import axios, { AxiosError, InternalAxiosRequestConfig } from 'axios';
 import { Alert } from 'react-native';
 import { clearSavedQueries } from './queryPersistence';
 import { clearRemovalNotices } from './removalNotice/removalNotice';
+import { clearJobEditMarks } from './jobEdits/jobEditMarks';
+import { clearJobEditedNotices } from './readyNotice/readyNotice';
 import { clearSplitNotices } from './splitNotice/splitNotice';
 import { clearChatSeen } from './chat/chatSeen';
 import { clearChatNotice } from './chat/chatNotice';
@@ -163,6 +165,9 @@ export const clearRiderDataOnPhone = async (http: UClient): Promise<void> => {
   await clearSavedQueries();
   // Nor the last rider's removal answers (spec 0035).
   clearRemovalNotices();
+  // Nor which jobs their restaurant changed, nor those notices (row 164).
+  clearJobEditMarks();
+  await clearJobEditedNotices();
   clearSplitNotices();
   // Nor what they had seen of their chat (spec 0034), its notice in the shade, or the lines
   // they wrote that were never sent (review of 2026-11-18).

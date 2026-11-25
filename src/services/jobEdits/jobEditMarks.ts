@@ -36,8 +36,8 @@ const subscribe = (listener: () => void) => {
 export const useJobEditMarks = (deliveryId: string): JobEditedField[] =>
   useSyncExternalStore(subscribe, () => jobEditMarksFor(deliveryId));
 
-// For tests only: forget every mark.
-export const resetJobEditMarksForTests = (): void => {
+// Forgets every mark: at logout (no other rider may see them), and in tests.
+export const clearJobEditMarks = (): void => {
   marks.clear();
   listeners.forEach(listener => listener());
 };

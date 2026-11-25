@@ -111,3 +111,22 @@ export const showJobEditedNotice = async (update: JobEdited): Promise<void> => {
 export const resetJobEditedNoticeForTests = (): void => {
   lastEdited.clear();
 };
+
+// Row 164 (Fable review): at logout, forget which edits were shown and take their notices out of the shade, as the
+// other notice stores do. Never throws: a notice that cannot be cancelled must not stop the logout.
+export const clearJobEditedNotices = async (): Promise<void> => {
+  lastEdited.clear();
+  try {
+    const shown = await notifee.getDisplayedNotifications();
+    await Promise.all(
+      shown
+        .filter(item => item.id?.startsWith('edited-'))
+        .map(item => notifee.cancelNotification(item.id as string)),
+    );
+  } catch (error) {
+    console.log(
+      'Could not clear the job edited notifications',
+      (error as Error)?.message,
+    );
+  }
+};
