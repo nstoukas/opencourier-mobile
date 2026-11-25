@@ -8,6 +8,8 @@ Everything below sits on top of upstream `main` on the branch `feat/courier-earn
 has the full reasoning and verification notes.
 
 ---
+Scope row 161 (the partner edit's status check is a conditional write) needed only the server's new refusal here: `PARTNER_EDIT_CHANGED` is copied word for word in English and Greek (`d6b41c3`, merged in on 25 November), so the copy stays equal to the backend's. Riders never see it (it answers a restaurant's edit). Localization tests pass (76).
+
 Scope row 160 (a restaurant's tip change is on the record), the courier app part, was built on the branch `feat/tip-change-event` and merged in on 25 November. `TIP_CHANGED_BY_RESTAURANT` is copied word for word in English and Greek, the Earnings timeline has the label "Tip changed" / "Άλλαξε το φιλοδώρημα" (`334fbda`), and the parity test counts 83 codes, moved by hand (`a306e62`). The server does not show this line to riders today (it is written before a rider holds the order), so the label only guards against the generic "Update". Suite: 3463 pass.
 
 Scope rows 149 and 152 to 159, built in the unattended run of 24 November and merged in that night:
