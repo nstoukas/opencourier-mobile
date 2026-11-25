@@ -171,7 +171,8 @@ the error count is above `typecheck-baseline.json`, and lowers the file when the
 
 - The rider's Earnings timeline labels a line `earnings_event_<type>` and falls back to "Update": a new event type the backend
   writes with the rider's id needs that label in both languages (row 146). `src/types/event-messages.ts` and
-  `src/localization/server/*` are word for word copies of the backend's; the parity test counts the codes.
+  `src/localization/server/*` are word for word copies of the backend's; the parity test pins the number of codes, so each new
+  code moves that count by hand (`translationsParity.test.ts`; rows 146, 149, 160).
 
 - `OFFER_ENDED` (push and live connection) carries the ended offer's `offeredAt`, and the reason `ANSWERED` when the rider answered on
   one of their phones (rows 154, 155). An end drops only the offer it names (`isTheEndedOffer`, `cancelEndedOfferAlert`), and the ended
