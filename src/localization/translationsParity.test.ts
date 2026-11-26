@@ -3,6 +3,12 @@ import path from 'path';
 import os from 'os';
 import vm from 'vm';
 import ts from 'typescript';
+import {
+  assertBackendFilesPresent,
+  BackendLocationOptions,
+  resolveBackendLocation,
+  warnBackendAbsentOnce,
+} from '../testing/backendCopies';
 import en from './en/translations';
 import el from './el/translations';
 import { serverEn } from './server/en';
@@ -117,95 +123,47 @@ function loadTypeScriptFile<T = Record<string, unknown>>(filePath: string): T {
   return moduleObj.exports as T;
 }
 
-interface BackendPathsOptions {
-  defaultDir?: string;
-  env?: Record<string, string | undefined>;
-}
-
-// Resolves backend file locations with support for overrides (e.g. scratch copies in tests).
-function getBackendPaths(options?: BackendPathsOptions) {
+// Where the backend's three localization files are, under the shared skip rules
+// (src/testing/backendCopies.ts). Each BACKEND_*_PATH points at one file directly (a scratch copy in a test).
+function getBackendPaths(options?: BackendLocationOptions) {
   const env = options?.env ?? process.env;
-  const defaultDir =
-    options?.defaultDir ??
-    path.resolve(__dirname, '../../../opencourier-backend');
-
-  const hasOverride = Boolean(
-    env.OPENCOURIER_BACKEND_DIR ||
-      env.BACKEND_EN_PATH ||
-      env.BACKEND_EL_PATH ||
-      env.BACKEND_MESSAGES_PATH,
-  );
-
-  const allFilesOverridden = Boolean(
-    env.BACKEND_EN_PATH && env.BACKEND_EL_PATH && env.BACKEND_MESSAGES_PATH,
-  );
-
-  const backendDir = env.OPENCOURIER_BACKEND_DIR || defaultDir;
-
-  const backendEnPath =
-    env.BACKEND_EN_PATH || path.join(backendDir, 'src/localization/en.ts');
-  const backendElPath =
-    env.BACKEND_EL_PATH || path.join(backendDir, 'src/localization/el.ts');
-  const backendMessagesPath =
-    env.BACKEND_MESSAGES_PATH ||
-    path.join(backendDir, 'src/shared-types/event-messages.ts');
-
-  const dirExists = fs.existsSync(backendDir);
-  const requireBackend = env.REQUIRE_BACKEND === '1';
-
-  // Skip only when the backend folder itself is absent and no override is set.
-  // When REQUIRE_BACKEND=1, never skip (it turns the absence into a failure).
-  const shouldSkip = !hasOverride && !dirExists && !requireBackend;
-
+  const location = resolveBackendLocation({
+    ...options,
+    env,
+    fileOverrideVars: [
+      'BACKEND_EN_PATH',
+      'BACKEND_EL_PATH',
+      'BACKEND_MESSAGES_PATH',
+    ],
+  });
+  const { backendDir } = location;
   return {
-    backendDir,
-    backendEnPath,
-    backendElPath,
-    backendMessagesPath,
-    hasOverride,
-    allFilesOverridden,
-    dirExists,
-    requireBackend,
-    shouldSkip,
+    ...location,
+    backendEnPath:
+      env.BACKEND_EN_PATH || path.join(backendDir, 'src/localization/en.ts'),
+    backendElPath:
+      env.BACKEND_EL_PATH || path.join(backendDir, 'src/localization/el.ts'),
+    backendMessagesPath:
+      env.BACKEND_MESSAGES_PATH ||
+      path.join(backendDir, 'src/shared-types/event-messages.ts'),
   };
 }
 
 // Verifies required backend files exist; only checks directory existence when paths are derived from it.
 function assertBackendFilesExist(paths: ReturnType<typeof getBackendPaths>) {
-  if (paths.requireBackend && !paths.dirExists && !paths.allFilesOverridden) {
-    throw new Error(
-      `REQUIRE_BACKEND=1 is set, but backend directory was not found under ${paths.backendDir}`,
-    );
-  }
-  if (!paths.dirExists && !paths.allFilesOverridden) {
-    throw new Error(
-      `Backend directory was not found under ${paths.backendDir}`,
-    );
-  }
-  for (const [name, filePath] of [
-    ['en.ts', paths.backendEnPath],
-    ['el.ts', paths.backendElPath],
-    ['event-messages.ts', paths.backendMessagesPath],
-  ] as const) {
-    if (!fs.existsSync(filePath)) {
-      throw new Error(
-        `Backend localization file missing: ${name} (checked ${filePath})`,
-      );
-    }
-  }
-}
-
-let loggedSkipWarning = false;
-function warnBackendAbsentOnce(backendDir: string) {
-  if (!loggedSkipWarning) {
-    loggedSkipWarning = true;
-    console.warn(
-      '\n=================================================================================\n' +
-        `WARNING: Backend localization files not found under ${backendDir}.\n` +
-        'Skipping server copy checks because backend repo is absent.\n' +
-        '=================================================================================\n',
-    );
-  }
+  assertBackendFilesPresent(
+    paths,
+    (
+      [
+        ['en.ts', paths.backendEnPath],
+        ['el.ts', paths.backendElPath],
+        ['event-messages.ts', paths.backendMessagesPath],
+      ] as const
+    ).map(([name, filePath]) => ({
+      missingMessage: `Backend localization file missing: ${name}`,
+      filePath,
+    })),
+  );
 }
 
 describe('Translation Parity and Completeness Guard (spec 0054, AC-8)', () => {
@@ -381,7 +339,7 @@ describe('Translation Parity and Completeness Guard (spec 0054, AC-8)', () => {
 
     const backendPaths = getBackendPaths();
     if (backendPaths.shouldSkip) {
-      warnBackendAbsentOnce(backendPaths.backendDir);
+      warnBackendAbsentOnce(backendPaths.backendDir, 'server copy checks');
     }
 
     const itBackendCopy = backendPaths.shouldSkip ? it.skip : it;
@@ -530,7 +488,7 @@ describe('Row 163: Every copied server sentence is checked against the backend',
   const backendPaths = getBackendPaths();
 
   if (backendPaths.shouldSkip) {
-    warnBackendAbsentOnce(backendPaths.backendDir);
+    warnBackendAbsentOnce(backendPaths.backendDir, 'server copy checks');
   }
 
   const itRow163 = backendPaths.shouldSkip ? it.skip : it;

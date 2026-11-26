@@ -54,9 +54,10 @@ export type OfferMessage =
     };
 
 // Row 180: a copy of the backend's OFFER_CARD_PAYLOAD_KEYS, in its order, which must stay the same
-// (offerMessageParity.test.ts compares the two). Every key of an offer push besides `type`. The app
-// reads most of them; `distanceKm` (for apps older than row 100), `boxSize` and `offerGroupId` it
-// receives and leaves alone. `as const` keeps the exact strings, so the type below lists them.
+// (src/utilities/backendCopiesParity.test.ts compares the two). Every key of an offer push besides
+// `type`. The app reads most of them; `distanceKm` (for apps older than row 100), `boxSize` and
+// `offerGroupId` it receives and leaves alone. `as const` keeps the exact strings, so the type
+// below lists them.
 export const OFFER_PUSH_KEYS = [
   'deliveryId',
   'offeredAt',
@@ -142,7 +143,9 @@ export const parseOfferMessage = (data: RawData): OfferMessage | null => {
     return null;
   }
 
-  // An offer push field: a key outside OFFER_PUSH_KEYS is a type error here.
+  // An offer push field: a read through `field` with a key outside OFFER_PUSH_KEYS is a type
+  // error. Reads through `text` (type, deliveryId, the trip figures) are not; the parity test
+  // checks those at run time.
   const field = (key: OfferPushKey): string => text(data, key);
 
   // The deadline as a difference of two server times, so a wrong phone clock

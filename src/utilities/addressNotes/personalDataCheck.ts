@@ -38,7 +38,8 @@ const GREEK_ACCENTS: Record<string, string> = {
 
 // Lower case, accents removed, final sigma as σ: "Γιώργος" and "ΓΙΩΡΓΟΣ" both become "γιωργοσ".
 // Row 180: the same steps in the same order as the backend's foldForNameCheck, so the two give the
-// same answer on any text. NFD splits each accented letter into the letter and its accent mark, and
+// same answer while their Unicode tables match (the app's are fixed when it is built, the server's
+// come with its Node version; both Unicode 17 on 2026-11-26). NFD splits each accented letter into the letter and its accent mark, and
 // `\p{M}` (any mark, in any alphabet) drops them. Hermes cannot read `\p{...}` itself; the React
 // Native Babel preset rewrites it into plain character ranges when the app is built.
 export const foldForNameCheck = (text: string): string => {

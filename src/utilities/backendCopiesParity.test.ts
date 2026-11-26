@@ -10,8 +10,15 @@ import {
   OFFER_PUSH_KEYS,
   parseOfferMessage,
 } from '../services/offerPush/offerMessage';
+import {
+  assertBackendFilesPresent,
+  BackendLocationOptions,
+  resolveBackendLocation,
+  warnBackendAbsentOnce,
+} from '../testing/backendCopies';
 
-// Babel runtime helper mock: enables Jest's Babel transform to evaluate files loaded outside the mobile repo.
+// Babel runtime helper mock: Jest compiles the backend's file with this app's Babel config, and the
+// output asks for this helper, which cannot be found from the backend's folder. Its body is the real helper's.
 jest.mock(
   '@babel/runtime/helpers/interopRequireDefault',
   () => (obj: any) => obj && obj.__esModule ? obj : { default: obj },
@@ -25,11 +32,6 @@ jest.mock(
  * 2. COMPLAINT_CATEGORIES in src/utilities/complaints.ts (copy of complaint-rules.ts)
  * 3. OFFER_PUSH_KEYS in src/services/offerPush/offerMessage.ts (copy of offer-card-payload.ts)
  */
-
-interface BackendPathsOptions {
-  defaultDir?: string;
-  env?: Record<string, string | undefined>;
-}
 
 // Strips single-line (//...) and multi-line (/*...*/) comments from source code before regex parsing.
 export function stripComments(code: string): string {
@@ -188,106 +190,57 @@ export function compareOfferPushKeys(
   };
 }
 
-/**
- * Resolves backend directory and target file paths following row 174's skip rules.
- * Default directory is 4 levels up from src/utilities/addressNotes (workspace root) plus opencourier-backend.
- */
-export function getBackendPaths(options?: BackendPathsOptions) {
-  const env = options?.env ?? process.env;
-  // Four levels up from addressNotes corresponds to three levels up from src/utilities (workspace root)
-  const defaultDir =
-    options?.defaultDir ??
-    path.resolve(__dirname, '../../../opencourier-backend');
-
-  const hasOverride = Boolean(env.OPENCOURIER_BACKEND_DIR);
-  const backendDir = env.OPENCOURIER_BACKEND_DIR || defaultDir;
-
-  const backendPersonalDataCheckPath = path.join(
-    backendDir,
-    'src/domains/location-note/personal-data-check.ts',
-  );
-  const backendComplaintRulesPath = path.join(
-    backendDir,
-    'src/domains/complaint/complaint-rules.ts',
-  );
-  const backendOfferCardPayloadPath = path.join(
-    backendDir,
-    'src/domains/delivery/offer-card-payload.ts',
-  );
-
-  const dirExists = fs.existsSync(backendDir);
-  const requireBackend = env.REQUIRE_BACKEND === '1';
-
-  // Skip only when the backend folder itself is absent and no override is set.
-  // When REQUIRE_BACKEND=1, never skip (it turns absence into a failure).
-  const shouldSkip = !hasOverride && !dirExists && !requireBackend;
-
+// Where the backend's three files are, under the shared skip rules (src/testing/backendCopies.ts).
+export function getBackendPaths(options?: BackendLocationOptions) {
+  const location = resolveBackendLocation(options);
+  const { backendDir } = location;
   return {
-    backendDir,
-    backendPersonalDataCheckPath,
-    backendComplaintRulesPath,
-    backendOfferCardPayloadPath,
-    hasOverride,
-    dirExists,
-    requireBackend,
-    shouldSkip,
+    ...location,
+    backendPersonalDataCheckPath: path.join(
+      backendDir,
+      'src/domains/location-note/personal-data-check.ts',
+    ),
+    backendComplaintRulesPath: path.join(
+      backendDir,
+      'src/domains/complaint/complaint-rules.ts',
+    ),
+    backendOfferCardPayloadPath: path.join(
+      backendDir,
+      'src/domains/delivery/offer-card-payload.ts',
+    ),
   };
 }
 
-/**
- * Asserts backend directory and all three required parity files exist.
- */
+// Throws, naming the file and the path, unless the backend folder and all three files are there.
 // 'ReturnType<typeof getBackendPaths>' extracts the return type of getBackendPaths function.
 export function assertBackendFilesExist(
   paths: ReturnType<typeof getBackendPaths>,
 ) {
-  if (paths.requireBackend && !paths.dirExists) {
-    throw new Error(
-      `REQUIRE_BACKEND=1 is set, but backend directory was not found under ${paths.backendDir}`,
-    );
-  }
-  if (!paths.dirExists) {
-    throw new Error(
-      `Backend directory was not found under ${paths.backendDir}`,
-    );
-  }
-  if (!fs.existsSync(paths.backendPersonalDataCheckPath)) {
-    throw new Error(
-      `Backend personal data check file missing: personal-data-check.ts (checked ${paths.backendPersonalDataCheckPath})`,
-    );
-  }
-  if (!fs.existsSync(paths.backendComplaintRulesPath)) {
-    throw new Error(
-      `Backend complaint rules file missing: complaint-rules.ts (checked ${paths.backendComplaintRulesPath})`,
-    );
-  }
-  if (!fs.existsSync(paths.backendOfferCardPayloadPath)) {
-    throw new Error(
-      `Backend offer card payload file missing: offer-card-payload.ts (checked ${paths.backendOfferCardPayloadPath})`,
-    );
-  }
+  assertBackendFilesPresent(paths, [
+    {
+      missingMessage:
+        'Backend personal data check file missing: personal-data-check.ts',
+      filePath: paths.backendPersonalDataCheckPath,
+    },
+    {
+      missingMessage:
+        'Backend complaint rules file missing: complaint-rules.ts',
+      filePath: paths.backendComplaintRulesPath,
+    },
+    {
+      missingMessage:
+        'Backend offer card payload file missing: offer-card-payload.ts',
+      filePath: paths.backendOfferCardPayloadPath,
+    },
+  ]);
 }
 
-let loggedSkipWarning = false;
-export function warnBackendAbsentOnce(backendDir: string) {
-  if (!loggedSkipWarning) {
-    loggedSkipWarning = true;
-    console.warn(
-      '\n=================================================================================\n' +
-        `WARNING: Backend folder not found under ${backendDir}.\n` +
-        'Skipping other copies parity checks because backend repo is absent.\n' +
-        '=================================================================================\n',
-    );
-  }
-}
-
-// Dynamically loads the backend's personal-data-check.ts module while invalidating cache.
+// Loads the backend's personal-data-check.ts with a plain require. Jest compiles that file with
+// this app's Babel config (hence the interopRequireDefault mock at the top of this file), so its
+// `\p{M}` and `\p{L}` become the same plain ranges as the app's, built from the same Unicode tables.
+// The comparisons below therefore prove the two files hold the same logic; they cannot see the
+// server's own Node answering differently once its Unicode tables move on (row 180 review, Minor 1).
 export function loadBackendPersonalDataCheck(filePath: string) {
-  try {
-    delete require.cache[require.resolve(filePath)];
-  } catch {
-    // Ignore if not previously cached
-  }
   return require(filePath);
 }
 
@@ -591,7 +544,10 @@ describe("Row 180: The courier app's other copies are checked against the backen
   const backendPaths = getBackendPaths();
 
   if (backendPaths.shouldSkip) {
-    warnBackendAbsentOnce(backendPaths.backendDir);
+    warnBackendAbsentOnce(
+      backendPaths.backendDir,
+      'other copies parity checks',
+    );
   }
 
   const itBackend = backendPaths.shouldSkip ? it.skip : it;

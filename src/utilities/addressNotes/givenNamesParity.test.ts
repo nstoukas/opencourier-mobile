@@ -1,6 +1,12 @@
 import fs from 'fs';
 import path from 'path';
 import os from 'os';
+import {
+  assertBackendFilesPresent,
+  BackendLocationOptions,
+  resolveBackendLocation,
+  warnBackendAbsentOnce,
+} from '../../testing/backendCopies';
 
 /**
  * Shape of given-names.json (spec 0053, AC-4, cross check 6; scope row 174):
@@ -129,87 +135,39 @@ export function assertValidGivenNamesShape(
   }
 }
 
-interface BackendPathsOptions {
-  defaultDir?: string;
-  env?: Record<string, string | undefined>;
-}
-
 /**
- * Resolves backend file locations with support for overrides (e.g. scratch copies in tests).
- * Precedent: src/localization/translationsParity.test.ts (row 163).
+ * Where the backend's given names file is, under the shared skip rules (src/testing/backendCopies.ts).
+ * BACKEND_GIVEN_NAMES_PATH points at one file directly (a scratch copy in a test).
  */
-export function getBackendPaths(options?: BackendPathsOptions) {
+export function getBackendPaths(options?: BackendLocationOptions) {
   const env = options?.env ?? process.env;
-  const defaultDir =
-    options?.defaultDir ??
-    path.resolve(__dirname, '../../../../opencourier-backend');
-
-  const hasOverride = Boolean(
-    env.OPENCOURIER_BACKEND_DIR || env.BACKEND_GIVEN_NAMES_PATH,
-  );
-
-  const allFilesOverridden = Boolean(env.BACKEND_GIVEN_NAMES_PATH);
-
-  const backendDir = env.OPENCOURIER_BACKEND_DIR || defaultDir;
-
-  const backendGivenNamesPath =
-    env.BACKEND_GIVEN_NAMES_PATH ||
-    path.join(backendDir, 'src/domains/location-note/given-names.json');
-
-  const dirExists = fs.existsSync(backendDir);
-  const requireBackend = env.REQUIRE_BACKEND === '1';
-
-  // Skip only when the backend folder itself is absent and no override is set.
-  // When REQUIRE_BACKEND=1, never skip (it turns the absence into a failure).
-  const shouldSkip = !hasOverride && !dirExists && !requireBackend;
-
+  const location = resolveBackendLocation({
+    ...options,
+    env,
+    fileOverrideVars: ['BACKEND_GIVEN_NAMES_PATH'],
+  });
   return {
-    backendDir,
-    backendGivenNamesPath,
-    hasOverride,
-    allFilesOverridden,
-    dirExists,
-    requireBackend,
-    shouldSkip,
+    ...location,
+    backendGivenNamesPath:
+      env.BACKEND_GIVEN_NAMES_PATH ||
+      path.join(
+        location.backendDir,
+        'src/domains/location-note/given-names.json',
+      ),
   };
 }
 
-/**
- * Verifies required backend files exist; only checks directory existence when paths are derived from it.
- * Precedent: src/localization/translationsParity.test.ts (row 163).
- */
+// Throws, naming the file and the path, unless the backend's given names file is there.
 // 'ReturnType<typeof getBackendPaths>' extracts the object type returned by getBackendPaths.
 export function assertBackendFilesExist(
   paths: ReturnType<typeof getBackendPaths>,
 ) {
-  if (paths.requireBackend && !paths.dirExists && !paths.allFilesOverridden) {
-    throw new Error(
-      `REQUIRE_BACKEND=1 is set, but backend directory was not found under ${paths.backendDir}`,
-    );
-  }
-  if (!paths.dirExists && !paths.allFilesOverridden) {
-    throw new Error(
-      `Backend directory was not found under ${paths.backendDir}`,
-    );
-  }
-  if (!fs.existsSync(paths.backendGivenNamesPath)) {
-    throw new Error(
-      `Backend given names file missing: given-names.json (checked ${paths.backendGivenNamesPath})`,
-    );
-  }
-}
-
-let loggedSkipWarning = false;
-export function warnBackendAbsentOnce(backendDir: string) {
-  if (!loggedSkipWarning) {
-    loggedSkipWarning = true;
-    console.warn(
-      '\n=================================================================================\n' +
-        `WARNING: Backend folder not found under ${backendDir}.\n` +
-        'Skipping given names check because backend repo is absent.\n' +
-        '=================================================================================\n',
-    );
-  }
+  assertBackendFilesPresent(paths, [
+    {
+      missingMessage: 'Backend given names file missing: given-names.json',
+      filePath: paths.backendGivenNamesPath,
+    },
+  ]);
 }
 
 describe('Backend path resolution and skip guard (row 174)', () => {
@@ -367,7 +325,7 @@ describe("Row 174: The courier app's given names list is checked against the bac
   const appGivenNamesPath = path.resolve(__dirname, 'given-names.json');
 
   if (backendPaths.shouldSkip) {
-    warnBackendAbsentOnce(backendPaths.backendDir);
+    warnBackendAbsentOnce(backendPaths.backendDir, 'given names check');
   }
 
   const itBackend = backendPaths.shouldSkip ? it.skip : it;
