@@ -177,6 +177,8 @@ the error count is above `typecheck-baseline.json`, and lowers the file when the
   test compares every server code and both event code lists with the backend's files beside this repo, both ways and word for
   word (row 163). It skips with a warning when the backend folder is absent (`REQUIRE_BACKEND=1` makes that a failure), and it
   compares with whatever that folder has checked out, uncommitted edits included.
+  `src/utilities/addressNotes/given-names.json` is a byte for byte copy of the backend's (`node scripts/copyGivenNames.js`);
+  `givenNamesParity.test.ts` compares them with the same skip rules (row 174).
 
 - `JOB_EDITED` (row 164; live connection and push, the `JOB_READY_UPDATED` pattern) marks a held job's card "Restaurant changed:
   notes, times". The marks live in memory only (`jobEditMarks.ts`) and nothing reports back whether the rider saw them (value 5); the
