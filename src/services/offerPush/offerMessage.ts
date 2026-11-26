@@ -53,6 +53,36 @@ export type OfferMessage =
       offeredAt: string | null;
     };
 
+// Row 180: a copy of the backend's OFFER_CARD_PAYLOAD_KEYS, in its order, which must stay the same
+// (offerMessageParity.test.ts compares the two). Every key of an offer push besides `type`. The app
+// reads most of them; `distanceKm` (for apps older than row 100), `boxSize` and `offerGroupId` it
+// receives and leaves alone. `as const` keeps the exact strings, so the type below lists them.
+export const OFFER_PUSH_KEYS = [
+  'deliveryId',
+  'offeredAt',
+  'offerExpiresAt',
+  'serverNow',
+  'payTotal',
+  'currencyCode',
+  'restaurantName',
+  'dropoffArea',
+  'distanceKm',
+  'toPickupMetres',
+  'toDropoffMetres',
+  'minutes',
+  'insistent',
+  'boxSize',
+  'legNumber',
+  'legCount',
+  'offerGroupId',
+  'partnerDeliveryId',
+  'addOn',
+  'calm',
+] as const;
+
+// `(typeof X)[number]`: any one element of the array X, so 'deliveryId' | 'offeredAt' | ...
+export type OfferPushKey = (typeof OFFER_PUSH_KEYS)[number];
+
 // `Record<string, ...>`: an object with any string keys, which is what FCM
 // hands over as `message.data` (its values can also be objects on iOS).
 type RawData = Record<string, unknown> | undefined;
@@ -112,31 +142,34 @@ export const parseOfferMessage = (data: RawData): OfferMessage | null => {
     return null;
   }
 
+  // An offer push field: a key outside OFFER_PUSH_KEYS is a type error here.
+  const field = (key: OfferPushKey): string => text(data, key);
+
   // The deadline as a difference of two server times, so a wrong phone clock
   // changes nothing (spec 0002's rule; spec 0003's Value sourcing table).
-  const expiresAt = timeOf(text(data, 'offerExpiresAt'));
-  const serverNow = timeOf(text(data, 'serverNow'));
+  const expiresAt = timeOf(field('offerExpiresAt'));
+  const serverNow = timeOf(field('serverNow'));
   const msLeftAtSend =
     expiresAt !== null && serverNow !== null ? expiresAt - serverNow : null;
 
-  const pay = Number(text(data, 'payTotal'));
+  const pay = Number(field('payTotal'));
   return {
     kind: 'offer',
     offer: {
       deliveryId,
-      offeredAt: text(data, 'offeredAt'),
+      offeredAt: field('offeredAt'),
       msLeftAtSend,
       payTotal: Number.isFinite(pay) ? pay : 0,
-      currencyCode: text(data, 'currencyCode'),
-      restaurantName: text(data, 'restaurantName'),
-      dropoffArea: text(data, 'dropoffArea'),
+      currencyCode: field('currencyCode'),
+      restaurantName: field('restaurantName'),
+      dropoffArea: field('dropoffArea'),
       trip: tripOf(data),
-      insistent: text(data, 'insistent') === '1',
-      legNumber: numberOf(text(data, 'legNumber')),
-      legCount: numberOf(text(data, 'legCount')),
-      partnerDeliveryId: text(data, 'partnerDeliveryId') || null,
-      addOn: text(data, 'addOn') === '1',
-      calm: text(data, 'calm') === '1',
+      insistent: field('insistent') === '1',
+      legNumber: numberOf(field('legNumber')),
+      legCount: numberOf(field('legCount')),
+      partnerDeliveryId: field('partnerDeliveryId') || null,
+      addOn: field('addOn') === '1',
+      calm: field('calm') === '1',
     },
   };
 };

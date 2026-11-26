@@ -4,8 +4,8 @@ import givenNamesFile from './given-names.json';
 // (opencourier-backend src/domains/location-note/personal-data-check.ts): before a note is sent, the
 // app looks for a phone number, an email address or a common first name, and asks the rider to edit
 // it or save it anyway. The server runs the same check, so a phone with an old copy still gets the
-// warning, as a 422. Keep the two the same; the name list itself is copied from the backend by
-// scripts/copyGivenNames.js.
+// warning, as a 422. Keep the two the same (row 180: a test runs both on the same texts and expects
+// the same answer); the name list itself is copied from the backend by scripts/copyGivenNames.js.
 
 export type PersonalDataKind = 'phone' | 'email' | 'name';
 
@@ -19,8 +19,8 @@ const EMAIL_PATTERN = /[^\s@]+@[^\s@]+\.[^\s@]+/;
 // The names, already folded (lower case, no accents, every sigma as σ) in the file.
 const GIVEN_NAMES: ReadonlySet<string> = new Set(givenNamesFile.names);
 
-// Greek letters with an accent or diaeresis, and the plain letter each folds to. Spelled out because
-// not every phone's JavaScript engine can split letters from their accents (normalize).
+// Greek letters with an accent or diaeresis, and the plain letter each folds to. Used only on a phone
+// whose JavaScript engine has no normalize, which cannot split letters from their accents.
 const GREEK_ACCENTS: Record<string, string> = {
   ά: 'α',
   έ: 'ε',
@@ -37,23 +37,31 @@ const GREEK_ACCENTS: Record<string, string> = {
 };
 
 // Lower case, accents removed, final sigma as σ: "Γιώργος" and "ΓΙΩΡΓΟΣ" both become "γιωργοσ".
+// Row 180: the same steps in the same order as the backend's foldForNameCheck, so the two give the
+// same answer on any text. NFD splits each accented letter into the letter and its accent mark, and
+// `\p{M}` (any mark, in any alphabet) drops them. Hermes cannot read `\p{...}` itself; the React
+// Native Babel preset rewrites it into plain character ranges when the app is built.
 export const foldForNameCheck = (text: string): string => {
-  const lower = text.toLowerCase();
-  // NFD splits a Latin letter from its accent (é into e and the accent mark); the marks are dropped.
-  const withoutMarks =
-    typeof lower.normalize === 'function'
-      ? lower.normalize('NFD').replace(/[\u0300-\u036f]/g, '')
-      : lower;
-  return Array.from(
-    withoutMarks,
-    letter => GREEK_ACCENTS[letter] ?? letter,
-  ).join('');
+  if (typeof text.normalize !== 'function') {
+    // A phone with no normalize: lower case and the Greek table only.
+    return Array.from(
+      text.toLowerCase(),
+      letter => GREEK_ACCENTS[letter] ?? letter,
+    ).join('');
+  }
+  return text
+    .normalize('NFD')
+    .replace(/\p{M}/gu, '')
+    .toLowerCase()
+    .replace(/ς/g, 'σ');
 };
 
-// The words of the folded text: runs of Latin or Greek letters.
+// The words of the folded text: runs of letters in any alphabet (`\p{L}` is "any letter" in
+// Unicode), as on the server. A name glued to a letter from another alphabet ("ømaria") is then one
+// word that is not a name, on the phone and on the server alike (row 180).
 const wordsOf = (text: string): string[] =>
   foldForNameCheck(text)
-    .split(/[^a-z\u03b1-\u03c9]+/)
+    .split(/[^\p{L}]+/u)
     .filter(Boolean);
 
 // Every kind found, in a fixed order; an empty list means the note looks fine.
