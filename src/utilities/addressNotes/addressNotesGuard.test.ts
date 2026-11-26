@@ -1,13 +1,13 @@
 import fs from 'fs';
 import path from 'path';
-import crypto from 'crypto';
 import { looksLikePersonalData } from './personalDataCheck';
 
-// Spec 0053 (AC-3, AC-9, Cross check 5, 6, 12, Value 5):
+// Spec 0053 (AC-3, AC-9, Cross check 5, 12, Value 5):
 // Notes describe the place, never the person.
-// Guard tests verifying that no author data or author metrics leak, that the mobile name list
-// is identical to the backend's source, and that personal data requires confirmation.
-describe('Address notes guards (spec 0053, AC-3, AC-9, Cross check 5, 6, 12)', () => {
+// Guard tests verifying that no author data or author metrics leak,
+// and that personal data requires confirmation.
+// Note: byte-for-byte check of given-names.json (cross check 6) is in givenNamesParity.test.ts (row 174).
+describe('Address notes guards (spec 0053, AC-3, AC-9, Cross check 5, 12)', () => {
   const srcDir = path.resolve(__dirname, '../..');
 
   it('Note type in types.ts contains no author, courierId, actor or deletedBy fields (AC-3, AC-9, cross check 5)', () => {
@@ -71,34 +71,6 @@ describe('Address notes guards (spec 0053, AC-3, AC-9, Cross check 5, 6, 12)', (
     }
 
     expect(violations).toEqual([]);
-  });
-
-  it('mobile given-names.json matches backend given-names.json byte for byte (cross check 6)', () => {
-    const mobileNamesFile = path.resolve(
-      __dirname,
-      '../../../src/utilities/addressNotes/given-names.json',
-    );
-    const backendNamesFile = path.resolve(
-      __dirname,
-      '../../../../opencourier-backend/src/domains/location-note/given-names.json',
-    );
-
-    expect(fs.existsSync(mobileNamesFile)).toBe(true);
-    expect(fs.existsSync(backendNamesFile)).toBe(true);
-
-    const mobileBuffer = fs.readFileSync(mobileNamesFile);
-    const backendBuffer = fs.readFileSync(backendNamesFile);
-
-    const mobileHash = crypto
-      .createHash('sha256')
-      .update(mobileBuffer)
-      .digest('hex');
-    const backendHash = crypto
-      .createHash('sha256')
-      .update(backendBuffer)
-      .digest('hex');
-
-    expect(mobileHash).toBe(backendHash);
   });
 
   it('notes with phone numbers or personal data are flagged so they cannot save without confirmation (AC-4, AC-9)', () => {

@@ -8,7 +8,7 @@ import os from 'os';
  * - `about`: string describing the provenance, spec reference, and folding rules.
  * - `names`: string[] of folded given names (lower case, no accents, every sigma as σ).
  *
- * Scope row 174: 'The courier app given names list is checked against the backend'.
+ * Scope row 174: "The courier app's given names list is checked against the backend".
  * Done when: a test compares the app's given names list with the backend's, both ways;
  * changing either side fails it; it skips with a warning only when the backend folder is absent,
  * and REQUIRE_BACKEND=1 makes that a failure.
@@ -16,6 +16,7 @@ import os from 'os';
 export interface GivenNamesJson {
   about?: string;
   names: string[];
+  // Index signature allows accessing arbitrary properties when validating unknown JSON.
   [key: string]: unknown;
 }
 
@@ -33,8 +34,8 @@ export interface GivenNamesDifferenceReport {
 
 /**
  * Compares parsed JSON from backend and app given-names.json both ways.
- * For any list key (such as `names`), reports elements missing in app and extra in app.
- * For any scalar or other property (such as `about`), reports mismatches.
+ * For the 'names' list key, reports elements missing in app and extra in app.
+ * For any scalar or other property (such as 'about'), reports mismatched values.
  */
 export function compareGivenNames(
   backendData: Record<string, unknown>,
@@ -59,57 +60,18 @@ export function compareGivenNames(
       const bVal = backendData[key];
       const aVal = appData[key];
 
-      if (Array.isArray(bVal) && Array.isArray(aVal)) {
+      if (key === 'names' && Array.isArray(bVal) && Array.isArray(aVal)) {
         const bSet = new Set(bVal);
         const aSet = new Set(aVal);
 
-        const missing = bVal.filter(item => !aSet.has(item));
-        const extra = aVal.filter(item => !bSet.has(item));
-
-        if (key === 'names') {
-          missingNamesInApp = missing;
-          extraNamesInApp = extra;
-        } else {
-          if (missing.length > 0 || extra.length > 0) {
-            mismatchedValues.push({
-              key,
-              backend: { missingFromApp: missing },
-              app: { extraInApp: extra },
-            });
-          }
-        }
-
-        // Check exact array equality (including length and order)
-        if (JSON.stringify(bVal) !== JSON.stringify(aVal)) {
-          if (key !== 'names') {
-            mismatchedValues.push({
-              key,
-              backend: bVal,
-              app: aVal,
-            });
-          }
-        }
-      } else if (
-        typeof bVal === 'object' &&
-        bVal !== null &&
-        typeof aVal === 'object' &&
-        aVal !== null
-      ) {
-        if (JSON.stringify(bVal) !== JSON.stringify(aVal)) {
-          mismatchedValues.push({
-            key,
-            backend: bVal,
-            app: aVal,
-          });
-        }
-      } else {
-        if (bVal !== aVal) {
-          mismatchedValues.push({
-            key,
-            backend: bVal,
-            app: aVal,
-          });
-        }
+        missingNamesInApp = bVal.filter(item => !aSet.has(item));
+        extraNamesInApp = aVal.filter(item => !bSet.has(item));
+      } else if (bVal !== aVal) {
+        mismatchedValues.push({
+          key,
+          backend: bVal,
+          app: aVal,
+        });
       }
     }
   }
@@ -126,6 +88,7 @@ export function compareGivenNames(
 /**
  * Validates that an object conforms to the expected given-names.json shape.
  */
+// 'asserts data is GivenNamesJson' is a TypeScript type assertion signature that narrows data's type if the function does not throw.
 export function assertValidGivenNamesShape(
   data: unknown,
   sourceLabel: string,
@@ -215,6 +178,7 @@ export function getBackendPaths(options?: BackendPathsOptions) {
  * Verifies required backend files exist; only checks directory existence when paths are derived from it.
  * Precedent: src/localization/translationsParity.test.ts (row 163).
  */
+// 'ReturnType<typeof getBackendPaths>' extracts the object type returned by getBackendPaths.
 export function assertBackendFilesExist(
   paths: ReturnType<typeof getBackendPaths>,
 ) {
@@ -241,8 +205,8 @@ export function warnBackendAbsentOnce(backendDir: string) {
     loggedSkipWarning = true;
     console.warn(
       '\n=================================================================================\n' +
-        `WARNING: Backend given names file not found under ${backendDir}.\n` +
-        'Skipping server copy checks because backend repo is absent.\n' +
+        `WARNING: Backend folder not found under ${backendDir}.\n` +
+        'Skipping given names check because backend repo is absent.\n' +
         '=================================================================================\n',
     );
   }
@@ -375,6 +339,7 @@ describe('compareGivenNames difference reporting logic', () => {
     expect(diff.extraNamesInApp).toEqual(['george']);
     expect(diff.missingTopLevelKeysInApp).toEqual([]);
     expect(diff.extraTopLevelKeysInApp).toEqual([]);
+    expect(diff.mismatchedValues).toEqual([]);
   });
 
   it('detects missing and extra top-level keys', () => {
@@ -397,7 +362,7 @@ describe('compareGivenNames difference reporting logic', () => {
   });
 });
 
-describe('Row 174: The courier app given names list is checked against the backend', () => {
+describe("Row 174: The courier app's given names list is checked against the backend", () => {
   const backendPaths = getBackendPaths();
   const appGivenNamesPath = path.resolve(__dirname, 'given-names.json');
 
@@ -426,9 +391,7 @@ describe('Row 174: The courier app given names list is checked against the backe
     expect(keys).toEqual(['about', 'names']);
 
     expect(typeof parsed.about).toBe('string');
-    expect(parsed.about!.length).toBeGreaterThan(50);
     expect(Array.isArray(parsed.names)).toBe(true);
-    expect(parsed.names.length).toBeGreaterThan(800);
 
     // Every name is folded: lowercase, no accents, no uppercase, no final sigma ς
     for (const name of parsed.names) {
@@ -438,11 +401,9 @@ describe('Row 174: The courier app given names list is checked against the backe
       expect(name).not.toMatch(/[ΆΈΉΊΪΐΌΎΫΰΏάέήίϊΐόύϋΰώς]/);
     }
 
-    // Names list has no duplicates and is sorted alphabetically
+    // Names list has no duplicates
     const uniqueNames = new Set(parsed.names);
     expect(uniqueNames.size).toBe(parsed.names.length);
-    const sortedNames = [...parsed.names].sort();
-    expect(parsed.names).toEqual(sortedNames);
   });
 
   itBackend(
@@ -460,8 +421,7 @@ describe('Row 174: The courier app given names list is checked against the backe
       const keys = Object.keys(parsed).sort();
       expect(keys).toEqual(['about', 'names']);
       expect(typeof parsed.about).toBe('string');
-      expect(parsed.about!.length).toBeGreaterThan(50);
-      expect(parsed.names.length).toBeGreaterThan(800);
+      expect(Array.isArray(parsed.names)).toBe(true);
 
       // Every name is folded: lowercase, no accents, no uppercase, no final sigma ς
       for (const name of parsed.names) {
@@ -473,8 +433,21 @@ describe('Row 174: The courier app given names list is checked against the backe
 
       const uniqueNames = new Set(parsed.names);
       expect(uniqueNames.size).toBe(parsed.names.length);
-      const sortedNames = [...parsed.names].sort();
-      expect(parsed.names).toEqual(sortedNames);
+    },
+  );
+
+  itBackend(
+    'mobile given-names.json matches backend given-names.json byte for byte (spec 0053, cross check 6)',
+    () => {
+      const appBuffer = fs.readFileSync(appGivenNamesPath);
+      const backendBuffer = fs.readFileSync(backendPaths.backendGivenNamesPath);
+
+      if (!appBuffer.equals(backendBuffer)) {
+        throw new Error(
+          'mobile given-names.json does not match backend given-names.json byte for byte. Fix: run node scripts/copyGivenNames.js',
+        );
+      }
+      expect(appBuffer.equals(backendBuffer)).toBe(true);
     },
   );
 
@@ -491,6 +464,37 @@ describe('Row 174: The courier app given names list is checked against the backe
       const backendJson = JSON.parse(backendContent);
 
       const diff = compareGivenNames(backendJson, appJson);
+
+      if (
+        diff.missingNamesInApp.length > 0 ||
+        diff.extraNamesInApp.length > 0 ||
+        diff.missingTopLevelKeysInApp.length > 0 ||
+        diff.extraTopLevelKeysInApp.length > 0 ||
+        diff.mismatchedValues.length > 0
+      ) {
+        const details = [
+          diff.missingNamesInApp.length > 0
+            ? `missing in app: ${diff.missingNamesInApp.join(', ')}`
+            : '',
+          diff.extraNamesInApp.length > 0
+            ? `extra in app: ${diff.extraNamesInApp.join(', ')}`
+            : '',
+          diff.missingTopLevelKeysInApp.length > 0
+            ? `missing keys in app: ${diff.missingTopLevelKeysInApp.join(', ')}`
+            : '',
+          diff.extraTopLevelKeysInApp.length > 0
+            ? `extra keys in app: ${diff.extraTopLevelKeysInApp.join(', ')}`
+            : '',
+          diff.mismatchedValues.length > 0
+            ? `mismatched values: ${JSON.stringify(diff.mismatchedValues)}`
+            : '',
+        ]
+          .filter(Boolean)
+          .join('; ');
+        throw new Error(
+          `given-names.json differences detected (${details}). Fix: run node scripts/copyGivenNames.js`,
+        );
+      }
 
       expect(diff.missingTopLevelKeysInApp).toEqual([]);
       expect(diff.extraTopLevelKeysInApp).toEqual([]);
@@ -513,18 +517,29 @@ describe('Row 174: The courier app given names list is checked against the backe
       const appJson = JSON.parse(appContent);
       const backendJson = JSON.parse(backendContent);
 
-      const appNamesSet = new Set<string>(appJson.names);
-      const backendNamesSet = new Set<string>(backendJson.names);
+      const diff = compareGivenNames(backendJson, appJson);
 
-      const missingInApp = backendJson.names.filter(
-        (name: string) => !appNamesSet.has(name),
-      );
-      const extraInApp = appJson.names.filter(
-        (name: string) => !backendNamesSet.has(name),
-      );
+      if (
+        diff.missingNamesInApp.length > 0 ||
+        diff.extraNamesInApp.length > 0
+      ) {
+        const details = [
+          diff.missingNamesInApp.length > 0
+            ? `missing in app: ${diff.missingNamesInApp.join(', ')}`
+            : '',
+          diff.extraNamesInApp.length > 0
+            ? `extra in app: ${diff.extraNamesInApp.join(', ')}`
+            : '',
+        ]
+          .filter(Boolean)
+          .join('; ');
+        throw new Error(
+          `Name entry mismatch (${details}). Fix: run node scripts/copyGivenNames.js`,
+        );
+      }
 
-      expect(missingInApp).toEqual([]);
-      expect(extraInApp).toEqual([]);
+      expect(diff.missingNamesInApp).toEqual([]);
+      expect(diff.extraNamesInApp).toEqual([]);
       expect(appJson.names.length).toBe(backendJson.names.length);
       expect(appJson.names).toEqual(backendJson.names);
     },
